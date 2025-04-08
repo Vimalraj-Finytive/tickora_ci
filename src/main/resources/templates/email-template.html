@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.w3.org/1999/xhtml">
+<head>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+        }
+        .btn {
+            display: block;
+            width: max-content;
+            padding: 12px 20px;
+            background-color: #007bff;
+            color: #ffffff !important;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            text-align: center;
+            font-size: 16px;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+<p>Hello <b th:text="${userName}"></b>,</p>
+<p>Your account has been created successfully.</p>
+<p><b>Default Password:</b> <span style="color: #007bff; font-weight: bold;" th:text="${password}"></span></p>
+
+<p>
+    <a th:href="@{http://54.234.165.77:8000/deeplink(email=${email})}"
+       th:if="${!isNewUser}" class="btn">
+        Reset Password
+    </a>
+    <a th:href="@{http://54.234.165.77:8000/deeplink(email=${email}, newUser='true')}"
+       th:if="${isNewUser}" class="btn">
+        Reset Password
+    </a>
+</p>
+
+
+<p>Reset your password to Login.</p>
+</body>
+</html>

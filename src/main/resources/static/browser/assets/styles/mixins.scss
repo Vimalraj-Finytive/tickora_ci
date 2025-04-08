@@ -1,0 +1,75 @@
+
+@mixin header-title{
+    font-size: 1.5rem;
+    text-align: center;
+    font-weight: 500;
+    margin: 0;
+    white-space: nowrap;
+  }
+  
+
+  @mixin app-container {    
+    background-color: var(--bg-screen);
+    z-index: 1; 
+    margin-top: 60px; 
+    display: block;
+    padding: 10px;
+    // position: fixed;  // Fixes the container in place
+    width: 100%;
+    height: 100%;     // Takes the full viewport height
+    overflow: hidden; // Prevents scrolling
+}
+
+
+  @mixin section-header-container {
+    display: flex;
+    align-items: center;   
+    gap: 15px;
+    width: 100%;
+    padding: 10px;
+  }
+  
+@mixin bg-image {
+  // background: url('/assets/images/bg-image1.avif') no-repeat center center fixed;
+  background: url('/assets/images/bg-image.jpg') no-repeat center center fixed;
+  background-size: cover;
+  height: 100vh;
+  width: 100%;
+}
+
+@mixin buttonview {
+  .custom-width {
+    width: 60% !important;
+  }
+
+  .custom-btn {
+    color: var(--primary-color);
+    border: 2px solid var(--primary-color);
+    transition: background-color 0.3s, color 0.3s;
+
+    &:hover {
+      background-color: var(--primary-color);
+      color: var(--white);
+    }
+  }
+}
+
+
+@mixin errormessage {
+  color: var(--primary-color);
+  font-size: 0.8rem;
+  margin-top: 5px;
+}
+
+
+@mixin custom-border {
+  border: 2px solid var(--border-line); /* Default border */
+  border-radius: 5px; /* Slightly rounded corners */
+  outline: none; /* Removes the default focus outline */
+  transition: border-color 0.3s ease-in-out;
+}
+
+// @mixin custom-border:focus {
+//   border: 2px solid var(--border-line); /* Default border */
+//   box-shadow: none; /* Prevents Bootstrap's default focus effect */
+// }
