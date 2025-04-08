@@ -3,6 +3,7 @@ package com.uniq.tms.tms_microservice.service.impl;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.uniq.tms.tms_microservice.adapter.UserAdapter;
+import com.uniq.tms.tms_microservice.dto.GroupDto;
 import com.uniq.tms.tms_microservice.dto.UserResponseDto;
 import com.uniq.tms.tms_microservice.dto.UserRole;
 import com.uniq.tms.tms_microservice.entity.GroupEntity;
@@ -36,8 +37,10 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class UserServiceImpl implements UserService {
@@ -314,6 +317,37 @@ public class UserServiceImpl implements UserService {
     public List<User> getMembersExcludingRole(Long orgId, String  excludedRole) {
         List<User> members = userAdapter.getMembersExcludingRole(orgId,  excludedRole).stream().map(userEntityMapper::toMiddleware).toList();
         return members;
+    }
+
+    @Override
+    public List<GroupDto> getUserGroups(Long userId, Long orgId) {
+        List<GroupDto> group = userAdapter.getUserGroups(userId, orgId);
+        return group;
+    }
+
+    @Override
+    public List<Map<String, Object>> getStudentGroupMembers(Long groupId, Long orgId) {
+
+        GroupEntity groupEntity = userAdapter.getGroupById(groupId, orgId);
+        List<Long> memberIds = groupEntity.getGroupMemberIds();
+
+        if (memberIds == null || memberIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<UserEntity> studentUsers = userAdapter.getUsersByIds(memberIds, orgId);
+
+        List<Map<String, Object>> studentDetailsList = studentUsers.stream()
+//                .filter(user -> "student".equalsIgnoreCase(user.getRole().getName()))
+                .map(user -> {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("id", user.getUserId());
+                    map.put("name", user.getUserName());
+                    map.put("role", user.getRole().getName());
+                    return map;
+                })
+                .collect(Collectors.toList());
+        return studentDetailsList;
     }
 
 

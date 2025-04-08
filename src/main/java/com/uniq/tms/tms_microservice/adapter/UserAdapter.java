@@ -2,6 +2,7 @@ package com.uniq.tms.tms_microservice.adapter;
 
 
 
+import com.uniq.tms.tms_microservice.dto.GroupDto;
 import com.uniq.tms.tms_microservice.dto.UserResponseDto;
 import com.uniq.tms.tms_microservice.entity.GroupEntity;
 import com.uniq.tms.tms_microservice.entity.LocationEntity;
@@ -32,4 +33,7 @@ public interface UserAdapter {
     void deleteGroup(Long groupId);
     List<UserEntity> getMembers(Long orgId, String  excludedRole);
     List<UserEntity> getMembersExcludingRole(Long orgId, String excludedRole);
+    List<GroupDto> getUserGroups(Long userId, Long orgId);
+    GroupEntity getGroupById(Long groupId, Long orgId);
+    List<UserEntity> getUsersByIds(List<Long> userIds, Long orgId);
 }

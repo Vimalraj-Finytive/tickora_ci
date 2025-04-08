@@ -2,6 +2,7 @@ package com.uniq.tms.tms_microservice.service;
 
 
 
+import com.uniq.tms.tms_microservice.dto.GroupDto;
 import com.uniq.tms.tms_microservice.dto.UserResponseDto;
 import com.uniq.tms.tms_microservice.model.AddGroup;
 import com.uniq.tms.tms_microservice.model.Group;
@@ -31,4 +32,6 @@ public interface UserService {
     void deleteGroup(Long groupId);
     List<User> getMembers(Long orgId, String role);
     List<User> getMembersExcludingRole(Long orgId, String excludedRole);
+    List<GroupDto>getUserGroups(Long userId, Long orgId);
+    List<Map<String, Object>> getStudentGroupMembers(Long groupId, Long orgId);
 }

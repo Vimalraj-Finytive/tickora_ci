@@ -2,6 +2,7 @@ package com.uniq.tms.tms_microservice.adapter.impl;
 
 
 import com.uniq.tms.tms_microservice.adapter.UserAdapter;
+import com.uniq.tms.tms_microservice.dto.GroupDto;
 import com.uniq.tms.tms_microservice.dto.UserResponseDto;
 import com.uniq.tms.tms_microservice.entity.GroupEntity;
 import com.uniq.tms.tms_microservice.entity.LocationEntity;
@@ -148,4 +149,20 @@ public class UserAdapterImpl implements UserAdapter {
         return userRepository.findAllByOrganizationIdAndRole_NameNot(orgId, excludedRole);
     }
 
+
+    @Override
+    public List<GroupDto> getUserGroups(Long userId, Long orgId) {
+        return teamRepository.findByUserIdAndOrganization_id(userId, orgId);
+    }
+
+    @Override
+    public GroupEntity getGroupById(Long groupId, Long orgId) {
+        return teamRepository.findByGroupIdAndOrganizationEntity_OrganizationId(groupId, orgId)
+                .orElseThrow(() -> new RuntimeException("Group not found"));
+    }
+
+    @Override
+    public List<UserEntity> getUsersByIds(List<Long> userIds, Long orgId) {
+        return userRepository.findByUserIdInAndOrganizationId(userIds, orgId);
+    }
 }

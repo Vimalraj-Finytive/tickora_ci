@@ -5,6 +5,11 @@ public class GroupDto {
     private Long groupId;
     private String groupName;
 
+    public GroupDto(Long groupId, String groupName) {
+        this.groupId = groupId;
+        this.groupName = groupName;
+    }
+
     public Long getGroupId() {
         return groupId;
     }

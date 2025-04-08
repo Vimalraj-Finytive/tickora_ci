@@ -1,5 +1,6 @@
 package com.uniq.tms.tms_microservice.repository;
 
+import com.uniq.tms.tms_microservice.dto.GroupDto;
 import com.uniq.tms.tms_microservice.entity.GroupEntity;
 import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -131,6 +132,16 @@ public interface TeamRepository extends JpaRepository<GroupEntity, Long> {
 """, nativeQuery = true)
     void deleteMemberById(@Param("groupId") Long groupId, @Param("memberId") Long memberId);
 
+
+    @Query(value = """
+    SELECT group_id AS groupId, group_name AS groupName
+    FROM group_table
+    WHERE (:userId = ANY (SELECT jsonb_array_elements_text(managers_id)::bigint)
+           OR :userId = ANY (SELECT jsonb_array_elements_text(supervisors_id)::bigint))
+      AND organization_id = :orgId
+    """, nativeQuery = true)
+    List<GroupDto> findByUserIdAndOrganization_id(@Param("userId") Long userId, @Param("orgId") Long orgId);
+
     @Modifying(clearAutomatically = true)
     @Transactional
     @Query(value = """
@@ -138,4 +149,8 @@ public interface TeamRepository extends JpaRepository<GroupEntity, Long> {
         WHERE group_id = :groupId
         """, nativeQuery = true)
     void deleteGroupById(@Param("groupId") Long groupId);
+
+    Optional<GroupEntity> findByGroupIdAndOrganizationEntity_OrganizationId(Long groupId, Long organizationId);
+
+
 }

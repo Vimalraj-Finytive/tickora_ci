@@ -32,8 +32,8 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<ApiResponse> login(@RequestBody LoginDto loginDto,
-                                             HttpServletResponse response,
-                                             HttpServletRequest request) {
+                                                HttpServletResponse response,
+                                                HttpServletRequest request) {
         Logger logger = LoggerFactory.getLogger(getClass());
 
         logger.info("Login Request Received: {}", loginDto);
@@ -66,7 +66,7 @@ public class AuthController {
 
     @PatchMapping("/reset-password")
     public ResponseEntity<ApiResponse> resetPassword(@RequestParam String email,
-                                                     @RequestBody ChangePasswordDto request) {
+                                                        @RequestBody ChangePasswordDto request) {
         return authFacade.resetPassword(email, request);
     }
 
