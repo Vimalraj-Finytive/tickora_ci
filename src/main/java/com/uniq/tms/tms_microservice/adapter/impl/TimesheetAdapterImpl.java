@@ -129,30 +129,30 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
                 historyDto.setLogTime(row[14] != null ? ((java.sql.Time) row[14]).toLocalTime() : null);
 
                 try {
-                    historyDto.setLogType(row[14] != null ? LogType.valueOf(row[14].toString()) : null);
+                    historyDto.setLogType(row[15] != null ? LogType.valueOf(row[15].toString()) : null);
                 } catch (IllegalArgumentException e) {
-                    System.err.println("Invalid LogType: " + row[14]);
+                    System.err.println("Invalid LogType: " + row[15]);
                     e.printStackTrace();
                 }
 
                 try {
-                    historyDto.setLocationId(row[15] != null ? Long.parseLong(row[15].toString()) : null);
+                    historyDto.setLocationId(row[16] != null ? Long.parseLong(row[16].toString()) : null);
                 } catch (NumberFormatException e) {
-                    System.err.println("LocationId parsing error: " + row[15]);
+                    System.err.println("LocationId parsing error: " + row[16]);
                     e.printStackTrace();
                 }
 
                 try {
-                    historyDto.setLogFrom(row[16] != null ? LogFrom.valueOf(row[16].toString()) : null);
+                    historyDto.setLogFrom(row[17] != null ? LogFrom.valueOf(row[17].toString()) : null);
                 } catch (IllegalArgumentException e) {
-                    System.err.println("Invalid LogFrom: " + row[16]);
+                    System.err.println("Invalid LogFrom: " + row[17]);
                     e.printStackTrace();
                 }
 
                 try {
-                    historyDto.setLoggedTimestamp(row[17] != null ? ((java.sql.Timestamp) row[17]).toLocalDateTime() : null);
+                    historyDto.setLoggedTimestamp(row[18] != null ? ((java.sql.Timestamp) row[18]).toLocalDateTime() : null);
                 } catch (ClassCastException e) {
-                    System.err.println("LoggedTimestamp conversion error: " + row[17]);
+                    System.err.println("LoggedTimestamp conversion error: " + row[18]);
                     e.printStackTrace();
                 }
 

@@ -7,7 +7,7 @@ public class UserResponseDto {
     private Long userId;
     private String userName;
     private String email;
-    private String mobile_number;
+    private String mobileNumber;
     private String groupName;
     private String roleName;
     private String locationName;
@@ -17,7 +17,7 @@ public class UserResponseDto {
         this.userId = userId;
         this.userName = userName;
         this.email = email;
-        this.mobile_number = mobile;
+        this.mobileNumber = mobile;
         this.groupName = teamName;
         this.roleName = roleName;
         this.locationName = locationName;
@@ -52,11 +52,13 @@ public class UserResponseDto {
     public void setEmail(String email) {
         this.email = email;
     }
-    public String getMobile_number() {
-        return mobile_number;
+
+    public String getMobileNumber() {
+        return mobileNumber;
     }
-    public void setMobile_number(String mobile_number) {
-        this.mobile_number = mobile_number;
+
+    public void setMobileNumber(String mobileNumber) {
+        this.mobileNumber = mobileNumber;
     }
 
     public String getGroupName() {

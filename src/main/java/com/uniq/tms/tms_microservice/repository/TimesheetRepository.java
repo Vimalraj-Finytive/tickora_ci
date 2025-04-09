@@ -47,29 +47,28 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
         CASE 
             WHEN t.date IS NULL THEN 
                 CASE 
-                    WHEN trim(to_char(d.work_date, 'Day')) ILIKE trim(ws.rest_day) THEN 'HOLIDAY' 
-                    ELSE 'TIME_OFF' 
+                    WHEN trim(to_char(d.work_date, 'Day')) ILIKE trim(ws.rest_day) THEN 'Holiday' 
+                    ELSE 'Time Off' 
                 END
             ELSE 
                 CASE 
-                    WHEN trim(to_char(d.work_date, 'Day')) ILIKE trim(ws.rest_day) THEN 'ExtraWorkedDay' 
-                    ELSE 'WORKING_DAY' 
+                    WHEN trim(to_char(d.work_date, 'Day')) ILIKE trim(ws.rest_day) THEN 'Extra Worked Day' 
+                    ELSE 'Working_Day' 
                 END
         END AS dayy_type,
 
-        -- Work status based on expected vs actual work time
         CASE
             WHEN t.first_clock_in IS NOT NULL
                  AND t.last_clock_out IS NOT NULL
                  AND (EXTRACT(EPOCH FROM (t.last_clock_out - t.first_clock_in))/3600.0) >=
                      (EXTRACT(EPOCH FROM (ws.end_time - ws.start_time))/3600.0)
-            THEN 'SUFFICIENT_HOURS'
+            THEN 'Sufficient Hours'
         
             WHEN t.first_clock_in IS NOT NULL
                  AND t.last_clock_out IS NOT NULL
                  AND (EXTRACT(EPOCH FROM (t.last_clock_out - t.first_clock_in))/3600.0) <
                      (EXTRACT(EPOCH FROM (ws.end_time - ws.start_time))/3600.0)
-            THEN 'LESS_WORKED_HOURS'
+            THEN 'Less Worked Hours'
         END AS work_status,
 
         -- Timesheet history

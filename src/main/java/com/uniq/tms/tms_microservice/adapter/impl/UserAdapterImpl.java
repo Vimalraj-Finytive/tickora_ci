@@ -165,4 +165,11 @@ public class UserAdapterImpl implements UserAdapter {
     public List<UserEntity> getUsersByIds(List<Long> userIds, Long orgId) {
         return userRepository.findByUserIdInAndOrganizationId(userIds, orgId);
     }
+
+    @Override
+    public boolean existsByMobileNumber(String mobileNumber) {
+        return userRepository.existsByMobileNumber(mobileNumber);
+    }
+
+
 }

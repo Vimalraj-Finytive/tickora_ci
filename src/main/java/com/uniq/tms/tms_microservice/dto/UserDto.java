@@ -7,7 +7,7 @@ public class UserDto {
     private Long userId;
     private String userName;
     private String email;
-    private String mobile_number;
+    private String mobileNumber;
     private Long organizationId;
     private Long groupId;
     private Long roleId;
@@ -46,12 +46,12 @@ public class UserDto {
         this.email = email;
     }
 
-    public String getMobile_number() {
-        return mobile_number;
+    public String getMobileNumber() {
+        return mobileNumber;
     }
 
-    public void setMobile_number(String mobile_number) {
-        this.mobile_number = mobile_number;
+    public void setMobileNumber(String mobileNumber) {
+        this.mobileNumber = mobileNumber;
     }
 
     public Long getOrganizationId() {

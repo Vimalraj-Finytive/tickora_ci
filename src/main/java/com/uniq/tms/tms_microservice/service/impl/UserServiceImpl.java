@@ -86,7 +86,11 @@ public class UserServiceImpl implements UserService {
     public User createUser(User usermiddleware, Long organizationId) {
 
         if (userAdapter.existsByEmail(usermiddleware.getEmail())) {
-            throw new DataIntegrityViolationException("User with email " + usermiddleware.getEmail() + " already exists");
+            throw new DataIntegrityViolationException("User with email already exists");
+        }
+
+        if(userAdapter.existsByMobileNumber(usermiddleware.getMobileNumber())){
+            throw new DataIntegrityViolationException( "User with mobile number already exists");
         }
 
         UserEntity entity = userEntityMapper.toEntity(usermiddleware);

@@ -42,7 +42,7 @@ public class GroupEntity {
     private List<Long> groupMemberIds;
 
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "supervisors_id", nullable = false)
+    @Column(name = "supervisors_id")
     private List<Long> supervisorsId;
 
     @Column(name = "work_schedule_id")

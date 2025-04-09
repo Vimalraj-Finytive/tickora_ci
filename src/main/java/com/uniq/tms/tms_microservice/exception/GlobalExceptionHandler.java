@@ -43,7 +43,9 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ApiResponse> handleDuplicateEntryException(DataIntegrityViolationException ex) {
+        String message = ex.getMessage();
         return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(new ApiResponse(409, "Email already exists", null));
+                .body(new ApiResponse(409, message, null));
     }
+
 }

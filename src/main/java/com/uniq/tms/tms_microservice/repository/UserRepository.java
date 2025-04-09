@@ -18,9 +18,9 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
 
     boolean existsByEmail(String email);
 
-    @Query("SELECT new com.uniq.tms.ams.dto.UserResponseDto( " +
+    @Query("SELECT new com.uniq.tms.tms_microservice.dto.UserResponseDto( " +
             "u.userId, " +
-            "u.userName, u.email, u.mobile_number, " +
+            "u.userName, u.email, u.mobileNumber, " +
             "CASE WHEN u.groupId IS NULL THEN '-' ELSE g.groupName END, " +
             "r.name, l.name, u.dateOfJoining) " +
             "FROM UserEntity u " +
@@ -35,5 +35,7 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
     List<UserEntity> findAllByOrganizationIdAndRole_NameNot(Long orgId, String excludedRole);
 
     List<UserEntity> findByUserIdInAndOrganizationId(List <Long> userIds, Long orgId);
+
+    boolean existsByMobileNumber(String mobileNumber);
 
 }

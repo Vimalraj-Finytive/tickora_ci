@@ -36,4 +36,6 @@ public interface UserAdapter {
     List<GroupDto> getUserGroups(Long userId, Long orgId);
     GroupEntity getGroupById(Long groupId, Long orgId);
     List<UserEntity> getUsersByIds(List<Long> userIds, Long orgId);
+    boolean existsByMobileNumber(String mobileNumber);
+
 }

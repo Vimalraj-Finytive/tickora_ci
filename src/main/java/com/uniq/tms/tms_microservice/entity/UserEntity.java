@@ -30,7 +30,7 @@ public class UserEntity {
     private String email;
 
     @Column(name = "mobile_number", nullable = false, unique = true)
-    private String mobile_number;
+    private String mobileNumber;
 
     @Column(name = "password", nullable = false)
     private String password;
@@ -99,12 +99,12 @@ public class UserEntity {
         this.email = email;
     }
 
-    public String getMobile_number() {
-        return mobile_number;
+    public String getMobileNumber() {
+        return mobileNumber;
     }
 
-    public void setMobile_number(String mobile_number) {
-        this.mobile_number = mobile_number;
+    public void setMobileNumber(String mobileNumber) {
+        this.mobileNumber = mobileNumber;
     }
 
     public String getPassword() {
