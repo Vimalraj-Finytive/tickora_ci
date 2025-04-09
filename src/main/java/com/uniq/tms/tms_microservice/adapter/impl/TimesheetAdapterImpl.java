@@ -48,6 +48,7 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
 
     @Override
     public List<TimesheetDto> filterTimesheetsForAllUsers(LocalDate startDate, LocalDate endDate, Long userId) {
+        System.out.println("StartDate: " + startDate + ", EndDate: " + endDate + ", userId: " + userId);
         List<Object[]> resultList = timesheetRepository.fetchTimesheetsWithHistory(startDate, endDate, userId);
         System.out.println("Result List Size: " + (resultList == null ? "null" : resultList.size()));
 
@@ -56,29 +57,35 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
         for (Object[] row : resultList) {
             if (row[1] == null) continue;
 
-            Long timesheetId = row[1] != null ? Long.parseLong(row[1].toString()) : null;
+            Long timesheetId = row[4] != null ? Long.parseLong(row[4].toString()) : null;
 
             TimesheetDto dto = timesheetMap.computeIfAbsent(timesheetId, id -> {
                 TimesheetDto newDto = new TimesheetDto();
                 newDto.setId(timesheetId);
-                newDto.setUserId(row[2] != null ? Long.parseLong(row[2].toString()) : null);
-                newDto.setDate(row[3] != null ? ((java.sql.Date) row[3]).toLocalDate() : null);
-                newDto.setUserName((String) row[4]);
-                newDto.setRole((String) row[5]);
-                newDto.setDayType((String) row[6]);
+                newDto.setUserId(row[1] != null ? Long.parseLong(row[1].toString()) : null);
+                newDto.setDate(row[0] != null ?
+                        (row[0] instanceof java.sql.Date ?
+                                ((java.sql.Date) row[0]).toLocalDate() :
+                                (row[0] instanceof java.time.Instant ?
+                                        ((java.time.Instant) row[0]).atZone(ZoneId.systemDefault()).toLocalDate() :
+                                        null))
+                        : null);
+                newDto.setUserName((String) row[2]);
+                newDto.setRole((String) row[3]);
+                newDto.setDayType((String) row[9]);
 
                 // Handle first_clock_in (java.sql.Time to LocalTime)
-                newDto.setFirstClockIn(row[7] != null ? ((java.sql.Time) row[7]).toLocalTime() : null);
+                newDto.setFirstClockIn(row[5] != null ? ((java.sql.Time) row[5]).toLocalTime() : null);
 
                 // Handle last_clock_out (java.sql.Time to LocalTime)
-                newDto.setLastClockOut(row[8] != null ? ((java.sql.Time) row[8]).toLocalTime() : null);
+                newDto.setLastClockOut(row[6] != null ? ((java.sql.Time) row[6]).toLocalTime() : null);
 
                 // Handle tracked_hours
-                if (row[9] != null) {
-                    if (row[9] instanceof java.sql.Time) {
+                if (row[7] != null) {
+                    if (row[7] instanceof java.sql.Time) {
                         // Convert java.sql.Time to LocalTime
-                        newDto.setTrackedHours(((java.sql.Time) row[9]).toLocalTime());
-                    } else if (row[9] instanceof String) {
+                        newDto.setTrackedHours(((java.sql.Time) row[7]).toLocalTime());
+                    } else if (row[7] instanceof String) {
                         // If it's a String, parse it
                         String timeString = (String) row[7];
                         try {
@@ -90,17 +97,17 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
                             newDto.setTrackedHours(LocalTime.MIDNIGHT); // Default value on error
                         }
                     } else {
-                        System.err.println("Unexpected type for tracked_hours: " + row[9].getClass());
+                        System.err.println("Unexpected type for tracked_hours: " + row[7].getClass());
                     }
                 }
 
-                if (row[10] != null) {
-                    if (row[10] instanceof java.sql.Time) {
+                if (row[8] != null) {
+                    if (row[8] instanceof java.sql.Time) {
                         // Convert java.sql.Time to LocalTime
-                        newDto.setRegularHours(((java.sql.Time) row[10]).toLocalTime());
-                    } else if (row[10] instanceof String) {
+                        newDto.setRegularHours(((java.sql.Time) row[8]).toLocalTime());
+                    } else if (row[8] instanceof String) {
                         // If it's a String, parse it
-                        String timeString = (String) row[10];
+                        String timeString = (String) row[8];
                         try {
                             LocalTime regularHours = LocalTime.parse(timeString);
                             newDto.setRegularHours(regularHours);
@@ -110,12 +117,12 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
                             newDto.setRegularHours(LocalTime.MIDNIGHT);
                         }
                     } else {
-                        System.err.println("Unexpected type for tracked_hours: " + row[10].getClass());
+                        System.err.println("Unexpected type for tracked_hours: " + row[8].getClass());
                     }
                 }
 
-                newDto.setUserDayType((String) row[11]);
-                newDto.setWorkStatus((String) row[12]);
+                newDto.setUserDayType((String) row[10]);
+                newDto.setWorkStatus((String) row[11]);
                 newDto.setHistory(new ArrayList<>());
                 return newDto;
             });
@@ -123,10 +130,10 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
 
             System.out.println("Row Data: " + Arrays.toString(row));
 
-            if (row[13] != null) {
+            if (row[12] != null) {
                 TimesheetHistoryDto historyDto = new TimesheetHistoryDto();
-                historyDto.setTimesheetHistoryId(row[13] != null ? Long.parseLong(row[13].toString()) : null);
-                historyDto.setLogTime(row[14] != null ? ((java.sql.Time) row[14]).toLocalTime() : null);
+                historyDto.setTimesheetHistoryId(row[12] != null ? Long.parseLong(row[12].toString()) : null);
+                historyDto.setLogTime(row[13] != null ? ((java.sql.Time) row[13]).toLocalTime() : null);
 
                 try {
                     historyDto.setLogType(row[14] != null ? LogType.valueOf(row[14].toString()) : null);
@@ -276,6 +283,11 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
     @Override
     public void saveAll(List<TimesheetEntity> openClockIns) {
         timesheetRepository.saveAll(openClockIns);
+    }
+
+    @Override
+    public List<TimesheetEntity> getLatestLogsByTimesheetIds(List<Long> memberIds, Long orgId, LocalDate date) {
+        return timesheetHistoryRepository.findLatestLogByTimesheet(memberIds, date);
     }
 
     @Override

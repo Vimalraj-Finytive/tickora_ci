@@ -25,54 +25,58 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
         ) AS work_date
     )
     SELECT
-        d.work_date, 
-        t.id AS timesheet_id,
-        t.user_id,
-        t.date,
+        d.work_date,
+        u.user_id,
         u.user_name,
         r.name AS role,
-        
-        -- Day type: is this date a working day or a holiday
-        CASE 
-            WHEN trim(to_char(d.work_date, 'Day')) ILIKE trim(ws.rest_day) THEN 'Holiday' 
-            ELSE 'Working Day' 
-        END AS day_type,
-        
+        t.id AS timesheet_id,
         t.first_clock_in,
         t.last_clock_out,
         t.tracked_hours,
         t.regular_hours,
         
-        -- What happened that day
-        CASE 
-            WHEN t.date IS NULL THEN 
-                CASE 
-                    WHEN trim(to_char(d.work_date, 'Day')) ILIKE trim(ws.rest_day) THEN 'HOLIDAY' 
-                    ELSE 'TIME_OFF' 
+        -- Day type (holiday/working)
+        CASE
+            WHEN trim(to_char(d.work_date, 'Day')) ILIKE trim(ws.rest_day) THEN 'Holiday'
+            ELSE 'Working Day'
+        END AS day_type,
+        
+        -- Day status
+        CASE
+            WHEN t.date IS NULL THEN
+                CASE
+                    WHEN trim(to_char(d.work_date, 'Day')) ILIKE trim(ws.rest_day) THEN 'Holiday'
+                    ELSE 'Time Off'
                 END
-            ELSE 
-                CASE 
-                    WHEN trim(to_char(d.work_date, 'Day')) ILIKE trim(ws.rest_day) THEN 'ExtraWorkedDay' 
-                    ELSE 'WORKING_DAY' 
+            ELSE
+                CASE
+                    WHEN trim(to_char(d.work_date, 'Day')) ILIKE trim(ws.rest_day) THEN 'Extra Worked Day'
+                    ELSE 'Working Day'
                 END
-        END AS dayy_type,
-
-        -- Work status based on expected vs actual work time
+        END AS day_status,
+        
+        -- Work status
         CASE
             WHEN t.first_clock_in IS NOT NULL
                  AND t.last_clock_out IS NOT NULL
-                 AND (EXTRACT(EPOCH FROM (t.last_clock_out - t.first_clock_in))/3600.0) >=
-                     (EXTRACT(EPOCH FROM (ws.end_time - ws.start_time))/3600.0)
-            THEN 'SUFFICIENT_HOURS'
-        
+                 AND (
+                     EXTRACT(EPOCH FROM (t.last_clock_out - t.first_clock_in)) / 3600.0
+                 ) >= (
+                     EXTRACT(EPOCH FROM (ws.end_time - ws.start_time)) / 3600.0
+                 )
+            THEN 'Sufficient Hours'
+            
             WHEN t.first_clock_in IS NOT NULL
                  AND t.last_clock_out IS NOT NULL
-                 AND (EXTRACT(EPOCH FROM (t.last_clock_out - t.first_clock_in))/3600.0) <
-                     (EXTRACT(EPOCH FROM (ws.end_time - ws.start_time))/3600.0)
-            THEN 'LESS_WORKED_HOURS'
+                 AND (
+                     EXTRACT(EPOCH FROM (t.last_clock_out - t.first_clock_in)) / 3600.0
+                 ) < (
+                     EXTRACT(EPOCH FROM (ws.end_time - ws.start_time)) / 3600.0
+                 )
+            THEN 'Less Worked Hours'
         END AS work_status,
-
-        -- Timesheet history
+        
+        -- Timesheet history (log entries)
         th.id AS history_id,
         th.log_time,
         th.log_type,
@@ -81,27 +85,29 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
         th.logged_timestamp
 
     FROM DateSeries d
-    LEFT JOIN Timesheet t 
-        ON d.work_date = t.date AND (:userId IS NULL OR t.user_id = :userId)
-    LEFT JOIN Users u 
-        ON t.user_id = u.user_id
-    LEFT JOIN Role r 
+    CROSS JOIN (
+        SELECT * FROM users WHERE (:userId IS NULL OR user_id = :userId)
+    ) u
+    LEFT JOIN timesheet t
+        ON d.work_date = t.date AND t.user_id = u.user_id
+    LEFT JOIN role r
         ON u.role_id = r.role_id
-    LEFT JOIN Work_Schedule ws 
+    LEFT JOIN work_schedule ws
         ON ws.is_active = TRUE
-    LEFT JOIN Timesheet_History th
+    LEFT JOIN timesheet_history th
         ON t.id = th.timesheet_id
 
-    WHERE (:userId IS NOT NULL OR t.user_id IS NOT NULL)
-    ORDER BY d.work_date, th.logged_timestamp
-    """, nativeQuery = true)
+    WHERE (:userId IS NULL OR u.user_id = :userId)
+
+    ORDER BY u.user_id, d.work_date, th.logged_timestamp
+""", nativeQuery = true)
     List<Object[]> fetchTimesheetsWithHistory(
-            @Param("startDate") @Nullable LocalDate startDate,
-            @Param("endDate") @Nullable LocalDate endDate,
-            @Param("userId") @Nullable Long userId
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate,
+            @Param("userId") Long userId
     );
 
-
     List<TimesheetEntity> findByFirstClockInNotNullAndLastClockOutIsNullAndDate(LocalDate today);
+
 }
 

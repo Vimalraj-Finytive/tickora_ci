@@ -18,13 +18,12 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
 
     boolean existsByEmail(String email);
 
-    @Query("SELECT new com.uniq.tms.ams.dto.UserResponseDto( " +
-            "u.userId, " +
-            "u.userName, u.email, u.mobile_number, " +
-            "CASE WHEN u.groupId IS NULL THEN '-' ELSE g.groupName END, " +
-            "r.name, l.name, u.dateOfJoining) " +
+    @Query("SELECT new com.uniq.tms.tms_microservice.dto.UserResponseDto( " +
+            "u.userId, u.userName, u.email, u.mobileNumber, " +
+            "COALESCE(g.groupName, '-'), u.organizationId, r.name, u.dateOfJoining, l.name) " +
             "FROM UserEntity u " +
-            "LEFT JOIN GroupEntity g ON u.groupId = g.groupId " +
+            "LEFT JOIN UserGroupEntity ug ON ug.user.userId = u.userId " +
+            "LEFT JOIN GroupEntity g ON ug.group.groupId = g.groupId " +
             "JOIN RoleEntity r ON u.role = r " +
             "JOIN LocationEntity l ON u.locationId = l.locationId " +
             "WHERE u.organizationId = :orgId AND r.name IN (:role)")
@@ -35,5 +34,7 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
     List<UserEntity> findAllByOrganizationIdAndRole_NameNot(Long orgId, String excludedRole);
 
     List<UserEntity> findByUserIdInAndOrganizationId(List <Long> userIds, Long orgId);
+
+    boolean existsByMobileNumber(String mobileNumber);
 
 }

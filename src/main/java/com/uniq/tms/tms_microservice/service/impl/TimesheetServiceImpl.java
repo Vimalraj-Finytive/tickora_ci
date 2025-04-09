@@ -2,24 +2,28 @@ package com.uniq.tms.tms_microservice.service.impl;
 
 
 import com.uniq.tms.tms_microservice.adapter.TimesheetAdapter;
+import com.uniq.tms.tms_microservice.adapter.UserAdapter;
 import com.uniq.tms.tms_microservice.dto.LogType;
 import com.uniq.tms.tms_microservice.dto.Timeperiod;
 import com.uniq.tms.tms_microservice.dto.TimesheetDto;
 import com.uniq.tms.tms_microservice.entity.TimesheetEntity;
 import com.uniq.tms.tms_microservice.entity.TimesheetHistoryEntity;
+import com.uniq.tms.tms_microservice.entity.UserEntity;
 import com.uniq.tms.tms_microservice.mapper.TimesheetDtoMapper;
 import com.uniq.tms.tms_microservice.mapper.TimesheetEntityMapper;
 import com.uniq.tms.tms_microservice.model.TimesheetHistory;
 import com.uniq.tms.tms_microservice.service.TimesheetService;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class TimesheetServiceImpl implements TimesheetService {
@@ -27,11 +31,13 @@ public class TimesheetServiceImpl implements TimesheetService {
     private final TimesheetAdapter timesheetAdapter;
     private final TimesheetEntityMapper timesheetEntityMapper;
     private final TimesheetDtoMapper timesheetDtoMapper;
+    private final UserAdapter userAdapter;
 
-    public TimesheetServiceImpl(TimesheetAdapter timesheetAdapter, TimesheetEntityMapper timesheetEntityMapper, TimesheetDtoMapper timesheetDtoMapper) {
+    public TimesheetServiceImpl(TimesheetAdapter timesheetAdapter, TimesheetEntityMapper timesheetEntityMapper, TimesheetDtoMapper timesheetDtoMapper, UserAdapter userAdapter) {
         this.timesheetAdapter = timesheetAdapter;
         this.timesheetEntityMapper = timesheetEntityMapper;
         this.timesheetDtoMapper = timesheetDtoMapper;
+        this.userAdapter = userAdapter;
     }
 
 
@@ -45,9 +51,50 @@ public class TimesheetServiceImpl implements TimesheetService {
             endDate = range.endDate();
         }
 
-        return timesheetAdapter.filterTimesheetsForAllUsers(startDate, endDate, userId);
+        List<TimesheetDto> timesheetDtos = timesheetAdapter.filterTimesheetsForAllUsers(startDate, endDate, userId);
+
+        List<UserEntity> allUsers = (userId != null)
+                ? Collections.singletonList(userAdapter.getUserById(userId))
+                : userAdapter.getAllUsers();
+
+        return fillMissingDates(timesheetDtos, allUsers, startDate, endDate);
     }
 
+
+    private List<TimesheetDto> fillMissingDates(List<TimesheetDto> existingDtos, List<UserEntity> allUsers, LocalDate startDate, LocalDate endDate) {
+        Map<String, TimesheetDto> existingMap = new HashMap<>();
+
+        for (TimesheetDto dto : existingDtos) {
+            String key = dto.getUserId() + "|" + dto.getDate();
+            existingMap.put(key, dto);
+        }
+
+        List<TimesheetDto> finalList = new ArrayList<>();
+
+        for (UserEntity user : allUsers) {
+            for (LocalDate currentDate = startDate; !currentDate.isAfter(endDate); currentDate = currentDate.plusDays(1)) {
+                String key = user.getUserId() + "|" + currentDate;
+                if (existingMap.containsKey(key)) {
+                    finalList.add(existingMap.get(key));
+                } else {
+                    TimesheetDto newDto = new TimesheetDto();
+                    newDto.setUserId(user.getUserId());
+                    newDto.setUserName(user.getUserName());
+                    newDto.setRole(user.getRole().getName());
+                    newDto.setDate(currentDate);
+                    newDto.setFirstClockIn(LocalTime.MIDNIGHT);
+                    newDto.setLastClockOut(LocalTime.MIDNIGHT);
+                    newDto.setTrackedHours(LocalTime.MIDNIGHT);
+                    newDto.setRegularHours(LocalTime.MIDNIGHT);
+                    newDto.setDayType("Holiday");
+                    newDto.setHistory(new ArrayList<>());
+                    finalList.add(newDto);
+                }
+            }
+        }
+
+        return finalList;
+    }
 
     private LocalDateRange calculateDateRange(LocalDate date, String timePeriod) {
         return Timeperiod.fromString(timePeriod).calculateDateRange(date);
@@ -126,7 +173,10 @@ public class TimesheetServiceImpl implements TimesheetService {
         TimesheetEntity timesheet = timesheetAdapter.findUserIdAndDate(userId, date);
 
         if (timesheet == null) {
-            return null;
+            timesheet = new TimesheetEntity();
+            timesheet.setUserId(userId);
+            timesheet.setDate(date);
+            timesheet.setCreatedAt(LocalDateTime.now());
         }
 
         if (request.getFirstClockIn() != null) {
@@ -146,11 +196,7 @@ public class TimesheetServiceImpl implements TimesheetService {
     private void calculateHours(TimesheetEntity timesheet) {
         if (timesheet.getFirstClockIn() != null && timesheet.getLastClockOut() != null) {
             Duration workedDuration = Duration.between(timesheet.getFirstClockIn(), timesheet.getLastClockOut());
-            long workedHours = workedDuration.toHours();
-            long workedMinutes = workedDuration.toMinutesPart();
-
-            timesheet.setRegularHours(LocalTime.of((int) workedHours, (int) workedMinutes));
-
+            timesheet.setRegularHours(LocalTime.ofSecondOfDay(workedDuration.toSeconds()));
             timesheet.setTrackedHours(LocalTime.ofSecondOfDay(workedDuration.toSeconds()));
         }
     }
@@ -170,5 +216,7 @@ public class TimesheetServiceImpl implements TimesheetService {
 
         timesheetAdapter.saveAll(openClockIns);
     }
+
+
 }
 

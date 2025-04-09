@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -62,6 +63,18 @@ public class TimesheetController {
 
         return ResponseEntity.ok(new ApiResponse<>(200, "Timesheet updated successfully", updatedTimesheet));
     }
+
+    @PutMapping("/upsert")
+    public ResponseEntity<ApiResponse<TimesheetDto>> upsertClockInOutTimes(
+            @RequestParam Long userId,
+            @RequestParam LocalDate date,
+            @RequestBody TimesheetDto request) {
+
+        TimesheetDto timesheetDto = authFacade.upsertClockInOut(userId, date, request);
+
+        return ResponseEntity.ok(new ApiResponse<>(200, "Timesheet upserted successfully", timesheetDto));
+    }
+
 
 
 }

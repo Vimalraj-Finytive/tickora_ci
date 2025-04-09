@@ -5,9 +5,13 @@ import java.util.List;
 public class AddGroup {
 
     private String groupName;
-    private List<Long> managerIds;
     private Long locationId;
     private List<Long> supervisorsId;
+    private String type;
+
+    public String getType() {return type; }
+
+    public void setType(String type) {this.type = type; }
 
     public List<Long> getSupervisorsId() {
         return supervisorsId;
@@ -25,14 +29,6 @@ public class AddGroup {
         this.groupName = groupName;
     }
 
-    public List<Long> getManagerIds() {
-        return managerIds;
-    }
-
-    public void setManagerIds(List<Long> managerIds) {
-        this.managerIds = managerIds;
-    }
-
     public Long getLocationId() {
         return locationId;
     }
@@ -40,5 +36,6 @@ public class AddGroup {
     public void setLocationId(Long locationId) {
         this.locationId = locationId;
     }
+
 
 }

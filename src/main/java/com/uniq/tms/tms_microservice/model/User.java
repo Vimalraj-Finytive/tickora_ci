@@ -7,9 +7,8 @@ public class User {
     private Long userId;
     private String userName;
     private String email;
-    private String mobile_number;
+    private String mobileNumber;
     private Long organizationId;
-    private Long groupId;
     private Long roleId;
     private Long locationId;
     private LocalDate dateOfJoining;
@@ -46,12 +45,12 @@ public class User {
         this.email = email;
     }
 
-    public String getMobile_number() {
-        return mobile_number;
+    public String getMobileNumber() {
+        return mobileNumber;
     }
 
-    public void setMobile_number(String mobile_number) {
-        this.mobile_number = mobile_number;
+    public void setMobileNumber(String mobileNumber) {
+        this.mobileNumber = mobileNumber;
     }
 
     public Long getOrganizationId() {
@@ -60,14 +59,6 @@ public class User {
 
     public void setOrganizationId(Long organizationId) {
         this.organizationId = organizationId;
-    }
-
-    public Long getGroupId() {
-        return groupId;
-    }
-
-    public void setGroupId(Long groupId) {
-        this.groupId = groupId;
     }
 
     public Long getRoleId() {

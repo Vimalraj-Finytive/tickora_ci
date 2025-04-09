@@ -30,7 +30,7 @@ public class UserEntity {
     private String email;
 
     @Column(name = "mobile_number", nullable = false, unique = true)
-    private String mobile_number;
+    private String mobileNumber;
 
     @Column(name = "password", nullable = false)
     private String password;
@@ -40,9 +40,6 @@ public class UserEntity {
 
     @Column(name = "organization_id")
     private Long organizationId;
-
-    @Column(name = "group_id")
-    private Long groupId;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -57,6 +54,13 @@ public class UserEntity {
 
     @Column(name = "date_of_joining")
     private LocalDate dateOfJoining;
+
+    public UserEntity(Long userId){
+        this.userId = userId;
+    }
+
+    public UserEntity() {
+    }
 
 
     public LocalDate getDateOfJoining() {
@@ -99,12 +103,12 @@ public class UserEntity {
         this.email = email;
     }
 
-    public String getMobile_number() {
-        return mobile_number;
+    public String getMobileNumber() {
+        return mobileNumber;
     }
 
-    public void setMobile_number(String mobile_number) {
-        this.mobile_number = mobile_number;
+    public void setMobileNumber(String mobileNumber) {
+        this.mobileNumber = mobileNumber;
     }
 
     public String getPassword() {
@@ -137,14 +141,6 @@ public class UserEntity {
 
     public void setOrganizationId(Long organizationId) {
         this.organizationId = organizationId;
-    }
-
-    public Long getGroupId() {
-        return groupId;
-    }
-
-    public void setGroupId(Long groupId) {
-        this.groupId = groupId;
     }
 
     @PrePersist

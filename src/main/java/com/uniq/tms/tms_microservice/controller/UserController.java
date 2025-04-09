@@ -1,6 +1,6 @@
 package com.uniq.tms.tms_microservice.controller;
 
-
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.uniq.tms.tms_microservice.config.JwtUtil;
 import com.uniq.tms.tms_microservice.constant.UserConstant;
 import com.uniq.tms.tms_microservice.dto.AddGroupDto;
@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
+import java.time.LocalDate;
 import java.util.Map;
 
 @RestController
@@ -138,15 +138,21 @@ public class UserController {
     @PostMapping("/addMember")
     public ResponseEntity<ApiResponse> addUserToGroup(
             @RequestHeader("Authorization") String token,
-            @RequestParam Long groupId,
             @RequestBody AddMemberDto addMemberDto) {
 
-        ApiResponse response = authFacade.addUserToGroup(token, groupId, addMemberDto);
+        ApiResponse response = authFacade.addUserToGroup(token, addMemberDto);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
+    @PatchMapping("/updateGroup")
+    public ResponseEntity<ApiResponse> updateGroup(@RequestHeader("Authorization") String token,@RequestBody AddGroupDto addGroupDto,@RequestParam Long groupId){
+        ApiResponse response = authFacade.updateGroupDetails(token, addGroupDto,groupId);
+
+        return ResponseEntity.status((response.getStatusCode())).body(response);
+    }
+
     @GetMapping("/getAllGroups")
-    public ResponseEntity<ApiResponse> getAllGroups(@RequestHeader("Authorization") String token) {
+    public ResponseEntity<ApiResponse> getAllGroups(@RequestHeader("Authorization") String token) throws JsonProcessingException {
         ApiResponse response = authFacade.getAllGroups(token);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
@@ -178,8 +184,9 @@ public class UserController {
 
     @GetMapping("/getGroupMembers")
     public ResponseEntity<ApiResponse> getUserGroupMembers(@RequestHeader("Authorization") String token,
-                                                           @RequestParam Long groupId) {
-        ApiResponse response = authFacade.getUserGroupMembers(token, groupId);
+                                                           @RequestParam Long groupId,
+                                                           @RequestParam LocalDate date) {
+        ApiResponse response = authFacade.getUserGroupMembers(token, groupId, date);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
