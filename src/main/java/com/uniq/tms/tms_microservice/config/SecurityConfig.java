@@ -34,7 +34,7 @@ public class SecurityConfig {
                                 "/", "/browser/**", "/assets/**", "/media/**", "/*.js", "/*.css", "/*.html", "/login")
                         .permitAll()
                         .requestMatchers("/tms/login", "/tms/logout", "/tms/validate-email", "/tms/reset-password","/tms/timesheets/**").permitAll()
-                        .requestMatchers("/tms/admin/**" ).hasAnyAuthority("admin", "SuperAdmin", "manager")
+                        .requestMatchers("/tms/admin/**" ).hasAnyAuthority("Admin", "SuperAdmin", "Manager","Staff")
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(exception -> exception
