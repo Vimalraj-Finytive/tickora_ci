@@ -1,11 +1,8 @@
 package com.uniq.tms.tms_microservice.adapter;
 
-
-
 import com.uniq.tms.tms_microservice.dto.TimesheetDto;
 import com.uniq.tms.tms_microservice.entity.TimesheetEntity;
 import com.uniq.tms.tms_microservice.entity.TimesheetHistoryEntity;
-
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -21,5 +18,6 @@ public interface TimesheetAdapter {
     TimesheetEntity findUserIdAndDate(Long userId, LocalDate date);
     List<TimesheetEntity> findByFirstClockInNotNullAndLastClockOutIsNullAndDate(LocalDate today);
     void saveAll(List<TimesheetEntity> openClockIns);
+    List<TimesheetEntity> getLatestLogsByTimesheetIds(List<Long> memberIds, Long orgId, LocalDate date);
 }
 

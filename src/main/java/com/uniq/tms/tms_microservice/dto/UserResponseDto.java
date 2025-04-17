@@ -9,19 +9,29 @@ public class UserResponseDto {
     private String email;
     private String mobileNumber;
     private String groupName;
+    private Long orgId;
     private String roleName;
     private String locationName;
     private LocalDate dateOfJoining;
 
-    public UserResponseDto(Long userId, String userName, String email, String mobile, String teamName, String roleName, String locationName, LocalDate dateOfJoining) {
+    public UserResponseDto(Long userId, String userName, String email, String mobileNumber, String groupName, Long orgId, String roleName, LocalDate dateOfJoining, String locationName) {
         this.userId = userId;
         this.userName = userName;
         this.email = email;
-        this.mobileNumber = mobile;
-        this.groupName = teamName;
+        this.mobileNumber = mobileNumber;
+        this.groupName = groupName;
+        this.orgId = orgId;
         this.roleName = roleName;
-        this.locationName = locationName;
         this.dateOfJoining = dateOfJoining;
+        this.locationName = locationName;
+    }
+
+    public Long getOrgId() {
+        return orgId;
+    }
+
+    public void setOrgId(Long orgId) {
+        this.orgId = orgId;
     }
 
     public LocalDate getDateOfJoining() {

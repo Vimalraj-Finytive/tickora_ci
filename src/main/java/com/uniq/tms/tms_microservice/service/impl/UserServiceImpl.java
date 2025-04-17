@@ -1,24 +1,32 @@
 package com.uniq.tms.tms_microservice.service.impl;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.uniq.tms.tms_microservice.adapter.TimesheetAdapter;
 import com.uniq.tms.tms_microservice.adapter.UserAdapter;
+import com.uniq.tms.tms_microservice.dto.AddGroupDto;
 import com.uniq.tms.tms_microservice.dto.GroupDto;
+import com.uniq.tms.tms_microservice.dto.GroupResponseDto;
+import com.uniq.tms.tms_microservice.dto.UserGroupDto;
 import com.uniq.tms.tms_microservice.dto.UserResponseDto;
 import com.uniq.tms.tms_microservice.dto.UserRole;
 import com.uniq.tms.tms_microservice.entity.GroupEntity;
 import com.uniq.tms.tms_microservice.entity.LocationEntity;
 import com.uniq.tms.tms_microservice.entity.OrganizationEntity;
 import com.uniq.tms.tms_microservice.entity.RoleEntity;
+import com.uniq.tms.tms_microservice.entity.TimesheetEntity;
 import com.uniq.tms.tms_microservice.entity.UserEntity;
+import com.uniq.tms.tms_microservice.entity.UserGroupEntity;
+import com.uniq.tms.tms_microservice.mapper.UserDtoMapper;
 import com.uniq.tms.tms_microservice.mapper.UserEntityMapper;
 import com.uniq.tms.tms_microservice.model.AddGroup;
+import com.uniq.tms.tms_microservice.model.AddMember;
 import com.uniq.tms.tms_microservice.model.Group;
-import com.uniq.tms.tms_microservice.model.GroupResponse;
 import com.uniq.tms.tms_microservice.model.Location;
-import com.uniq.tms.tms_microservice.model.Member;
 import com.uniq.tms.tms_microservice.model.Role;
 import com.uniq.tms.tms_microservice.model.User;
+import com.uniq.tms.tms_microservice.model.UserGroup;
 import com.uniq.tms.tms_microservice.repository.LocationRepository;
 import com.uniq.tms.tms_microservice.repository.OrganizationRepository;
 import com.uniq.tms.tms_microservice.repository.RoleRepository;
@@ -29,36 +37,46 @@ import jakarta.persistence.EntityNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 import java.lang.reflect.Field;
-import java.sql.Array;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
 public class UserServiceImpl implements UserService {
 
     private final UserAdapter userAdapter;
+    private final TimesheetAdapter timesheetAdapter;
     private final UserEntityMapper userEntityMapper;
     private final OrganizationRepository organizationRepository;
     private final RoleRepository roleRepository;
     private final LocationRepository locationRepository;
     private final EmailUtil emailUtil;
+    private final UserDtoMapper userDtoMapper;
+    private final ObjectMapper objectMapper;
 
-    public UserServiceImpl(UserAdapter userAdapter, UserEntityMapper userEntityMapper,OrganizationRepository organizationRepository, RoleRepository roleRepository, LocationRepository locationRepository, EmailUtil emailUtil) {
+
+
+    public UserServiceImpl(UserAdapter userAdapter, TimesheetAdapter timesheetAdapter, UserEntityMapper userEntityMapper, OrganizationRepository organizationRepository, RoleRepository roleRepository, LocationRepository locationRepository, EmailUtil emailUtil, UserDtoMapper userDtoMapper, ObjectMapper objectMapper) {
         this.userAdapter = userAdapter;
+        this.timesheetAdapter = timesheetAdapter;
         this.userEntityMapper = userEntityMapper;
         this.organizationRepository = organizationRepository;
         this.roleRepository = roleRepository;
         this.locationRepository = locationRepository;
         this.emailUtil = emailUtil;
+        this.userDtoMapper = userDtoMapper;
+        this.objectMapper = objectMapper;
     }
 
     @Override
@@ -214,92 +232,113 @@ public class UserServiceImpl implements UserService {
             entity.setLocationEntity(locationEntity);
         }
 
-        System.out.println("Saving Group: " + entity.getGroupName() + ", OrgID: " + orgId);
 
         GroupEntity savedEntity = userAdapter.saveGroup(entity);
 
+        for (Long id : groupMiddleware.getSupervisorsId()) {
+            UserEntity user = userAdapter.findById(id).orElseThrow(()->new UsernameNotFoundException("User ID " + id + " not found."));
+
+
+            createUserGroup(new UserGroup(savedEntity.getGroupId(), id, groupMiddleware.getType()),orgId);
+
+        }
         return userEntityMapper.toGroupMiddleware(savedEntity);
     }
 
     @Override
-    public Member addUserToGroup(Long groupId, Member memberMiddleware, Long orgId) {
-        GroupEntity groupEntity = userAdapter.findByTeamId(groupId)
-                .orElseThrow(() -> new RuntimeException("Team not found"));
+    public List<User> addUserToGroup(AddMember addMemberMiddleware, Long orgId){
+        List<User> savedUsers =new ArrayList<User>();
+        for (Long id : addMemberMiddleware.getUserId()) {
+            UserEntity userEntity = userAdapter.findById(id).orElseThrow(()->new UsernameNotFoundException("User ID " + id + " not found."));
+            createUserGroup(new UserGroup(addMemberMiddleware.getGroupId(), id, addMemberMiddleware.getType()), orgId);
 
-        if (!groupEntity.getOrganizationEntity().getOrganizationId().equals(orgId)) {
-            throw new RuntimeException("Unauthorized - You cannot modify this team");
+            User userMiddleware = userEntityMapper.toMiddleware(userEntity);
+            savedUsers.add(userMiddleware);
         }
 
-        List<Long> existingMembers = groupEntity.getGroupMemberIds();
-        if (existingMembers == null) {
-            existingMembers = new ArrayList<>();
-        }
-
-        for (Long memberId : memberMiddleware.getGroupMember()) {
-            if (existingMembers.contains(memberId)) {
-                throw new DataIntegrityViolationException("User with ID " + memberId + " is already a member of this team");
-            }
-        }
-
-        existingMembers.addAll(memberMiddleware.getGroupMember());
-        groupEntity.setGroupMemberIds(existingMembers);
-
-        GroupEntity savedGroup = userAdapter.saveMember(groupEntity);
-
-        return userEntityMapper.toMemberMiddleware(savedGroup);
+        return savedUsers;
     }
+
+    @Override
+    public UserGroup createUserGroup(UserGroup userGroupMiddleware, Long orgId) {
+        List<UserGroupEntity> existing = userAdapter.findByUserUserIdAndGroupGroupId(
+                userGroupMiddleware.getUserId(),
+                userGroupMiddleware.getGroupId()
+        );
+
+        if (!existing.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "User is already assigned to this group more than once.");
+        }
+
+
+        UserGroupEntity entity = userEntityMapper.toEntity(userGroupMiddleware);
+
+        UserGroupEntity savedEntity=null;
+
+        savedEntity = userAdapter.saveUserGroup(entity);
+        return userEntityMapper.toMiddleware(savedEntity);
+    }
+
+    @Override
+    public void updateGroupDetails(AddGroupDto addGroupDto, Long groupId, Long orgId){
+        AddGroup addGroup = userDtoMapper.toMiddleware(addGroupDto);
+        GroupEntity groupEntity = userEntityMapper.toEntity(addGroup);
+
+        boolean nameExists = userAdapter.existsGroupNameInOrganization(groupEntity.getGroupName(),orgId, groupId);
+
+        if (nameExists) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Group name already exists");
+        }
+
+
+        userAdapter.updateGroupNameAndLocation(groupId,groupEntity.getGroupName(),groupEntity.getLocationEntity().getLocationId());
+        userAdapter.deleteSupervisorsByGroupId(groupId);
+
+        // Step 2: Insert new supervisors
+        GroupEntity group = new GroupEntity(groupId);
+        for (Long supervisorId : addGroup.getSupervisorsId()) {
+            UserEntity user = new UserEntity(supervisorId);
+            UserGroupEntity supervisorEntry = new UserGroupEntity();
+            supervisorEntry.setGroup(group);
+            supervisorEntry.setUser(user);
+            supervisorEntry.setType("Supervisor");
+
+            userAdapter.saveUserGroup(supervisorEntry);
+        }
+    }
+
 
     private static final  Logger log = LoggerFactory.getLogger(UserServiceImpl.class);
 
-    @Override
-    public List<GroupResponse> getAllGroups(Long orgId) {
-        List<Object[]> rows = userAdapter.getGroupDataNative(orgId);
+    public List<GroupResponseDto> getAllGroups(Long orgId) throws JsonProcessingException {
+        List<Object[]> results = userAdapter.getGroupDataNative(orgId);
+        List<GroupResponseDto> finalList = new ArrayList<>();
 
-        return rows.stream().map(row -> {
-            GroupResponse dto = new GroupResponse();
+        for (Object[] row : results) {
+            Long groupId = ((Number) row[0]).longValue();
+            String groupName = (String) row[1];
+            String location = (String) row[2];
+            List<UserGroupDto> membersDetails = new ArrayList<>();
 
-            dto.setGroupId(((Number) row[0]).longValue());
-
-            dto.setGroupName((String) row[1]);
-
-            List<String> managerList = new ArrayList<>();
-            Object sqlArrayObj = row[2];
-
-            try {
-                if (sqlArrayObj instanceof Array) {
-                    String[] array = (String[]) ((Array) sqlArrayObj).getArray();
-                    managerList = Arrays.asList(array);
-                } else if (sqlArrayObj instanceof String[]) {
-                    managerList = Arrays.asList((String[]) sqlArrayObj);
-                } else if (sqlArrayObj instanceof List<?>) {
-                    managerList = ((List<?>) sqlArrayObj).stream()
-                            .map(String::valueOf)
-                            .toList();
-                } else if (sqlArrayObj != null) {
-                    ObjectMapper mapper = new ObjectMapper();
-                    managerList = mapper.readValue(sqlArrayObj.toString(), new TypeReference<>() {});
-                }
-            } catch (Exception e) {
-                log.error("Error parsing leadIds: {}", e.getMessage());
+            if (row[3] == null) {
+                log.warn("No members data found for group ID {}", groupId);
+            } else {
+                String json = row[3].toString();
+                membersDetails = objectMapper.readValue(json, new TypeReference<>() {});
             }
 
-            dto.setManagerIds(managerList);
+            GroupResponseDto dto = new GroupResponseDto();
+            dto.setGroupId(groupId);
+            dto.setGroupName(groupName);
+            dto.setLocation(location);
+            dto.setMembersDetails(membersDetails);
 
-            dto.setLocation((String) row[3]);
+            finalList.add(dto);
+        }
 
-            try {
-                String json = row[4].toString();
-                ObjectMapper objectMapper = new ObjectMapper();
-                List<Map<String, Object>> members = objectMapper.readValue(json, new TypeReference<>() {});
-                dto.setGroupmember(members);
-            } catch (Exception e) {
-                log.error("Error parsing groupmember: {}", e.getMessage());
-                dto.setGroupmember(Collections.emptyList());
-            }
-
-            return dto;
-        }).toList();
+        return finalList;
     }
+
 
     @Override
     public void deleteMember(Long groupId, Long memberId) {
@@ -308,7 +347,9 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public void deleteGroup(Long groupId) {
+        userAdapter.deleteByGroupId(groupId);
         userAdapter.deleteGroup(groupId);
+
     }
 
     @Override
@@ -330,10 +371,12 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public List<Map<String, Object>> getStudentGroupMembers(Long groupId, Long orgId) {
+    public List<Map<String, Object>> getStudentGroupMembers(Long groupId, Long orgId, LocalDate date) {
 
-        GroupEntity groupEntity = userAdapter.getGroupById(groupId, orgId);
-        List<Long> memberIds = groupEntity.getGroupMemberIds();
+        List<UserGroupEntity> groupEntity = userAdapter.getGroupMembersByGroupId(groupId, orgId);
+        List<Long> memberIds = groupEntity.stream()
+                .map(ug -> ug.getUser().getUserId())
+                .toList();
 
         if (memberIds == null || memberIds.isEmpty()) {
             return Collections.emptyList();
@@ -341,17 +384,33 @@ public class UserServiceImpl implements UserService {
 
         List<UserEntity> studentUsers = userAdapter.getUsersByIds(memberIds, orgId);
 
+        List<TimesheetEntity> latestLogs = timesheetAdapter.
+                getLatestLogsByTimesheetIds(memberIds, orgId, date);
+        Map<Long, TimesheetEntity> latestLogsMap = latestLogs.stream()
+                .collect(Collectors.toMap(TimesheetEntity::getUserId, Function.identity()));
+
+
         List<Map<String, Object>> studentDetailsList = studentUsers.stream()
-//                .filter(user -> "student".equalsIgnoreCase(user.getRole().getName()))
                 .map(user -> {
                     Map<String, Object> map = new HashMap<>();
                     map.put("id", user.getUserId());
                     map.put("name", user.getUserName());
                     map.put("role", user.getRole().getName());
+
+                    TimesheetEntity timesheet = latestLogsMap.get(user.getUserId());
+                    if(timesheet!=null){
+                        map.put("firstClockIn", timesheet.getFirstClockIn());
+                        map.put("lastClockOut", timesheet.getLastClockOut());
+                    }
+                    else{
+                        map.put("firstClockIn",null);
+                        map.put("lastClockOut",null);
+                    }
                     return map;
                 })
-                .collect(Collectors.toList());
-        return studentDetailsList;
+                .toList();
+                return studentDetailsList;
+
     }
 
 

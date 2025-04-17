@@ -8,9 +8,11 @@ import com.uniq.tms.tms_microservice.entity.GroupEntity;
 import com.uniq.tms.tms_microservice.entity.LocationEntity;
 import com.uniq.tms.tms_microservice.entity.RoleEntity;
 import com.uniq.tms.tms_microservice.entity.UserEntity;
+import com.uniq.tms.tms_microservice.entity.UserGroupEntity;
 import com.uniq.tms.tms_microservice.repository.LocationRepository;
 import com.uniq.tms.tms_microservice.repository.RoleRepository;
 import com.uniq.tms.tms_microservice.repository.TeamRepository;
+import com.uniq.tms.tms_microservice.repository.UserGroupRepository;
 import com.uniq.tms.tms_microservice.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
@@ -29,12 +31,14 @@ public class UserAdapterImpl implements UserAdapter {
     private final TeamRepository teamRepository;
     private final LocationRepository locationRepository;
     private final UserRepository userRepository;
+    private final UserGroupRepository userGroupRepository;
 
-    public UserAdapterImpl(RoleRepository roleRepository, TeamRepository teamRepository, LocationRepository locationRepository, UserRepository userRepository) {
+    public UserAdapterImpl(RoleRepository roleRepository, TeamRepository teamRepository, LocationRepository locationRepository, UserRepository userRepository, UserGroupRepository userGroupRepository) {
         this.roleRepository = roleRepository;
         this.teamRepository = teamRepository;
         this.locationRepository = locationRepository;
         this.userRepository = userRepository;
+        this.userGroupRepository = userGroupRepository;
     }
 
     @Override
@@ -115,11 +119,6 @@ public class UserAdapterImpl implements UserAdapter {
     }
 
     @Override
-    public GroupEntity saveMember(GroupEntity group) {
-        return teamRepository.save(group);
-    }
-
-    @Override
     public Optional<GroupEntity> findByTeamId(Long teamId) {
         return teamRepository.findById(teamId);
     }
@@ -156,10 +155,10 @@ public class UserAdapterImpl implements UserAdapter {
     }
 
     @Override
-    public GroupEntity getGroupById(Long groupId, Long orgId) {
-        return teamRepository.findByGroupIdAndOrganizationEntity_OrganizationId(groupId, orgId)
-                .orElseThrow(() -> new RuntimeException("Group not found"));
+    public List<UserGroupEntity> getGroupMembersByGroupId(Long groupId, Long orgId) {
+        return userGroupRepository.findByGroup_GroupIdAndGroup_OrganizationEntity_OrganizationId(groupId, orgId);
     }
+
 
     @Override
     public List<UserEntity> getUsersByIds(List<Long> userIds, Long orgId) {
@@ -171,5 +170,49 @@ public class UserAdapterImpl implements UserAdapter {
         return userRepository.existsByMobileNumber(mobileNumber);
     }
 
+    @Override
+    public List<UserEntity> getAllUsers() {
+        return userRepository.findAll();
+    }
+
+    @Override
+    public UserEntity getUserById(Long userId) {
+        return userRepository.findById(userId).orElse(null);
+    }
+
+    @Override
+    public void deleteByGroupId( Long groupId){
+        userGroupRepository.deleteByGroupId(groupId);
+    }
+
+    @Override
+    public UserGroupEntity saveUserGroup(UserGroupEntity entity) {
+        return userGroupRepository.save(entity);
+    }
+
+    @Override
+    public List<UserGroupEntity> findByUserUserIdAndGroupGroupId(Long userId, Long groupId){
+        return userGroupRepository.findByUserUserIdAndGroupGroupId(userId,groupId);
+    };
+
+    @Override
+    public void updateSupervisorUser(Long groupId,Long newUserId){
+        userGroupRepository.updateSupervisorUser(groupId,newUserId);
+    }
+
+    @Override
+    public void updateGroupNameAndLocation(Long groupId, String groupName, Long locationId){
+        teamRepository.updateGroupNameAndLocation(groupId,groupName,locationId);
+    }
+
+    @Override
+    public void deleteSupervisorsByGroupId( Long groupId){
+        userGroupRepository.deleteSupervisorsByGroupId(groupId);
+    }
+
+    @Override
+    public boolean existsGroupNameInOrganization(String groupName, Long orgId, Long groupId){
+        return teamRepository.existsGroupNameInOrganization(groupName,orgId,groupId);
+    }
 
 }

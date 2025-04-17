@@ -41,9 +41,6 @@ public class UserEntity {
     @Column(name = "organization_id")
     private Long organizationId;
 
-    @Column(name = "group_id")
-    private Long groupId;
-
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -57,6 +54,13 @@ public class UserEntity {
 
     @Column(name = "date_of_joining")
     private LocalDate dateOfJoining;
+
+    public UserEntity(Long userId){
+        this.userId = userId;
+    }
+
+    public UserEntity() {
+    }
 
 
     public LocalDate getDateOfJoining() {
@@ -137,14 +141,6 @@ public class UserEntity {
 
     public void setOrganizationId(Long organizationId) {
         this.organizationId = organizationId;
-    }
-
-    public Long getGroupId() {
-        return groupId;
-    }
-
-    public void setGroupId(Long groupId) {
-        this.groupId = groupId;
     }
 
     @PrePersist

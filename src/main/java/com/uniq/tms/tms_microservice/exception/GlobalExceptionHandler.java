@@ -4,6 +4,7 @@ import com.uniq.tms.tms_microservice.dto.ApiResponse;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
@@ -35,10 +36,12 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(ResponseStatusException.class)
-    public ResponseEntity<ApiResponse> handleResponseStatusException(ResponseStatusException ex) {
-        return ResponseEntity.status(ex.getStatusCode()).body(
-                new ApiResponse(ex.getStatusCode().value(), ex.getReason(), false)
-        );
+    public ResponseEntity<Object> handleResponseStatusException(ResponseStatusException ex) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("statusCode", ex.getStatusCode().value());
+        body.put("message", ex.getReason()); // NOT ex.getMessage() to avoid the "409 CONFLICT ..." format
+        body.put("data", null);
+        return new ResponseEntity<>(body, ex.getStatusCode());
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
@@ -47,5 +50,15 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(new ApiResponse(409, message, null));
     }
+
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ApiResponse> handleValidation(MethodArgumentNotValidException ex) {
+        Map<String, String> errors = new HashMap<>();
+        ex.getBindingResult().getFieldErrors().forEach(error ->
+                errors.put("Error", error.getDefaultMessage()));
+        return ResponseEntity.badRequest().body(new ApiResponse(ex.getStatusCode().value(),errors.values().toString(),false));
+    }
+
 
 }
