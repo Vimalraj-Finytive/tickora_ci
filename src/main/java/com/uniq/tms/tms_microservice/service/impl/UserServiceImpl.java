@@ -43,12 +43,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import java.lang.reflect.Field;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -131,6 +128,8 @@ public class UserServiceImpl implements UserService {
         String encryptedPassword = PasswordUtil.encryptPassword(defaultPassword);
         entity.setPassword(encryptedPassword);
         entity.setDefaultPassword(true);
+        entity.setActive(true);
+        entity.setCreatedAt(LocalDateTime.now());
 
         UserEntity saveEntity = userAdapter.saveUser(entity);
         boolean isNewUser = saveEntity.isDefaultPassword();
@@ -193,24 +192,50 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public List<UserResponseDto> getUsers(Long orgId, String role) {
-        System.out.println("Fetching users for orgId: " + orgId);
         List<String> accessibleRoles = UserRole.getRolesFor(role);
         if (accessibleRoles.isEmpty()) {
             throw new RuntimeException("Unauthorized");
         }
-        List<UserResponseDto> users = userAdapter.findByOrganizationId(orgId, accessibleRoles);
-        System.out.println("Fetched users: " + users);
-        return users;
+
+        // This query still gives duplicate rows
+        List<Object[]> rawResults = userAdapter.findRawUsersWithGroups(orgId, accessibleRoles);
+
+        // Map to avoid duplicate users
+        Map<Long, UserResponseDto> userMap = new LinkedHashMap<>();
+
+        for (Object[] row : rawResults) {
+            Long userId = (Long) row[0];
+            String groupName = (String) row[4];
+
+            UserResponseDto userDto = userMap.get(userId);
+            if (userDto == null) {
+                userDto = new UserResponseDto();
+                userDto.setUserId(userId);
+                userDto.setUserName((String) row[1]);
+                userDto.setEmail((String) row[2]);
+                userDto.setMobileNumber((String) row[3]);
+                userDto.setGroupName(new ArrayList<>());
+                userDto.setRoleName((String) row[6]);
+                userDto.setDateOfJoining((LocalDate) row[7]);
+                userDto.setLocationName((String) row[8]);
+                userMap.put(userId, userDto);
+            }
+            if (groupName != null && !groupName.equals("-")) {
+                userDto.getGroupName().add(groupName);
+            }
+        }
+
+        return new ArrayList<>(userMap.values());
     }
 
     @Override
     public User deleteUser(Long orgId, Long userId) {
         UserEntity user = userAdapter.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new UsernameNotFoundException("User ID " + userId + " not found."));
         if (!user.getOrganizationId().equals(orgId)) {
             throw new RuntimeException("Unauthorized");
         }
-        userAdapter.deleteUser(user);
+        userAdapter.deactivateUserById(userId);
         return userEntityMapper.toMiddleware(user);
     }
 
@@ -249,7 +274,7 @@ public class UserServiceImpl implements UserService {
     public List<User> addUserToGroup(AddMember addMemberMiddleware, Long orgId){
         List<User> savedUsers =new ArrayList<User>();
         for (Long id : addMemberMiddleware.getUserId()) {
-            UserEntity userEntity = userAdapter.findById(id).orElseThrow(()->new UsernameNotFoundException("User ID " + id + " not found."));
+            UserEntity userEntity = userAdapter.findById(id).orElseThrow(()->new UsernameNotFoundException("User not found."));
             createUserGroup(new UserGroup(addMemberMiddleware.getGroupId(), id, addMemberMiddleware.getType()), orgId);
 
             User userMiddleware = userEntityMapper.toMiddleware(userEntity);
@@ -267,7 +292,7 @@ public class UserServiceImpl implements UserService {
         );
 
         if (!existing.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "User is already assigned to this group more than once.");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "This user is already assigned to this group more than once.");
         }
 
 
@@ -275,7 +300,9 @@ public class UserServiceImpl implements UserService {
 
         UserGroupEntity savedEntity=null;
 
-        savedEntity = userAdapter.saveUserGroup(entity);
+
+            savedEntity = userAdapter.saveUserGroup(entity);
+
         return userEntityMapper.toMiddleware(savedEntity);
     }
 
@@ -292,51 +319,102 @@ public class UserServiceImpl implements UserService {
 
 
         userAdapter.updateGroupNameAndLocation(groupId,groupEntity.getGroupName(),groupEntity.getLocationEntity().getLocationId());
-        userAdapter.deleteSupervisorsByGroupId(groupId);
+
 
         // Step 2: Insert new supervisors
         GroupEntity group = new GroupEntity(groupId);
-        for (Long supervisorId : addGroup.getSupervisorsId()) {
-            UserEntity user = new UserEntity(supervisorId);
+        for (Long usersId : addGroup.getSupervisorsId()) {
+            UserEntity user = new UserEntity(usersId);
             UserGroupEntity supervisorEntry = new UserGroupEntity();
             supervisorEntry.setGroup(group);
             supervisorEntry.setUser(user);
             supervisorEntry.setType("Supervisor");
+            userAdapter.deleteSupervisorsByGroupId(groupId, usersId);
 
             userAdapter.saveUserGroup(supervisorEntry);
         }
     }
 
 
+
     private static final  Logger log = LoggerFactory.getLogger(UserServiceImpl.class);
 
     public List<GroupResponseDto> getAllGroups(Long orgId) throws JsonProcessingException {
         List<Object[]> results = userAdapter.getGroupDataNative(orgId);
+
+        // Maps for collecting union data
+        Map<Long, Set<String>> userToGroups = new HashMap<>();
+        Map<Long, Set<String>> userToLocations = new HashMap<>();
+        Map<Long, List<UserGroupDto>> groupIdToActiveMembers = new HashMap<>();
+
+        for (Object[] row : results) {
+            Long groupId = ((Number) row[0]).longValue();
+            String groupName = (String) row[1];
+            String location = (String) row[2];
+
+            if (row[3] != null) {
+                String json = row[3].toString();
+                List<UserGroupDto> allMembers = objectMapper.readValue(json, new TypeReference<>() {});
+
+                for (UserGroupDto member : allMembers) {
+                    if (Boolean.TRUE.equals(member.getActive())) {
+                        Long userId = member.getUserId();
+
+                        // Collect unions
+                        userToGroups.computeIfAbsent(userId, k -> new HashSet<>()).add(groupName);
+                        userToLocations.computeIfAbsent(userId, k -> new HashSet<>()).add(location);
+
+                        // Assign member to group
+                        groupIdToActiveMembers.computeIfAbsent(groupId, k -> new ArrayList<>()).add(member);
+                    }
+                }
+            }
+        }
+
+        // Final transformation
         List<GroupResponseDto> finalList = new ArrayList<>();
 
         for (Object[] row : results) {
             Long groupId = ((Number) row[0]).longValue();
             String groupName = (String) row[1];
             String location = (String) row[2];
-            List<UserGroupDto> membersDetails = new ArrayList<>();
 
-            if (row[3] == null) {
-                log.warn("No members data found for group ID {}", groupId);
-            } else {
-                String json = row[3].toString();
-                membersDetails = objectMapper.readValue(json, new TypeReference<>() {});
+            List<UserGroupDto> members = groupIdToActiveMembers.get(groupId);
+            if (members == null || members.isEmpty()) {
+                log.info("Group {} skipped because it has no active members", groupId);
+                continue;
             }
 
-            GroupResponseDto dto = new GroupResponseDto();
-            dto.setGroupId(groupId);
-            dto.setGroupName(groupName);
-            dto.setLocation(location);
-            dto.setMembersDetails(membersDetails);
+            // Enrich members with union info
+            for (UserGroupDto member : members) {
+                member.setGroupName(new ArrayList<>(userToGroups.getOrDefault(member.getUserId(), Set.of())));
+                member.setLocation(new ArrayList<>(userToLocations.getOrDefault(member.getUserId(), Set.of())));
+            }
 
-            finalList.add(dto);
+            finalList.add(new GroupResponseDto(groupId, groupName, location, members));
         }
 
         return finalList;
+    }
+
+
+    @Override
+    public boolean updateUserGroupType(UserGroup userGroup) {
+        // Map of valid prefixes to their corresponding roles
+        Map<String, String> typeMap = Map.of(
+                "m", "Member",
+                "s", "Supervisor"
+        );
+
+        String type = typeMap.entrySet().stream()
+                .filter(entry -> userGroup.getType().toLowerCase().startsWith(entry.getKey()))
+                .map(Map.Entry::getValue)
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Invalid type. Must start with 'm' or 's'."));
+
+
+        int updatedCount = userAdapter.updateUserGroupType(userGroup.getUserId(),userGroup.getGroupId(),type);
+        return updatedCount > 0;
     }
 
 

@@ -18,6 +18,7 @@ import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -95,13 +96,21 @@ public class UserAdapterImpl implements UserAdapter {
 
     @Override
     public Optional<UserEntity> findById(Long userId) {
-        return userRepository.findById(userId);
+        return userRepository.findByUserIdAndActiveTrue(userId);
+    }
+
+    public List<Object[]> findRawUsersWithGroups(@Param("orgId") Long orgId, @Param("role") List<String> accessibleRoles){
+        return userRepository.findRawUsersWithGroups(orgId,accessibleRoles);
     }
 
     @Override
-    public List<UserResponseDto> findByOrganizationId(Long orgId, List<String> accessibleRoles) {
-        return userRepository.findByOrganizationId(orgId, accessibleRoles);
+    public void deactivateUserById(Long userId) {
+        userRepository.deactivateUserById(userId);
     }
+//    @Override
+//    public List<UserResponseDto> findByOrganizationId(Long orgId, List<String> accessibleRoles) {
+//        return userRepository.findByOrganizationId(orgId, accessibleRoles);
+//    }
 
     @Override
     public void deleteUser(UserEntity user) {
@@ -117,6 +126,13 @@ public class UserAdapterImpl implements UserAdapter {
     public boolean findByGroup(String teamName, Long orgId) {
         return teamRepository.findBygroupNameAndOrganizationId(teamName, orgId).isPresent();
     }
+
+
+    @Override
+    public int updateUserGroupType(Long userId, Long groupId, String type) {
+        return userGroupRepository.updateUserGroupType(userId,groupId,type);
+    }
+
 
     @Override
     public Optional<GroupEntity> findByTeamId(Long teamId) {
@@ -139,13 +155,13 @@ public class UserAdapterImpl implements UserAdapter {
     }
 
     @Override
-    public List<UserEntity> getMembers(Long orgId, String  excludedRole) {
-        return userRepository.findAllByOrganizationIdAndRole_Name(orgId, excludedRole);
+    public List<UserEntity> getMembers(Long orgId, String role) {
+        return userRepository.findByOrganizationIdAndRole_NameAndActiveTrue(orgId, role);
     }
 
     @Override
     public List<UserEntity> getMembersExcludingRole(Long orgId, String excludedRole) {
-        return userRepository.findAllByOrganizationIdAndRole_NameNot(orgId, excludedRole);
+        return userRepository.findByOrganizationIdAndActiveTrueAndRole_NameNot(orgId, excludedRole);
     }
 
 
@@ -206,8 +222,8 @@ public class UserAdapterImpl implements UserAdapter {
     }
 
     @Override
-    public void deleteSupervisorsByGroupId( Long groupId){
-        userGroupRepository.deleteSupervisorsByGroupId(groupId);
+    public void deleteSupervisorsByGroupId( Long groupId, Long userId){
+        userGroupRepository.deleteSupervisorsByGroupId(groupId, userId);
     }
 
     @Override

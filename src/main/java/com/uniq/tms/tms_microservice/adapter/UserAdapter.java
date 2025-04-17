@@ -20,12 +20,15 @@ public interface UserAdapter {
     void updatePassword(UserEntity user);
     boolean existsByEmail(String email);
     Optional<UserEntity> findById(Long userId);
-    List<UserResponseDto> findByOrganizationId(Long orgId, List<String> accessibleRoles);
+    //List<UserResponseDto> findByOrganizationId(Long orgId, List<String> accessibleRoles);
+    List<Object[]> findRawUsersWithGroups(Long orgId,List<String> accessibleRoles);
+    void deactivateUserById(Long userId);
     void deleteUser(UserEntity user);
     GroupEntity saveGroup(GroupEntity entity);
     boolean findByGroup(String teamName, Long orgId);
     Optional<GroupEntity> findByTeamId(Long teamId);
     List<Object[]> getGroupDataNative(Long orgId);
+    int updateUserGroupType(Long userId, Long groupId, String type);
     void deleteMember(Long groupId, Long memberId);
     void deleteGroup(Long groupId);
     List<UserEntity> getMembers(Long orgId, String  excludedRole);
@@ -41,6 +44,6 @@ public interface UserAdapter {
     List<UserGroupEntity> findByUserUserIdAndGroupGroupId(Long userId, Long groupId);
     void updateSupervisorUser(Long groupId,Long newUserId);
     void updateGroupNameAndLocation(Long groupId, String groupName, Long locationId);
-    void deleteSupervisorsByGroupId(Long groupId);
+    void deleteSupervisorsByGroupId(Long groupId, Long userId);
     void deleteByGroupId(Long groupId);
 }

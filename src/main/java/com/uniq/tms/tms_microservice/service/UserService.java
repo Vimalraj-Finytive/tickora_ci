@@ -30,6 +30,7 @@ public interface UserService {
     void deleteGroup(Long groupId);
     List<User> getMembers(Long orgId, String role);
     List<User> getMembersExcludingRole(Long orgId, String excludedRole);
+    boolean updateUserGroupType(UserGroup userGroup);
     List<GroupDto>getUserGroups(Long userId, Long orgId);
     List<Map<String, Object>> getStudentGroupMembers(Long groupId, Long orgId, LocalDate date);
     List<User> addUserToGroup(AddMember addMemberMiddleware, Long orgId);
