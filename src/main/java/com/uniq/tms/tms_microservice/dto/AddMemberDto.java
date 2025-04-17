@@ -5,21 +5,26 @@ import java.util.List;
 public class AddMemberDto {
 
     private Long groupId;
-    private List<Long> groupMember;
+    private List<Long> userId;
+    private String type;
+
+    public List<Long> getUserId() {
+        return userId;
+    }
+
+    public String getType() {return type;}
 
     public Long getGroupId() {
-        return groupId;
+        return this.groupId;
     }
 
     public void setGroupId(Long groupId) {
         this.groupId = groupId;
     }
 
-    public List<Long> getGroupMember() {
-        return groupMember;
-    }
+    public void setType(String type) {this.type = type;}
 
-    public void setGroupMember(List<Long> groupMember) {
-        this.groupMember = groupMember;
+    public void setUserId(List<Long> userId) {
+        this.userId = userId;
     }
 }

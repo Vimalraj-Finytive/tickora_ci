@@ -6,18 +6,8 @@ public class Group {
 
     private Long groupId;
     private String groupName;
-    private List<Long> managerIds;
     private Long workScheduleId;
     private Long locationId;
-    private List<Long> groupMemberIds;
-
-    public List<Long> getGroupMemberIds() {
-        return groupMemberIds;
-    }
-
-    public void setGroupMemberIds(List<Long> groupMemberIds) {
-        this.groupMemberIds = groupMemberIds;
-    }
 
     public Long getGroupId() {
         return groupId;
@@ -33,14 +23,6 @@ public class Group {
 
     public void setGroupName(String groupName) {
         this.groupName = groupName;
-    }
-
-    public List<Long> getManagerIds() {
-        return managerIds;
-    }
-
-    public void setManagerIds(List<Long> managerIds) {
-        this.managerIds = managerIds;
     }
 
     public Long getWorkScheduleId() {

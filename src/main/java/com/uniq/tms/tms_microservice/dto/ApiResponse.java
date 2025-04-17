@@ -1,6 +1,6 @@
 package com.uniq.tms.tms_microservice.dto;
 
-public class ApiResponse {
+public class ApiResponse<T> {
     private int statusCode;
     private String message;
     private Object data;

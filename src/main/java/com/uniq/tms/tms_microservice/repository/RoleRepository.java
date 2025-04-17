@@ -12,7 +12,7 @@ import java.util.List;
 public interface RoleRepository extends JpaRepository<RoleEntity, Long> {
 
     @Query("SELECT r FROM RoleEntity r WHERE r.organizationEntity.organizationId = :orgId AND " +
-            "((:role = 'SuperAdmin' AND r.name IN ('admin', 'staff', 'student', 'manager')) OR " +
-            "(:role = 'admin' AND r.name IN ('student', 'staff', 'manager')))")
+            "((:role = 'SuperAdmin' AND r.name IN ('Admin', 'Staff', 'Student', 'Manager')) OR " +
+            "(:role = 'Admin' AND r.name IN ('Student', 'Staff', 'Manager')))")
     List<RoleEntity> findRolesByOrgIdAndRole(@Param("orgId") Long orgId, @Param("role") String role);
 }

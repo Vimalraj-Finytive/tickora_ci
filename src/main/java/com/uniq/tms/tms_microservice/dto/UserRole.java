@@ -3,9 +3,9 @@ package com.uniq.tms.tms_microservice.dto;
 import java.util.List;
 
 public enum UserRole {
-    SUPERADMIN(List.of("admin", "manager", "staff", "student")),
-    ADMIN(List.of("manager", "staff", "student")),
-    MANAGER(List.of("staff", "student"));
+    SUPERADMIN(List.of("Admin", "Manager", "Staff", "Student")),
+    ADMIN(List.of("Manager", "Staff", "Student")),
+    MANAGER(List.of("Staff", "Student"));
 
     private final List<String> accessibleRoles;
 

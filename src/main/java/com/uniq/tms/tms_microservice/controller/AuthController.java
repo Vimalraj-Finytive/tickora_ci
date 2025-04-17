@@ -1,6 +1,5 @@
 package com.uniq.tms.tms_microservice.controller;
 
-
 import com.uniq.tms.tms_microservice.constant.UserConstant;
 import com.uniq.tms.tms_microservice.dto.ApiResponse;
 import com.uniq.tms.tms_microservice.dto.ChangePasswordDto;
@@ -9,6 +8,7 @@ import com.uniq.tms.tms_microservice.dto.LoginDto;
 import com.uniq.tms.tms_microservice.facade.AuthFacade;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -32,8 +32,8 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<ApiResponse> login(@RequestBody LoginDto loginDto,
-                                             HttpServletResponse response,
-                                             HttpServletRequest request) {
+                                                HttpServletResponse response,
+                                                HttpServletRequest request) {
         Logger logger = LoggerFactory.getLogger(getClass());
 
         logger.info("Login Request Received: {}", loginDto);
@@ -66,10 +66,8 @@ public class AuthController {
 
     @PatchMapping("/reset-password")
     public ResponseEntity<ApiResponse> resetPassword(@RequestParam String email,
-                                                     @RequestBody ChangePasswordDto request) {
+                                                     @Valid @RequestBody ChangePasswordDto request) {
         return authFacade.resetPassword(email, request);
     }
-
-
 
 }
