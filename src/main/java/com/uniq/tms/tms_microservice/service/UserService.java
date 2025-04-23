@@ -29,6 +29,8 @@ public interface UserService {
     void deleteMember(Long groupId, Long memberId);
     void deleteGroup(Long groupId);
     List<User> getMembers(Long orgId, Long roleId);
+    //List<User> getMembersExcludingRole(Long orgId, String excludedRole);
+    boolean updateUserGroupType(UserGroup userGroup);
     List<GroupDto>getUserGroups(Long userId, Long orgId);
     List<Map<String, Object>> getGroupMembers(Long groupId, Long orgId, LocalDate date);
     List<User> addUserToGroup(AddMember addMemberMiddleware, Long orgId);

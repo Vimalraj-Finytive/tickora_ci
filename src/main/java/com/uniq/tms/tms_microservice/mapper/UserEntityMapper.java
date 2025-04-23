@@ -2,6 +2,7 @@ package com.uniq.tms.tms_microservice.mapper;
 
 import com.uniq.tms.tms_microservice.entity.*;
 import com.uniq.tms.tms_microservice.model.*;
+import org.hibernate.boot.archive.internal.StandardArchiveDescriptorFactory;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
@@ -9,8 +10,10 @@ import org.mapstruct.Named;
 @Mapper(componentModel = "spring")
 public interface UserEntityMapper {
 
+    @Mapping(target = "orgId", source = "organizationEntity.organizationId")
     Role toMiddleware(RoleEntity entity);
 
+    @Mapping(target = "orgId", source = "organizationEntity.organizationId")
     Location toMiddleware(LocationEntity entity);
 
     @Mapping(target = "roleId", source = "role.roleId")
@@ -29,10 +32,18 @@ public interface UserEntityMapper {
     @Mapping(target = "organizationEntity", ignore = true)
     GroupEntity toEntity(AddGroup group);
 
+    @Mapping(target = "organizationId", source = "organizationEntity.organizationId")
     @Mapping(target = "locationId", source = "locationEntity.locationId")
     Group toMiddleware(GroupEntity entity);
 
-//    WorkSchedule toMiddleware(WorkScheduleEntity workScheduleEntity);
+    @Mapping(target = "scheduleId", source = "scheduleId")
+    @Mapping(target = "scheduleName", source = "scheduleName")
+    @Mapping(target = "startTime", source = "startTime")
+    @Mapping(target = "endTime", source = "endTime")
+    @Mapping(target = "restDay", source = "restDay")
+    @Mapping(target = "type", source = "type")
+    @Mapping(target = "organizationId", source = "organizationEntity.organizationId")
+    WorkSchedule toMiddleware(WorkScheduleEntity workScheduleEntity);
 
     @Mapping(target = "type", ignore = true)
     @Mapping(target = "locationId", source = "locationEntity.locationId")

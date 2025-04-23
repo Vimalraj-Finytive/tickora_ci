@@ -57,6 +57,9 @@ public class UserEntity {
     @Column(name = "is_register_user", nullable = false)
     private boolean isRegisterUser = false;
 
+    @Column(name = "active", nullable = false)
+    private boolean active;
+
     public boolean isRegisterUser() {
         return isRegisterUser;
     }
@@ -70,6 +73,21 @@ public class UserEntity {
     }
 
     public UserEntity() {
+    }
+
+    public UserEntity(Long userId, String userName, String email, String mobileNumber, Long locationId, boolean isDefaultPassword, LocalDate dateOfJoining, boolean active, RoleEntity role, LocalDateTime createdAt, Long organizationId, String password) {
+        this.userId = userId;
+        this.userName = userName;
+        this.email = email;
+        this.mobileNumber = mobileNumber;
+        this.locationId = locationId;
+        this.isDefaultPassword = isDefaultPassword;
+        this.dateOfJoining = dateOfJoining;
+        this.active = active;
+        this.role = role;
+        this.createdAt = createdAt;
+        this.organizationId = organizationId;
+        this.password = password;
     }
 
     public LocalDate getDateOfJoining() {
@@ -150,6 +168,14 @@ public class UserEntity {
 
     public void setOrganizationId(Long organizationId) {
         this.organizationId = organizationId;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
     }
 
     @PrePersist

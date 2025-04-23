@@ -1,6 +1,7 @@
 package com.uniq.tms.tms_microservice.dto;
 
 import java.time.LocalDate;
+import java.util.List;
 
 public class UserResponseDto {
 
@@ -8,30 +9,23 @@ public class UserResponseDto {
     private String userName;
     private String email;
     private String mobileNumber;
-    private String groupName;
-    private Long orgId;
+    private List<String> groupName;
     private String roleName;
     private String locationName;
     private LocalDate dateOfJoining;
 
-    public UserResponseDto(Long userId, String userName, String email, String mobileNumber, String groupName, Long orgId, String roleName, LocalDate dateOfJoining, String locationName) {
+    public UserResponseDto() {
+    }
+
+    public UserResponseDto(Long userId, String userName, String email, String mobileNumber, String roleName, LocalDate dateOfJoining, String locationName) {
         this.userId = userId;
         this.userName = userName;
         this.email = email;
         this.mobileNumber = mobileNumber;
-        this.groupName = groupName;
-        this.orgId = orgId;
+
         this.roleName = roleName;
         this.dateOfJoining = dateOfJoining;
         this.locationName = locationName;
-    }
-
-    public Long getOrgId() {
-        return orgId;
-    }
-
-    public void setOrgId(Long orgId) {
-        this.orgId = orgId;
     }
 
     public LocalDate getDateOfJoining() {
@@ -71,10 +65,10 @@ public class UserResponseDto {
         this.mobileNumber = mobileNumber;
     }
 
-    public String getGroupName() {
+    public List<String> getGroupName() {
         return groupName;
     }
-    public void setGroupName(String groupName) {
+    public void setGroupName(List<String> groupName) {
         this.groupName = groupName;
     }
     public String getRoleName() {

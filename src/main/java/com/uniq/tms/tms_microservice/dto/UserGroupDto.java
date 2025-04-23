@@ -1,6 +1,7 @@
 package com.uniq.tms.tms_microservice.dto;
 
 import java.time.LocalDate;
+import java.util.List;
 
 public class UserGroupDto {
     private Long userId;
@@ -9,16 +10,22 @@ public class UserGroupDto {
     private String type;
     private String email;
     private LocalDate dateOfJoining;
+    private boolean active;
+    private List<String> location;
+    private List<String> groupName;
 
     public UserGroupDto() {}
 
-    public UserGroupDto(Long userId, String userName, String role, String type, LocalDate dateOfJoining, String email) {
+    public UserGroupDto(Long userId, String userName, String role, String type, String email, LocalDate dateOfJoining, boolean active, List<String> location, List<String> groupName) {
         this.userId = userId;
         this.userName = userName;
         this.role = role;
         this.type = type;
-        this.dateOfJoining = dateOfJoining;
         this.email = email;
+        this.dateOfJoining = dateOfJoining;
+        this.active = active;
+        this.location = location;
+        this.groupName = groupName;
     }
 
     public Long getUserId() {
@@ -67,5 +74,29 @@ public class UserGroupDto {
 
     public void setDateOfJoining(LocalDate dateOfJoining) {
         this.dateOfJoining = dateOfJoining;
+    }
+
+    public boolean getActive() {
+        return active;
+    }
+
+    public List<String> getLocation() {
+        return location;
+    }
+
+    public void setLocation(List<String> location) {
+        this.location = location;
+    }
+
+    public List<String> getGroupName() {
+        return groupName;
+    }
+
+    public void setGroupName(List<String> groupName) {
+        this.groupName = groupName;
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
     }
 }

@@ -16,11 +16,17 @@ public interface UserGroupRepository extends JpaRepository<UserGroupEntity,Long>
 
     @Modifying
     @Transactional
+    @Query("UPDATE UserGroupEntity ug SET ug.type = :type WHERE ug.user.id = :userId AND ug.group.id = :groupId")
+    int updateUserGroupType(Long userId, Long groupId, String type);
+
+    @Modifying
+    @Transactional
     @Query(value = """
     DELETE FROM user_group
-    WHERE group_id = :groupId AND type = 'Supervisor'
+    WHERE group_id = :groupId
+      AND user_id IN (:userIds)
 """, nativeQuery = true)
-    void deleteSupervisorsByGroupId(@Param("groupId") Long groupId);
+    void deleteSupervisorsByGroupId(@Param("groupId") Long groupId, @Param("userIds") Long userIds);
 
     @Modifying
     @Transactional

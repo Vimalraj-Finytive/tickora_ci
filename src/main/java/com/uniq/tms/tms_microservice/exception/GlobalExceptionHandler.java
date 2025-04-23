@@ -4,6 +4,7 @@ import com.uniq.tms.tms_microservice.dto.ApiResponse;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -56,5 +57,10 @@ public class GlobalExceptionHandler {
         ex.getBindingResult().getFieldErrors().forEach(error ->
                 errors.put("Error", error.getDefaultMessage()));
         return ResponseEntity.badRequest().body(new ApiResponse(ex.getStatusCode().value(),errors.values().toString(),false));
+    }
+
+    @ExceptionHandler(UsernameNotFoundException.class)
+    public ResponseEntity<ApiResponse> handleUserNotFoundException(UsernameNotFoundException ex){
+        return ResponseEntity.badRequest().body(new ApiResponse(400, ex.getMessage(), false));
     }
 }

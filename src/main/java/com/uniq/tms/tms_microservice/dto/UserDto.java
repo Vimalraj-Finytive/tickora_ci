@@ -8,7 +8,6 @@ public class UserDto {
     private String userName;
     private String email;
     private String mobileNumber;
-    private Long organizationId;
     private Long roleId;
     private Long locationId;
     private LocalDate dateOfJoining;
@@ -60,14 +59,6 @@ public class UserDto {
 
     public void setMobileNumber(String mobileNumber) {
         this.mobileNumber = mobileNumber;
-    }
-
-    public Long getOrganizationId() {
-        return organizationId;
-    }
-
-    public void setOrganizationId(Long organizationId) {
-        this.organizationId = organizationId;
     }
 
     public Long getRoleId() {

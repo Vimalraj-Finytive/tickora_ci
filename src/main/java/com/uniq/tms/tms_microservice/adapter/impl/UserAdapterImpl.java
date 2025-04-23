@@ -15,6 +15,7 @@ import com.uniq.tms.tms_microservice.repository.UserGroupRepository;
 import com.uniq.tms.tms_microservice.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -83,12 +84,21 @@ public class UserAdapterImpl implements UserAdapter {
 
     @Override
     public Optional<UserEntity> findById(Long userId) {
-        return userRepository.findById(userId);
+        return userRepository.findByUserIdAndActiveTrue(userId);
+    }
+
+    public List<Object[]> findRawUsersWithGroups(@Param("orgId") Long orgId, @Param("role") List<String> accessibleRoles){
+        return userRepository.findRawUsersWithGroups(orgId,accessibleRoles);
     }
 
     @Override
     public List<UserResponseDto> findByOrganizationId(Long orgId, int heirarchyLevel) {
         return userRepository.findByOrganizationIdAndHierarchyLevel(orgId, heirarchyLevel);
+    }
+
+    @Override
+    public void deactivateUserById(Long userId) {
+        userRepository.deactivateUserById(userId);
     }
 
     @Override
@@ -104,6 +114,11 @@ public class UserAdapterImpl implements UserAdapter {
     @Override
     public boolean findByGroup(String teamName, Long orgId) {
         return teamRepository.findBygroupNameAndOrganizationId(teamName, orgId).isPresent();
+    }
+
+    @Override
+    public int updateUserGroupType(Long userId, Long groupId, String type) {
+        return userGroupRepository.updateUserGroupType(userId,groupId,type);
     }
 
     @Override
@@ -128,12 +143,12 @@ public class UserAdapterImpl implements UserAdapter {
 
     @Override
     public List<UserEntity> getMembers(Long orgId, Long roleId) {
-        return userRepository.findAllByOrganizationIdAndRole_RoleId(orgId, roleId);
+        return userRepository.findByOrganizationIdAndRole_NameAndActiveTrue(orgId, roleId);
     }
 
     @Override
     public List<UserEntity> getMembersByRole(Long orgId, List<Integer> higherRoleIds) {
-        return userRepository.findAllByOrganizationIdAndRole_RoleIdIn(orgId, higherRoleIds);
+        return userRepository.findByOrganizationIdAndActiveTrueAndRole_NameNot(orgId, higherRoleIds);
     }
 
     @Override
@@ -219,8 +234,8 @@ public class UserAdapterImpl implements UserAdapter {
     }
 
     @Override
-    public void deleteSupervisorsByGroupId( Long groupId){
-        userGroupRepository.deleteSupervisorsByGroupId(groupId);
+    public void deleteSupervisorsByGroupId( Long groupId, Long userId){
+        userGroupRepository.deleteSupervisorsByGroupId(groupId, userId);
     }
 
     @Override
