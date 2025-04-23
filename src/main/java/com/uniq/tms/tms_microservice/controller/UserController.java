@@ -102,7 +102,6 @@ public class UserController {
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
-
     @PatchMapping("/updateUser")
     public ResponseEntity<ApiResponse> updateUser(
             @RequestHeader("Authorization") String token,
@@ -112,7 +111,6 @@ public class UserController {
         ApiResponse response = authFacade.updateUser(token, updates, userId);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
-
 
     @GetMapping("/getAllUsers")
     public ResponseEntity<ApiResponse> getUsers(@RequestHeader("Authorization") String token) {

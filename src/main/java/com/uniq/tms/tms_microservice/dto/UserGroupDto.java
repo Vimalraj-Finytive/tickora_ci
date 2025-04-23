@@ -14,7 +14,6 @@ public class UserGroupDto {
     private List<String> location;
     private List<String> groupName;
 
-
     public UserGroupDto() {}
 
     public UserGroupDto(Long userId, String userName, String role, String type, String email, LocalDate dateOfJoining, boolean active, List<String> location, List<String> groupName) {

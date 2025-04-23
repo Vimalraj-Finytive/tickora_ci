@@ -20,7 +20,6 @@ public interface UserAdapter {
     void updatePassword(UserEntity user);
     boolean existsByEmail(String email);
     Optional<UserEntity> findById(Long userId);
-    //List<UserResponseDto> findByOrganizationId(Long orgId, List<String> accessibleRoles);
     List<Object[]> findRawUsersWithGroups(Long orgId,List<String> accessibleRoles);
     void deactivateUserById(Long userId);
     void deleteUser(UserEntity user);
@@ -42,7 +41,6 @@ public interface UserAdapter {
     boolean existsGroupNameInOrganization(String groupName, Long orgId, Long groupId);
     UserGroupEntity saveUserGroup(UserGroupEntity entity);
     List<UserGroupEntity> findByUserUserIdAndGroupGroupId(Long userId, Long groupId);
-    void updateSupervisorUser(Long groupId,Long newUserId);
     void updateGroupNameAndLocation(Long groupId, String groupName, Long locationId);
     void deleteSupervisorsByGroupId(Long groupId, Long userId);
     void deleteByGroupId(Long groupId);

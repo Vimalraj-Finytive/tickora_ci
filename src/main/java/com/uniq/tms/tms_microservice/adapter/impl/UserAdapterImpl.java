@@ -55,7 +55,6 @@ public class UserAdapterImpl implements UserAdapter {
         return roleRepository.findRolesByOrgIdAndRole(orgId, role);
     }
 
-
     @Override
     public List<GroupEntity> getAllTeams() {
         List<GroupEntity> teams = teamRepository.findAll();
@@ -107,10 +106,6 @@ public class UserAdapterImpl implements UserAdapter {
     public void deactivateUserById(Long userId) {
         userRepository.deactivateUserById(userId);
     }
-//    @Override
-//    public List<UserResponseDto> findByOrganizationId(Long orgId, List<String> accessibleRoles) {
-//        return userRepository.findByOrganizationId(orgId, accessibleRoles);
-//    }
 
     @Override
     public void deleteUser(UserEntity user) {
@@ -127,12 +122,10 @@ public class UserAdapterImpl implements UserAdapter {
         return teamRepository.findBygroupNameAndOrganizationId(teamName, orgId).isPresent();
     }
 
-
     @Override
     public int updateUserGroupType(Long userId, Long groupId, String type) {
         return userGroupRepository.updateUserGroupType(userId,groupId,type);
     }
-
 
     @Override
     public Optional<GroupEntity> findByTeamId(Long teamId) {
@@ -164,7 +157,6 @@ public class UserAdapterImpl implements UserAdapter {
         return userRepository.findByOrganizationIdAndActiveTrueAndRole_NameNot(orgId, excludedRole);
     }
 
-
     @Override
     public List<GroupDto> getUserGroups(Long userId, Long orgId) {
         return teamRepository.findByUserIdAndOrganization_id(userId, orgId);
@@ -174,7 +166,6 @@ public class UserAdapterImpl implements UserAdapter {
     public List<UserGroupEntity> getGroupMembersByGroupId(Long groupId, Long orgId) {
         return userGroupRepository.findByGroup_GroupIdAndGroup_OrganizationEntity_OrganizationId(groupId, orgId);
     }
-
 
     @Override
     public List<UserEntity> getUsersByIds(List<Long> userIds, Long orgId) {

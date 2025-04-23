@@ -52,7 +52,6 @@ public class GlobalExceptionHandler {
                 .body(new ApiResponse(409, message, null));
     }
 
-
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse> handleValidation(MethodArgumentNotValidException ex) {
         Map<String, String> errors = new HashMap<>();
@@ -65,6 +64,4 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse> handleUserNotFoundException(UsernameNotFoundException ex){
         return ResponseEntity.badRequest().body(new ApiResponse(400, ex.getMessage(), false));
     }
-
-
 }

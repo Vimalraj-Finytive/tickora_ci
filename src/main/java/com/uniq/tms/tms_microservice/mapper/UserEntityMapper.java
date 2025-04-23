@@ -7,7 +7,6 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
 
-
 @Mapper(componentModel = "spring")
 public interface UserEntityMapper {
 
@@ -25,7 +24,6 @@ public interface UserEntityMapper {
     @Mapping(target = "defaultPassword", ignore = true)
     @Mapping(target = "role", expression = "java(user.getRoleId() != null ? new RoleEntity(user.getRoleId()) : null)")
 
-
     UserEntity toEntity(User user);
 
     @Mapping(target = "workScheduleId", ignore = true)
@@ -33,7 +31,6 @@ public interface UserEntityMapper {
     @Mapping(target = "groupId", ignore = true)
     @Mapping(target = "organizationEntity", ignore = true)
     GroupEntity toEntity(AddGroup group);
-
 
     @Mapping(target = "organizationId", source = "organizationEntity.organizationId")
     @Mapping(target = "locationId", source = "locationEntity.locationId")
@@ -63,11 +60,9 @@ public interface UserEntityMapper {
     @Mapping(target = "group", expression = "java(new GroupEntity(userGroup.getGroupId()))")
     UserGroupEntity toEntity(UserGroup userGroup);
 
-
     @Named("mapLocation")
     default LocationEntity mapLocation(Long locationId) {
         if (locationId == null) return null;
         return new LocationEntity(locationId);
     }
-
 }

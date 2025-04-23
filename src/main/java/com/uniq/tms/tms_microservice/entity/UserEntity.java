@@ -58,7 +58,6 @@ public class UserEntity {
     @Column(name = "active", nullable = false)
     private boolean active;
 
-
     public UserEntity(Long userId){
         this.userId = userId;
     }

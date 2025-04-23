@@ -62,8 +62,6 @@ public class UserServiceImpl implements UserService {
     private final UserDtoMapper userDtoMapper;
     private final ObjectMapper objectMapper;
 
-
-
     public UserServiceImpl(UserAdapter userAdapter, TimesheetAdapter timesheetAdapter, UserEntityMapper userEntityMapper, OrganizationRepository organizationRepository, RoleRepository roleRepository, LocationRepository locationRepository, EmailUtil emailUtil, UserDtoMapper userDtoMapper, ObjectMapper objectMapper) {
         this.userAdapter = userAdapter;
         this.timesheetAdapter = timesheetAdapter;
@@ -231,7 +229,8 @@ public class UserServiceImpl implements UserService {
     @Override
     public User deleteUser(Long orgId, Long userId) {
         UserEntity user = userAdapter.findById(userId)
-                .orElseThrow(() -> new UsernameNotFoundException("User ID " + userId + " not found."));
+                .orElseThrow(() -> new UsernameNotFoundException("User ID not found."));
+
         if (!user.getOrganizationId().equals(orgId)) {
             throw new RuntimeException("Unauthorized");
         }
@@ -257,12 +256,10 @@ public class UserServiceImpl implements UserService {
             entity.setLocationEntity(locationEntity);
         }
 
-
         GroupEntity savedEntity = userAdapter.saveGroup(entity);
 
         for (Long id : groupMiddleware.getSupervisorsId()) {
             UserEntity user = userAdapter.findById(id).orElseThrow(()->new UsernameNotFoundException("User ID " + id + " not found."));
-
 
             createUserGroup(new UserGroup(savedEntity.getGroupId(), id, groupMiddleware.getType()),orgId);
 
@@ -290,18 +287,13 @@ public class UserServiceImpl implements UserService {
                 userGroupMiddleware.getUserId(),
                 userGroupMiddleware.getGroupId()
         );
-
         if (!existing.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "This user is already assigned to this group more than once.");
         }
 
-
         UserGroupEntity entity = userEntityMapper.toEntity(userGroupMiddleware);
-
         UserGroupEntity savedEntity=null;
-
-
-            savedEntity = userAdapter.saveUserGroup(entity);
+        savedEntity = userAdapter.saveUserGroup(entity);
 
         return userEntityMapper.toMiddleware(savedEntity);
     }
@@ -310,16 +302,13 @@ public class UserServiceImpl implements UserService {
     public void updateGroupDetails(AddGroupDto addGroupDto, Long groupId, Long orgId){
         AddGroup addGroup = userDtoMapper.toMiddleware(addGroupDto);
         GroupEntity groupEntity = userEntityMapper.toEntity(addGroup);
-
         boolean nameExists = userAdapter.existsGroupNameInOrganization(groupEntity.getGroupName(),orgId, groupId);
 
         if (nameExists) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Group name already exists");
         }
 
-
         userAdapter.updateGroupNameAndLocation(groupId,groupEntity.getGroupName(),groupEntity.getLocationEntity().getLocationId());
-
 
         // Step 2: Insert new supervisors
         GroupEntity group = new GroupEntity(groupId);
@@ -334,8 +323,6 @@ public class UserServiceImpl implements UserService {
             userAdapter.saveUserGroup(supervisorEntry);
         }
     }
-
-
 
     private static final  Logger log = LoggerFactory.getLogger(UserServiceImpl.class);
 
@@ -397,7 +384,6 @@ public class UserServiceImpl implements UserService {
         return finalList;
     }
 
-
     @Override
     public boolean updateUserGroupType(UserGroup userGroup) {
         // Map of valid prefixes to their corresponding roles
@@ -412,11 +398,9 @@ public class UserServiceImpl implements UserService {
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Invalid type. Must start with 'm' or 's'."));
 
-
         int updatedCount = userAdapter.updateUserGroupType(userGroup.getUserId(),userGroup.getGroupId(),type);
         return updatedCount > 0;
     }
-
 
     @Override
     public void deleteMember(Long groupId, Long memberId) {
@@ -427,7 +411,6 @@ public class UserServiceImpl implements UserService {
     public void deleteGroup(Long groupId) {
         userAdapter.deleteByGroupId(groupId);
         userAdapter.deleteGroup(groupId);
-
     }
 
     @Override
@@ -450,7 +433,6 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public List<Map<String, Object>> getStudentGroupMembers(Long groupId, Long orgId, LocalDate date) {
-
         List<UserGroupEntity> groupEntity = userAdapter.getGroupMembersByGroupId(groupId, orgId);
         List<Long> memberIds = groupEntity.stream()
                 .map(ug -> ug.getUser().getUserId())

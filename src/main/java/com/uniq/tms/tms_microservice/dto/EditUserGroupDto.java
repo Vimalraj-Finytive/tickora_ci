@@ -36,6 +36,4 @@ public class EditUserGroupDto {
     public void setType(String type) {
         this.type = type;
     }
-
-
 }

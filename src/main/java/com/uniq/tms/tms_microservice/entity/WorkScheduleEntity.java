@@ -26,10 +26,8 @@ public class WorkScheduleEntity  {
     @Column(name = "rest_day", length = 50)
     private String restDay;
 
-
     @Column(name = "is_default", nullable = false)
     private Boolean isDefault;
-
 
     @Column(name = "is_active", nullable = false)
     private Boolean isActive;
