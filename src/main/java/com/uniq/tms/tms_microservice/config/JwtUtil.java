@@ -1,6 +1,5 @@
 package com.uniq.tms.tms_microservice.config;
 
-
 import com.uniq.tms.tms_microservice.entity.BlacklistedTokenEntity;
 import com.uniq.tms.tms_microservice.entity.OrganizationEntity;
 import com.uniq.tms.tms_microservice.entity.RoleEntity;
@@ -19,11 +18,9 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-
 import javax.crypto.SecretKey;
 import java.time.LocalDateTime;
 import java.util.Date;
-
 
 @Component
 public class JwtUtil {
@@ -66,6 +63,7 @@ public class JwtUtil {
                 .setSubject(email)
                 .claim("roles", "ROLE_" + role.getName())
                 .claim("orgId", user.getOrganizationId())
+                .claim("userId", user.getUserId())
                 .claim("userAgent", userAgent)
                 .claim("ipAddress", ipAddress)
                 .setIssuedAt(new Date(currentTime))
@@ -90,6 +88,13 @@ public class JwtUtil {
             long lastActiveTime = claims.get("lastActiveTime", Long.class);
             if (System.currentTimeMillis() - lastActiveTime > INACTIVITY_TIMEOUT) {
                 throw new SecurityException("Token has expired due to inactivity");
+            }
+
+            String tokenUserAgent = claims.get("userAgent", String.class);
+            String tokenIpAddress = claims.get("ipAddress", String.class);
+
+            if (!requestUserAgent.equals(tokenUserAgent) || !requestIp.equals(tokenIpAddress)) {
+                throw new SecurityException("Token mismatch: Possible token theft or misuse detected");
             }
 
             return claims;
@@ -135,7 +140,6 @@ public class JwtUtil {
     }
 
     public Claims extractAllClaims(String token) {
-        System.out.println("JWT Token Received: " + token);
         return Jwts.parserBuilder()
                 .setSigningKey(SECRET_KEY)
                 .build()
@@ -145,18 +149,13 @@ public class JwtUtil {
 
     public Long extractOrgIdFromToken(String token) {
         Claims claims = extractAllClaims(token);
-        System.out.println("JWT Claims: " + claims);
 
         if (claims.containsKey("orgId")) {
             Object orgId = claims.get("orgId");
-            System.out.println("Extracted orgId from JWT Claims: " + orgId);
             return (orgId instanceof Integer) ? ((Integer) orgId).longValue() : Long.parseLong(orgId.toString());
         }
-
-        System.out.println("Organization ID not found in JWT claims!");
-        return null;
+        throw new IllegalStateException("Organization ID not found in JWT claims!");
     }
-
 
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
@@ -173,7 +172,6 @@ public class JwtUtil {
         return authHeader.substring(7);
     }
 
-
     public String extractRoleFromToken(String jwt) {
         try {
             Claims claims = Jwts.parserBuilder()
@@ -181,12 +179,14 @@ public class JwtUtil {
                     .build()
                     .parseClaimsJws(jwt)
                     .getBody();
-            System.out.println(claims.get("roles", String.class));
             return claims.get("roles", String.class);
         } catch (SignatureException e) {
             throw new RuntimeException("Invalid JWT token", e);
         }
     }
 
-
+    public Long extractUserIdFromToken(String token) {
+        Claims claims = extractAllClaims(token);
+        return claims.get("userId", Long.class);
+    }
 }

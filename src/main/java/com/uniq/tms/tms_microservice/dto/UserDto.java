@@ -12,6 +12,15 @@ public class UserDto {
     private Long roleId;
     private Long locationId;
     private LocalDate dateOfJoining;
+    private boolean isRegisterUser;
+
+    public boolean isRegisterUser() {
+        return isRegisterUser;
+    }
+
+    public void setRegisterUser(boolean registerUser) {
+        isRegisterUser = registerUser;
+    }
 
     public LocalDate getDateOfJoining() {
         return dateOfJoining;

@@ -1,13 +1,12 @@
 package com.uniq.tms.tms_microservice.service.impl;
 
-
 import com.uniq.tms.tms_microservice.adapter.AuthAdapter;
 import com.uniq.tms.tms_microservice.adapter.UserAdapter;
 import com.uniq.tms.tms_microservice.config.JwtUtil;
 import com.uniq.tms.tms_microservice.dto.ApiResponse;
 import com.uniq.tms.tms_microservice.dto.ChangePasswordDto;
 import com.uniq.tms.tms_microservice.dto.EmailDto;
-import com.uniq.tms.tms_microservice.entity.PrivilageEntity;
+import com.uniq.tms.tms_microservice.entity.PrivilegeEntity;
 import com.uniq.tms.tms_microservice.entity.UserEntity;
 import com.uniq.tms.tms_microservice.service.AuthService;
 import com.uniq.tms.tms_microservice.util.EmailUtil;
@@ -20,12 +19,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-
 
 @Service
 public class AuthServiceImpl implements AuthService {
@@ -56,9 +53,6 @@ public class AuthServiceImpl implements AuthService {
         }
 
         boolean isPasswordValid = PasswordUtil.isPasswordMatch(password, userEntity.getPassword());
-        System.out.println("Stored Hashed Password: " + userEntity.getPassword());
-        System.out.println("Raw Password Entered: " + password);
-        System.out.println("Password match: " + isPasswordValid);
 
         if (!isPasswordValid) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -67,9 +61,7 @@ public class AuthServiceImpl implements AuthService {
 
         if (userEntity.isDefaultPassword()) {
             boolean isNewUser = userEntity.isDefaultPassword();
-            System.out.println("login same default password: " + isNewUser);
             emailUtil.sendDefaultPasswordReminderEmail(userEntity.getEmail(), userEntity.getUserName(), password, isNewUser);
-
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(new ApiResponse(401, "You must change your default password before logging in.", null));
         }
@@ -86,12 +78,10 @@ public class AuthServiceImpl implements AuthService {
         userData.put("role", userEntity.getRole().getName());
         userData.put("JWT_TOKEN", jwtToken);
         userData.put("userId", userEntity.getUserId());
-
-        Set<String> privilage = userEntity.getRole().getPrivilageEntities()
-                .stream().map(PrivilageEntity::getName).collect(Collectors.toSet());
-        userData.put("privilage", privilage);
-
-        System.out.println("Login success");
+        userData.put("isRegisterUser", userEntity.isRegisterUser());
+        Set<String> privilage = userEntity.getRole().getPrivilegeEntities()
+                .stream().map(PrivilegeEntity::getName).collect(Collectors.toSet());
+        userData.put("privilege", privilage);
         return ResponseEntity.ok(new ApiResponse(200, "Login Successful", userData));
     }
 
@@ -172,14 +162,9 @@ public class AuthServiceImpl implements AuthService {
         String defaultPassword = PasswordUtil.generateDefaultPassword();
         user.setPassword(PasswordUtil.encryptPassword(defaultPassword));
         user.setDefaultPassword(true);
-
         userAdapter.saveUser(user);
         boolean isNewUser = false;
-        System.out.println("forgot boolean: " + isNewUser);
         emailUtil.sendForgotPasswordReminderEmail(user.getEmail(), user.getUserName(), defaultPassword, isNewUser);
-
         return ResponseEntity.ok(new ApiResponse(200, "New default password sent to email", null));
     }
-
-
 }

@@ -1,6 +1,5 @@
 package com.uniq.tms.tms_microservice.model;
 
-
 public class UserGroup {
 
     private Long groupId;

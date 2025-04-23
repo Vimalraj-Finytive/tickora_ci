@@ -1,6 +1,5 @@
 package com.uniq.tms.tms_microservice.model;
 
-
 import java.util.List;
 import java.util.Map;
 
@@ -14,7 +13,6 @@ public class GroupResponse {
     public List<Map<String, Object>> getGroupMember() {
         return groupMember;
     }
-
 
     public void setGroupMember(List<Map<String, Object>> groupMember) {
         this.groupMember = groupMember;
@@ -43,6 +41,4 @@ public class GroupResponse {
     public void setLocation(String location) {
         this.location = location;
     }
-
-
 }

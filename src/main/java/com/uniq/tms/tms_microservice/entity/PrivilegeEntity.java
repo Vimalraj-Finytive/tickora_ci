@@ -7,22 +7,21 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.Table;
-
 import java.util.HashSet;
 import java.util.Set;
 
 @Entity
-@Table(name = "privilage")
-public class PrivilageEntity {
+@Table(name = "privilege")
+public class PrivilegeEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "privilage_id")
-    private Long privilageId;
-    @Column(name = "privilage_name")
+    @Column(name = "privilege_id")
+    private Long privilegeId;
+    @Column(name = "privilege_name")
     private String name;
+    @ManyToMany(mappedBy = "privilegeEntities")
 
-    @ManyToMany(mappedBy = "privilageEntities")
     private Set<RoleEntity> roles= new HashSet<>();
 
     public Set<RoleEntity> getRoles() {
@@ -33,12 +32,12 @@ public class PrivilageEntity {
         this.roles = roles;
     }
 
-    public Long getPrivilageId() {
-        return privilageId;
+    public Long getPrivilegeId() {
+        return privilegeId;
     }
 
-    public void setPrivilageId(Long privilageId) {
-        this.privilageId = privilageId;
+    public void setPrivilegeId(Long privilegeId) {
+        this.privilegeId = privilegeId;
     }
 
     public String getName() {

@@ -43,8 +43,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import java.lang.reflect.Field;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -65,8 +67,6 @@ public class UserServiceImpl implements UserService {
     private final UserDtoMapper userDtoMapper;
     private final ObjectMapper objectMapper;
 
-
-
     public UserServiceImpl(UserAdapter userAdapter, TimesheetAdapter timesheetAdapter, UserEntityMapper userEntityMapper, OrganizationRepository organizationRepository, RoleRepository roleRepository, LocationRepository locationRepository, EmailUtil emailUtil, UserDtoMapper userDtoMapper, ObjectMapper objectMapper) {
         this.userAdapter = userAdapter;
         this.timesheetAdapter = timesheetAdapter;
@@ -79,9 +79,16 @@ public class UserServiceImpl implements UserService {
         this.objectMapper = objectMapper;
     }
 
+    private static final  Logger log = LoggerFactory.getLogger(UserServiceImpl.class);
+
     @Override
     public List<Role> getAllRole(Long orgId, String role) {
-        List<Role> roles = userAdapter.getAllRole(orgId, role)
+
+        if (role != null && role.startsWith("ROLE_")) {
+            role = role.substring(5);
+        }
+        int hierarchyLevel = UserRole.getLevel(role);
+        List<Role> roles = userAdapter.getAllRole(orgId, hierarchyLevel)
                 .stream()
                 .map(userEntityMapper::toMiddleware)
                 .toList();
@@ -114,8 +121,6 @@ public class UserServiceImpl implements UserService {
         UserEntity entity = userEntityMapper.toEntity(usermiddleware);
         entity.setOrganizationId(organizationId);
 
-        System.out.println("Received roleId: " + usermiddleware.getRoleId());
-
         if (usermiddleware.getRoleId() == null) {
             throw new IllegalArgumentException("roleId must not be null");
         }
@@ -125,8 +130,6 @@ public class UserServiceImpl implements UserService {
 
         entity.setRole(role);
 
-        System.out.println("Assigned Role: " + entity.getRole().getName());
-
         String defaultPassword = PasswordUtil.generateDefaultPassword();
         String encryptedPassword = PasswordUtil.encryptPassword(defaultPassword);
         entity.setPassword(encryptedPassword);
@@ -134,7 +137,6 @@ public class UserServiceImpl implements UserService {
 
         UserEntity saveEntity = userAdapter.saveUser(entity);
         boolean isNewUser = saveEntity.isDefaultPassword();
-        System.out.println("Reset new user: " + isNewUser);
         emailUtil.sendAccountCreationEmail(usermiddleware.getEmail(), usermiddleware.getUserName(), defaultPassword, isNewUser);
 
         return userEntityMapper.toMiddleware(saveEntity);
@@ -193,13 +195,11 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public List<UserResponseDto> getUsers(Long orgId, String role) {
-        System.out.println("Fetching users for orgId: " + orgId);
-        List<String> accessibleRoles = UserRole.getRolesFor(role);
-        if (accessibleRoles.isEmpty()) {
+        int hierarchyLevel = UserRole.getLevel(role);
+        List<UserResponseDto> users = userAdapter.findByOrganizationId(orgId, hierarchyLevel);
+        if (users.isEmpty()) {
             throw new RuntimeException("Unauthorized");
         }
-        List<UserResponseDto> users = userAdapter.findByOrganizationId(orgId, accessibleRoles);
-        System.out.println("Fetched users: " + users);
         return users;
     }
 
@@ -231,8 +231,6 @@ public class UserServiceImpl implements UserService {
                     .orElseThrow(() -> new EntityNotFoundException("Location not found with ID: " + groupMiddleware.getLocationId()));
             entity.setLocationEntity(locationEntity);
         }
-
-
         GroupEntity savedEntity = userAdapter.saveGroup(entity);
 
         for (Long id : groupMiddleware.getSupervisorsId()) {
@@ -265,16 +263,11 @@ public class UserServiceImpl implements UserService {
                 userGroupMiddleware.getUserId(),
                 userGroupMiddleware.getGroupId()
         );
-
         if (!existing.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "User is already assigned to this group more than once.");
         }
-
-
         UserGroupEntity entity = userEntityMapper.toEntity(userGroupMiddleware);
-
         UserGroupEntity savedEntity=null;
-
         savedEntity = userAdapter.saveUserGroup(entity);
         return userEntityMapper.toMiddleware(savedEntity);
     }
@@ -290,7 +283,6 @@ public class UserServiceImpl implements UserService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Group name already exists");
         }
 
-
         userAdapter.updateGroupNameAndLocation(groupId,groupEntity.getGroupName(),groupEntity.getLocationEntity().getLocationId());
         userAdapter.deleteSupervisorsByGroupId(groupId);
 
@@ -302,13 +294,9 @@ public class UserServiceImpl implements UserService {
             supervisorEntry.setGroup(group);
             supervisorEntry.setUser(user);
             supervisorEntry.setType("Supervisor");
-
             userAdapter.saveUserGroup(supervisorEntry);
         }
     }
-
-
-    private static final  Logger log = LoggerFactory.getLogger(UserServiceImpl.class);
 
     public List<GroupResponseDto> getAllGroups(Long orgId) throws JsonProcessingException {
         List<Object[]> results = userAdapter.getGroupDataNative(orgId);
@@ -332,13 +320,10 @@ public class UserServiceImpl implements UserService {
             dto.setGroupName(groupName);
             dto.setLocation(location);
             dto.setMembersDetails(membersDetails);
-
             finalList.add(dto);
         }
-
         return finalList;
     }
-
 
     @Override
     public void deleteMember(Long groupId, Long memberId) {
@@ -349,29 +334,41 @@ public class UserServiceImpl implements UserService {
     public void deleteGroup(Long groupId) {
         userAdapter.deleteByGroupId(groupId);
         userAdapter.deleteGroup(groupId);
-
     }
 
     @Override
-    public List<User> getMembers(Long orgId, String role) {
-        List<User> members = userAdapter.getMembers(orgId, role).stream().map(userEntityMapper::toMiddleware).toList();
-        return members;
-    }
-
-    @Override
-    public List<User> getMembersExcludingRole(Long orgId, String  excludedRole) {
-        List<User> members = userAdapter.getMembersExcludingRole(orgId,  excludedRole).stream().map(userEntityMapper::toMiddleware).toList();
-        return members;
+    public List<User> getMembers(Long orgId, Long roleId) {
+        // if roleId is present, get users by roleId
+        if (roleId != null) {
+            return userAdapter.getMembers(orgId, roleId).stream()
+                    .map(userEntityMapper::toMiddleware).toList();
+        } else {
+            // Get the hierarchy level of the "Student" role dynamically
+            int studentHierarchyLevel = UserRole.STUDENT.getHierarchyLevel();
+            // Get all roles above the "Student" role hierarchy level
+            List<UserRole> higherRoles = Arrays.stream(UserRole.values())
+                    .filter(r -> r.getHierarchyLevel() < studentHierarchyLevel)
+                    .toList();
+            List<Integer> higherRoleIds = higherRoles.stream()
+                    .map(roles-> roles.getHierarchyLevel())
+                    .toList();
+           return userAdapter.getMembersByRole(orgId, higherRoleIds).stream()
+                   .map(userEntityMapper::toMiddleware).toList();
+        }
     }
 
     @Override
     public List<GroupDto> getUserGroups(Long userId, Long orgId) {
+        if(userId == null){
+            List<GroupDto> Allgroup = userAdapter.getAllgroups(orgId);
+            return Allgroup;
+        }
         List<GroupDto> group = userAdapter.getUserGroups(userId, orgId);
         return group;
     }
 
     @Override
-    public List<Map<String, Object>> getStudentGroupMembers(Long groupId, Long orgId, LocalDate date) {
+    public List<Map<String, Object>> getGroupMembers(Long groupId, Long orgId, LocalDate date) {
 
         List<UserGroupEntity> groupEntity = userAdapter.getGroupMembersByGroupId(groupId, orgId);
         List<Long> memberIds = groupEntity.stream()
@@ -382,15 +379,14 @@ public class UserServiceImpl implements UserService {
             return Collections.emptyList();
         }
 
-        List<UserEntity> studentUsers = userAdapter.getUsersByIds(memberIds, orgId);
+        List<UserEntity> GroupUsers = userAdapter.getUsersByIds(memberIds, orgId);
 
         List<TimesheetEntity> latestLogs = timesheetAdapter.
                 getLatestLogsByTimesheetIds(memberIds, orgId, date);
         Map<Long, TimesheetEntity> latestLogsMap = latestLogs.stream()
                 .collect(Collectors.toMap(TimesheetEntity::getUserId, Function.identity()));
 
-
-        List<Map<String, Object>> studentDetailsList = studentUsers.stream()
+        List<Map<String, Object>> UserDetailsList = GroupUsers.stream()
                 .map(user -> {
                     Map<String, Object> map = new HashMap<>();
                     map.put("id", user.getUserId());
@@ -398,21 +394,21 @@ public class UserServiceImpl implements UserService {
                     map.put("role", user.getRole().getName());
 
                     TimesheetEntity timesheet = latestLogsMap.get(user.getUserId());
-                    if(timesheet!=null){
-                        map.put("firstClockIn", timesheet.getFirstClockIn());
-                        map.put("lastClockOut", timesheet.getLastClockOut());
-                    }
-                    else{
-                        map.put("firstClockIn",null);
-                        map.put("lastClockOut",null);
+                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("hh:mm a");
+
+                    if (timesheet != null) {
+                        LocalTime clockIn = timesheet.getFirstClockIn();
+                        LocalTime clockOut = timesheet.getLastClockOut();
+
+                        map.put("firstClockIn", clockIn != null ? clockIn.format(formatter) : null);
+                        map.put("lastClockOut", clockOut != null ? clockOut.format(formatter) : null);
+                    } else {
+                        map.put("firstClockIn", null);
+                        map.put("lastClockOut", null);
                     }
                     return map;
                 })
                 .toList();
-                return studentDetailsList;
-
+                return UserDetailsList;
     }
-
-
 }
-

@@ -8,7 +8,6 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
-
 import java.nio.file.AccessDeniedException;
 import java.util.HashMap;
 import java.util.Map;
@@ -39,7 +38,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Object> handleResponseStatusException(ResponseStatusException ex) {
         Map<String, Object> body = new HashMap<>();
         body.put("statusCode", ex.getStatusCode().value());
-        body.put("message", ex.getReason()); // NOT ex.getMessage() to avoid the "409 CONFLICT ..." format
+        body.put("message", ex.getReason());
         body.put("data", null);
         return new ResponseEntity<>(body, ex.getStatusCode());
     }
@@ -51,7 +50,6 @@ public class GlobalExceptionHandler {
                 .body(new ApiResponse(409, message, null));
     }
 
-
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse> handleValidation(MethodArgumentNotValidException ex) {
         Map<String, String> errors = new HashMap<>();
@@ -59,6 +57,4 @@ public class GlobalExceptionHandler {
                 errors.put("Error", error.getDefaultMessage()));
         return ResponseEntity.badRequest().body(new ApiResponse(ex.getStatusCode().value(),errors.values().toString(),false));
     }
-
-
 }

@@ -6,7 +6,6 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
 
-
 @Mapper(componentModel = "spring")
 public interface UserEntityMapper {
 
@@ -30,11 +29,10 @@ public interface UserEntityMapper {
     @Mapping(target = "organizationEntity", ignore = true)
     GroupEntity toEntity(AddGroup group);
 
-
     @Mapping(target = "locationId", source = "locationEntity.locationId")
     Group toMiddleware(GroupEntity entity);
 
-    WorkSchedule toMiddleware(WorkScheduleEntity workScheduleEntity);
+//    WorkSchedule toMiddleware(WorkScheduleEntity workScheduleEntity);
 
     @Mapping(target = "type", ignore = true)
     @Mapping(target = "locationId", source = "locationEntity.locationId")
@@ -51,11 +49,9 @@ public interface UserEntityMapper {
     @Mapping(target = "group", expression = "java(new GroupEntity(userGroup.getGroupId()))")
     UserGroupEntity toEntity(UserGroup userGroup);
 
-
     @Named("mapLocation")
     default LocationEntity mapLocation(Long locationId) {
         if (locationId == null) return null;
         return new LocationEntity(locationId);
     }
-
 }

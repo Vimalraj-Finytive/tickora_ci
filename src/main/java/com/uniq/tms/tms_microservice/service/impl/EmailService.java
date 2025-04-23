@@ -14,8 +14,6 @@ public class EmailService {
     private final JavaMailSender javaMailSender;
     private final TemplateEngine templateEngine;
 
-
-
     public EmailService(JavaMailSender javaMailSender, TemplateEngine templateEngine) {
         this.javaMailSender = javaMailSender;
         this.templateEngine = templateEngine;
@@ -45,5 +43,4 @@ public class EmailService {
             throw new RuntimeException("Failed to send message" + e.getMessage());
         }
     }
-
 }

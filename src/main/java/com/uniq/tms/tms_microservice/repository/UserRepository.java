@@ -1,13 +1,11 @@
 package com.uniq.tms.tms_microservice.repository;
 
-
 import com.uniq.tms.tms_microservice.dto.UserResponseDto;
 import com.uniq.tms.tms_microservice.entity.UserEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-
 import java.util.List;
 
 @Repository
@@ -26,15 +24,14 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
             "LEFT JOIN GroupEntity g ON ug.group.groupId = g.groupId " +
             "JOIN RoleEntity r ON u.role = r " +
             "JOIN LocationEntity l ON u.locationId = l.locationId " +
-            "WHERE u.organizationId = :orgId AND r.name IN (:role)")
-    List<UserResponseDto> findByOrganizationId(@Param("orgId") Long orgId, @Param("role") List<String> accessibleRoles);
+            "WHERE u.organizationId = :orgId AND r.hierarchyLevel > :hierarchyLevel")
+    List<UserResponseDto> findByOrganizationIdAndHierarchyLevel(@Param("orgId") Long orgId, @Param("hierarchyLevel") int hierarchyLevel);
 
-    List<UserEntity> findAllByOrganizationIdAndRole_Name(Long organizationId, String roleName);
+    List<UserEntity> findAllByOrganizationIdAndRole_RoleId(Long organizationId, Long roleId);
 
-    List<UserEntity> findAllByOrganizationIdAndRole_NameNot(Long orgId, String excludedRole);
+    List<UserEntity> findAllByOrganizationIdAndRole_RoleIdIn(Long organizationId, List<Integer> higherRoleIds);
 
     List<UserEntity> findByUserIdInAndOrganizationId(List <Long> userIds, Long orgId);
 
     boolean existsByMobileNumber(String mobileNumber);
-
 }

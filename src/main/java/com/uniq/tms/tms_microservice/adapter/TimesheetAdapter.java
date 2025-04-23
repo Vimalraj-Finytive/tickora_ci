@@ -9,7 +9,7 @@ import java.util.Optional;
 
 public interface TimesheetAdapter {
 
-    List<TimesheetDto> filterTimesheetsForAllUsers(LocalDate startDate, LocalDate endDate, Long userId);
+    List<TimesheetDto> filterTimesheetsForAllUsers(LocalDate startDate, LocalDate endDate, List<Long> userIds);
     Optional<TimesheetEntity> findByUserIdAndDate(Long userId, LocalDate date);
     TimesheetEntity saveTimesheet(TimesheetEntity timesheet);
     TimesheetHistoryEntity saveTimesheetHistory(TimesheetHistoryEntity history);
@@ -20,4 +20,3 @@ public interface TimesheetAdapter {
     void saveAll(List<TimesheetEntity> openClockIns);
     List<TimesheetEntity> getLatestLogsByTimesheetIds(List<Long> memberIds, Long orgId, LocalDate date);
 }
-

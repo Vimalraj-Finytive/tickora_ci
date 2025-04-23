@@ -28,10 +28,9 @@ public interface UserService {
     AddGroup createGroup(AddGroup groupmiddleware, Long orgId);
     void deleteMember(Long groupId, Long memberId);
     void deleteGroup(Long groupId);
-    List<User> getMembers(Long orgId, String role);
-    List<User> getMembersExcludingRole(Long orgId, String excludedRole);
+    List<User> getMembers(Long orgId, Long roleId);
     List<GroupDto>getUserGroups(Long userId, Long orgId);
-    List<Map<String, Object>> getStudentGroupMembers(Long groupId, Long orgId, LocalDate date);
+    List<Map<String, Object>> getGroupMembers(Long groupId, Long orgId, LocalDate date);
     List<User> addUserToGroup(AddMember addMemberMiddleware, Long orgId);
     List<GroupResponseDto> getAllGroups(Long orgId) throws JsonProcessingException;
     UserGroup createUserGroup(UserGroup userGroupMiddleware, Long orgId);

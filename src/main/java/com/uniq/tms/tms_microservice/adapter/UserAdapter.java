@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface UserAdapter {
-    List<RoleEntity>getAllRole(Long orgId, String role);
+    List<RoleEntity>getAllRole(Long orgId, int hierarchyLevel);
     List<GroupEntity> getAllTeams();
     List<LocationEntity> getAllLocation(Long orgId);
     UserEntity saveUser(UserEntity entity);
@@ -20,7 +20,7 @@ public interface UserAdapter {
     void updatePassword(UserEntity user);
     boolean existsByEmail(String email);
     Optional<UserEntity> findById(Long userId);
-    List<UserResponseDto> findByOrganizationId(Long orgId, List<String> accessibleRoles);
+    List<UserResponseDto> findByOrganizationId(Long orgId, int hierarchyLevel);
     void deleteUser(UserEntity user);
     GroupEntity saveGroup(GroupEntity entity);
     boolean findByGroup(String teamName, Long orgId);
@@ -28,8 +28,8 @@ public interface UserAdapter {
     List<Object[]> getGroupDataNative(Long orgId);
     void deleteMember(Long groupId, Long memberId);
     void deleteGroup(Long groupId);
-    List<UserEntity> getMembers(Long orgId, String  excludedRole);
-    List<UserEntity> getMembersExcludingRole(Long orgId, String excludedRole);
+    List<UserEntity> getMembers(Long orgId, Long roleId);
+    List<UserEntity> getMembersByRole(Long orgId, List<Integer> higherRoleIds);
     List<GroupDto> getUserGroups(Long userId, Long orgId);
     List<UserGroupEntity> getGroupMembersByGroupId(Long groupId, Long orgId);
     List<UserEntity> getUsersByIds(List<Long> userIds, Long orgId);
@@ -43,4 +43,9 @@ public interface UserAdapter {
     void updateGroupNameAndLocation(Long groupId, String groupName, Long locationId);
     void deleteSupervisorsByGroupId(Long groupId);
     void deleteByGroupId(Long groupId);
+    List<Long> findGroupIdsBySupervisorId(Long userIdFromToken);
+    List<UserEntity> findUsersByGroupIdsExcludingSupervisors(List<Long> supervisedGroupIds);
+    List<GroupDto> getAllgroups(Long orgId);
+    List<UserEntity> findUsersByGroupIds(List<Long> groupIds);
+    List<UserEntity> findUsersByGroupIdsAndRoleTypeExcludingUser(List<Long> filteredGroupIds, Long userIdFromToken);
 }

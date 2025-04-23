@@ -1,5 +1,6 @@
 package com.uniq.tms.tms_microservice.model;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -11,11 +12,63 @@ public class Timesheet {
     private LocalDate date;
     private LocalTime firstClockIn;
     private LocalTime lastClockOut;
-    private LocalTime trackedHours;
-    private LocalTime regularHours;
+    private Duration trackedHours;
+    private Duration regularHours;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private String userName;
+    private String firstClockInStr;
+    private String lastClockOutStr;
+    private String trackedHoursStr;
+    private String regularHoursStr;
+
+    public Duration getTrackedHours() {
+        return trackedHours;
+    }
+
+    public void setTrackedHours(Duration trackedHours) {
+        this.trackedHours = trackedHours;
+    }
+
+    public Duration getRegularHours() {
+        return regularHours;
+    }
+
+    public void setRegularHours(Duration regularHours) {
+        this.regularHours = regularHours;
+    }
+
+    public String getFirstClockInStr() {
+        return firstClockInStr;
+    }
+
+    public void setFirstClockInStr(String firstClockInStr) {
+        this.firstClockInStr = firstClockInStr;
+    }
+
+    public String getLastClockOutStr() {
+        return lastClockOutStr;
+    }
+
+    public void setLastClockOutStr(String lastClockOutStr) {
+        this.lastClockOutStr = lastClockOutStr;
+    }
+
+    public String getTrackedHoursStr() {
+        return trackedHoursStr;
+    }
+
+    public void setTrackedHoursStr(String trackedHoursStr) {
+        this.trackedHoursStr = trackedHoursStr;
+    }
+
+    public String getRegularHoursStr() {
+        return regularHoursStr;
+    }
+
+    public void setRegularHoursStr(String regularHoursStr) {
+        this.regularHoursStr = regularHoursStr;
+    }
 
     public String getUserName() {
         return userName;
@@ -39,22 +92,6 @@ public class Timesheet {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
-    }
-
-    public LocalTime getRegularHours() {
-        return regularHours;
-    }
-
-    public void setRegularHours(LocalTime regularHours) {
-        this.regularHours = regularHours;
-    }
-
-    public LocalTime getTrackedHours() {
-        return trackedHours;
-    }
-
-    public void setTrackedHours(LocalTime trackedHours) {
-        this.trackedHours = trackedHours;
     }
 
     public LocalTime getLastClockOut() {

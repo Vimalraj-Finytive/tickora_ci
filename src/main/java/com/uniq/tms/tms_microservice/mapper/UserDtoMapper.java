@@ -31,4 +31,3 @@ public interface UserDtoMapper {
     UserDto toDto(User user);
     GroupDto toGroupDto(Group group);
 }
-

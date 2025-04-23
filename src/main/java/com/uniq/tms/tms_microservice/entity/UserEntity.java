@@ -10,7 +10,6 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
-
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -55,13 +54,23 @@ public class UserEntity {
     @Column(name = "date_of_joining")
     private LocalDate dateOfJoining;
 
+    @Column(name = "is_register_user", nullable = false)
+    private boolean isRegisterUser = false;
+
+    public boolean isRegisterUser() {
+        return isRegisterUser;
+    }
+
+    public void setRegisterUser(boolean registerUser) {
+        isRegisterUser = registerUser;
+    }
+
     public UserEntity(Long userId){
         this.userId = userId;
     }
 
     public UserEntity() {
     }
-
 
     public LocalDate getDateOfJoining() {
         return dateOfJoining;

@@ -1,7 +1,5 @@
 package com.uniq.tms.tms_microservice.service;
 
-
-
 import com.uniq.tms.tms_microservice.dto.ApiResponse;
 import com.uniq.tms.tms_microservice.dto.ChangePasswordDto;
 import com.uniq.tms.tms_microservice.dto.EmailDto;
@@ -21,5 +19,4 @@ public interface AuthService {
     ResponseEntity<ApiResponse> resetPassword(String email, ChangePasswordDto request);
 
     ResponseEntity<ApiResponse> forgotPassword(String email);
-
 }

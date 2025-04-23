@@ -1,29 +1,32 @@
 package com.uniq.tms.tms_microservice.service.impl;
 
-
 import com.uniq.tms.tms_microservice.adapter.TimesheetAdapter;
 import com.uniq.tms.tms_microservice.adapter.UserAdapter;
 import com.uniq.tms.tms_microservice.dto.LogType;
+import com.uniq.tms.tms_microservice.dto.Privilege;
+import com.uniq.tms.tms_microservice.dto.Role;
 import com.uniq.tms.tms_microservice.dto.Timeperiod;
 import com.uniq.tms.tms_microservice.dto.TimesheetDto;
 import com.uniq.tms.tms_microservice.entity.TimesheetEntity;
 import com.uniq.tms.tms_microservice.entity.TimesheetHistoryEntity;
 import com.uniq.tms.tms_microservice.entity.UserEntity;
+import com.uniq.tms.tms_microservice.mapper.RolePrivilegeMapper;
 import com.uniq.tms.tms_microservice.mapper.TimesheetDtoMapper;
 import com.uniq.tms.tms_microservice.mapper.TimesheetEntityMapper;
 import com.uniq.tms.tms_microservice.model.TimesheetHistory;
 import com.uniq.tms.tms_microservice.service.TimesheetService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 @Service
 public class TimesheetServiceImpl implements TimesheetService {
@@ -40,8 +43,9 @@ public class TimesheetServiceImpl implements TimesheetService {
         this.userAdapter = userAdapter;
     }
 
+    private static final Logger log = LoggerFactory.getLogger(TimesheetServiceImpl.class);
 
-    public List<TimesheetDto> getAllTimesheets(LocalDate date, String timePeriod, Long userId) {
+    public List<TimesheetDto> getAllTimesheets(Long userIdFromToken, String role, LocalDate date, String timePeriod, Long userId, List<Long> groupIds) {
         LocalDate startDate = null;
         LocalDate endDate = null;
 
@@ -49,51 +53,75 @@ public class TimesheetServiceImpl implements TimesheetService {
             LocalDateRange range = calculateDateRange(date, timePeriod);
             startDate = range.startDate();
             endDate = range.endDate();
+        } else if (userId != null) {
+            startDate = LocalDate.of(2025, 1, 1);
+            endDate = LocalDate.now();
         }
 
-        List<TimesheetDto> timesheetDtos = timesheetAdapter.filterTimesheetsForAllUsers(startDate, endDate, userId);
+        // Determine target users based on privileges
+        List<UserEntity> targetUsers = (userId != null)
+                ? List.of(userAdapter.getUserById(userId))
+                : resolveTargetUsers(userIdFromToken, groupIds);
 
-        List<UserEntity> allUsers = (userId != null)
-                ? Collections.singletonList(userAdapter.getUserById(userId))
-                : userAdapter.getAllUsers();
+        List<Long> userIds = targetUsers.stream()
+                .map(UserEntity::getUserId)
+                .toList();
 
-        return fillMissingDates(timesheetDtos, allUsers, startDate, endDate);
+        // Fetch timesheets for the filtered users and date range
+        List<TimesheetDto> timesheetDtos = timesheetAdapter.filterTimesheetsForAllUsers(startDate, endDate, userIds);
+        return timesheetDtos;
     }
 
+    private List<UserEntity> resolveTargetUsers(Long userIdFromToken, List<Long> groupIds) {
 
-    private List<TimesheetDto> fillMissingDates(List<TimesheetDto> existingDtos, List<UserEntity> allUsers, LocalDate startDate, LocalDate endDate) {
-        Map<String, TimesheetDto> existingMap = new HashMap<>();
+        UserEntity currentUser = userAdapter.getUserById(userIdFromToken);
+        String roleName = currentUser.getRole().getName().toUpperCase();
 
-        for (TimesheetDto dto : existingDtos) {
-            String key = dto.getUserId() + "|" + dto.getDate();
-            existingMap.put(key, dto);
-        }
+        boolean canSeeOwn = RolePrivilegeMapper.hasPrivilege(Role.valueOf(roleName), Privilege.CAN_SEE_OWN_TIMESHEET);
+        boolean canSeeAll = RolePrivilegeMapper.hasPrivilege(Role.valueOf(roleName), Privilege.CAN_SEE_ALL_TIMESHEETS);
+        boolean canSeeGroup = RolePrivilegeMapper.hasPrivilege(Role.valueOf(roleName), Privilege.CAN_SEE_GROUP_LEVEL_TIMESHEETS);
 
-        List<TimesheetDto> finalList = new ArrayList<>();
+        log.info("Privileges - Own: {}, Group: {}, All: {}", canSeeOwn, canSeeGroup, canSeeAll);
 
-        for (UserEntity user : allUsers) {
-            for (LocalDate currentDate = startDate; !currentDate.isAfter(endDate); currentDate = currentDate.plusDays(1)) {
-                String key = user.getUserId() + "|" + currentDate;
-                if (existingMap.containsKey(key)) {
-                    finalList.add(existingMap.get(key));
-                } else {
-                    TimesheetDto newDto = new TimesheetDto();
-                    newDto.setUserId(user.getUserId());
-                    newDto.setUserName(user.getUserName());
-                    newDto.setRole(user.getRole().getName());
-                    newDto.setDate(currentDate);
-                    newDto.setFirstClockIn(LocalTime.MIDNIGHT);
-                    newDto.setLastClockOut(LocalTime.MIDNIGHT);
-                    newDto.setTrackedHours(LocalTime.MIDNIGHT);
-                    newDto.setRegularHours(LocalTime.MIDNIGHT);
-                    newDto.setDayType("Holiday");
-                    newDto.setHistory(new ArrayList<>());
-                    finalList.add(newDto);
-                }
+        // Superadmin
+        if (canSeeOwn && canSeeGroup && canSeeAll) {
+            if (groupIds != null && !groupIds.isEmpty()) {
+                return userAdapter.findUsersByGroupIds(groupIds); // includes members + all supervisors
+            } else if (userIdFromToken != null) {
+                return List.of(userAdapter.getUserById(userIdFromToken));
+            } else {
+                return userAdapter.getAllUsers();
             }
         }
 
-        return finalList;
+        // Admin / Manager / Staff
+        if (canSeeOwn && canSeeGroup && !canSeeAll) {
+            // If groupIds are passed → get groups supervised by the logged-in user
+            if (groupIds != null && !groupIds.isEmpty()) {
+                List<Long> supervisedGroupIds = userAdapter.findGroupIdsBySupervisorId(userIdFromToken);
+                // Keep only groups the logged-in user actually supervises
+                List<Long> filteredGroupIds = groupIds.stream()
+                        .filter(supervisedGroupIds::contains)
+                        .toList();
+                if (filteredGroupIds.isEmpty()) {
+                    throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not supervise the selected group(s)");
+                }
+                // Return only members from the supervised group(s) — exclude supervisors and logged-in user
+                return userAdapter.findUsersByGroupIdsAndRoleTypeExcludingUser(
+                        filteredGroupIds,
+                        userIdFromToken
+                );
+            } else if (userIdFromToken!=null){
+                return List.of(userAdapter.getUserById(userIdFromToken));                }
+            }
+        // Student
+        if (canSeeOwn && !canSeeGroup && !canSeeAll) {
+            if (groupIds != null && !groupIds.isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not supervise the selected group(s)");
+            }
+            return List.of(currentUser);
+        }
+        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied based on role privileges.");
     }
 
     private LocalDateRange calculateDateRange(LocalDate date, String timePeriod) {
@@ -140,8 +168,6 @@ public class TimesheetServiceImpl implements TimesheetService {
                         newTimesheet.setTrackedHours(LocalTime.of(0, 0));
                         newTimesheet.setTotalBreakHours(LocalTime.of(0, 0));
                         newTimesheet.setRegularHours(LocalTime.of(0, 0));
-
-                        System.out.println("New Timesheet Created for User: " + userId + " on Date: " + finalDate);
                         return timesheetAdapter.saveTimesheet(newTimesheet);
                     });
 
@@ -151,16 +177,12 @@ public class TimesheetServiceImpl implements TimesheetService {
             if (history.getLogType() == LogType.CLOCK_IN) {
                 if (timesheet.getFirstClockIn() == null) {
                     timesheet.setFirstClockIn(history.getLogTime());
-                    System.out.println("First Clock-In Set: " + history.getLogTime());
                 }
             } else if (history.getLogType() == LogType.CLOCK_OUT) {
                 timesheet.setLastClockOut(history.getLogTime());
-                System.out.println("Last Clock-Out Set: " + history.getLogTime());
             }
             timesheetAdapter.saveTimesheet(timesheet);
         }
-
-        System.out.println("Calculating Tracked and Break Hours...");
         timesheetAdapter.calculateTrackedAndBreakHours(savedEntities);
 
         return savedEntities.stream()
@@ -213,10 +235,6 @@ public class TimesheetServiceImpl implements TimesheetService {
             entry.setLastClockOut(LocalTime.now());
             calculateHours(entry);
         }
-
         timesheetAdapter.saveAll(openClockIns);
     }
-
-
 }
-
