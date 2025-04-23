@@ -220,7 +220,7 @@ public class AuthFacade {
         } catch (DataIntegrityViolationException e) {
             return new ApiResponse(409, e.getMessage(), null);
         } catch(ResponseStatusException e){
-            return new ApiResponse(e.getStatusCode().value(),e.getMessage(),null);
+            return new ApiResponse(e.getStatusCode().value(),e.getReason(),null);
         }
         catch (Exception e) {
             return new ApiResponse(500, "Internal Server Error: " + e.getMessage(), null);
@@ -321,6 +321,25 @@ public class AuthFacade {
 
 
         return new ApiResponse(200, "Members fetched successfully", result);
+    }
+
+    public ApiResponse updateUserGroupType(String token, EditUserGroupDto editUserGroupDto){
+        if (!token.startsWith("Bearer ")) {
+            return new ApiResponse(400, "Invalid token format", null);
+        }
+        String jwt = token.substring(7);
+        Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
+
+        if (orgId == null) {
+            return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
+        }
+
+        UserGroup userGroup = userDtoMapper.toMiddleware(editUserGroupDto);
+        boolean isUpdated = userService.updateUserGroupType(userGroup);
+        if(!isUpdated==true){
+            throw new RuntimeException("Update failed: No matching user-group mapping found or type is the same.");
+        }
+        return new ApiResponse(200, "User group type updated successfully.", true);
     }
 
     public List<TimesheetDto> getAllTimesheets(LocalDate date, String timePeriod, Long userId) {

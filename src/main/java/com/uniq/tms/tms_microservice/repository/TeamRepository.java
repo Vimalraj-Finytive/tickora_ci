@@ -25,7 +25,6 @@ public interface TeamRepository extends JpaRepository<GroupEntity, Long> {
 
     @Query("SELECT g FROM GroupEntity g WHERE g.groupName = :groupName AND g.organizationEntity.id = :orgId")
     Optional<GroupEntity> findBygroupNameAndOrganizationId(@Param("groupName") String teamName, @Param("orgId") Long orgId);
-
     @Query(value = """
     WITH group_base AS (
         SELECT 
@@ -50,7 +49,8 @@ public interface TeamRepository extends JpaRepository<GroupEntity, Long> {
             u.email,
             u.date_of_joining,
             r.name AS role_name,
-            u.location_id
+            u.location_id,
+            u.active
         FROM users u
         LEFT JOIN role r ON u.role_id = r.role_id
     ),
@@ -64,6 +64,7 @@ public interface TeamRepository extends JpaRepository<GroupEntity, Long> {
             ui.email,
             ui.date_of_joining,
             ui.role_name,
+            ui.active,
             ugd.type AS user_type
         FROM group_base gb
         LEFT JOIN user_group_details ugd ON gb.groupid = ugd.group_id
@@ -80,7 +81,8 @@ public interface TeamRepository extends JpaRepository<GroupEntity, Long> {
                 'email', gd.email,
                 'dateOfJoining', gd.date_of_joining,
                 'role', gd.role_name,
-                'type', gd.user_type
+                'type', gd.user_type,
+                'active', gd.active
             )
         ) FILTER (WHERE gd.user_id IS NOT NULL) AS members_details
     FROM group_data gd

@@ -3,10 +3,7 @@ package com.uniq.tms.tms_microservice.controller;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.uniq.tms.tms_microservice.config.JwtUtil;
 import com.uniq.tms.tms_microservice.constant.UserConstant;
-import com.uniq.tms.tms_microservice.dto.AddGroupDto;
-import com.uniq.tms.tms_microservice.dto.AddMemberDto;
-import com.uniq.tms.tms_microservice.dto.ApiResponse;
-import com.uniq.tms.tms_microservice.dto.UserDto;
+import com.uniq.tms.tms_microservice.dto.*;
 import com.uniq.tms.tms_microservice.facade.AuthFacade;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -105,7 +102,6 @@ public class UserController {
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
-
     @PatchMapping("/updateUser")
     public ResponseEntity<ApiResponse> updateUser(
             @RequestHeader("Authorization") String token,
@@ -115,7 +111,6 @@ public class UserController {
         ApiResponse response = authFacade.updateUser(token, updates, userId);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
-
 
     @GetMapping("/getAllUsers")
     public ResponseEntity<ApiResponse> getUsers(@RequestHeader("Authorization") String token) {
@@ -132,6 +127,12 @@ public class UserController {
     @PostMapping("/createGroup")
     public ResponseEntity<ApiResponse> createUser(@RequestHeader("Authorization") String token, @RequestBody AddGroupDto addGroupDto) {
         ApiResponse response = authFacade.createGroup(token, addGroupDto);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
+
+    @PatchMapping("/editType")
+    public ResponseEntity<ApiResponse> updateUserGroupType(@RequestHeader("Authorization") String token, @RequestBody EditUserGroupDto editUserGroupDto){
+        ApiResponse response = authFacade.updateUserGroupType(token,editUserGroupDto);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 

@@ -9,17 +9,15 @@ public class WorkScheduleDto {
     private String restDay;
     private boolean isDefault;
     private String type;
-    private Long organizationId;
 
     public WorkScheduleDto() {
     }
 
-    public WorkScheduleDto(String scheduleName, LocalTime startTime, String restDay, boolean isDefault, Long organizationId, String type, LocalTime endTime) {
+    public WorkScheduleDto(String scheduleName, LocalTime startTime, String restDay, boolean isDefault, String type, LocalTime endTime) {
         this.scheduleName = scheduleName;
         this.startTime = startTime;
         this.restDay = restDay;
         this.isDefault = isDefault;
-        this.organizationId = organizationId;
         this.type = type;
         this.endTime = endTime;
     }
@@ -38,14 +36,6 @@ public class WorkScheduleDto {
 
     public void setEndTime(LocalTime endTime) {
         this.endTime = endTime;
-    }
-
-    public Long getOrganizationId() {
-        return organizationId;
-    }
-
-    public void setOrganizationId(Long organizationId) {
-        this.organizationId = organizationId;
     }
 
     public String getRestDay() {

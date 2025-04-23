@@ -8,6 +8,7 @@ public class WorkSchedule {
     private LocalTime startTime;
     private LocalTime endTime;
     private String restDay;
+    private boolean isActive;
     private boolean isDefault;
     private String type;
     private Long organizationId;
@@ -15,15 +16,16 @@ public class WorkSchedule {
     public WorkSchedule() {
     }
 
-    public WorkSchedule(Long scheduleId, String scheduleName, LocalTime startTime, String restDay, String type, boolean isDefault, Long organizationId, LocalTime endTime) {
+    public WorkSchedule(Long scheduleId, String scheduleName, LocalTime startTime, LocalTime endTime, String restDay, boolean isActive, boolean isDefault, String type, Long organizationId) {
         this.scheduleId = scheduleId;
         this.scheduleName = scheduleName;
         this.startTime = startTime;
-        this.restDay = restDay;
-        this.type = type;
-        this.isDefault = isDefault;
-        this.organizationId = organizationId;
         this.endTime = endTime;
+        this.restDay = restDay;
+        this.isActive = isActive;
+        this.isDefault = isDefault;
+        this.type = type;
+        this.organizationId = organizationId;
     }
 
     public Long getScheduleId() {
@@ -89,4 +91,8 @@ public class WorkSchedule {
     public void setEndTime(LocalTime endTime) {
         this.endTime = endTime;
     }
+
+    public boolean isActive() {return isActive;}
+
+    public void setActive(boolean active) {isActive = active;}
 }

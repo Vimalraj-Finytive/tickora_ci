@@ -12,6 +12,15 @@ public class User {
     private Long roleId;
     private Long locationId;
     private LocalDate dateOfJoining;
+    private boolean active;
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
+    }
 
     public LocalDate getDateOfJoining() {
         return dateOfJoining;
