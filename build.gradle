@@ -48,3 +48,11 @@ dependencies {
 tasks.named('test') {
 	useJUnitPlatform()
 }
+
+bootJar {
+	archiveFileName = 'tms-monoservice.jar'
+}
+
+jar {
+	enabled = false
+}

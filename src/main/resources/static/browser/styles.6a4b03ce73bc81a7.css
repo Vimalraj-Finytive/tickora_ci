@@ -1,4 +1,4 @@
-:root{--primary-color: #DB222A;--secondary-color: #FFF8F6;--bg-screen:#F2F5FA;--balck:#000000;--white:#FFFFFF;--border-line: #8D99AE;--form-line: #555555;--table-line: #808080;--gray:#808080;--success: #28a745;--error: #dc3545;--warning: #ffc107;--info: #17a2b8;--neutral: #6c757d}*{font-family:Poppins,sans-serif;box-sizing:border-box;margin:0}/*!
+:root{--primary-color: #DB222A;--secondary-color: #FFF8F6;--bg-screen:#F2F5FA;--balck:#000000;--white:#FFFFFF;--border-line: #8D99AE;--form-line: #555555;--table-line: #808080;--gray:#808080;--success: #28a745;--error: #dc3545;--warning: #ffc107;--info: #17a2b8;--neutral: #6c757d;--black-shadow: rgba(0, 0, 0, .3)}*{font-family:Poppins,sans-serif;box-sizing:border-box;margin:0}/*!
  * Bootstrap Icons v1.11.3 (https://icons.getbootstrap.com/)
  * Copyright 2019-2024 The Bootstrap Authors
  * Licensed under MIT (https://github.com/twbs/icons/blob/main/LICENSE)
