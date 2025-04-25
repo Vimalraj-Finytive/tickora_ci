@@ -107,7 +107,7 @@ public class TimesheetServiceImpl implements TimesheetService {
                     throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not supervise the selected group(s)");
                 }
                 // Return only members from the supervised group(s) — exclude supervisors and logged-in user
-                return userAdapter.findUsersByGroupIdsAndRoleTypeExcludingUser(
+                return userAdapter.findMembersByGroupIds(
                         filteredGroupIds,
                         userIdFromToken
                 );
@@ -229,7 +229,7 @@ public class TimesheetServiceImpl implements TimesheetService {
         LocalDate today = LocalDate.now();
 
         List<TimesheetEntity> openClockIns = timesheetAdapter
-                .findByFirstClockInNotNullAndLastClockOutIsNullAndDate(today);
+                .findActiveTimesheetsByDate(today);
 
         for (TimesheetEntity entry : openClockIns) {
             entry.setLastClockOut(LocalTime.now());

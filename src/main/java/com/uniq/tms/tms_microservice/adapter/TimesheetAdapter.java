@@ -16,7 +16,7 @@ public interface TimesheetAdapter {
     void calculateTrackedAndBreakHours(List<TimesheetHistoryEntity> savedLogs);
     TimesheetEntity save(TimesheetEntity timesheet);
     TimesheetEntity findUserIdAndDate(Long userId, LocalDate date);
-    List<TimesheetEntity> findByFirstClockInNotNullAndLastClockOutIsNullAndDate(LocalDate today);
+    List<TimesheetEntity> findActiveTimesheetsByDate(LocalDate today);
     void saveAll(List<TimesheetEntity> openClockIns);
     List<TimesheetEntity> getLatestLogsByTimesheetIds(List<Long> memberIds, Long orgId, LocalDate date);
 }

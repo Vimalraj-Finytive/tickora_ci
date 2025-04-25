@@ -2,6 +2,7 @@ package com.uniq.tms.tms_microservice.mapper;
 
 import com.uniq.tms.tms_microservice.dto.*;
 import com.uniq.tms.tms_microservice.model.*;
+import com.uniq.tms.tms_microservice.model.Role;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
@@ -28,4 +29,6 @@ public interface UserDtoMapper {
     AddMember toMiddleware(AddMemberDto addMemberDto);
     UserDto toDto(User user);
     GroupDto toGroupDto(Group group);
+
+    UserResponseDto toDto(UserResponse userResponse);
 }

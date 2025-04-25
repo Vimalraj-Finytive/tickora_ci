@@ -1,7 +1,6 @@
 package com.uniq.tms.tms_microservice.facade;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.uniq.tms.tms_microservice.adapter.UserAdapter;
 import com.uniq.tms.tms_microservice.config.JwtUtil;
 import com.uniq.tms.tms_microservice.dto.*;
 import com.uniq.tms.tms_microservice.entity.UserEntity;
@@ -22,7 +21,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.server.ResponseStatusException;
 import java.time.LocalDate;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Component
 public class AuthFacade {
@@ -152,7 +150,9 @@ public class AuthFacade {
         if (orgId == null) {
             return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
         }
-        List<UserResponseDto> users = userService.getUsers(orgId,role);
+        List<UserResponseDto> users = userService.getUsers(orgId,role).stream()
+                .map(userDtoMapper::toDto)
+                .toList();
         return new ApiResponse(200, "Users fetched successfully", users);
     }
 

@@ -124,7 +124,7 @@ public class UserController {
     }
 
     @PostMapping("/createGroup")
-    public ResponseEntity<ApiResponse> createUser(@RequestHeader("Authorization") String token, @RequestBody AddGroupDto addGroupDto) {
+    public ResponseEntity<ApiResponse> createGroup(@RequestHeader("Authorization") String token, @RequestBody AddGroupDto addGroupDto) {
         ApiResponse response = authFacade.createGroup(token, addGroupDto);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
@@ -185,8 +185,7 @@ public class UserController {
 
     @GetMapping("/getGroupMembers")
     public ResponseEntity<ApiResponse> getUserGroupMembers(@RequestHeader("Authorization") String token,
-                                                           @RequestParam Long groupId,
-                                                           @RequestParam LocalDate date) {
+                                                           @RequestParam Long groupId,@RequestParam LocalDate date) {
         ApiResponse response = authFacade.getUserGroupMembers(token, groupId, date);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }

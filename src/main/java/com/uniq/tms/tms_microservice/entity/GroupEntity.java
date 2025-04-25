@@ -29,21 +29,21 @@ public class GroupEntity {
     @JoinColumn(name = "location_id")
     private LocationEntity locationEntity;
 
-    @Column(name = "work_schedule_id")
-    private Long workScheduleId;
-
+    @ManyToOne
+    @JoinColumn(name = "work_schedule_id")
+    private WorkScheduleEntity workSchedule;
 
     public GroupEntity() {
     }
 
     public GroupEntity(Long groupId){this.groupId=groupId;}
 
-    public Long getWorkScheduleId() {
-        return workScheduleId;
+    public WorkScheduleEntity getWorkSchedule() {
+        return workSchedule;
     }
 
-    public void setWorkScheduleId(Long workScheduleId) {
-        this.workScheduleId = workScheduleId;
+    public void setWorkSchedule(WorkScheduleEntity workSchedule) {
+        this.workSchedule = workSchedule;
     }
 
     public Long getGroupId() {

@@ -16,7 +16,6 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -241,8 +240,8 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
     }
 
     @Override
-    public List<TimesheetEntity> findByFirstClockInNotNullAndLastClockOutIsNullAndDate(LocalDate today) {
-        return timesheetRepository.findByFirstClockInNotNullAndLastClockOutIsNullAndDate(today);
+    public List<TimesheetEntity> findActiveTimesheetsByDate(LocalDate today) {
+        return timesheetRepository.findActiveTimesheetsByDate(today);
     }
 
     @Override

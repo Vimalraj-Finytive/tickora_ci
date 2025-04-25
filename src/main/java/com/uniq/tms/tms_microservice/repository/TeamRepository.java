@@ -87,7 +87,7 @@ public interface TeamRepository extends JpaRepository<GroupEntity, Long> {
     LEFT JOIN location l ON gd.location_id = l.location_id
     GROUP BY gd.groupid, gd.groupname, l.name
     """, nativeQuery = true)
-    List<Object[]> getGroupDataNative(@Param("orgId") Long orgId);
+    List<Object[]> getGroupData(@Param("orgId") Long orgId);
 
     @Modifying
     @Transactional
@@ -123,7 +123,7 @@ public interface TeamRepository extends JpaRepository<GroupEntity, Long> {
             AND g.organization_id = :orgId
             AND ug.type = 'Supervisor'
     """, nativeQuery = true)
-    List<GroupDto> findByUserIdAndOrganization_id(
+    List<GroupDto> findByUserIdAndOrganizationId(
             @Param("userId") Long userId,
             @Param("orgId") Long orgId
     );

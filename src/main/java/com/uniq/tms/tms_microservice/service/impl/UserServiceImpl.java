@@ -9,7 +9,6 @@ import com.uniq.tms.tms_microservice.dto.AddGroupDto;
 import com.uniq.tms.tms_microservice.dto.GroupDto;
 import com.uniq.tms.tms_microservice.dto.GroupResponseDto;
 import com.uniq.tms.tms_microservice.dto.UserGroupDto;
-import com.uniq.tms.tms_microservice.dto.UserResponseDto;
 import com.uniq.tms.tms_microservice.dto.UserRole;
 import com.uniq.tms.tms_microservice.entity.GroupEntity;
 import com.uniq.tms.tms_microservice.entity.LocationEntity;
@@ -18,6 +17,7 @@ import com.uniq.tms.tms_microservice.entity.RoleEntity;
 import com.uniq.tms.tms_microservice.entity.TimesheetEntity;
 import com.uniq.tms.tms_microservice.entity.UserEntity;
 import com.uniq.tms.tms_microservice.entity.UserGroupEntity;
+import com.uniq.tms.tms_microservice.entity.WorkScheduleEntity;
 import com.uniq.tms.tms_microservice.mapper.UserDtoMapper;
 import com.uniq.tms.tms_microservice.mapper.UserEntityMapper;
 import com.uniq.tms.tms_microservice.model.AddGroup;
@@ -27,6 +27,7 @@ import com.uniq.tms.tms_microservice.model.Location;
 import com.uniq.tms.tms_microservice.model.Role;
 import com.uniq.tms.tms_microservice.model.User;
 import com.uniq.tms.tms_microservice.model.UserGroup;
+import com.uniq.tms.tms_microservice.model.UserResponse;
 import com.uniq.tms.tms_microservice.repository.LocationRepository;
 import com.uniq.tms.tms_microservice.repository.OrganizationRepository;
 import com.uniq.tms.tms_microservice.repository.RoleRepository;
@@ -192,41 +193,38 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public List<UserResponseDto> getUsers(Long orgId, String role) {
+    public List<UserResponse> getUsers(Long orgId, String role) {
 
         int hierarchyLevel = UserRole.getLevel(role);
-
-        // This query still gives duplicate rows
-        List<Object[]> rawResults = userAdapter.findRawUsersWithGroups(orgId, hierarchyLevel);
-        if (rawResults.isEmpty()) {
+        List<UserResponse> users = userAdapter.findByOrganizationId(orgId, hierarchyLevel);
+        if (users.isEmpty()) {
             throw new RuntimeException("Unauthorized");
         }
-
-        // Map to avoid duplicate users
-        Map<Long, UserResponseDto> userMap = new LinkedHashMap<>();
-
-        for (Object[] row : rawResults) {
-            Long userId = (Long) row[0];
-            String groupName = (String) row[4];
-
-            UserResponseDto userDto = userMap.get(userId);
-            if (userDto == null) {
-                userDto = new UserResponseDto();
-                userDto.setUserId(userId);
-                userDto.setUserName((String) row[1]);
-                userDto.setEmail((String) row[2]);
-                userDto.setMobileNumber((String) row[3]);
-                userDto.setGroupName(new ArrayList<>());
-                userDto.setRoleName((String) row[6]);
-                userDto.setDateOfJoining((LocalDate) row[7]);
-                userDto.setLocationName((String) row[8]);
-                userMap.put(userId, userDto);
-            }
-            if (groupName != null && !groupName.equals("-")) {
-                userDto.getGroupName().add(groupName);
-            }
+        Map<Long, UserResponse> userMap = new LinkedHashMap<>();
+        for (UserResponse row : users) {
+            userMap.compute(row.getUserId(), (id, existing) -> {
+                if (existing == null) {
+                    return new UserResponse(
+                            row.getUserId(),
+                            row.getUserName(),
+                            row.getEmail(),
+                            row.getMobileNumber(),
+                            row.getGroupName(),
+                            row.getRoleName(),
+                            row.getLocationName(),
+                            row.getDateOfJoining()
+                    );
+                } else {
+                    // Merge group names (if not already present)
+                    String mergedGroups = existing.getGroupName();
+                    if (!mergedGroups.contains(row.getGroupName())) {
+                        mergedGroups += ", " + row.getGroupName();
+                    }
+                    existing.setGroupName(mergedGroups);
+                    return existing;
+                }
+            });
         }
-
         return new ArrayList<>(userMap.values());
     }
 
@@ -260,6 +258,14 @@ public class UserServiceImpl implements UserService {
             entity.setLocationEntity(locationEntity);
         }
 
+        if (groupMiddleware.getWorkScheduleId() != null) {
+            WorkScheduleEntity ws = userAdapter.findByWorkscheduleId(groupMiddleware.getWorkScheduleId());
+            entity.setWorkSchedule(ws);
+        } else {
+            WorkScheduleEntity defaultWs = userAdapter.findDefaultActiveSchedule();
+            entity.setWorkSchedule(defaultWs);
+        }
+
         GroupEntity savedEntity = userAdapter.saveGroup(entity);
 
         for (Long id : groupMiddleware.getSupervisorsId()) {
@@ -273,21 +279,19 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public List<User> addUserToGroup(AddMember addMemberMiddleware, Long orgId){
-        List<User> savedUsers =new ArrayList<User>();
+        List<User> savedUsers =new ArrayList();
         for (Long id : addMemberMiddleware.getUserId()) {
             UserEntity userEntity = userAdapter.findById(id).orElseThrow(()->new UsernameNotFoundException("User not found."));
             createUserGroup(new UserGroup(addMemberMiddleware.getGroupId(), id, addMemberMiddleware.getType()), orgId);
-
             User userMiddleware = userEntityMapper.toMiddleware(userEntity);
             savedUsers.add(userMiddleware);
         }
-
         return savedUsers;
     }
 
     @Override
     public UserGroup createUserGroup(UserGroup userGroupMiddleware, Long orgId) {
-        List<UserGroupEntity> existing = userAdapter.findByUserUserIdAndGroupGroupId(
+        List<UserGroupEntity> existing = userAdapter.findByUserIdAndGroupId(
                 userGroupMiddleware.getUserId(),
                 userGroupMiddleware.getGroupId()
         );
@@ -329,7 +333,7 @@ public class UserServiceImpl implements UserService {
     }
 
     public List<GroupResponseDto> getAllGroups(Long orgId) throws JsonProcessingException {
-        List<Object[]> results = userAdapter.getGroupDataNative(orgId);
+        List<Object[]> results = userAdapter.getGroupData(orgId);
 
         // Maps for collecting union data
         Map<Long, Set<String>> userToGroups = new HashMap<>();
@@ -436,12 +440,6 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public List<User> getMembersExcludingRole(Long orgId, String  excludedRole) {
-        //List<User> members = userAdapter.getMembersExcludingRole(orgId,  excludedRole).stream().map(userEntityMapper::toMiddleware).toList();
-        return null;
-    }
-
-    @Override
     public List<GroupDto> getUserGroups(Long userId, Long orgId) {
         if(userId == null){
             List<GroupDto> Allgroup = userAdapter.getAllgroups(orgId);
@@ -462,7 +460,7 @@ public class UserServiceImpl implements UserService {
         if (memberIds == null || memberIds.isEmpty()) {
             return Collections.emptyList();
         }
-
+        //Fetch list of users in a group
         List<UserEntity> GroupUsers = userAdapter.getUsersByIds(memberIds, orgId);
 
         List<TimesheetEntity> latestLogs = timesheetAdapter.

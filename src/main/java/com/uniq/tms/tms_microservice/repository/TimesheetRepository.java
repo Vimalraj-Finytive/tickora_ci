@@ -23,7 +23,7 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
         ) AS work_date
     ),
     SelectedUsers AS (
-        SELECT * FROM users WHERE (:userIds IS NULL OR user_id = ANY(:userIds))
+        SELECT * FROM users WHERE active = TRUE AND (:userIds IS NULL OR user_id = ANY(:userIds))
     ),
     UserDateMatrix AS (
         SELECT d.work_date, u.user_id, u.user_name, u.role_id
@@ -85,5 +85,5 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
                                               @Param("endDate") LocalDate endDate,
                                               @Param("userIds") Long[] userIds);
 
-    List<TimesheetEntity> findByFirstClockInNotNullAndLastClockOutIsNullAndDate(LocalDate today);
+    List<TimesheetEntity> findActiveTimesheetsByDate(LocalDate today);
 }

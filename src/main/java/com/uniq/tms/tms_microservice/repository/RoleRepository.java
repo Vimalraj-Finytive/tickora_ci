@@ -12,5 +12,5 @@ public interface RoleRepository extends JpaRepository<RoleEntity, Long> {
 
     @Query("SELECT r FROM RoleEntity r WHERE r.organizationEntity.organizationId = :orgId AND " +
             "(r.hierarchyLevel > :hierarchyLevel)")
-    List<RoleEntity> findRolesByOrgIdAndRole(@Param("orgId") Long orgId, @Param("hierarchyLevel") int hierarchyLevel);
+    List<RoleEntity> findRolesByOrgIdAndRoleLevel(@Param("orgId") Long orgId, @Param("hierarchyLevel") int hierarchyLevel);
 }
