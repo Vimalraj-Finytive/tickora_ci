@@ -30,8 +30,13 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // Allow static folder
                         .requestMatchers(
-                                "/", "/browser/**", "/assets/**","/assets/images/**", "/media/**", "/*.js", "/*.css", "/*.html", "/login")
-                        .permitAll()
+                                "/", "/browser/**", "/assets/**","/assets/images/**", "/media/**",
+                                "/*.js", "/*.css", "/*.html",
+                                "/login", // login endpoint
+                                "/tms/loginByEmail", "/tms/loginByMobile", "/tms/sendOTP", "/tms/logout",
+                                "/tms/validate-email", "/tms/reset-password", "/tms/timesheets/**"
+                        ).permitAll()
+
                         .requestMatchers("/tms/loginByEmail","/tms/loginByMobile","/tms/sendOTP", "/tms/logout", "/tms/validate-email", "/tms/reset-password","/tms/timesheets/**").permitAll()
                         .requestMatchers("/tms/admin/**" ).hasAnyAuthority("Admin", "SuperAdmin", "Manager","Staff")
                         .anyRequest().authenticated()
@@ -60,6 +65,7 @@ public class SecurityConfig {
         source.registerCorsConfiguration("/**", config);
         return source;
     }
+
 
     @Bean
     public PasswordEncoder passwordEncoder() {

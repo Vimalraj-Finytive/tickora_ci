@@ -15,6 +15,14 @@ public class WebConfig implements WebMvcConfigurer {
                 .addResourceLocations("classpath:/static/browser/","classpath:/static/browser/assets/images/");
     }
 
+    @Override
+    public void addCorsMappings(CorsRegistry registry) {
+        registry.addMapping("/**")
+                .allowedOrigins("*") // or your frontend URL
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                .allowedHeaders("*");
+    }
+
     // Optional: Forward any non-API path to index.html for Angular routing support
     @Override
     public void addViewControllers(ViewControllerRegistry registry) {
