@@ -30,9 +30,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // Allow static folder
                         .requestMatchers(
-                                "/", "/browser/**", "/assets/**", "/media/**", "/*.js", "/*.css", "/*.html", "/login")
+                                "/", "/browser/**", "/assets/**","/assets/images/**", "/media/**", "/*.js", "/*.css", "/*.html", "/login")
                         .permitAll()
-                        .requestMatchers("/tms/login", "/tms/logout", "/tms/validate-email", "/tms/reset-password","/tms/timesheets/**").permitAll()
+                        .requestMatchers("/tms/loginByEmail","/tms/loginByMobile","/tms/sendOTP", "/tms/logout", "/tms/validate-email", "/tms/reset-password","/tms/timesheets/**").permitAll()
                         .requestMatchers("/tms/admin/**" ).hasAnyAuthority("Admin", "SuperAdmin", "Manager","Staff")
                         .anyRequest().authenticated()
                 )

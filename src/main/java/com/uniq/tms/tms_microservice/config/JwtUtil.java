@@ -1,5 +1,6 @@
 package com.uniq.tms.tms_microservice.config;
 
+import com.uniq.tms.tms_microservice.adapter.AuthAdapter;
 import com.uniq.tms.tms_microservice.entity.BlacklistedTokenEntity;
 import com.uniq.tms.tms_microservice.entity.OrganizationEntity;
 import com.uniq.tms.tms_microservice.entity.RoleEntity;
@@ -17,10 +18,14 @@ import io.jsonwebtoken.security.SignatureException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Component;
 import javax.crypto.SecretKey;
 import java.time.LocalDateTime;
 import java.util.Date;
+import java.util.List;
+import java.util.Objects;
+import java.util.function.Supplier;
 
 @Component
 public class JwtUtil {
@@ -34,16 +39,30 @@ public class JwtUtil {
     private final OrganizationRepository organizationRepository;
 
     private static final long INACTIVITY_TIMEOUT = 12 * 60 * 60 * 1000;
+    private final AuthAdapter authAdapter;
 
-    public JwtUtil(BlacklistedTokenRepository blacklistedTokenRepository, UserRepository userRepository, RoleRepository roleRepository, OrganizationRepository organizationRepository) {
+    public JwtUtil(BlacklistedTokenRepository blacklistedTokenRepository, UserRepository userRepository, RoleRepository roleRepository, OrganizationRepository organizationRepository, AuthAdapter authAdapter) {
         this.blacklistedTokenRepository = blacklistedTokenRepository;
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.organizationRepository = organizationRepository;
+        this.authAdapter = authAdapter;
     }
 
-    public String generateToken(String email, long l,  HttpServletRequest request) {
-        UserEntity user = userRepository.findByEmail(email);
+    public String generateToken(String loginInput, long l,  HttpServletRequest request) {
+        // List of Suppliers returning UserEntity
+        List<Supplier<UserEntity>> userSuppliers = List.of(
+                () -> loginInput.contains("@") ? userRepository.findByEmail(loginInput) : null,
+                () -> loginInput.matches("\\d{10}") ? authAdapter.findByMobileNumber(loginInput) : null,
+                () -> authAdapter.findStudentIdByMobile(loginInput)
+        );
+
+        // Use Stream to get the first non-null user
+        UserEntity user = userSuppliers.stream()
+                .map(Supplier::get)
+                .filter(Objects::nonNull)
+                .findFirst()
+                .orElseThrow(() -> new UsernameNotFoundException("User not found for input: " + loginInput));
 
         Long roleId = user.getRole().getRoleId();
 
@@ -60,7 +79,7 @@ public class JwtUtil {
         String ipAddress = request.getRemoteAddr();
 
         return Jwts.builder()
-                .setSubject(email)
+                .setSubject(loginInput)
                 .claim("roles", "ROLE_" + role.getName())
                 .claim("orgId", user.getOrganizationId())
                 .claim("userId", user.getUserId())

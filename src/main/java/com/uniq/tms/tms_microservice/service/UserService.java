@@ -1,9 +1,8 @@
 package com.uniq.tms.tms_microservice.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.uniq.tms.tms_microservice.dto.AddGroupDto;
-import com.uniq.tms.tms_microservice.dto.GroupDto;
-import com.uniq.tms.tms_microservice.dto.GroupResponseDto;
+import com.uniq.tms.tms_microservice.dto.*;
+import com.uniq.tms.tms_microservice.entity.UserEntity;
 import com.uniq.tms.tms_microservice.model.AddGroup;
 import com.uniq.tms.tms_microservice.model.AddMember;
 import com.uniq.tms.tms_microservice.model.Group;
@@ -21,19 +20,21 @@ public interface UserService {
     List<Role> getAllRole(Long orgId, String role);
     List<Group> getAllTeam();
     List<Location> getAllLocation(Long orgId);
-    User createUser(User usermiddleware, Long organizationId);
-    User updateUser(Map<String, Object> updates, Long orgId, Long userId);
+    User createUser(User userMiddleware, Long organizationId);
+    User updateUser(CreateUserDto updates, Long orgId, Long userId);
     List<UserResponse> getUsers(Long orgId, String role);
     User deleteUser(Long orgId, Long userId);
-    AddGroup createGroup(AddGroup groupmiddleware, Long orgId);
+    AddGroup createGroup(AddGroup groupMiddleware, Long orgId);
     void deleteMember(Long groupId, Long memberId);
     void deleteGroup(Long groupId);
     List<User> getMembers(Long orgId, Long roleId);
     boolean updateUserGroupType(UserGroup userGroup);
-    List<GroupDto>getUserGroups(Long userId, Long orgId);
+    List<GroupDto>getUserGroups(Long userId, String role, Long orgId);
     List<Map<String, Object>> getGroupMembers(Long groupId, Long orgId, LocalDate date);
     List<User> addUserToGroup(AddMember addMemberMiddleware, Long orgId);
     List<GroupResponseDto> getAllGroups(Long orgId) throws JsonProcessingException;
     UserGroup createUserGroup(UserGroup userGroupMiddleware, Long orgId);
     void updateGroupDetails(AddGroupDto addGroupDto, Long groupId, Long orgId);
+    boolean createSecondaryUser(SecondaryDetailsDto secondaryDetailsDto, UserEntity savedUser);
+    List<UserNameSuggestionDto> searchUsernames(String keywords);
 }

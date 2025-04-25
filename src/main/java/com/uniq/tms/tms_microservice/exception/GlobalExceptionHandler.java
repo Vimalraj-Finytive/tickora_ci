@@ -60,7 +60,17 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(UsernameNotFoundException.class)
-    public ResponseEntity<ApiResponse> handleUserNotFoundException(UsernameNotFoundException ex){
+    public ResponseEntity<ApiResponse> handleUserNotFoundException(UsernameNotFoundException ex) {
         return ResponseEntity.badRequest().body(new ApiResponse(400, ex.getMessage(), false));
+
+    }
+
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<Object> handleRuntimeException(RuntimeException ex) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("statusCode", HttpStatus.INTERNAL_SERVER_ERROR.value());
+        body.put("message", ex.getMessage());
+        body.put("data", null);
+        return new ResponseEntity<>(body, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }

@@ -2,6 +2,7 @@ package com.uniq.tms.tms_microservice.repository;
 
 import com.uniq.tms.tms_microservice.entity.UserEntity;
 import com.uniq.tms.tms_microservice.model.UserResponse;
+import com.uniq.tms.tms_microservice.dto.UserNameSuggestionDto;
 import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -17,6 +18,8 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
 
     UserEntity findUserByEmail(String email);;
 
+    UserEntity findByMobileNumber(String mobile);
+
     boolean existsByEmail(String email);
 
     @Query("SELECT new com.uniq.tms.tms_microservice.model.UserResponse(" +
@@ -29,6 +32,10 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
             "JOIN LocationEntity l ON u.locationId = l.locationId " +
             "WHERE u.organizationId = :orgId AND u.active = true AND r.hierarchyLevel > :hierarchyLevel")
     List<UserResponse> findAllUsers(@Param("orgId") Long orgId, @Param("hierarchyLevel") int hierarchyLevel);
+
+    @Query("SELECT new com.uniq.tms.tms_microservice.dto.UserNameSuggestionDto(u.userId, u.userName) " +
+            "FROM UserEntity u WHERE LOWER(u.userName) LIKE LOWER(CONCAT('%', :keyword, '%'))")
+    List<UserNameSuggestionDto> searchUserNamesContaining(@Param("keyword") String keyword);
 
     @Query("SELECT u FROM UserEntity u WHERE u.organizationId = :orgId AND u.active = true AND u.role.roleId = :roleId")
     List<UserEntity> findUsersByOrgIdAndRoleId(@Param("orgId") Long orgId, @Param("roleId") Long roleId);
@@ -47,4 +54,5 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
     @Transactional
     @Query("UPDATE UserEntity u SET u.active = false WHERE u.userId = :userId")
     void deactivateUserById(Long userId);
+
 }
