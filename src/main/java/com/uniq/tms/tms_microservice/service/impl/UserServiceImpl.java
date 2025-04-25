@@ -20,14 +20,11 @@ import com.uniq.tms.tms_microservice.entity.UserGroupEntity;
 import com.uniq.tms.tms_microservice.entity.WorkScheduleEntity;
 import com.uniq.tms.tms_microservice.mapper.UserDtoMapper;
 import com.uniq.tms.tms_microservice.mapper.UserEntityMapper;
-import com.uniq.tms.tms_microservice.model.AddGroup;
-import com.uniq.tms.tms_microservice.model.AddMember;
-import com.uniq.tms.tms_microservice.model.Group;
-import com.uniq.tms.tms_microservice.model.Location;
+import com.uniq.tms.tms_microservice.model.*;
+import com.uniq.tms.tms_microservice.dto.*;
+import com.uniq.tms.tms_microservice.entity.*;
+import com.uniq.tms.tms_microservice.mapper.SecondaryDetailsMapper;
 import com.uniq.tms.tms_microservice.model.Role;
-import com.uniq.tms.tms_microservice.model.User;
-import com.uniq.tms.tms_microservice.model.UserGroup;
-import com.uniq.tms.tms_microservice.model.UserResponse;
 import com.uniq.tms.tms_microservice.repository.LocationRepository;
 import com.uniq.tms.tms_microservice.repository.OrganizationRepository;
 import com.uniq.tms.tms_microservice.repository.RoleRepository;
@@ -63,8 +60,10 @@ public class UserServiceImpl implements UserService {
     private final EmailUtil emailUtil;
     private final UserDtoMapper userDtoMapper;
     private final ObjectMapper objectMapper;
+    private final SecondaryDetailsMapper secondaryDetailsMapper;
+    private final Long STUDENT_ROLE_ID = 5l;
 
-    public UserServiceImpl(UserAdapter userAdapter, TimesheetAdapter timesheetAdapter, UserEntityMapper userEntityMapper, OrganizationRepository organizationRepository, RoleRepository roleRepository, LocationRepository locationRepository, EmailUtil emailUtil, UserDtoMapper userDtoMapper, ObjectMapper objectMapper) {
+    public UserServiceImpl(UserAdapter userAdapter, TimesheetAdapter timesheetAdapter, UserEntityMapper userEntityMapper, OrganizationRepository organizationRepository, RoleRepository roleRepository, LocationRepository locationRepository, EmailUtil emailUtil, UserDtoMapper userDtoMapper, ObjectMapper objectMapper, SecondaryDetailsMapper secondaryDetailsMapper) {
         this.userAdapter = userAdapter;
         this.timesheetAdapter = timesheetAdapter;
         this.userEntityMapper = userEntityMapper;
@@ -74,6 +73,7 @@ public class UserServiceImpl implements UserService {
         this.emailUtil = emailUtil;
         this.userDtoMapper = userDtoMapper;
         this.objectMapper = objectMapper;
+        this.secondaryDetailsMapper = secondaryDetailsMapper;
     }
 
     private static final  Logger log = LoggerFactory.getLogger(UserServiceImpl.class);
@@ -137,12 +137,12 @@ public class UserServiceImpl implements UserService {
         UserEntity saveEntity = userAdapter.saveUser(entity);
         boolean isNewUser = saveEntity.isDefaultPassword();
         emailUtil.sendAccountCreationEmail(usermiddleware.getEmail(), usermiddleware.getUserName(), defaultPassword, isNewUser);
-
         return userEntityMapper.toMiddleware(saveEntity);
     }
 
     @Override
-    public User updateUser(Map<String, Object> updates, Long orgId, Long userId) {
+    public User updateUser(CreateUserDto updates, Long orgId, Long userId) {
+
 
         UserEntity existingUser = userAdapter.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -151,17 +151,59 @@ public class UserServiceImpl implements UserService {
             throw new RuntimeException("Unauthorized");
         }
 
-        updates.forEach((key, value) -> {
-            if ("roleId".equals(key)) {
-                existingUser.setRole(roleRepository.findById(Long.parseLong(value.toString()))
+        UserDto userDto = updates.getUser();
+        if (userDto != null) {
+
+            if (userDto.getRoleId() != null) {
+                existingUser.setRole(userAdapter.findRoleById(userDto.getRoleId())
                         .orElseThrow(() -> new RuntimeException("Role not found")));
-            } else {
-                setField(existingUser, key, value);
             }
-        });
+            if (userDto.getEmail() != null) {
+                existingUser.setEmail(userDto.getEmail());
+            }
+            if (userDto.getUserName()!= null) {
+                existingUser.setUserName(userDto.getUserName());
+            }
+            if (userDto.getMobileNumber() != null) {
+                existingUser.setMobileNumber(userDto.getMobileNumber());
+            }
+            if(userDto.isRegisterUser()){
+                existingUser.setRegisterUser(userDto.isRegisterUser());
+            }
+            if(userDto.getLocationId() != null){
+                existingUser.setLocationId(userDto.getLocationId());
+            }
+            if(userDto.getDateOfJoining() != null){
+                existingUser.setDateOfJoining(userDto.getDateOfJoining());
+            }
+
+            //If user is edit the table also edit the secondary table...
+            if(existingUser.getRole().getRoleId() == STUDENT_ROLE_ID){
+                SecondaryDetailsDto secondaryDetails = updates.getSecondaryDetails();
+                SecondaryDetailsEntity existingSecondaryUser = userAdapter.findSecondaryUserById(userId)
+                        .orElseThrow(() -> new RuntimeException("Secondary User not found"));
+                System.out.println("Fetched Secondary User Id: " + existingSecondaryUser.getId());
+                System.out.println("Fetched Secondary User's User Id: " + existingSecondaryUser.getUser().getUserId());
+
+                if (secondaryDetails != null) {
+                    if (secondaryDetails.getMobile() != null) {
+                        existingSecondaryUser.setMobile(secondaryDetails.getMobile());
+                    }
+                    if (secondaryDetails.getEmail() != null) {
+                        existingSecondaryUser.setEmail(secondaryDetails.getEmail());
+                    }
+                    if (secondaryDetails.getRelation() != null) {
+                        existingSecondaryUser.setRelation(secondaryDetails.getRelation());
+                    }
+
+                }
+                userAdapter.saveSecondaryDetails(existingSecondaryUser);
+            }else{System.out.println("User Role Id: "+existingUser.getRole().getRoleId());}
+        }
 
         return userEntityMapper.toMiddleware(userAdapter.updateUser(existingUser));
     }
+
 
     private void setField(UserEntity user, String key, Object value) {
         try {
@@ -332,6 +374,42 @@ public class UserServiceImpl implements UserService {
         }
     }
 
+    @Override
+    public boolean createSecondaryUser(SecondaryDetailsDto secondaryDetailsDto,UserEntity savedUser) {
+        SecondaryDetails secondaryDetails = secondaryDetailsMapper.toMiddleware(secondaryDetailsDto);
+        SecondaryDetailsEntity secondaryDetailsEntity = secondaryDetailsMapper.toEntity(secondaryDetails);
+        secondaryDetailsEntity.setUser(savedUser);
+
+        boolean isMobileExist = userAdapter.existsMobileByMobile(secondaryDetailsEntity.getMobile());
+            if(isMobileExist){
+                userAdapter.deleteUser(savedUser);
+                throw new RuntimeException("Secondary User Mobile Number is Exist!");
+            }
+        boolean isEmailExist = userAdapter.existsEmailByEmail(secondaryDetails.getEmail());
+            if(isEmailExist){
+                userAdapter.deleteUser(savedUser);
+                throw new RuntimeException("Secondary User Email is Exist!");
+            }
+        SecondaryDetailsEntity savedSD = userAdapter.saveSecondaryDetails(secondaryDetailsEntity);
+
+        if(savedSD==null){return false;}
+        return true;
+    }
+
+    @Override
+    public List<UserNameSuggestionDto> searchUsernames(String keywords) {
+        if (keywords == null || keywords.trim().length() < 3) {
+            throw new RuntimeException("Minimum 3 characters required");
+        }
+
+        List<UserNameSuggestionDto> results = userAdapter.searchUserNamesContaining(keywords);
+
+        return results;
+    }
+
+
+  //  private static final  Logger log = LoggerFactory.getLogger(UserServiceImpl.class);
+
     public List<GroupResponseDto> getAllGroups(Long orgId) throws JsonProcessingException {
         List<Object[]> results = userAdapter.getGroupData(orgId);
 
@@ -440,8 +518,9 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public List<GroupDto> getUserGroups(Long userId, Long orgId) {
-        if(userId == null){
+    public List<GroupDto> getUserGroups(Long userId, String role, Long orgId) {
+        String roleName = role.replace("ROLE_", "");
+        if(RoleName.SUPERADMIN.getRoleName().equalsIgnoreCase(roleName)){
             List<GroupDto> Allgroup = userAdapter.getAllgroups(orgId);
             return Allgroup;
         }

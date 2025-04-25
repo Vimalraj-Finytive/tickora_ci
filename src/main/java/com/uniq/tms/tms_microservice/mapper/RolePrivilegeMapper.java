@@ -1,7 +1,8 @@
 package com.uniq.tms.tms_microservice.mapper;
 
 import com.uniq.tms.tms_microservice.dto.Privilege;
-import com.uniq.tms.tms_microservice.dto.Role;
+import com.uniq.tms.tms_microservice.dto.RoleName;
+
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -10,12 +11,12 @@ import java.util.Set;
 
 public class RolePrivilegeMapper {
 
-    private static final Map<Role, Set<Privilege>> ROLE_PRIVILEGE_MAP = new HashMap<>();
+    private static final Map<RoleName, Set<Privilege>> ROLE_PRIVILEGE_MAP = new HashMap<>();
 
     static {
-        ROLE_PRIVILEGE_MAP.put(Role.SUPERADMIN, EnumSet.allOf(Privilege.class));
+        ROLE_PRIVILEGE_MAP.put(RoleName.SUPERADMIN, EnumSet.allOf(Privilege.class));
 
-        ROLE_PRIVILEGE_MAP.put(Role.ADMIN, EnumSet.of(
+        ROLE_PRIVILEGE_MAP.put(RoleName.ADMIN, EnumSet.of(
                 Privilege.CREATE_NEW_MEMBER,
                 Privilege.LIST_OF_MEMBER,
                 Privilege.EDIT_MEMBER_PROFILE,
@@ -37,7 +38,7 @@ public class RolePrivilegeMapper {
                 Privilege.CHECK_IN_AND_OUT
         ));
 
-        ROLE_PRIVILEGE_MAP.put(Role.MANAGER, EnumSet.of(
+        ROLE_PRIVILEGE_MAP.put(RoleName.MANAGER, EnumSet.of(
                 Privilege.LIST_OF_MEMBER,
                 Privilege.CREATE_NEW_GROUP,
                 Privilege.ADD_GROUP_MEMBER,
@@ -53,7 +54,7 @@ public class RolePrivilegeMapper {
                 Privilege.EDIT_GROUP
         ));
 
-        ROLE_PRIVILEGE_MAP.put(Role.STAFF, EnumSet.of(
+        ROLE_PRIVILEGE_MAP.put(RoleName.STAFF, EnumSet.of(
                 Privilege.CAN_SEE_OWN_TIMESHEET,
                 Privilege.VIEW_SCHEDULE,
                 Privilege.VIEW_LOCATIONS,
@@ -62,18 +63,18 @@ public class RolePrivilegeMapper {
                 Privilege.CAN_SEE_GROUP_LEVEL_TIMESHEETS
                 ));
 
-        ROLE_PRIVILEGE_MAP.put(Role.STUDENT, EnumSet.of(
+        ROLE_PRIVILEGE_MAP.put(RoleName.STUDENT, EnumSet.of(
                 Privilege.VIEW_SCHEDULE,
                 Privilege.VIEW_LOCATIONS,
                 Privilege.CAN_SEE_OWN_TIMESHEET
         ));
     }
 
-    public static Set<Privilege> getPrivilegesForRole(Role role) {
-        return ROLE_PRIVILEGE_MAP.getOrDefault(role, Collections.emptySet());
+    public static Set<Privilege> getPrivilegesForRole(RoleName roleName) {
+        return ROLE_PRIVILEGE_MAP.getOrDefault(roleName, Collections.emptySet());
     }
 
-    public static boolean hasPrivilege(Role role, Privilege privilege) {
-        return getPrivilegesForRole(role).contains(privilege);
+    public static boolean hasPrivilege(RoleName roleName, Privilege privilege) {
+        return getPrivilegesForRole(roleName).contains(privilege);
     }
 }

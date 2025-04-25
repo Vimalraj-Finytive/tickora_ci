@@ -5,6 +5,7 @@ import com.uniq.tms.tms_microservice.config.JwtUtil;
 import com.uniq.tms.tms_microservice.constant.UserConstant;
 import com.uniq.tms.tms_microservice.dto.*;
 import com.uniq.tms.tms_microservice.facade.AuthFacade;
+import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -19,16 +20,19 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 
 @RestController
 @RequestMapping(UserConstant.User_Url)
 public class UserController {
 
+
     private final AuthFacade authFacade;
     private final JwtUtil jwtUtil;
 
     public UserController(AuthFacade authFacade, JwtUtil jwtUtil) {
+
         this.authFacade = authFacade;
         this.jwtUtil = jwtUtil;
     }
@@ -96,15 +100,22 @@ public class UserController {
     }
 
     @PostMapping("/createUser")
-    public ResponseEntity<ApiResponse> createUser(@RequestBody UserDto userdto, @RequestHeader("Authorization") String token) {
-        ApiResponse response = authFacade.createUser(userdto, token);
+    public ResponseEntity<ApiResponse> createUser(
+            @Valid @RequestBody CreateUserDto request,
+            @RequestHeader("Authorization") String token) {
+        if (request == null || request.getUser() == null) {
+            throw new IllegalArgumentException("Request body or user details cannot be null.");
+        }
+        UserDto userDto = request.getUser();
+
+        ApiResponse  response = authFacade.createUser(userDto, request.getSecondaryDetails(), token);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
     @PatchMapping("/updateUser")
     public ResponseEntity<ApiResponse> updateUser(
             @RequestHeader("Authorization") String token,
-            @RequestBody Map<String, Object> updates,
+            @RequestBody CreateUserDto updates,
             @RequestParam Long userId) {
 
         ApiResponse response = authFacade.updateUser(token, updates, userId);
@@ -115,6 +126,14 @@ public class UserController {
     public ResponseEntity<ApiResponse> getUsers(@RequestHeader("Authorization") String token) {
         ApiResponse response = authFacade.getUsers(token);
         return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<ApiResponse<List<UserNameSuggestionDto>>> searchUsers(@RequestHeader("Authorization") String token,@RequestParam String keyword) {
+
+        ApiResponse response = authFacade.searchUsernames(token,keyword);
+
+        return ResponseEntity.ok(response);
     }
 
     @DeleteMapping("/deleteUser")
@@ -178,8 +197,8 @@ public class UserController {
     }
 
     @GetMapping("/getUserGroups")
-    public ResponseEntity<ApiResponse> getUserGroups(@RequestHeader("Authorization") String token, @RequestParam (required = false) Long userId) {
-        ApiResponse response = authFacade.getUserGroups(token, userId);
+    public ResponseEntity<ApiResponse> getUserGroups(@RequestHeader("Authorization") String token) {
+        ApiResponse response = authFacade.getUserGroups(token);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 

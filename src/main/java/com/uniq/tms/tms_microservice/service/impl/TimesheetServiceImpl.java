@@ -2,11 +2,8 @@ package com.uniq.tms.tms_microservice.service.impl;
 
 import com.uniq.tms.tms_microservice.adapter.TimesheetAdapter;
 import com.uniq.tms.tms_microservice.adapter.UserAdapter;
-import com.uniq.tms.tms_microservice.dto.LogType;
-import com.uniq.tms.tms_microservice.dto.Privilege;
-import com.uniq.tms.tms_microservice.dto.Role;
-import com.uniq.tms.tms_microservice.dto.Timeperiod;
-import com.uniq.tms.tms_microservice.dto.TimesheetDto;
+import com.uniq.tms.tms_microservice.dto.*;
+import com.uniq.tms.tms_microservice.dto.RoleName;
 import com.uniq.tms.tms_microservice.entity.TimesheetEntity;
 import com.uniq.tms.tms_microservice.entity.TimesheetHistoryEntity;
 import com.uniq.tms.tms_microservice.entity.UserEntity;
@@ -77,9 +74,9 @@ public class TimesheetServiceImpl implements TimesheetService {
         UserEntity currentUser = userAdapter.getUserById(userIdFromToken);
         String roleName = currentUser.getRole().getName().toUpperCase();
 
-        boolean canSeeOwn = RolePrivilegeMapper.hasPrivilege(Role.valueOf(roleName), Privilege.CAN_SEE_OWN_TIMESHEET);
-        boolean canSeeAll = RolePrivilegeMapper.hasPrivilege(Role.valueOf(roleName), Privilege.CAN_SEE_ALL_TIMESHEETS);
-        boolean canSeeGroup = RolePrivilegeMapper.hasPrivilege(Role.valueOf(roleName), Privilege.CAN_SEE_GROUP_LEVEL_TIMESHEETS);
+        boolean canSeeOwn = RolePrivilegeMapper.hasPrivilege(RoleName.valueOf(roleName), Privilege.CAN_SEE_OWN_TIMESHEET);
+        boolean canSeeAll = RolePrivilegeMapper.hasPrivilege(RoleName.valueOf(roleName), Privilege.CAN_SEE_ALL_TIMESHEETS);
+        boolean canSeeGroup = RolePrivilegeMapper.hasPrivilege(RoleName.valueOf(roleName), Privilege.CAN_SEE_GROUP_LEVEL_TIMESHEETS);
 
         log.info("Privileges - Own: {}, Group: {}, All: {}", canSeeOwn, canSeeGroup, canSeeAll);
 

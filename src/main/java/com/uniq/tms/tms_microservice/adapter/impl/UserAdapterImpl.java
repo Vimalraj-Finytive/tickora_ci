@@ -9,12 +9,9 @@ import com.uniq.tms.tms_microservice.entity.UserEntity;
 import com.uniq.tms.tms_microservice.entity.UserGroupEntity;
 import com.uniq.tms.tms_microservice.entity.WorkScheduleEntity;
 import com.uniq.tms.tms_microservice.model.UserResponse;
-import com.uniq.tms.tms_microservice.repository.LocationRepository;
-import com.uniq.tms.tms_microservice.repository.RoleRepository;
-import com.uniq.tms.tms_microservice.repository.TeamRepository;
-import com.uniq.tms.tms_microservice.repository.UserGroupRepository;
-import com.uniq.tms.tms_microservice.repository.UserRepository;
-import com.uniq.tms.tms_microservice.repository.WorkScheduleRepository;
+import com.uniq.tms.tms_microservice.dto.UserNameSuggestionDto;
+import com.uniq.tms.tms_microservice.entity.*;
+import com.uniq.tms.tms_microservice.repository.*;
 import jakarta.transaction.Transactional;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
@@ -32,14 +29,16 @@ public class UserAdapterImpl implements UserAdapter {
     private final UserRepository userRepository;
     private final UserGroupRepository userGroupRepository;
     private final WorkScheduleRepository workScheduleRepository;
+    private final SecondaryDetailsRepository secondaryDetailsRepository;
 
-    public UserAdapterImpl(RoleRepository roleRepository, TeamRepository teamRepository, LocationRepository locationRepository, UserRepository userRepository, UserGroupRepository userGroupRepository, WorkScheduleRepository workScheduleRepository) {
+    public UserAdapterImpl(RoleRepository roleRepository, TeamRepository teamRepository, LocationRepository locationRepository, UserRepository userRepository, UserGroupRepository userGroupRepository, WorkScheduleRepository workScheduleRepository, SecondaryDetailsRepository secondaryDetailsRepository) {
         this.roleRepository = roleRepository;
         this.teamRepository = teamRepository;
         this.locationRepository = locationRepository;
         this.userRepository = userRepository;
         this.userGroupRepository = userGroupRepository;
         this.workScheduleRepository = workScheduleRepository;
+        this.secondaryDetailsRepository = secondaryDetailsRepository;
     }
 
     @Override
@@ -204,6 +203,36 @@ public class UserAdapterImpl implements UserAdapter {
     public List<UserEntity> findMembersByGroupIds(
             List<Long> filteredGroupIds, Long userIdFromToken) {
         return userGroupRepository.findMembersByGroupIds(filteredGroupIds, userIdFromToken);
+
+    }
+
+    public SecondaryDetailsEntity saveSecondaryDetails(SecondaryDetailsEntity secondaryDetails) {
+        return secondaryDetailsRepository.save(secondaryDetails);
+    }
+
+    @Override
+    public boolean existsMobileByMobile(String mobile) {
+        return secondaryDetailsRepository.existsMobileByMobile(mobile);
+    }
+
+    @Override
+    public boolean existsEmailByEmail(String email) {
+        return secondaryDetailsRepository.existsEmailByEmail(email);
+    }
+
+    @Override
+    public List<UserNameSuggestionDto> searchUserNamesContaining(String keyword) {
+        return userRepository.searchUserNamesContaining(keyword);
+    }
+
+    @Override
+    public Optional<RoleEntity> findRoleById(Long roleId) {
+        return roleRepository.findById(roleId);
+    }
+
+    @Override
+    public Optional<SecondaryDetailsEntity> findSecondaryUserById(Long userId) {
+        return secondaryDetailsRepository.findByUserId(userId);
     }
 
     @Override

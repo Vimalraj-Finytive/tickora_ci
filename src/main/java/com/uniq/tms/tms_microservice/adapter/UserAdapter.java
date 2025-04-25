@@ -8,6 +8,8 @@ import com.uniq.tms.tms_microservice.entity.UserEntity;
 import com.uniq.tms.tms_microservice.entity.UserGroupEntity;
 import com.uniq.tms.tms_microservice.entity.WorkScheduleEntity;
 import com.uniq.tms.tms_microservice.model.UserResponse;
+import com.uniq.tms.tms_microservice.dto.UserNameSuggestionDto;
+import com.uniq.tms.tms_microservice.entity.*;
 import java.util.List;
 import java.util.Optional;
 
@@ -51,5 +53,11 @@ public interface UserAdapter {
     List<UserEntity> findMembersByGroupIds(List<Long> filteredGroupIds, Long userIdFromToken);
     WorkScheduleEntity findByWorkscheduleId(Long workScheduleId);
     WorkScheduleEntity findDefaultActiveSchedule();
+    SecondaryDetailsEntity saveSecondaryDetails(SecondaryDetailsEntity secondaryDetails);
+    boolean existsMobileByMobile(String mobile);
+    boolean existsEmailByEmail(String email);
+    List<UserNameSuggestionDto> searchUserNamesContaining(String keyword);
+    Optional<RoleEntity> findRoleById(Long roleId);
+    Optional<SecondaryDetailsEntity> findSecondaryUserById(Long userId);
 }
 

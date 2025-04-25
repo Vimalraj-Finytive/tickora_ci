@@ -8,6 +8,7 @@ import com.uniq.tms.tms_microservice.dto.LoginDto;
 import com.uniq.tms.tms_microservice.facade.AuthFacade;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,8 +31,8 @@ public class AuthController {
         this.authFacade = authFacade;
     }
 
-    @PostMapping("/login")
-    public ResponseEntity<ApiResponse> login(@RequestBody LoginDto loginDto,
+    @PostMapping("/loginByEmail")
+    public ResponseEntity<ApiResponse> loginByEmail(@RequestBody LoginDto loginDto,
                                                 HttpServletResponse response,
                                                 HttpServletRequest request) {
         Logger logger = LoggerFactory.getLogger(getClass());
@@ -50,7 +51,29 @@ public class AuthController {
                     .body(new ApiResponse(400, "Email and Password are required", null));
         }
 
-        return authFacade.handleLogin(loginDto.getEmail(), loginDto.getPassword(), response, request);
+        return authFacade.handleLoginByEmail(loginDto.getEmail(), loginDto.getPassword(), response, request);
+    }
+
+    @GetMapping("/loginByMobile")
+    public ResponseEntity<ApiResponse> loginByMobile(@RequestParam String mobile, @RequestParam String otp,
+                                                     HttpSession session, HttpServletResponse response, HttpServletRequest request) {
+        System.out.println("Session ID at login: " + session.getId());
+
+        String storedOtp = (String) session.getAttribute("otp");
+        System.out.println("Stored OTP in session: " + storedOtp);
+        if (storedOtp == null) {
+            System.out.println("OTP expired or not found in session.");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new ApiResponse(400, "OTP expired", null));
+        }
+        return authFacade.authenticateUserByMobile(mobile,otp,response,request);
+
+    }
+
+    @GetMapping("/sendOTP")
+    public ResponseEntity<ApiResponse> sendOTP(@RequestParam String mobile, HttpSession session) {
+        ResponseEntity<ApiResponse> response = authFacade.sendOTP(mobile,session);
+        return response;
     }
 
     @GetMapping("/logout")
@@ -68,5 +91,4 @@ public class AuthController {
                                                      @Valid @RequestBody ChangePasswordDto request) {
         return authFacade.resetPassword(email, request);
     }
-
 }
