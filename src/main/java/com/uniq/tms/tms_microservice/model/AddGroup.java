@@ -8,6 +8,7 @@ public class AddGroup {
     private Long locationId;
     private List<Long> supervisorsId;
     private String type;
+    private Long workScheduleId;
 
     public String getType() {return type; }
 
@@ -37,5 +38,11 @@ public class AddGroup {
         this.locationId = locationId;
     }
 
+    public Long getWorkScheduleId() {
+        return workScheduleId;
+    }
 
+    public void setWorkScheduleId(Long workScheduleId) {
+        this.workScheduleId = workScheduleId;
+    }
 }

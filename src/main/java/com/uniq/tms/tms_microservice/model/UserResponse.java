@@ -1,8 +1,8 @@
-package com.uniq.tms.tms_microservice.dto;
+package com.uniq.tms.tms_microservice.model;
 
 import java.time.LocalDate;
 
-public class UserResponseDto {
+public class UserResponse {
 
     private Long userId;
     private String userName;
@@ -13,25 +13,14 @@ public class UserResponseDto {
     private String locationName;
     private LocalDate dateOfJoining;
 
-    public UserResponseDto() {
-    }
-
-    public UserResponseDto(Long userId, String userName, String email, String mobileNumber,String groupName, String roleName, LocalDate dateOfJoining, String locationName) {
+    public UserResponse(Long userId, String userName, String email, String mobileNumber, String groupName, String roleName, String locationName, LocalDate dateOfJoining) {
         this.userId = userId;
         this.userName = userName;
         this.email = email;
         this.mobileNumber = mobileNumber;
         this.groupName = groupName;
         this.roleName = roleName;
-        this.dateOfJoining = dateOfJoining;
         this.locationName = locationName;
-    }
-
-    public LocalDate getDateOfJoining() {
-        return dateOfJoining;
-    }
-
-    public void setDateOfJoining(LocalDate dateOfJoining) {
         this.dateOfJoining = dateOfJoining;
     }
 
@@ -46,12 +35,15 @@ public class UserResponseDto {
     public String getUserName() {
         return userName;
     }
+
     public void setUserName(String userName) {
         this.userName = userName;
     }
+
     public String getEmail() {
         return email;
     }
+
     public void setEmail(String email) {
         this.email = email;
     }
@@ -67,19 +59,32 @@ public class UserResponseDto {
     public String getGroupName() {
         return groupName;
     }
+
     public void setGroupName(String groupName) {
         this.groupName = groupName;
     }
+
     public String getRoleName() {
         return roleName;
     }
+
     public void setRoleName(String roleName) {
         this.roleName = roleName;
     }
+
     public String getLocationName() {
         return locationName;
     }
+
     public void setLocationName(String locationName) {
         this.locationName = locationName;
+    }
+
+    public LocalDate getDateOfJoining() {
+        return dateOfJoining;
+    }
+
+    public void setDateOfJoining(LocalDate dateOfJoining) {
+        this.dateOfJoining = dateOfJoining;
     }
 }

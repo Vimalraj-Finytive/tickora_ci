@@ -7,21 +7,15 @@ import com.uniq.tms.tms_microservice.dto.TimesheetDto;
 import com.uniq.tms.tms_microservice.dto.TimesheetHistoryDto;
 import com.uniq.tms.tms_microservice.entity.TimesheetEntity;
 import com.uniq.tms.tms_microservice.entity.TimesheetHistoryEntity;
-import com.uniq.tms.tms_microservice.mapper.TimesheetDtoMapper;
-import com.uniq.tms.tms_microservice.mapper.TimesheetEntityMapper;
 import com.uniq.tms.tms_microservice.repository.TimesheetHistoryRepository;
 import com.uniq.tms.tms_microservice.repository.TimesheetRepository;
 import org.springframework.stereotype.Component;
 import java.time.Duration;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
-import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -34,105 +28,68 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
 
     private final TimesheetRepository timesheetRepository;
     private final TimesheetHistoryRepository timesheetHistoryRepository;
-    private final TimesheetDtoMapper timesheetDtoMapper;
-    private final TimesheetEntityMapper timesheetEntityMapper;
 
-    public TimesheetAdapterImpl(TimesheetRepository timesheetRepository, TimesheetHistoryRepository timesheetHistoryRepository, TimesheetDtoMapper timesheetDtoMapper, TimesheetEntityMapper timesheetEntityMapper) {
+    public TimesheetAdapterImpl(TimesheetRepository timesheetRepository, TimesheetHistoryRepository timesheetHistoryRepository) {
         this.timesheetRepository = timesheetRepository;
         this.timesheetHistoryRepository = timesheetHistoryRepository;
-        this.timesheetDtoMapper = timesheetDtoMapper;
-        this.timesheetEntityMapper = timesheetEntityMapper;
     }
 
-    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssX");
-
     @Override
-    public List<TimesheetDto> filterTimesheetsForAllUsers(LocalDate startDate, LocalDate endDate, Long userId) {
-        System.out.println("StartDate: " + startDate + ", EndDate: " + endDate + ", userId: " + userId);
-        List<Object[]> resultList = timesheetRepository.fetchTimesheetsWithHistory(startDate, endDate, userId);
-        System.out.println("Result List Size: " + (resultList == null ? "null" : resultList.size()));
+    public List<TimesheetDto> filterTimesheetsForAllUsers(LocalDate startDate, LocalDate endDate, List<Long> userIds) {
+        Long[] userIdArray = userIds.toArray(new Long[0]); // Convert list to array
 
-        Map<Long, TimesheetDto> timesheetMap = new LinkedHashMap<>();
+        List<Object[]> resultList = timesheetRepository.fetchTimesheetsWithHistory(startDate, endDate, userIdArray);
+
+        Map<String, TimesheetDto> timesheetMap = new LinkedHashMap<>();
 
         for (Object[] row : resultList) {
-            if (row[1] == null) continue;
+            if (row[1] == null) {
+                continue;
+            }
 
-            Long timesheetId = row[4] != null ? Long.parseLong(row[4].toString()) : null;
+            Long userId = Long.parseLong(row[1].toString());
 
-            TimesheetDto dto = timesheetMap.computeIfAbsent(timesheetId, id -> {
+            // Extract date and convert properly
+            LocalDate date = row[0] != null ?
+                    (row[0] instanceof java.sql.Date ?
+                            ((java.sql.Date) row[0]).toLocalDate() :
+                            (row[0] instanceof java.time.Instant ?
+                                    ((java.time.Instant) row[0]).atZone(ZoneId.systemDefault()).toLocalDate() :
+                                    null))
+                    : null;
+
+            // NEW: Composite key = userId + "-" + date
+            String compositeKey = userId + "-" + date;
+
+            TimesheetDto dto = timesheetMap.computeIfAbsent(compositeKey, key -> {
                 TimesheetDto newDto = new TimesheetDto();
-                newDto.setId(timesheetId);
-                newDto.setUserId(row[1] != null ? Long.parseLong(row[1].toString()) : null);
-                newDto.setDate(row[0] != null ?
-                        (row[0] instanceof java.sql.Date ?
-                                ((java.sql.Date) row[0]).toLocalDate() :
-                                (row[0] instanceof java.time.Instant ?
-                                        ((java.time.Instant) row[0]).atZone(ZoneId.systemDefault()).toLocalDate() :
-                                        null))
-                        : null);
+                newDto.setId(row[4] != null ? Long.parseLong(row[4].toString()) : null);
+                newDto.setUserId(userId);
+                newDto.setDate(date);
                 newDto.setUserName((String) row[2]);
                 newDto.setRole((String) row[3]);
                 newDto.setDayType((String) row[9]);
-
-                // Handle first_clock_in (java.sql.Time to LocalTime)
                 newDto.setFirstClockIn(row[5] != null ? ((java.sql.Time) row[5]).toLocalTime() : null);
-
-                // Handle last_clock_out (java.sql.Time to LocalTime)
                 newDto.setLastClockOut(row[6] != null ? ((java.sql.Time) row[6]).toLocalTime() : null);
-
-                // Handle tracked_hours
-                if (row[7] != null) {
-                    if (row[7] instanceof java.sql.Time) {
-                        // Convert java.sql.Time to LocalTime
-                        newDto.setTrackedHours(((java.sql.Time) row[7]).toLocalTime());
-                    } else if (row[7] instanceof String) {
-                        // If it's a String, parse it
-                        String timeString = (String) row[7];
-                        try {
-                            LocalTime trackedHours = LocalTime.parse(timeString);
-                            newDto.setTrackedHours(trackedHours);
-                        } catch (DateTimeParseException e) {
-                            // Handle error if parsing fails
-                            System.err.println("Error parsing tracked_hours: " + timeString);
-                            newDto.setTrackedHours(LocalTime.MIDNIGHT); // Default value on error
-                        }
-                    } else {
-                        System.err.println("Unexpected type for tracked_hours: " + row[7].getClass());
-                    }
-                }
-
-                if (row[8] != null) {
-                    if (row[8] instanceof java.sql.Time) {
-                        // Convert java.sql.Time to LocalTime
-                        newDto.setRegularHours(((java.sql.Time) row[8]).toLocalTime());
-                    } else if (row[8] instanceof String) {
-                        // If it's a String, parse it
-                        String timeString = (String) row[8];
-                        try {
-                            LocalTime regularHours = LocalTime.parse(timeString);
-                            newDto.setRegularHours(regularHours);
-                        } catch (DateTimeParseException e) {
-                            // Handle error if parsing fails
-                            System.err.println("Error parsing tracked_hours: " + timeString);
-                            newDto.setRegularHours(LocalTime.MIDNIGHT);
-                        }
-                    } else {
-                        System.err.println("Unexpected type for tracked_hours: " + row[8].getClass());
-                    }
-                }
-
+                // trackedHours
+                newDto.setTrackedHours(parseTimeToDuration(row[7], "tracked_hours"));
+                // regularHours
+                newDto.setRegularHours(parseTimeToDuration(row[8], "regular_hours"));
                 newDto.setUserDayType((String) row[10]);
                 newDto.setWorkStatus((String) row[11]);
                 newDto.setHistory(new ArrayList<>());
+                // Format values for display
+                newDto.setFirstClockInTime(formatTime(newDto.getFirstClockIn()));
+                newDto.setLastClockOutTime(formatTime(newDto.getLastClockOut()));
+                newDto.setTrackedHoursDuration(formatDuration(newDto.getTrackedHours()));
+                newDto.setRegularHoursDuration(formatDuration(newDto.getRegularHours()));
                 return newDto;
             });
 
-
-            System.out.println("Row Data: " + Arrays.toString(row));
-
+            // Add TimesheetHistoryDto
             if (row[12] != null) {
                 TimesheetHistoryDto historyDto = new TimesheetHistoryDto();
-                historyDto.setTimesheetHistoryId(row[12] != null ? Long.parseLong(row[12].toString()) : null);
+                historyDto.setTimesheetHistoryId(Long.parseLong(row[12].toString()));
                 historyDto.setLogTime(row[13] != null ? ((java.sql.Time) row[13]).toLocalTime() : null);
 
                 try {
@@ -165,24 +122,48 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
 
                 dto.getHistory().add(historyDto);
             }
-
         }
-
         return new ArrayList<>(timesheetMap.values());
     }
 
-    private LocalDate parseDate(Object obj) {
-        if (obj == null) return null;
+    // Update the parseTimeToDuration method to handle SQL Time correctly
+    private Duration parseTimeToDuration(Object timeObj, String label) {
+        if (timeObj == null) return Duration.ZERO;
+
         try {
-            return LocalDateTime.parse(obj.toString(), DATE_TIME_FORMATTER)
-                    .atZone(ZoneOffset.UTC)
-                    .withZoneSameInstant(ZoneId.systemDefault())
-                    .toLocalDate();
+            if (timeObj instanceof String) {
+                String intervalStr = (String) timeObj;
+                // Parse PostgreSQL INTERVAL string format: "01:30:00"
+                LocalTime lt = LocalTime.parse(intervalStr);
+                return Duration.ofHours(lt.getHour()).plusMinutes(lt.getMinute()).plusSeconds(lt.getSecond());
+            } else {
+                System.err.println("Unexpected type for " + label + ": " + timeObj.getClass());
+            }
         } catch (Exception e) {
-            return LocalDate.parse(obj.toString().substring(0, 10));
+            System.err.println("Error parsing " + label + ": " + timeObj);
+            e.printStackTrace();
         }
+        return Duration.ZERO;
     }
 
+    // Format Duration in "XXh XXm" format
+    private String formatDuration(Duration duration) {
+        if (duration == null || duration.isZero()) {
+            return "00h 00m"; // Return this when duration is zero
+        }
+        long hours = duration.toHours();
+        long minutes = duration.toMinutes() % 60;
+        return String.format("%02dh %02dm", hours, minutes); // Format as "09h 00m"
+    }
+
+    // Method to format LocalTime to 12-hour format (AM/PM)
+    private String formatTime(LocalTime localTime) {
+        if (localTime == null) {
+            return "00:00";
+        }
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("hh:mm a"); // 12-hour format with AM/PM
+        return localTime.format(formatter);
+    }
 
     @Override
     public Optional<TimesheetEntity> findByUserIdAndDate(Long userId, LocalDate date) {
@@ -225,20 +206,11 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
             LocalTime lastClockIn = Optional.ofNullable(timesheet.getFirstClockIn()).orElse(null);
             LocalTime lastClockOut = Optional.ofNullable(timesheet.getLastClockOut()).orElse(null);
 
-            System.out.println("\n=== Processing Timesheet ID: " + timesheetId + " ===");
-            System.out.println("Initial Tracked: " + LocalTime.ofSecondOfDay(trackedSeconds));
-            System.out.println("Initial Break: " + LocalTime.ofSecondOfDay(breakSeconds));
-            System.out.println("Initial Regular Hours: " + LocalTime.ofSecondOfDay(regularSeconds));
-            System.out.println("Initial Last Clock-Out: " + lastClockOut);
-
             for (TimesheetHistoryEntity log : historyLogs) {
-                System.out.println("Processing Log: " + log.getLogType() + " at " + log.getLogTime());
-
                 if (log.getLogType() == LogType.CLOCK_IN) {
                     if (lastClockOut != null) {
                         long breakTime = Duration.between(lastClockOut, log.getLogTime()).getSeconds();
                         if (breakTime > 0) {
-                            System.out.println("Break Time: " + LocalTime.ofSecondOfDay(breakTime));
                             breakSeconds += breakTime;
                         }
                     }
@@ -246,24 +218,16 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
                 } else if (log.getLogType() == LogType.CLOCK_OUT && lastClockIn != null) {
                     long trackedTime = Duration.between(lastClockIn, log.getLogTime()).getSeconds();
                     if (trackedTime > 0) {
-                        System.out.println("Tracked Time: " + LocalTime.ofSecondOfDay(trackedTime));
                         trackedSeconds += trackedTime;
                         regularSeconds += trackedTime;
                     }
                     lastClockOut = log.getLogTime();
                 }
             }
-
-            System.out.println("Final Tracked Hours: " + LocalTime.ofSecondOfDay(trackedSeconds));
-            System.out.println("Final Break Hours: " + LocalTime.ofSecondOfDay(breakSeconds));
-            System.out.println("Final Regular Hours: " + LocalTime.ofSecondOfDay(regularSeconds));
-            System.out.println("Final Last Clock-Out: " + lastClockOut);
-
             timesheet.setTrackedHours(LocalTime.ofSecondOfDay(trackedSeconds));
             timesheet.setRegularHours(LocalTime.ofSecondOfDay(regularSeconds));
             timesheet.setTotalBreakHours(LocalTime.ofSecondOfDay(breakSeconds));
             timesheet.setLastClockOut(lastClockOut);
-
             timesheetRepository.save(timesheet);
         }
     }
@@ -276,8 +240,8 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
     }
 
     @Override
-    public List<TimesheetEntity> findByFirstClockInNotNullAndLastClockOutIsNullAndDate(LocalDate today) {
-        return timesheetRepository.findByFirstClockInNotNullAndLastClockOutIsNullAndDate(today);
+    public List<TimesheetEntity> findActiveTimesheetsByDate(LocalDate today) {
+        return timesheetRepository.findActiveTimesheetsByDate(today);
     }
 
     @Override
@@ -294,7 +258,4 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
     public TimesheetEntity save(TimesheetEntity timesheet) {
         return timesheetRepository.save(timesheet);
     }
-
-
 }
-

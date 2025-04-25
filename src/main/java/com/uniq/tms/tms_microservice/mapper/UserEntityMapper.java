@@ -2,10 +2,8 @@ package com.uniq.tms.tms_microservice.mapper;
 
 import com.uniq.tms.tms_microservice.entity.*;
 import com.uniq.tms.tms_microservice.model.*;
-import org.hibernate.boot.archive.internal.StandardArchiveDescriptorFactory;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
-import org.mapstruct.Named;
 
 @Mapper(componentModel = "spring")
 public interface UserEntityMapper {
@@ -26,14 +24,14 @@ public interface UserEntityMapper {
 
     UserEntity toEntity(User user);
 
-    @Mapping(target = "workScheduleId", ignore = true)
+    @Mapping(target = "workSchedule", ignore = true)
     @Mapping(target = "locationEntity", expression = "java(new LocationEntity(group.getLocationId()))")
     @Mapping(target = "groupId", ignore = true)
     @Mapping(target = "organizationEntity", ignore = true)
     GroupEntity toEntity(AddGroup group);
 
-    @Mapping(target = "organizationId", source = "organizationEntity.organizationId")
     @Mapping(target = "locationId", source = "locationEntity.locationId")
+    @Mapping(target = "workScheduleId", source = "workSchedule.scheduleId")
     Group toMiddleware(GroupEntity entity);
 
     @Mapping(target = "scheduleId", source = "scheduleId")
@@ -47,6 +45,7 @@ public interface UserEntityMapper {
 
     @Mapping(target = "type", ignore = true)
     @Mapping(target = "locationId", source = "locationEntity.locationId")
+    @Mapping(target = "workScheduleId", source = "workSchedule.scheduleId")
     @Mapping(target = "supervisorsId", ignore = true)
     AddGroup toGroupMiddleware(GroupEntity entity);
 
@@ -59,10 +58,4 @@ public interface UserEntityMapper {
     @Mapping(target = "user", expression = "java(new UserEntity(userGroup.getUserId()))")
     @Mapping(target = "group", expression = "java(new GroupEntity(userGroup.getGroupId()))")
     UserGroupEntity toEntity(UserGroup userGroup);
-
-    @Named("mapLocation")
-    default LocationEntity mapLocation(Long locationId) {
-        if (locationId == null) return null;
-        return new LocationEntity(locationId);
-    }
 }

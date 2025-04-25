@@ -30,6 +30,4 @@ public class EmailUtil {
         emailService.sendEmail(toEmail, subject, userName, defaultPassword, isNewUser);
     }
 
-
-
 }

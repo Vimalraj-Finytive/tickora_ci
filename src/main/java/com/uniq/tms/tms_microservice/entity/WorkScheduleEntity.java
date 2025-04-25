@@ -1,8 +1,6 @@
 package com.uniq.tms.tms_microservice.entity;
 
-
 import jakarta.persistence.*;
-
 import java.time.LocalTime;
 
 @Entity
@@ -27,7 +25,7 @@ public class WorkScheduleEntity  {
     private String restDay;
 
     @Column(name = "is_default", nullable = false)
-    private Boolean isDefault;
+    private Boolean isDefault = false;
 
     @Column(name = "is_active", nullable = false)
     private Boolean isActive;

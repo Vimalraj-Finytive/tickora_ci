@@ -1,15 +1,13 @@
 package com.uniq.tms.tms_microservice.repository;
 
-
-import com.uniq.tms.tms_microservice.dto.UserResponseDto;
 import com.uniq.tms.tms_microservice.entity.UserEntity;
+import com.uniq.tms.tms_microservice.model.UserResponse;
 import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-
 import java.util.List;
 import java.util.Optional;
 
@@ -21,25 +19,28 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
 
     boolean existsByEmail(String email);
 
-    @Query("SELECT u.userId, u.userName, u.email, u.mobileNumber, " +
-            "COALESCE(g.groupName, '-'), u.organizationId, r.name, u.dateOfJoining, l.name " +
+    @Query("SELECT new com.uniq.tms.tms_microservice.model.UserResponse(" +
+            "u.userId, u.userName, u.email, u.mobileNumber, " +
+            "COALESCE(g.groupName, '-'), r.name, l.name, u.dateOfJoining) " +
             "FROM UserEntity u " +
             "LEFT JOIN UserGroupEntity ug ON ug.user.userId = u.userId " +
             "LEFT JOIN GroupEntity g ON ug.group.groupId = g.groupId " +
             "JOIN RoleEntity r ON u.role = r " +
             "JOIN LocationEntity l ON u.locationId = l.locationId " +
-            "WHERE u.organizationId = :orgId AND r.name IN (:role) AND u.active = true")
-    List<Object[]> findRawUsersWithGroups(@Param("orgId") Long orgId, @Param("role") List<String> accessibleRoles);
+            "WHERE u.organizationId = :orgId AND u.active = true AND r.hierarchyLevel > :hierarchyLevel")
+    List<UserResponse> findAllUsers(@Param("orgId") Long orgId, @Param("hierarchyLevel") int hierarchyLevel);
 
-    @Query("SELECT u FROM UserEntity u WHERE u.organizationId = :orgId AND u.role.name = :role AND u.active = true")
-    List<UserEntity> findByOrganizationIdAndRole_NameAndActiveTrue(@Param("orgId") Long orgId,@Param("role") String roleName);
+    @Query("SELECT u FROM UserEntity u WHERE u.organizationId = :orgId AND u.active = true AND u.role.roleId = :roleId")
+    List<UserEntity> findUsersByOrgIdAndRoleId(@Param("orgId") Long orgId, @Param("roleId") Long roleId);
 
-    @Query("SELECT u FROM UserEntity u WHERE u.organizationId = :orgId AND u.role.name <> :excludedRole AND u.active = true")
-    List<UserEntity> findByOrganizationIdAndActiveTrueAndRole_NameNot(@Param("orgId") Long orgId,@Param("excludedRole") String excludedRole);
+    @Query("SELECT u FROM UserEntity u WHERE u.organizationId = :orgId AND u.active = true AND u.role.hierarchyLevel IN :higherRoleIds")
+    List<UserEntity> findByOrgIdAndRoleId(Long orgId, List<Integer> higherRoleIds);
 
-    List<UserEntity> findByUserIdInAndOrganizationId(List <Long> userIds, Long orgId);
+    @Query("SELECT u FROM UserEntity u WHERE u.userId IN :userIds AND u.organizationId = :orgId")
+    List<UserEntity> findByUserIdAndOrgId(@Param("userIds") List<Long> userIds, @Param("orgId") Long orgId);
 
-    Optional<UserEntity> findByUserIdAndActiveTrue(Long userId);
+    Optional<UserEntity> findByUserId(Long userId);
+
     boolean existsByMobileNumber(String mobileNumber);
 
     @Modifying

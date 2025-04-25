@@ -12,7 +12,16 @@ public class User {
     private Long roleId;
     private Long locationId;
     private LocalDate dateOfJoining;
+    private boolean isRegisterUser;
     private boolean active;
+
+    public boolean isRegisterUser() {
+        return isRegisterUser;
+    }
+
+    public void setRegisterUser(boolean registerUser) {
+        isRegisterUser = registerUser;
+    }
 
     public boolean isActive() {
         return active;

@@ -1,6 +1,5 @@
 package com.uniq.tms.tms_microservice.controller;
 
-
 import com.uniq.tms.tms_microservice.constant.UserConstant;
 import com.uniq.tms.tms_microservice.dto.ApiResponse;
 import com.uniq.tms.tms_microservice.dto.TimesheetDto;
@@ -8,12 +7,12 @@ import com.uniq.tms.tms_microservice.dto.TimesheetHistoryDto;
 import com.uniq.tms.tms_microservice.facade.AuthFacade;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -22,7 +21,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping(UserConstant.Timesheet_URL)
-@CrossOrigin(origins = "http://localhost:4200")
 public class TimesheetController {
 
     private final AuthFacade authFacade;
@@ -31,14 +29,14 @@ public class TimesheetController {
         this.authFacade = authFacade;
     }
 
-    //working query
     @GetMapping
-    public ResponseEntity<ApiResponse> getAllTimesheets(
+    public ResponseEntity<ApiResponse> getAllTimesheets(@RequestHeader("Authorization") String token,
             @RequestParam(required = false) LocalDate date,
             @RequestParam(required = false) String timePeriod,
-            @RequestParam(required = false) Long userId) {
+            @RequestParam(required = false) Long userId,
+            @RequestParam(required = false) List<Long> groupId) {
 
-        List<TimesheetDto> timesheets = authFacade.getAllTimesheets(date, timePeriod,userId);
+        List<TimesheetDto> timesheets = authFacade.getAllTimesheets(token,date, timePeriod,userId, groupId);
         return ResponseEntity.ok(new ApiResponse(200, "Timesheets fetched successfully", timesheets));
     }
 
@@ -74,8 +72,4 @@ public class TimesheetController {
 
         return ResponseEntity.ok(new ApiResponse<>(200, "Timesheet upserted successfully", timesheetDto));
     }
-
-
-
 }
-

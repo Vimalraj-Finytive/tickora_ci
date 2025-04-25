@@ -2,14 +2,12 @@ package com.uniq.tms.tms_microservice.repository;
 
 import com.uniq.tms.tms_microservice.dto.GroupDto;
 import com.uniq.tms.tms_microservice.entity.GroupEntity;
-import com.uniq.tms.tms_microservice.entity.UserGroupEntity;
 import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-
 import java.util.List;
 import java.util.Optional;
 
@@ -89,8 +87,7 @@ public interface TeamRepository extends JpaRepository<GroupEntity, Long> {
     LEFT JOIN location l ON gd.location_id = l.location_id
     GROUP BY gd.groupid, gd.groupname, l.name
     """, nativeQuery = true)
-    List<Object[]> getGroupDataNative(@Param("orgId") Long orgId);
-
+    List<Object[]> getGroupData(@Param("orgId") Long orgId);
 
     @Modifying
     @Transactional
@@ -124,8 +121,9 @@ public interface TeamRepository extends JpaRepository<GroupEntity, Long> {
         WHERE 
             ug.user_id = :userId
             AND g.organization_id = :orgId
+            AND ug.type = 'Supervisor'
     """, nativeQuery = true)
-    List<GroupDto> findByUserIdAndOrganization_id(
+    List<GroupDto> findByUserIdAndOrganizationId(
             @Param("userId") Long userId,
             @Param("orgId") Long orgId
     );
@@ -138,7 +136,14 @@ public interface TeamRepository extends JpaRepository<GroupEntity, Long> {
         """, nativeQuery = true)
     void deleteGroupById(@Param("groupId") Long groupId);
 
-    List<UserGroupEntity> findByGroupIdAndOrganizationEntity_OrganizationId(Long groupId, Long organizationId);
-
-
+    @Query(value = """
+        SELECT 
+            g.group_id AS groupId,
+            g.group_name AS groupName
+        FROM 
+            group_table g
+        WHERE 
+            g.organization_id = :orgId
+    """, nativeQuery = true)
+    List<GroupDto> findByOrganizationId(Long orgId);
 }

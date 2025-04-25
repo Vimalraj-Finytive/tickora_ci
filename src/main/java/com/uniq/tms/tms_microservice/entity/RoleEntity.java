@@ -13,7 +13,6 @@ import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
-
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -27,8 +26,11 @@ public class RoleEntity {
     @Column(name = "role_id")
     private Long roleId;
 
-    @Column(name = "name", nullable = false, length =    100)
+    @Column(name = "name", nullable = false, length = 100)
     private String name;
+
+    @Column(name = "hierarchy_level")
+    private Integer hierarchyLevel;
 
     @ManyToOne
     @JoinColumn(name = "organization_id", nullable = false)
@@ -39,15 +41,23 @@ public class RoleEntity {
     private List<UserEntity> users;
 
     @ManyToMany
-    @JoinTable(name = "role_privilage_map", joinColumns = @JoinColumn(name = "role_id"), inverseJoinColumns = @JoinColumn(name = "privilage_id"))
-    private Set<PrivilageEntity> privilageEntities = new HashSet<>();
+    @JoinTable(name = "role_privilege_map", joinColumns = @JoinColumn(name = "role_id"), inverseJoinColumns = @JoinColumn(name = "privilege_id"))
+    private Set<PrivilegeEntity> privilegeEntities = new HashSet<>();
 
-    public Set<PrivilageEntity> getPrivilageEntities() {
-        return privilageEntities;
+    public Set<PrivilegeEntity> getPrivilegeEntities() {
+        return privilegeEntities;
     }
 
-    public void setPrivilageEntities(Set<PrivilageEntity> privilageEntities) {
-        this.privilageEntities = privilageEntities;
+    public void setPrivilegeEntities(Set<PrivilegeEntity> privilegeEntities) {
+        this.privilegeEntities = privilegeEntities;
+    }
+
+    public int getHierarchyLevel() {
+        return hierarchyLevel;
+    }
+
+    public int setHierarchyLevel(int hierarchyLevel) {
+        return this.hierarchyLevel = hierarchyLevel;
     }
 
     public Long getRoleId() {
@@ -65,7 +75,6 @@ public class RoleEntity {
     public void setName(String name) {
         this.name = name;
     }
-
 
     public OrganizationEntity getOrganizationEntity() {
         return organizationEntity;

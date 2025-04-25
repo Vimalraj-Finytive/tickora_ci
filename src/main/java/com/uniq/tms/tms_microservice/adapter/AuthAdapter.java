@@ -1,6 +1,5 @@
 package com.uniq.tms.tms_microservice.adapter;
 
-
 import com.uniq.tms.tms_microservice.entity.UserEntity;
 
 public interface AuthAdapter {

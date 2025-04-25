@@ -8,10 +8,8 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
-
 import java.util.ArrayList;
 import java.util.List;
-
 
 @Entity
 @Table(name = "organization")
@@ -39,7 +37,6 @@ public class OrganizationEntity {
 
     @OneToMany(mappedBy = "organizationEntity", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<GroupEntity> groups = new ArrayList<>();
-
 
     public List<GroupEntity> getGroups() {
         return groups;

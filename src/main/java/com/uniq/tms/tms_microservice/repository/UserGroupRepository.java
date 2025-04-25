@@ -1,5 +1,6 @@
 package com.uniq.tms.tms_microservice.repository;
 
+import com.uniq.tms.tms_microservice.entity.UserEntity;
 import com.uniq.tms.tms_microservice.entity.UserGroupEntity;
 import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -7,13 +8,13 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-
 import java.util.List;
-
 
 @Repository
 public interface UserGroupRepository extends JpaRepository<UserGroupEntity,Long> {
-    List<UserGroupEntity> findByUserUserIdAndGroupGroupId(Long userId, Long groupId);
+
+    @Query("SELECT ug FROM UserGroupEntity ug WHERE ug.user.userId = :userId AND ug.group.groupId = :groupId")
+    List<UserGroupEntity> findByUserIdAndGroupId(@Param("userId") Long userId,  @Param("groupId") Long groupId);
 
     @Modifying
     @Transactional
@@ -39,5 +40,19 @@ public interface UserGroupRepository extends JpaRepository<UserGroupEntity,Long>
     @Query(value = "UPDATE user_group SET user_id = :newUserId WHERE group_id = :groupId AND type = 'supervisor' ", nativeQuery = true)
     void updateSupervisorUser(@Param("groupId") Long groupId, @Param("newUserId") Long newUserId);
 
-    List<UserGroupEntity> findByGroup_GroupIdAndGroup_OrganizationEntity_OrganizationId(Long groupId, Long orgId);
+    @Query("SELECT ug FROM UserGroupEntity ug WHERE ug.group.groupId = :groupId AND ug.group.organizationEntity.organizationId = :orgId")
+    List<UserGroupEntity> findUserGroups(Long groupId, Long orgId);
+
+    @Query("SELECT DISTINCT ug.group.id FROM UserGroupEntity ug WHERE ug.user.userId = :supervisorId AND ug.type = 'Supervisor'")
+    List<Long>  findGroupIdsBySupervisorId(Long supervisorId);
+
+    @Query("SELECT u FROM UserEntity u " +
+            "JOIN UserGroupEntity ug ON u.userId = ug.user.userId " +
+            "WHERE ug.group.groupId IN :groupIds")
+    List<UserEntity> findUsersByGroupId(@Param("groupIds") List<Long> groupIds);
+
+    @Query("SELECT ug.user FROM UserGroupEntity ug WHERE ug.group.groupId IN :filteredGroupIds AND ug.type = 'Member' AND ug.user.id != :userIdFromToken")
+    List<UserEntity> findMembersByGroupIds(
+            @Param("filteredGroupIds") List<Long> filteredGroupIds,
+            @Param("userIdFromToken") Long userIdFromToken);
 }

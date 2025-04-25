@@ -8,10 +8,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
-
-import java.util.List;
 
 @Entity
 @Table(name = "group_table")
@@ -33,21 +29,21 @@ public class GroupEntity {
     @JoinColumn(name = "location_id")
     private LocationEntity locationEntity;
 
-    @Column(name = "work_schedule_id")
-    private Long workScheduleId;
-
+    @ManyToOne
+    @JoinColumn(name = "work_schedule_id")
+    private WorkScheduleEntity workSchedule;
 
     public GroupEntity() {
     }
 
     public GroupEntity(Long groupId){this.groupId=groupId;}
 
-    public Long getWorkScheduleId() {
-        return workScheduleId;
+    public WorkScheduleEntity getWorkSchedule() {
+        return workSchedule;
     }
 
-    public void setWorkScheduleId(Long workScheduleId) {
-        this.workScheduleId = workScheduleId;
+    public void setWorkSchedule(WorkScheduleEntity workSchedule) {
+        this.workSchedule = workSchedule;
     }
 
     public Long getGroupId() {
@@ -89,4 +85,3 @@ public class GroupEntity {
         }
     }
 }
-

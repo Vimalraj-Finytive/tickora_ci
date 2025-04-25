@@ -1,7 +1,5 @@
 package com.uniq.tms.tms_microservice.model;
 
-import java.util.List;
-
 public class Group {
 
     private Long groupId;

@@ -53,7 +53,6 @@ public class AuthController {
         return authFacade.handleLogin(loginDto.getEmail(), loginDto.getPassword(), response, request);
     }
 
-
     @GetMapping("/logout")
     public ResponseEntity<ApiResponse> logout(HttpServletRequest request, HttpServletResponse response ) {
         return authFacade.handleLogout(request, response);

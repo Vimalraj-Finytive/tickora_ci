@@ -10,7 +10,6 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -112,6 +111,5 @@ public class LocationEntity {
     public void setRadius(String radius) {
         this.radius = radius;
     }
-
 
 }

@@ -1,27 +1,25 @@
 package com.uniq.tms.tms_microservice.adapter.impl;
 
-
 import com.uniq.tms.tms_microservice.adapter.UserAdapter;
 import com.uniq.tms.tms_microservice.dto.GroupDto;
-import com.uniq.tms.tms_microservice.dto.UserResponseDto;
 import com.uniq.tms.tms_microservice.entity.GroupEntity;
 import com.uniq.tms.tms_microservice.entity.LocationEntity;
 import com.uniq.tms.tms_microservice.entity.RoleEntity;
 import com.uniq.tms.tms_microservice.entity.UserEntity;
 import com.uniq.tms.tms_microservice.entity.UserGroupEntity;
+import com.uniq.tms.tms_microservice.entity.WorkScheduleEntity;
+import com.uniq.tms.tms_microservice.model.UserResponse;
 import com.uniq.tms.tms_microservice.repository.LocationRepository;
 import com.uniq.tms.tms_microservice.repository.RoleRepository;
 import com.uniq.tms.tms_microservice.repository.TeamRepository;
 import com.uniq.tms.tms_microservice.repository.UserGroupRepository;
 import com.uniq.tms.tms_microservice.repository.UserRepository;
+import com.uniq.tms.tms_microservice.repository.WorkScheduleRepository;
 import jakarta.transaction.Transactional;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Component;
-
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 
 @Component
@@ -33,26 +31,20 @@ public class UserAdapterImpl implements UserAdapter {
     private final LocationRepository locationRepository;
     private final UserRepository userRepository;
     private final UserGroupRepository userGroupRepository;
+    private final WorkScheduleRepository workScheduleRepository;
 
-    public UserAdapterImpl(RoleRepository roleRepository, TeamRepository teamRepository, LocationRepository locationRepository, UserRepository userRepository, UserGroupRepository userGroupRepository) {
+    public UserAdapterImpl(RoleRepository roleRepository, TeamRepository teamRepository, LocationRepository locationRepository, UserRepository userRepository, UserGroupRepository userGroupRepository, WorkScheduleRepository workScheduleRepository) {
         this.roleRepository = roleRepository;
         this.teamRepository = teamRepository;
         this.locationRepository = locationRepository;
         this.userRepository = userRepository;
         this.userGroupRepository = userGroupRepository;
+        this.workScheduleRepository = workScheduleRepository;
     }
 
     @Override
-    public List<RoleEntity> getAllRole(Long orgId, String role) {
-
-        if (role != null && role.startsWith("ROLE_")) {
-            role = role.substring(5);
-        }
-
-        Logger logger = LoggerFactory.getLogger(getClass());
-        logger.info("Fetching roles for orgId: " + orgId + " and role: " + role);
-
-        return roleRepository.findRolesByOrgIdAndRole(orgId, role);
+    public List<RoleEntity> getAllRole(Long orgId, int hierarchyLevel) {
+        return roleRepository.findRolesByOrgIdAndRoleLevel(orgId, hierarchyLevel);
     }
 
     @Override
@@ -63,7 +55,7 @@ public class UserAdapterImpl implements UserAdapter {
 
     @Override
     public List<LocationEntity> getAllLocation(Long orgId) {
-        List<LocationEntity> location = locationRepository.findByOrganizationEntity_OrganizationId(orgId);
+        List<LocationEntity> location = locationRepository.findAllLocationsByOrganization(orgId);
         return location;
     }
 
@@ -95,11 +87,11 @@ public class UserAdapterImpl implements UserAdapter {
 
     @Override
     public Optional<UserEntity> findById(Long userId) {
-        return userRepository.findByUserIdAndActiveTrue(userId);
+        return userRepository.findByUserId(userId);
     }
 
-    public List<Object[]> findRawUsersWithGroups(@Param("orgId") Long orgId, @Param("role") List<String> accessibleRoles){
-        return userRepository.findRawUsersWithGroups(orgId,accessibleRoles);
+    public List<UserResponse> findByOrganizationId(Long orgId, int hierarchyLevel){
+        return userRepository.findAllUsers(orgId,hierarchyLevel);
     }
 
     @Override
@@ -133,8 +125,8 @@ public class UserAdapterImpl implements UserAdapter {
     }
 
     @Override
-    public List<Object[]> getGroupDataNative(Long orgId) {
-        return teamRepository.getGroupDataNative(orgId);
+    public List<Object[]> getGroupData(Long orgId) {
+        return teamRepository.getGroupData(orgId);
     }
 
     @Override
@@ -148,28 +140,28 @@ public class UserAdapterImpl implements UserAdapter {
     }
 
     @Override
-    public List<UserEntity> getMembers(Long orgId, String role) {
-        return userRepository.findByOrganizationIdAndRole_NameAndActiveTrue(orgId, role);
+    public List<UserEntity> getMembers(Long orgId, Long roleId) {
+        return userRepository.findUsersByOrgIdAndRoleId(orgId, roleId);
     }
 
     @Override
-    public List<UserEntity> getMembersExcludingRole(Long orgId, String excludedRole) {
-        return userRepository.findByOrganizationIdAndActiveTrueAndRole_NameNot(orgId, excludedRole);
+    public List<UserEntity> getMembersByRole(Long orgId, List<Integer> higherRoleIds) {
+        return userRepository.findByOrgIdAndRoleId(orgId, higherRoleIds);
     }
 
     @Override
     public List<GroupDto> getUserGroups(Long userId, Long orgId) {
-        return teamRepository.findByUserIdAndOrganization_id(userId, orgId);
+        return teamRepository.findByUserIdAndOrganizationId(userId, orgId);
     }
 
     @Override
     public List<UserGroupEntity> getGroupMembersByGroupId(Long groupId, Long orgId) {
-        return userGroupRepository.findByGroup_GroupIdAndGroup_OrganizationEntity_OrganizationId(groupId, orgId);
+        return userGroupRepository.findUserGroups(groupId, orgId);
     }
 
     @Override
     public List<UserEntity> getUsersByIds(List<Long> userIds, Long orgId) {
-        return userRepository.findByUserIdInAndOrganizationId(userIds, orgId);
+        return userRepository.findByUserIdAndOrgId(userIds, orgId);
     }
 
     @Override
@@ -184,7 +176,8 @@ public class UserAdapterImpl implements UserAdapter {
 
     @Override
     public UserEntity getUserById(Long userId) {
-        return userRepository.findById(userId).orElse(null);
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new NoSuchElementException("User not found with ID: " + userId));
     }
 
     @Override
@@ -193,19 +186,35 @@ public class UserAdapterImpl implements UserAdapter {
     }
 
     @Override
+    public List<Long> findGroupIdsBySupervisorId(Long userIdFromToken) {
+        return userGroupRepository.findGroupIdsBySupervisorId(userIdFromToken);
+    }
+
+    @Override
+    public List<GroupDto> getAllgroups(Long orgId) {
+        return teamRepository.findByOrganizationId(orgId);
+    }
+
+    @Override
+    public List<UserEntity> findUsersByGroupIds(List<Long> groupIds) {
+        return userGroupRepository.findUsersByGroupId(groupIds);
+    }
+
+    @Override
+    public List<UserEntity> findMembersByGroupIds(
+            List<Long> filteredGroupIds, Long userIdFromToken) {
+        return userGroupRepository.findMembersByGroupIds(filteredGroupIds, userIdFromToken);
+    }
+
+    @Override
     public UserGroupEntity saveUserGroup(UserGroupEntity entity) {
         return userGroupRepository.save(entity);
     }
 
     @Override
-    public List<UserGroupEntity> findByUserUserIdAndGroupGroupId(Long userId, Long groupId){
-        return userGroupRepository.findByUserUserIdAndGroupGroupId(userId,groupId);
+    public List<UserGroupEntity> findByUserIdAndGroupId(Long userId, Long groupId){
+        return userGroupRepository.findByUserIdAndGroupId(userId,groupId);
     };
-
-    @Override
-    public void updateSupervisorUser(Long groupId,Long newUserId){
-        userGroupRepository.updateSupervisorUser(groupId,newUserId);
-    }
 
     @Override
     public void updateGroupNameAndLocation(Long groupId, String groupName, Long locationId){
@@ -222,4 +231,13 @@ public class UserAdapterImpl implements UserAdapter {
         return teamRepository.existsGroupNameInOrganization(groupName,orgId,groupId);
     }
 
+    @Override
+    public WorkScheduleEntity findByWorkscheduleId(Long workScheduleId) {
+        return workScheduleRepository.findByScheduleId(workScheduleId);
+    }
+
+    @Override
+    public WorkScheduleEntity findDefaultActiveSchedule() {
+        return workScheduleRepository.findDefaultActiveSchedule();
+    }
 }

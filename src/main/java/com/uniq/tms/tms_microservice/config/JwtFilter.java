@@ -1,6 +1,5 @@
 package com.uniq.tms.tms_microservice.config;
 
-
 import com.uniq.tms.tms_microservice.entity.RoleEntity;
 import com.uniq.tms.tms_microservice.entity.UserEntity;
 import com.uniq.tms.tms_microservice.repository.UserRepository;
@@ -18,7 +17,6 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
-
 import java.io.IOException;
 import java.util.Collections;
 
@@ -62,8 +60,6 @@ public class JwtFilter implements Filter {
                 Claims claims = jwtUtil.parseToken(jwtToken, userAgent, ipAddress);
                 String email = claims.getSubject();
                 String role = claims.get("roles", String.class);
-                System.out.println("Extracted Role from Token: " + claims.get("roles"));
-
                 if (email != null && role != null) {
                     UserEntity user = userRepository.findByEmail(email);
                     if (user == null) {
@@ -76,10 +72,7 @@ public class JwtFilter implements Filter {
 
                     if (userRole.startsWith("ROLE_")) {
                         userRole = userRole.substring(5);
-                        System.out.println(userRole);
                     }
-
-                    System.out.println("Database Role: " + userRole);
 
                     UsernamePasswordAuthenticationToken authentication =
                             new UsernamePasswordAuthenticationToken(email, null,

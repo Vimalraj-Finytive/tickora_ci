@@ -51,7 +51,6 @@ public class UserController {
             }
 
             String role = jwtUtil.extractRoleFromToken(jwt);
-            System.out.println(role + "role");
             return ResponseEntity.ok(authFacade.getAllRole(orgId, role));
         } catch (RuntimeException e) {
             logger.error("JWT Processing Error: " + e.getMessage());
@@ -125,7 +124,7 @@ public class UserController {
     }
 
     @PostMapping("/createGroup")
-    public ResponseEntity<ApiResponse> createUser(@RequestHeader("Authorization") String token, @RequestBody AddGroupDto addGroupDto) {
+    public ResponseEntity<ApiResponse> createGroup(@RequestHeader("Authorization") String token, @RequestBody AddGroupDto addGroupDto) {
         ApiResponse response = authFacade.createGroup(token, addGroupDto);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
@@ -173,22 +172,21 @@ public class UserController {
     }
 
     @GetMapping("/getMembers")
-    public ResponseEntity<ApiResponse> getMembers(@RequestHeader("Authorization") String token, @RequestParam(required = false) String role) {
-        ApiResponse response = authFacade.getMembers(token, role);
+        public ResponseEntity<ApiResponse> getMembers(@RequestHeader("Authorization") String token, @RequestParam(required = false) Long roleId) {
+        ApiResponse response = authFacade.getMembers(token, roleId);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
+
     @GetMapping("/getUserGroups")
-    public ResponseEntity<ApiResponse> getUserGroups(@RequestHeader("Authorization") String token, @RequestParam Long userId) {
+    public ResponseEntity<ApiResponse> getUserGroups(@RequestHeader("Authorization") String token, @RequestParam (required = false) Long userId) {
         ApiResponse response = authFacade.getUserGroups(token, userId);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
     @GetMapping("/getGroupMembers")
     public ResponseEntity<ApiResponse> getUserGroupMembers(@RequestHeader("Authorization") String token,
-                                                           @RequestParam Long groupId,
-                                                           @RequestParam LocalDate date) {
+                                                           @RequestParam Long groupId,@RequestParam LocalDate date) {
         ApiResponse response = authFacade.getUserGroupMembers(token, groupId, date);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
-
 }

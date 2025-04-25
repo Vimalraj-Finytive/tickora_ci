@@ -1,10 +1,7 @@
 package com.uniq.tms.tms_microservice.util;
 
-
-
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-
 import java.security.SecureRandom;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -12,7 +9,6 @@ import java.util.stream.IntStream;
 public class PasswordUtil {
 
     private static final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
-
 
     private static final String UPPERCASE = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     private static final String LOWERCASE = "abcdefghijklmnopqrstuvwxyz";
