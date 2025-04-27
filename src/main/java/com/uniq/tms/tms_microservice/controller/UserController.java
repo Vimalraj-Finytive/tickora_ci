@@ -21,18 +21,15 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping(UserConstant.User_Url)
 public class UserController {
 
-
     private final AuthFacade authFacade;
     private final JwtUtil jwtUtil;
 
     public UserController(AuthFacade authFacade, JwtUtil jwtUtil) {
-
         this.authFacade = authFacade;
         this.jwtUtil = jwtUtil;
     }

@@ -18,6 +18,7 @@ import com.uniq.tms.tms_microservice.entity.TimesheetEntity;
 import com.uniq.tms.tms_microservice.entity.UserEntity;
 import com.uniq.tms.tms_microservice.entity.UserGroupEntity;
 import com.uniq.tms.tms_microservice.entity.WorkScheduleEntity;
+import com.uniq.tms.tms_microservice.mapper.RolePrivilegeMapper;
 import com.uniq.tms.tms_microservice.mapper.UserDtoMapper;
 import com.uniq.tms.tms_microservice.mapper.UserEntityMapper;
 import com.uniq.tms.tms_microservice.model.*;
@@ -36,6 +37,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -407,10 +409,14 @@ public class UserServiceImpl implements UserService {
         return results;
     }
 
+    public List<GroupResponseDto> getAllGroups(Long orgId, Long userId) throws JsonProcessingException {
 
-  //  private static final  Logger log = LoggerFactory.getLogger(UserServiceImpl.class);
+        UserEntity currentUser = userAdapter.getUserById(userId);
+        String roleName = currentUser.getRole().getName().toUpperCase();
+        boolean canSeeAllGroups = RolePrivilegeMapper.hasPrivilege(RoleName.valueOf(roleName), Privilege.CAN_SEE_ALL_GROUPS);
+        boolean canSeeSupervisingGroups = RolePrivilegeMapper.hasPrivilege(RoleName.valueOf(roleName), Privilege.CAN_SEE_SUPERVISING_GROUPS);
 
-    public List<GroupResponseDto> getAllGroups(Long orgId) throws JsonProcessingException {
+        log.info("canSeeAllGroups={}, canSeeSupervisingGroups={}", canSeeAllGroups, canSeeSupervisingGroups);
         List<Object[]> results = userAdapter.getGroupData(orgId);
 
         // Maps for collecting union data
@@ -429,11 +435,11 @@ public class UserServiceImpl implements UserService {
 
                 for (UserGroupDto member : allMembers) {
                     if (Boolean.TRUE.equals(member.getActive())) {
-                        Long userId = member.getUserId();
+                        Long memberUserId = member.getUserId();
 
                         // Collect unions
-                        userToGroups.computeIfAbsent(userId, k -> new HashSet<>()).add(groupName);
-                        userToLocations.computeIfAbsent(userId, k -> new HashSet<>()).add(location);
+                        userToGroups.computeIfAbsent(memberUserId, k -> new HashSet<>()).add(groupName);
+                        userToLocations.computeIfAbsent(memberUserId, k -> new HashSet<>()).add(location);
 
                         // Assign member to group
                         groupIdToActiveMembers.computeIfAbsent(groupId, k -> new ArrayList<>()).add(member);
@@ -451,19 +457,36 @@ public class UserServiceImpl implements UserService {
             String location = (String) row[2];
 
             List<UserGroupDto> members = groupIdToActiveMembers.get(groupId);
-            if (members == null || members.isEmpty()) {
-                log.info("Group {} skipped because it has no active members", groupId);
-                continue;
+            if (members == null) {
+                members = new ArrayList<>();
             }
 
-            // Enrich members with union info
-            for (UserGroupDto member : members) {
-                member.setGroupName(new ArrayList<>(userToGroups.getOrDefault(member.getUserId(), Set.of())));
-                member.setLocation(new ArrayList<>(userToLocations.getOrDefault(member.getUserId(), Set.of())));
+            // If user has CAN_SEE_ALL_GROUPS, allow all groups
+            if (canSeeAllGroups) {
+                for (UserGroupDto member : members) {
+                    member.setGroupName(new ArrayList<>(userToGroups.getOrDefault(member.getUserId(), Set.of())));
+                    member.setLocation(new ArrayList<>(userToLocations.getOrDefault(member.getUserId(), Set.of())));
+                }
+                finalList.add(new GroupResponseDto(groupId, groupName, location, members));
             }
-
-            finalList.add(new GroupResponseDto(groupId, groupName, location, members));
+            // If user has CAN_SEE_SUPERVISING_GROUPS, only add groups where user is supervisor
+            else if (canSeeSupervisingGroups) {
+                boolean isSupervisor = members.stream()
+                        .anyMatch(member -> member.getUserId().equals(userId) && MemberType.SUPERVISOR.getValue().equals(member.getType()));
+                if (isSupervisor) {
+                    for (UserGroupDto member : members) {
+                        member.setGroupName(new ArrayList<>(userToGroups.getOrDefault(member.getUserId(), Set.of())));
+                        member.setLocation(new ArrayList<>(userToLocations.getOrDefault(member.getUserId(), Set.of())));
+                    }
+                    finalList.add(new GroupResponseDto(groupId, groupName, location, members));
+                }
+            }
         }
+
+        if (finalList.isEmpty()) {
+            throw new AccessDeniedException("User does not have access to any groups.");
+        }
+
         return finalList;
     }
 
@@ -471,8 +494,8 @@ public class UserServiceImpl implements UserService {
     public boolean updateUserGroupType(UserGroup userGroup) {
         // Map of valid prefixes to their corresponding roles
         Map<String, String> typeMap = Map.of(
-                "m", "Member",
-                "s", "Supervisor"
+                "m", MemberType.MEMBER.getValue(),
+                "s", MemberType.SUPERVISOR.getValue()
         );
 
         String type = typeMap.entrySet().stream()

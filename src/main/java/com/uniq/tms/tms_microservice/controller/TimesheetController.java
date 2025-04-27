@@ -63,7 +63,7 @@ public class  TimesheetController {
         return ResponseEntity.ok(new ApiResponse<>(200, "Timesheet updated successfully", updatedTimesheet));
     }
 
-    @PutMapping("/upsert")
+    @PutMapping("/editTimesheet")
     public ResponseEntity<ApiResponse<TimesheetDto>> upsertClockInOutTimes(
             @RequestParam Long userId,
             @RequestParam LocalDate date,

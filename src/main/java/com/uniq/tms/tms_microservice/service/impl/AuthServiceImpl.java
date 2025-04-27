@@ -118,9 +118,6 @@ public class AuthServiceImpl implements AuthService {
             userData.put("JWT_TOKEN", jwtToken);
             userData.put("userId", user.getUserId());
             userData.put("isRegisterUser", user.isRegisterUser());
-            Set<String> privilege = user.getRole().getPrivilegeEntities()
-                    .stream().map(PrivilegeEntity::getName).collect(Collectors.toSet());
-            userData.put("privilege", privilege);
             userData.put("userId", user.getUserId());
             userData.put("privilage", privileges);
             return ResponseEntity.ok(new ApiResponse(200, "Login Successful", userData));

@@ -19,7 +19,7 @@ public class BlacklistedTokenEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
+    @Column(name = "token", columnDefinition = "TEXT", nullable = false, unique = true)
     private String token;
 
     @ManyToOne
