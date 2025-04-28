@@ -35,7 +35,8 @@ public class RolePrivilegeMapper {
                 Privilege.VIEW_LOCATIONS,
                 Privilege.CREATE_WORK_SCHEDULE,
                 Privilege.STUDENT_ATTENDANCE,
-                Privilege.CHECK_IN_AND_OUT
+                Privilege.CHECK_IN_AND_OUT,
+                Privilege.CAN_SEE_SUPERVISING_GROUPS
         ));
 
         ROLE_PRIVILEGE_MAP.put(RoleName.MANAGER, EnumSet.of(
@@ -51,7 +52,8 @@ public class RolePrivilegeMapper {
                 Privilege.STUDENT_ATTENDANCE,
                 Privilege.CHECK_IN_AND_OUT,
                 Privilege.DELETE_GROUP,
-                Privilege.EDIT_GROUP
+                Privilege.EDIT_GROUP,
+                Privilege.CAN_SEE_SUPERVISING_GROUPS
         ));
 
         ROLE_PRIVILEGE_MAP.put(RoleName.STAFF, EnumSet.of(
@@ -60,8 +62,9 @@ public class RolePrivilegeMapper {
                 Privilege.VIEW_LOCATIONS,
                 Privilege.STUDENT_ATTENDANCE,
                 Privilege.CHECK_IN_AND_OUT,
-                Privilege.CAN_SEE_GROUP_LEVEL_TIMESHEETS
-                ));
+                Privilege.CAN_SEE_GROUP_LEVEL_TIMESHEETS,
+                Privilege.CAN_SEE_SUPERVISING_GROUPS
+        ));
 
         ROLE_PRIVILEGE_MAP.put(RoleName.STUDENT, EnumSet.of(
                 Privilege.VIEW_SCHEDULE,

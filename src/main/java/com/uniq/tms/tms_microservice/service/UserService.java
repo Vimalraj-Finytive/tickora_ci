@@ -32,7 +32,7 @@ public interface UserService {
     List<GroupDto>getUserGroups(Long userId, String role, Long orgId);
     List<Map<String, Object>> getGroupMembers(Long groupId, Long orgId, LocalDate date);
     List<User> addUserToGroup(AddMember addMemberMiddleware, Long orgId);
-    List<GroupResponseDto> getAllGroups(Long orgId) throws JsonProcessingException;
+    List<GroupResponseDto> getAllGroups(Long orgId, Long userId) throws JsonProcessingException;
     UserGroup createUserGroup(UserGroup userGroupMiddleware, Long orgId);
     void updateGroupDetails(AddGroupDto addGroupDto, Long groupId, Long orgId);
     boolean createSecondaryUser(SecondaryDetailsDto secondaryDetailsDto, UserEntity savedUser);

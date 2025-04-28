@@ -284,11 +284,11 @@ public class AuthFacade {
             }
             String jwt = token.substring(7);
             Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
-
+            Long userId = jwtUtil.extractUserIdFromToken(jwt);
             if (orgId == null) {
                 return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
             }
-            List<GroupResponseDto> groups = userService.getAllGroups(orgId);
+            List<GroupResponseDto> groups = userService.getAllGroups(orgId, userId);
 
             return new ApiResponse(200, "All Groups Details fetched successfully", groups);
         }

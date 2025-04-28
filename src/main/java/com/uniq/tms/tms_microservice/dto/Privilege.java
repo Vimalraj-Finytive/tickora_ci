@@ -21,7 +21,9 @@ public enum Privilege {
     DELETE_GROUP("Delete group"),
     CREATE_WORK_SCHEDULE("Create work schedule"),
     EDIT_GROUP("Edit group"),
-    CHECK_IN_AND_OUT("Check in and check out");
+    CHECK_IN_AND_OUT("Check in and check out"),
+    CAN_SEE_ALL_GROUPS("Can see all groups"),
+    CAN_SEE_SUPERVISING_GROUPS("Can see supervising groups");
 
     private final String dbValue;
 
