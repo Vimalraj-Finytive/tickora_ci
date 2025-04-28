@@ -236,6 +236,21 @@ public class UserAdapterImpl implements UserAdapter {
     }
 
     @Override
+    public boolean existsById(Long userId) {
+        return userRepository.existsById(userId);
+    }
+
+    @Override
+    public List<Long> findSupervisorIdsByGroupId(Long groupId) {
+        return userGroupRepository.findSupervisorIdsByGroupId(groupId);
+    }
+
+    @Override
+    public Optional<GroupEntity> findByGroupId(Long groupId) {
+        return teamRepository.findByGroupId(groupId);
+    }
+
+    @Override
     public UserGroupEntity saveUserGroup(UserGroupEntity entity) {
         return userGroupRepository.save(entity);
     }
@@ -269,4 +284,15 @@ public class UserAdapterImpl implements UserAdapter {
     public WorkScheduleEntity findDefaultActiveSchedule() {
         return workScheduleRepository.findDefaultActiveSchedule();
     }
+
+    @Override
+    public List<Long> findMemberIdsByGroupId(Long groupId) {
+        return userGroupRepository.findUserIdsByGroupIdAndType(groupId, "Member");
+    }
+
+    @Override
+    public LocationEntity findLocationById(Long locationId) {
+        return locationRepository.findById(locationId).orElse(null);
+    }
+
 }

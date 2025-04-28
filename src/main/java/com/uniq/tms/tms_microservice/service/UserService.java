@@ -31,10 +31,10 @@ public interface UserService {
     boolean updateUserGroupType(UserGroup userGroup);
     List<GroupDto>getUserGroups(Long userId, String role, Long orgId);
     List<Map<String, Object>> getGroupMembers(Long groupId, Long orgId, LocalDate date);
-    List<User> addUserToGroup(AddMember addMemberMiddleware, Long orgId);
+    ApiResponse addUserToGroup(AddMember addMemberMiddleware, Long orgId);
     List<GroupResponseDto> getAllGroups(Long orgId, Long userId) throws JsonProcessingException;
     UserGroup createUserGroup(UserGroup userGroupMiddleware, Long orgId);
-    void updateGroupDetails(AddGroupDto addGroupDto, Long groupId, Long orgId);
+    ApiResponse updateGroupDetails(AddGroupDto addGroupDto, Long groupId, Long orgId);
     boolean createSecondaryUser(SecondaryDetailsDto secondaryDetailsDto, UserEntity savedUser);
     List<UserNameSuggestionDto> searchUsernames(String keywords);
 }

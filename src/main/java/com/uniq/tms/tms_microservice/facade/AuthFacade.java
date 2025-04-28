@@ -249,8 +249,8 @@ public class AuthFacade {
             AddMember addMemberMiddleware = userDtoMapper.toMiddleware(addMemberDto);
 
             try {
-                List<User> member = userService.addUserToGroup(addMemberMiddleware, orgId);
-                return new ApiResponse(201, "Users added successfully", true);
+                return userService.addUserToGroup(addMemberMiddleware, orgId);
+
             } catch (DataIntegrityViolationException e) {
                 return new ApiResponse(409, e.getMessage(), null);
             } catch (ResponseStatusException e) {
@@ -273,9 +273,8 @@ public class AuthFacade {
 
             log.info("Updating group: groupId={}, groupName={}, locationId={}",
                     groupId, addGroupDto.getGroupName(), addGroupDto.getLocationId());
-            userService.updateGroupDetails(addGroupDto, groupId, orgId);
+            return userService.updateGroupDetails(addGroupDto, groupId, orgId);
 
-            return new ApiResponse(200, "Group details are updated successfullly", true);
         }
 
         public ApiResponse getAllGroups (String token) throws JsonProcessingException {

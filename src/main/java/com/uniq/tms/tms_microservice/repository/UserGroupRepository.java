@@ -55,4 +55,11 @@ public interface UserGroupRepository extends JpaRepository<UserGroupEntity,Long>
     List<UserEntity> findMembersByGroupIds(
             @Param("filteredGroupIds") List<Long> filteredGroupIds,
             @Param("userIdFromToken") Long userIdFromToken);
+
+    @Query(value = "SELECT user_id FROM user_group WHERE group_id = :groupId AND type = 'Supervisor'", nativeQuery = true)
+    List<Long> findSupervisorIdsByGroupId(@Param("groupId") Long groupId);
+
+    @Query("SELECT u.user.userId FROM UserGroupEntity u WHERE u.group.groupId = :groupId AND u.type = :type")
+    List<Long> findUserIdsByGroupIdAndType(@Param("groupId") Long groupId, @Param("type") String type);
+
 }

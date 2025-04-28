@@ -146,4 +146,6 @@ public interface TeamRepository extends JpaRepository<GroupEntity, Long> {
             g.organization_id = :orgId
     """, nativeQuery = true)
     List<GroupDto> findByOrganizationId(Long orgId);
+
+    Optional<GroupEntity> findByGroupId(Long groupId);
 }

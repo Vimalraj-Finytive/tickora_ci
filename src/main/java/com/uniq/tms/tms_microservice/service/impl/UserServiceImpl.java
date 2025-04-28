@@ -33,6 +33,7 @@ import com.uniq.tms.tms_microservice.service.UserService;
 import com.uniq.tms.tms_microservice.util.EmailUtil;
 import com.uniq.tms.tms_microservice.util.PasswordUtil;
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -144,7 +145,6 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public User updateUser(CreateUserDto updates, Long orgId, Long userId) {
-
 
         UserEntity existingUser = userAdapter.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -322,15 +322,46 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public List<User> addUserToGroup(AddMember addMemberMiddleware, Long orgId){
-        List<User> savedUsers =new ArrayList();
-        for (Long id : addMemberMiddleware.getUserId()) {
-            UserEntity userEntity = userAdapter.findById(id).orElseThrow(()->new UsernameNotFoundException("User not found."));
-            createUserGroup(new UserGroup(addMemberMiddleware.getGroupId(), id, addMemberMiddleware.getType()), orgId);
-            User userMiddleware = userEntityMapper.toMiddleware(userEntity);
-            savedUsers.add(userMiddleware);
+    public ApiResponse addUserToGroup(AddMember addMemberMiddleware, Long orgId) {
+        List<Long> userIds = addMemberMiddleware.getUserId();
+        List<String> addedUserNames = new ArrayList<>();
+        List<String> alreadyExistsUsers = new ArrayList<>();
+
+        // Validate all users first
+        for (Long id : userIds) {
+            boolean exists = userAdapter.existsById(id);
+            if (!exists) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found with ID: " + id);
+            }
         }
-        return savedUsers;
+
+        // Proceed to add members if all exist
+        for (Long id : userIds) {
+            List<UserGroupEntity> existing = userAdapter.findByUserIdAndGroupId(id, addMemberMiddleware.getGroupId());
+            UserEntity userEntity = userAdapter.findById(id).get(); // safe because already validated
+
+            if (!existing.isEmpty()) {
+                alreadyExistsUsers.add(userEntity.getUserName());
+                continue;
+            }
+
+            createUserGroup(new UserGroup(addMemberMiddleware.getGroupId(), id, addMemberMiddleware.getType()), orgId);
+            addedUserNames.add(userEntity.getUserName());
+        }
+
+        // Prepare message
+        String addedMessage = addedUserNames.isEmpty()
+                ?""
+                : "Successfully added users: " + String.join(", ", addedUserNames) + ".";
+
+        String existsMessage = alreadyExistsUsers.isEmpty()
+                ? ""
+                : "These users were already in the group: " + String.join(", ", alreadyExistsUsers) + ".";
+
+        String finalMessage = addedMessage + existsMessage;
+
+        // Return ApiResponse — no need to return data list of users
+        return new ApiResponse<>(200, finalMessage, null);
     }
 
     @Override
@@ -350,30 +381,102 @@ public class UserServiceImpl implements UserService {
         return userEntityMapper.toMiddleware(savedEntity);
     }
 
+    @Transactional
     @Override
-    public void updateGroupDetails(AddGroupDto addGroupDto, Long groupId, Long orgId){
+    public ApiResponse<?> updateGroupDetails(AddGroupDto addGroupDto, Long groupId, Long orgId) {
         AddGroup addGroup = userDtoMapper.toMiddleware(addGroupDto);
-        GroupEntity groupEntity = userEntityMapper.toEntity(addGroup);
-        boolean nameExists = userAdapter.existsGroupNameInOrganization(groupEntity.getGroupName(),orgId, groupId);
 
-        if (nameExists) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Group name already exists");
+        List<String> conflictMessages = new ArrayList<>();
+        List<String> addedSupervisors = new ArrayList<>();
+
+        // Fetch existing group
+        GroupEntity existingGroup = userAdapter.findByGroupId(groupId).orElse(null);
+        if (existingGroup == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Group not found with ID: " + groupId);
         }
 
-        userAdapter.updateGroupNameAndLocation(groupId,groupEntity.getGroupName(),groupEntity.getLocationEntity().getLocationId());
-
-        // Step 2: Insert new supervisors
-        GroupEntity group = new GroupEntity(groupId);
-        for (Long usersId : addGroup.getSupervisorsId()) {
-            UserEntity user = new UserEntity(usersId);
-            UserGroupEntity supervisorEntry = new UserGroupEntity();
-            supervisorEntry.setGroup(group);
-            supervisorEntry.setUser(user);
-            supervisorEntry.setType("Supervisor");
-            userAdapter.deleteSupervisorsByGroupId(groupId, usersId);
-
-            userAdapter.saveUserGroup(supervisorEntry);
+        // Check for duplicate group name in the same org
+        boolean groupNameChanged = false;
+        if (addGroup.getGroupName() != null && !addGroup.getGroupName().equals(existingGroup.getGroupName())) {
+            boolean nameExists = userAdapter.existsGroupNameInOrganization(addGroup.getGroupName(), orgId, groupId);
+            if (nameExists) {
+                conflictMessages.add("Group name already exists");
+            } else {
+                existingGroup.setGroupName(addGroup.getGroupName());
+                groupNameChanged = true;
+            }
         }
+
+        // Update location if provided
+        if (addGroup.getLocationId() != null) {
+            LocationEntity locationEntity = userAdapter.findLocationById(addGroup.getLocationId());
+            if (locationEntity == null) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Location not found with ID: " + addGroup.getLocationId());
+            }
+            existingGroup.setLocationEntity(locationEntity);
+        }
+
+        // Save updated group details (name/location)
+        userAdapter.saveGroup(existingGroup);
+
+        // Remove supervisors not in the new list
+        List<Long> existingSupervisorIds = userAdapter.findSupervisorIdsByGroupId(groupId);
+        Set<Long> newSupervisorIds = addGroup.getSupervisorsId() != null
+                ? new HashSet<>(addGroup.getSupervisorsId())
+                : new HashSet<>();
+
+        for (Long existingSupervisorId : existingSupervisorIds) {
+            if (!newSupervisorIds.contains(existingSupervisorId)) {
+                userAdapter.deleteSupervisorsByGroupId(groupId, existingSupervisorId);
+            }
+        }
+
+        // Insert new supervisors, checking against existing members
+        List<Long> existingMemberIds = userAdapter.findMemberIdsByGroupId(groupId);
+        for (Long supervisorId : newSupervisorIds) {
+            if (existingMemberIds.contains(supervisorId)) {
+                // Fetch username for the supervisor
+                UserEntity supervisorUser = userAdapter.findById(supervisorId).orElse(null);
+                if (supervisorUser != null) {
+                    conflictMessages.add("User " + supervisorUser.getUserName() + " is already a member in this group");
+                } else {
+                    conflictMessages.add("User ID " + supervisorId + " is already a member in this group");
+                }
+            } else {
+                // Delete if already supervisor (safe clean-up)
+                userAdapter.deleteSupervisorsByGroupId(groupId, supervisorId);
+
+                // Add new supervisor entry
+                UserGroupEntity supervisorEntry = new UserGroupEntity();
+                supervisorEntry.setGroup(existingGroup);
+                supervisorEntry.setUser(new UserEntity(supervisorId));
+                supervisorEntry.setType("Supervisor");
+                userAdapter.saveUserGroup(supervisorEntry);
+
+                // Fetch username for the added supervisor
+                UserEntity supervisorUser = userAdapter.findById(supervisorId).orElse(null);
+                if (supervisorUser != null) {
+                    addedSupervisors.add(supervisorUser.getUserName());
+                } else {
+                    addedSupervisors.add("UserID: " + supervisorId);
+                }
+            }
+        }
+
+        // Build final message
+        String conflictMessage = conflictMessages.isEmpty()
+                ? ""
+                :  String.join(", ", conflictMessages) + ".";
+
+        String finalMessage = conflictMessage.trim();
+
+        // If conflicts occurred, return only conflict message (if any)
+        if (!conflictMessages.isEmpty()) {
+            return new ApiResponse<>(HttpStatus.CONFLICT.value(), finalMessage, Collections.emptyList());
+        }
+
+        // If no conflicts and no supervisors added, indicate that no changes were made
+        return new ApiResponse<>(HttpStatus.OK.value(), "Group updated Successfully.", Collections.emptyList());
     }
 
     @Override
