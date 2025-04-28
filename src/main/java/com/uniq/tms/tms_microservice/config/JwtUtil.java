@@ -38,7 +38,7 @@ public class JwtUtil {
     private final RoleRepository roleRepository;
     private final OrganizationRepository organizationRepository;
 
-    private static final long INACTIVITY_TIMEOUT = 12 * 60 * 60 * 1000;
+    private static final long INACTIVITY_TIMEOUT = 90L * 24 * 60 * 60 * 1000;
     private final AuthAdapter authAdapter;
 
     public JwtUtil(BlacklistedTokenRepository blacklistedTokenRepository, UserRepository userRepository, RoleRepository roleRepository, OrganizationRepository organizationRepository, AuthAdapter authAdapter) {

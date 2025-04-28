@@ -10,6 +10,8 @@ import com.uniq.tms.tms_microservice.entity.WorkScheduleEntity;
 import com.uniq.tms.tms_microservice.model.UserResponse;
 import com.uniq.tms.tms_microservice.dto.UserNameSuggestionDto;
 import com.uniq.tms.tms_microservice.entity.*;
+import org.springframework.data.repository.query.Param;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -59,5 +61,10 @@ public interface UserAdapter {
     List<UserNameSuggestionDto> searchUserNamesContaining(String keyword);
     Optional<RoleEntity> findRoleById(Long roleId);
     Optional<SecondaryDetailsEntity> findSecondaryUserById(Long userId);
+    boolean existsById(Long userId);
+    List<Long> findSupervisorIdsByGroupId( Long groupId);
+    Optional<GroupEntity> findByGroupId(Long groupId);
+    List<Long> findMemberIdsByGroupId(Long groupId);
+    LocationEntity findLocationById(Long locationId);
 }
 
