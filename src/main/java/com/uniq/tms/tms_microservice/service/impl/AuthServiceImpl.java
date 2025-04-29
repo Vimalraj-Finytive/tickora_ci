@@ -102,7 +102,7 @@ public class AuthServiceImpl implements AuthService {
             String jwtToken = jwtUtil.generateToken(email, System.currentTimeMillis(), request);
             Cookie jwtCookie = new Cookie("JWT_TOKEN", jwtToken);
             jwtCookie.setHttpOnly(true);
-            jwtCookie.setSecure(false); // Set to true in production with HTTPS
+            jwtCookie.setSecure(true); // Set to true in production with HTTPS
             jwtCookie.setPath("/");
             response.addCookie(jwtCookie);
 
@@ -302,7 +302,7 @@ public class AuthServiceImpl implements AuthService {
             jwtCookie.setHttpOnly(true);
             jwtCookie.setPath("/");
             jwtCookie.setMaxAge(0);
-            jwtCookie.setSecure(false);
+            jwtCookie.setSecure(true);
             jwtCookie.setAttribute("SameSite", "None");
             response.addCookie(jwtCookie);
 
