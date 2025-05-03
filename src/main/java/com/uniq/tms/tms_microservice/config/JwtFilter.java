@@ -39,7 +39,7 @@ public class JwtFilter implements Filter {
 
         String jwtToken = null;
         String userAgent = httpRequest.getHeader("User-Agent");
-        String ipAddress = httpRequest.getRemoteAddr();
+        String ipAddress = jwtUtil.getClientIp(httpRequest);
         String authHeader = httpRequest.getHeader("Authorization");
         System.out.println("JWT_Filter **********userAgent from the token: {}"+ userAgent);
         System.out.println("JWT_Filter *************IP Address from the token: {}"+ ipAddress);

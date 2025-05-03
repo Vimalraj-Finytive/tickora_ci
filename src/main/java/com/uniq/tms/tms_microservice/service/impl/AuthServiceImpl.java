@@ -296,7 +296,7 @@ public class AuthServiceImpl implements AuthService {
                         .body(new ApiResponse(401, "Invalid JWT Token", null));
             }
 
-            jwtUtil.blacklistToken(jwtToken, request.getHeader("User-Agent"), request.getRemoteAddr());
+            jwtUtil.blacklistToken(jwtToken, request.getHeader("User-Agent"), jwtUtil.getClientIp(request));
 
             Cookie jwtCookie = new Cookie("JWT_TOKEN", "");
             jwtCookie.setHttpOnly(true);

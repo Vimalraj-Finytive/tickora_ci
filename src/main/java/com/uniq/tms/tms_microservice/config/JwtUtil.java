@@ -76,7 +76,8 @@ public class JwtUtil {
 
         long currentTime = System.currentTimeMillis();
         String userAgent = request.getHeader("User-Agent");
-        String ipAddress = request.getRemoteAddr();
+//        String ipAddress = request.getRemoteAddr();
+        String ipAddress = getClientIp(request);
 
         return Jwts.builder()
                 .setSubject(loginInput)
@@ -91,6 +92,16 @@ public class JwtUtil {
                 .signWith(SECRET_KEY)
                 .compact();
     }
+
+
+    public String getClientIp(HttpServletRequest request) {
+        String xfHeader = request.getHeader("X-Forwarded-For");
+        if (xfHeader != null && !xfHeader.isEmpty()) {
+            return xfHeader.split(",")[0].trim(); // First IP = real client
+        }
+        return request.getRemoteAddr(); // Fallback
+    }
+
 
     public Claims parseToken(String token,  String requestUserAgent, String requestIp) {
         if (isTokenBlacklisted(token)) {
