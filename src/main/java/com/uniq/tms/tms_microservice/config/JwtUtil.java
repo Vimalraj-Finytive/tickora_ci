@@ -131,6 +131,10 @@ public class JwtUtil {
 
     public void blacklistToken(String token,  String requestUserAgent, String requestIp) {
         try {
+
+            System.out.println("JWT_Util _________userAgent from the token: {}"+ requestUserAgent);
+            System.out.println("JWT_Util ___________IP Address from the token: {}"+ requestIp);
+            System.out.println("JWT_Util ________AuthHeader from the token: {}"+ token);
             Claims claims = parseToken(token, requestUserAgent, requestIp);
             String userEmail = claims.getSubject();
 
