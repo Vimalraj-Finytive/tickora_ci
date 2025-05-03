@@ -123,9 +123,9 @@ public class JwtUtil {
             String tokenUserAgent = claims.get("userAgent", String.class);
             String tokenIpAddress = claims.get("ipAddress", String.class);
 
-            if (!requestUserAgent.equals(tokenUserAgent) || !requestIp.equals(tokenIpAddress)) {
-                throw new SecurityException("Token mismatch: Possible token theft or misuse detected");
-            }
+//            if (!requestUserAgent.equals(tokenUserAgent) || !requestIp.equals(tokenIpAddress)) {
+//                throw new SecurityException("Token mismatch: Possible token theft or misuse detected");
+//            }
 
             return claims;
         } catch (ExpiredJwtException e) {
