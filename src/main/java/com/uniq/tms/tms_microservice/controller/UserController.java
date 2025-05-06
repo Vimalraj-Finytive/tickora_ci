@@ -105,7 +105,7 @@ public class UserController {
         }
         UserDto userDto = request.getUser();
 
-        ApiResponse  response = authFacade.createUser(userDto, request.getSecondaryDetails(), token);
+        ApiResponse  response = authFacade.createUser(userDto, request.getSecondaryDetails(),token);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
@@ -122,6 +122,12 @@ public class UserController {
     @GetMapping("/getAllUsers")
     public ResponseEntity<ApiResponse> getUsers(@RequestHeader("Authorization") String token) {
         ApiResponse response = authFacade.getUsers(token);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
+
+    @GetMapping("/profile")
+    public ResponseEntity<ApiResponse> getUser(@RequestHeader("Authorization") String token){
+        ApiResponse response = authFacade.getUser(token);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 

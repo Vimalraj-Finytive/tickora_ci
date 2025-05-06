@@ -21,6 +21,8 @@ public interface UserService {
     List<Group> getAllTeam();
     List<Location> getAllLocation(Long orgId);
     User createUser(User userMiddleware, Long organizationId);
+    ApiResponse createUser(UserDto userDto, Long organizationId);
+
     User updateUser(CreateUserDto updates, Long orgId, Long userId);
     List<UserResponse> getUsers(Long orgId, String role);
     User deleteUser(Long orgId, Long userId);
@@ -37,4 +39,5 @@ public interface UserService {
     ApiResponse updateGroupDetails(AddGroupDto addGroupDto, Long groupId, Long orgId);
     boolean createSecondaryUser(SecondaryDetailsDto secondaryDetailsDto, UserEntity savedUser);
     List<UserNameSuggestionDto> searchUsernames(String keywords);
+    UserProfileResponse getUser(Long orgId, Long userId);
 }

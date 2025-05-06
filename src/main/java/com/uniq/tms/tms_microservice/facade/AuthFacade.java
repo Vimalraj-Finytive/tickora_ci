@@ -25,6 +25,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ResponseStatusException;
+
+import java.security.PrivateKey;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -33,7 +35,6 @@ import java.util.stream.Collectors;
 public class AuthFacade {
 
     private static final Long STUDENT_ROLE_ID = 5l;
-    private final Validator validator;
     private final UserAdapter userAdapter;
     private final AuthService authService;
     private final UserService userService;
@@ -43,9 +44,10 @@ public class AuthFacade {
     private final JwtUtil jwtUtil;
     private final SecondaryDetailsMapper secondaryDetailsMapper;
     private final UserEntityMapper userEntityMapper;
+    private final Validator validator;
 
-    public AuthFacade(Validator validator, UserAdapter userAdapter, AuthService authService, UserService userService, UserDtoMapper userDtoMapper, TimesheetService timesheetService, TimesheetDtoMapper timesheetDtoMapper, JwtUtil jwtUtil, SecondaryDetailsMapper secondaryDetailsMapper, UserEntityMapper userEntityMapper) {
-        this.validator = validator;
+    public AuthFacade(UserAdapter userAdapter, AuthService authService, UserService userService, UserDtoMapper userDtoMapper, TimesheetService timesheetService, TimesheetDtoMapper timesheetDtoMapper, JwtUtil jwtUtil, SecondaryDetailsMapper secondaryDetailsMapper, UserEntityMapper userEntityMapper, Validator validator) {
+
         this.userAdapter = userAdapter;
         this.authService = authService;
         this.userService = userService;
@@ -55,6 +57,7 @@ public class AuthFacade {
         this.jwtUtil = jwtUtil;
         this.secondaryDetailsMapper = secondaryDetailsMapper;
         this.userEntityMapper = userEntityMapper;
+        this.validator = validator;
     }
 
     private final Logger log = LoggerFactory.getLogger(AuthFacade.class);
@@ -124,24 +127,73 @@ public class AuthFacade {
                     userAdapter.deleteUser(mappedUser);
                     return new ApiResponse(400, "Secondary details are null", null);
                 }
+    public ApiResponse createUser (UserDto userDto, SecondaryDetailsDto secondaryDetailsDto, String token){
 
-                Set<ConstraintViolation<SecondaryDetailsDto>> violations = validator.validate(secondaryDetailsDto);
-                if (!violations.isEmpty()) {
-                    String errorMsg = violations.stream()
-                            .map(ConstraintViolation::getMessage)
-                            .collect(Collectors.joining(", "));
+        if (!token.startsWith("Bearer ")) {
+            return new ApiResponse(400, "Invalid token format", null);
+        }
+        String jwt = token.substring(7);
+        Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
+        if (orgId == null) {
+            return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
+        }
+        User usermiddleware = userDtoMapper.toMiddleware(userDto);
+        if (userAdapter.existsByEmail(usermiddleware.getEmail())) {
+            throw new DataIntegrityViolationException("User with email already exists");
+        }
+        if(userAdapter.existsByMobileNumber(usermiddleware.getMobileNumber())){
+            throw new DataIntegrityViolationException( "User with mobile number already exists");
+        }
+        ApiResponse user = userService.createUser(userDto, orgId);
+        if (userDto.getRoleId().equals(STUDENT_ROLE_ID)) {
+            UserEntity mappedUser = userEntityMapper.toEntity((User) user.getData());
+            if (secondaryDetailsDto == null) {
+                userAdapter.deleteUser(mappedUser);
+                return new ApiResponse(400, "Secondary details are null", null);
+            }
+            Set<ConstraintViolation<SecondaryDetailsDto>> violations = validator.validate(secondaryDetailsDto);
+            if (!violations.isEmpty()) {
+                String errorMsg = violations.stream()
+                        .map(ConstraintViolation::getMessage)
+                        .collect(Collectors.joining(", "));
+                userAdapter.deleteUser(mappedUser);
+                return new ApiResponse(400, "Validation failed for secondary details: " + errorMsg, null);
+            }
+            boolean isMobileExist = userAdapter.existsMobileByMobile(secondaryDetailsDto.getMobile());
+            if (isMobileExist) {
+                userAdapter.deleteUser(mappedUser);
+                throw new RuntimeException("Secondary User Mobile Number is Exist!");
+            }
+            if (secondaryDetailsDto.getEmail() != null) {
+                boolean isEmailExist = userAdapter.existsEmailByEmail(secondaryDetailsDto.getEmail());
+                if (isEmailExist) {
                     userAdapter.deleteUser(mappedUser);
-                    return new ApiResponse(400, "Validation failed for secondary details: " + errorMsg, null);
+                    throw new RuntimeException("Secondary User Email is Exist!");
                 }
-
                 boolean secondaryUserCreated = userService.createSecondaryUser(secondaryDetailsDto, mappedUser);
                 if (!secondaryUserCreated) {
                     userAdapter.deleteUser(mappedUser);
                     return new ApiResponse(400, "Secondary details creation failed", null);
                 }
             }
+        }
+        return new ApiResponse(201, "User Created successfully and Reset password link sent to email.", user);
+    }
 
-            return new ApiResponse(201, "User Created successfully and Reset password link sent to email.", user);
+    public ApiResponse getUser(String token){
+            if (!token.startsWith("Bearer ")) {
+                return new ApiResponse(400, "Invalid token format", null);
+            }
+            String jwt = token.substring(7);
+            Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
+            String role = jwtUtil.extractRoleFromToken(jwt);
+            Long userId = jwtUtil.extractUserIdFromToken(jwt);
+            role = role.replace("ROLE_", "").toUpperCase();
+            if (orgId == null) {
+                return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
+            }
+            UserProfileResponse response = userService.getUser(orgId,userId);
+            return new ApiResponse(HttpStatus.OK.value(), "User fetched successfully",response);
         }
 
         public ResponseEntity<ApiResponse> validateEmail (EmailDto email){
