@@ -10,8 +10,6 @@ public class SecondaryDetailsDto {
     @NotBlank(message = "Secondary user mobile is required")
     @Pattern(regexp = "^[0-9]{10}$", message = "mobile must be a 10-digit number")
     private String mobile;
-    @NotBlank
-    @Email(message = "Invalid email format in Secondary Details")
     private String email;
     @NotBlank(message = "Relation is required in Secondary details")
     private String relation;

@@ -14,6 +14,10 @@ import java.util.Optional;
 
 @Repository
 public interface UserRepository extends JpaRepository<UserEntity, Long> {
+
+    @Query(value = "SELECT * FROM users u WHERE u.organization_id = :organizationId AND u.user_id = :userId", nativeQuery = true)
+    UserEntity findUserByOrganizationIdAndUserId(@Param("organizationId") Long organizationId, @Param("userId") Long userId);
+
     UserEntity findByEmail(String email);
 
     UserEntity findUserByEmail(String email);;

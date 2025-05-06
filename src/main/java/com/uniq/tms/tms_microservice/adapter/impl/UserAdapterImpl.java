@@ -15,9 +15,8 @@ import com.uniq.tms.tms_microservice.repository.*;
 import jakarta.transaction.Transactional;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
-import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.Optional;
+
+import java.util.*;
 
 @Component
 @ConditionalOnProperty(name = "database.type", havingValue = "postgres")
@@ -293,6 +292,11 @@ public class UserAdapterImpl implements UserAdapter {
     @Override
     public LocationEntity findLocationById(Long locationId) {
         return locationRepository.findById(locationId).orElse(null);
+    }
+
+    @Override
+    public UserEntity findUserByOrganizationIdAndUserId(Long organizationId, Long userId) {
+        return userRepository.findUserByOrganizationIdAndUserId(organizationId,userId);
     }
 
 }

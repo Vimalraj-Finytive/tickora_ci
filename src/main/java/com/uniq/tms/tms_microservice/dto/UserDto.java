@@ -12,6 +12,7 @@ public class UserDto {
     private Long locationId;
     private LocalDate dateOfJoining;
     private boolean isRegisterUser;
+    private Long groupId;
 
     public boolean isRegisterUser() {
         return isRegisterUser;
@@ -75,5 +76,13 @@ public class UserDto {
 
     public void setLocationId(Long locationId) {
         this.locationId = locationId;
+    }
+
+    public Long getGroupId() {
+        return groupId;
+    }
+
+    public void setGroupId(Long groupId) {
+        this.groupId = groupId;
     }
 }

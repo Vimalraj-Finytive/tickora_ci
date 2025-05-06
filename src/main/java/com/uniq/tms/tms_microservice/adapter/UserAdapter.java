@@ -13,7 +13,9 @@ import com.uniq.tms.tms_microservice.entity.*;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 public interface UserAdapter {
     List<RoleEntity>getAllRole(Long orgId, int hierarchyLevel);
@@ -66,5 +68,6 @@ public interface UserAdapter {
     Optional<GroupEntity> findByGroupId(Long groupId);
     List<Long> findMemberIdsByGroupId(Long groupId);
     LocationEntity findLocationById(Long locationId);
+    UserEntity findUserByOrganizationIdAndUserId(Long organizationId, Long userId);
 }
 
