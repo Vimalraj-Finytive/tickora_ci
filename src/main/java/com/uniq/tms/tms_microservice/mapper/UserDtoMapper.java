@@ -30,6 +30,5 @@ public interface UserDtoMapper {
     AddMember toMiddleware(AddMemberDto addMemberDto);
     UserDto toDto(User user);
     GroupDto toGroupDto(Group group);
-
     UserResponseDto toDto(UserResponse userResponse);
 }

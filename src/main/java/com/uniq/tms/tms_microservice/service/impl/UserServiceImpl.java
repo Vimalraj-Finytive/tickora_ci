@@ -33,7 +33,6 @@ import com.uniq.tms.tms_microservice.util.EmailUtil;
 import com.uniq.tms.tms_microservice.util.PasswordUtil;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
-import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,8 +42,6 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
-
-import java.io.*;
 import java.lang.reflect.Field;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -112,17 +109,6 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-
-        }
-
-        }
-
-                String dojValue = getCsvValue(row, headerIndexMap, "dateofjoining");
-            sendEmailsAsync(emailRequests);
-
-            if(headerRow[i]!=null){
-
-    @Override
     public ApiResponse createUser(UserDto userDto, Long organizationId) {
         User usermiddleware = userDtoMapper.toMiddleware(userDto);
 
@@ -183,9 +169,7 @@ public class UserServiceImpl implements UserService {
             if (userDto.getMobileNumber() != null) {
                 existingUser.setMobileNumber(userDto.getMobileNumber());
             }
-            if(userDto.isRegisterUser()){
-                existingUser.setRegisterUser(userDto.isRegisterUser());
-            }
+            existingUser.setRegisterUser(userDto.isRegisterUser());
             if(userDto.getLocationId() != null){
                 existingUser.setLocationId(userDto.getLocationId());
             }
@@ -679,25 +663,31 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public List<Map<String, Object>> getGroupMembers(Long groupId, Long orgId, LocalDate date) {
+    public List<Map<String, Object>> getGroupMembers(Long groupId, Long orgId, LocalDate date, Long userIdFromToken) {
 
+        // Fetch group members, filtering out supervisors and logged-in user
         List<UserGroupEntity> groupEntity = userAdapter.getGroupMembersByGroupId(groupId, orgId);
+
         List<Long> memberIds = groupEntity.stream()
+                .filter(ug -> ug.getType().equalsIgnoreCase("Member"))  // Only members
                 .map(ug -> ug.getUser().getUserId())
+                .filter(id -> !id.equals(userIdFromToken))  // Exclude logged-in user
                 .toList();
 
         if (memberIds == null || memberIds.isEmpty()) {
-            return Collections.emptyList();
+            return Collections.emptyList();  // If no members found, return empty
         }
-        //Fetch list of users in a group
-        List<UserEntity> GroupUsers = userAdapter.getUsersByIds(memberIds, orgId);
 
-        List<TimesheetEntity> latestLogs = timesheetAdapter.
-                getLatestLogsByTimesheetIds(memberIds, orgId, date);
+        // Fetch list of users based on memberIds
+        List<UserEntity> groupUsers = userAdapter.getUsersByIds(memberIds, orgId);
+
+        // Fetch the latest timesheet logs for the members
+        List<TimesheetEntity> latestLogs = timesheetAdapter.getLatestLogsByTimesheetIds(memberIds, orgId, date);
         Map<Long, TimesheetEntity> latestLogsMap = latestLogs.stream()
                 .collect(Collectors.toMap(TimesheetEntity::getUserId, Function.identity()));
 
-        List<Map<String, Object>> UserDetailsList = GroupUsers.stream()
+        // Map user details to return response
+        List<Map<String, Object>> userDetailsList = groupUsers.stream()
                 .map(user -> {
                     Map<String, Object> map = new HashMap<>();
                     map.put("id", user.getUserId());
@@ -720,6 +710,40 @@ public class UserServiceImpl implements UserService {
                     return map;
                 })
                 .toList();
-                return UserDetailsList;
+
+        return userDetailsList;
     }
+
+    @Override
+    public List<UserNameSuggestionDto> getGroupUsers(List<Long> groupIds, Long orgId, Long loggedInUserId) {
+        // Case 1: groupIds is null or empty → return all active users
+        if (groupIds == null || groupIds.isEmpty()) {
+            List<UserNameSuggestionDto> allUsers = userAdapter.getAllActiveUsers(orgId);
+
+            return allUsers.stream()
+                    .filter(user -> !user.getUserId().equals(loggedInUserId))  // Exclude logged-in user
+                    .map(userDto -> new UserNameSuggestionDto(userDto.getUserId(), userDto.getUserName()))  // Map to UserNameSuggestionDto
+                    .collect(Collectors.toList());
+        }
+
+        // Case 2: groupIds provided → return only members from those groups
+        List<UserGroupEntity> groupEntity = userAdapter.getGroupUsersByGroupId(groupIds, orgId);
+
+        List<Long> memberIds = groupEntity.stream()
+                .filter(ug -> ug.getType().equalsIgnoreCase("Member"))  // Only members
+                .map(ug -> ug.getUser().getUserId())
+                .filter(id -> !id.equals(loggedInUserId))  // Exclude logged-in user
+                .distinct()
+                .collect(Collectors.toList());
+
+        if (memberIds.isEmpty()) {
+            return Collections.emptyList();  // No valid members
+        }
+
+        List<UserEntity> groupUsers = userAdapter.getUsersByIds(memberIds, orgId);
+        return groupUsers.stream()
+                .map(userEntity -> new UserNameSuggestionDto(userEntity.getUserId(), userEntity.getUserName()))  // Map to UserNameSuggestionDto
+                .collect(Collectors.toList());
+    }
+
 }

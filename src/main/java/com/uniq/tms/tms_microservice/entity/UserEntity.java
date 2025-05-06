@@ -60,14 +60,6 @@ public class UserEntity {
     @Column(name = "active", nullable = false)
     private boolean active;
 
-    public boolean isRegisterUser() {
-        return isRegisterUser;
-    }
-
-    public void setRegisterUser(boolean registerUser) {
-        isRegisterUser = registerUser;
-    }
-
     public UserEntity(Long userId){
         this.userId = userId;
     }
@@ -189,6 +181,14 @@ public class UserEntity {
 
     public void setRole(RoleEntity role) {
         this.role = role;
+    }
+
+    public boolean isRegisterUser() {
+        return isRegisterUser;
+    }
+
+    public void setRegisterUser(boolean registerUser) {
+        isRegisterUser = registerUser;
     }
 
 }

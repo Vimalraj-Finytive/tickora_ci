@@ -37,7 +37,7 @@ public class SecurityConfig {
                                 "/tms/validate-email", "/tms/reset-password", "/tms/timesheets/**"
                         ).permitAll()
 
-                        .requestMatchers("/tms/loginByEmail","/tms/loginByMobile","/tms/sendOTP", "/tms/logout", "/tms/validate-email", "/tms/reset-password","/tms/timesheets/**").permitAll()
+                        .requestMatchers("/tms/loginByEmail","/tms/loginByMobile","/tms/sendOTP", "/tms/logout", "/tms/validate-email", "/tms/reset-password","/tms/timesheets/**","/tms/validate-token").permitAll()
                         .requestMatchers("/tms/admin/**" ).hasAnyAuthority("Admin", "SuperAdmin", "Manager","Staff")
                         .anyRequest().authenticated()
                 )

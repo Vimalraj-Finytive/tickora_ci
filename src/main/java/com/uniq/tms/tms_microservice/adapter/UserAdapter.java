@@ -10,12 +10,8 @@ import com.uniq.tms.tms_microservice.entity.WorkScheduleEntity;
 import com.uniq.tms.tms_microservice.model.UserResponse;
 import com.uniq.tms.tms_microservice.dto.UserNameSuggestionDto;
 import com.uniq.tms.tms_microservice.entity.*;
-import org.springframework.data.repository.query.Param;
-
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 
 public interface UserAdapter {
     List<RoleEntity>getAllRole(Long orgId, int hierarchyLevel);
@@ -69,5 +65,9 @@ public interface UserAdapter {
     List<Long> findMemberIdsByGroupId(Long groupId);
     LocationEntity findLocationById(Long locationId);
     UserEntity findUserByOrganizationIdAndUserId(Long organizationId, Long userId);
+    List<UserEntity> filterUsersByGroupIds(Long userIdFromToken, List<UserEntity> targetUsers);
+    List<RoleEntity> findAllWithPrivileges();
+    List<UserGroupEntity> getGroupUsersByGroupId(List<Long> groupIds, Long orgId);
+    List<UserNameSuggestionDto> getAllActiveUsers(Long orgId);
 }
 

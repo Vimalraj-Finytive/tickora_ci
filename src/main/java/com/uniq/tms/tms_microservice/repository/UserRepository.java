@@ -59,4 +59,8 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
     @Query("UPDATE UserEntity u SET u.active = false WHERE u.userId = :userId")
     void deactivateUserById(Long userId);
 
+    @Query("SELECT new com.uniq.tms.tms_microservice.dto.UserNameSuggestionDto(u.userId, u.userName) " +
+            "FROM UserEntity u " +
+            "WHERE u.organizationId = :orgId AND u.active = true")
+    List<UserNameSuggestionDto> findAllActiveUsersByOrganization(@Param("orgId") Long orgId);
 }

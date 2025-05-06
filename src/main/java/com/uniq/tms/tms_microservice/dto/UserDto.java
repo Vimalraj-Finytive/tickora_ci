@@ -13,13 +13,11 @@ public class UserDto {
     private LocalDate dateOfJoining;
     private boolean isRegisterUser;
     private Long groupId;
+    private boolean active;
 
-    public boolean isRegisterUser() {
-        return isRegisterUser;
-    }
-
-    public void setRegisterUser(boolean registerUser) {
-        isRegisterUser = registerUser;
+    public UserDto(Long userId, String userName) {
+        this.userId = userId;
+        this.userName = userName;
     }
 
     public LocalDate getDateOfJoining() {
@@ -84,5 +82,22 @@ public class UserDto {
 
     public void setGroupId(Long groupId) {
         this.groupId = groupId;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
+    }
+
+    public boolean isRegisterUser() {
+        return isRegisterUser;
+    }
+
+    public void setRegisterUser(boolean registerUser) {
+        isRegisterUser = registerUser;
+
     }
 }

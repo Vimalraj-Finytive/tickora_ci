@@ -15,7 +15,6 @@ import com.uniq.tms.tms_microservice.repository.*;
 import jakarta.transaction.Transactional;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
-
 import java.util.*;
 
 @Component
@@ -296,7 +295,31 @@ public class UserAdapterImpl implements UserAdapter {
 
     @Override
     public UserEntity findUserByOrganizationIdAndUserId(Long organizationId, Long userId) {
-        return userRepository.findUserByOrganizationIdAndUserId(organizationId,userId);
+        return userRepository.findUserByOrganizationIdAndUserId(organizationId, userId);
+    }
+
+    public List<UserEntity> filterUsersByGroupIds(Long supervisorId, List<UserEntity> targetUsers) {
+        // Extract userIds from the targetUsers list
+        List<Long> userIds = targetUsers.stream()
+                .map(UserEntity::getUserId)
+                .toList();
+        // Query the repository to filter users based on their groups and supervisorId
+        return userGroupRepository.filterUsersByGroupIds(supervisorId, userIds);
+    }
+
+    @Override
+    public List<RoleEntity> findAllWithPrivileges() {
+        return roleRepository.findAllWithPrivileges();
+    }
+
+    @Override
+    public List<UserGroupEntity> getGroupUsersByGroupId(List<Long> groupIds, Long orgId) {
+        return userGroupRepository.findActiveGroupMembersExcludingSupervisors(groupIds, orgId);
+    }
+
+    @Override
+    public List<UserNameSuggestionDto> getAllActiveUsers(Long orgId) {
+        return userRepository.findAllActiveUsersByOrganization(orgId);
     }
 
 }
