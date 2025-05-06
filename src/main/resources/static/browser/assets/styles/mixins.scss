@@ -9,14 +9,14 @@
   
 
   @mixin app-container {    
-    background-color: var(--bg-screen);
+    // background-color: var(--bg-screen);
     z-index: 1; 
     margin-top: 60px; 
     display: block;
     padding: 10px;
     // position: fixed;  // Fixes the container in place
     width: 100%;
-    height: 100%;     // Takes the full viewport height
+    height: 90%;     // Takes the full viewport height
     overflow: hidden; // Prevents scrolling
 }
 
