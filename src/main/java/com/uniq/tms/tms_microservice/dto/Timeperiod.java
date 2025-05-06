@@ -2,12 +2,14 @@ package com.uniq.tms.tms_microservice.dto;
 
 import com.uniq.tms.tms_microservice.service.impl.TimesheetServiceImpl;
 import java.time.LocalDate;
+import java.time.Year;
 import java.util.function.Function;
 
 public enum Timeperiod {
-    DAY(date -> date),
-    WEEK(date -> date.plusDays(6)),
-    MONTH(date -> date.withDayOfMonth(date.lengthOfMonth()));
+    DAY(fromdate -> fromdate),
+    WEEK(fromdate -> fromdate.plusDays(6)),
+    MONTH(fromdate -> fromdate.withDayOfMonth(fromdate.lengthOfMonth())),
+    YEAR (fromdate -> fromdate.with(Year.from(fromdate).atMonth(12).atDay(31)));
 
     private final Function<LocalDate, LocalDate> endDateFunction;
 

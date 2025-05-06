@@ -207,8 +207,19 @@ public class UserController {
 
     @GetMapping("/getGroupMembers")
     public ResponseEntity<ApiResponse> getUserGroupMembers(@RequestHeader("Authorization") String token,
-                                                           @RequestParam Long groupId,@RequestParam LocalDate date) {
+                                                           @RequestParam Long groupId,@RequestParam(required = false) LocalDate date) {
         ApiResponse response = authFacade.getUserGroupMembers(token, groupId, date);
         return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
+    @GetMapping("/getGroupUsers")
+    public ResponseEntity<ApiResponse> getGroupUsers(
+            @RequestHeader("Authorization") String token,
+            @RequestParam(required = false) List<Long> groupIds) {
+        try {
+            ApiResponse response = authFacade.getGroupUsers(token, groupIds);
+            return ResponseEntity.status(response.getStatusCode()).body(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ApiResponse(403,"Error: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
+        }
     }
 }

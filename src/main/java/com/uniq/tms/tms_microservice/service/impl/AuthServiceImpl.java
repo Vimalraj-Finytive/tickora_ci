@@ -17,6 +17,7 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -29,6 +30,7 @@ import java.util.*;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 public class AuthServiceImpl implements AuthService {
     private final NettyfishService nettyfishService;
@@ -57,13 +59,14 @@ public class AuthServiceImpl implements AuthService {
                 () -> authAdapter.findByEmail(email),
                 () -> authAdapter.findUserByEmail(email) // from SecondaryDetails
         );
-
+        log.info("fetch user: {}", userSuppliers);
         List<UserEntity> users = userSuppliers.stream()
                 .map(Supplier::get)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
 
         if (users.isEmpty()) {
+            log.info("user not found");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(new ApiResponse(401, "Invalid credentials: User not found", null));
         }
@@ -76,6 +79,7 @@ public class AuthServiceImpl implements AuthService {
                 .findFirst();
 
         if (userWithEmailPrivilege.isEmpty()) {
+            log.info("user with email login privilege not found");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(new ApiResponse(401, "You are not allowed to login using email.", null));
         }
@@ -83,15 +87,17 @@ public class AuthServiceImpl implements AuthService {
         UserEntity user = userWithEmailPrivilege.get();
 
         boolean isPasswordValid = PasswordUtil.isPasswordMatch(password, user.getPassword());
-
+        log.info("password valid: {}", isPasswordValid);
         // Step 3: Validate password
         if (!isPasswordValid) {
+            log.info("password not valid");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(new ApiResponse(401, "Invalid Credentials: Wrong password", null));
         }
 
         Map<String, Object> userData = new HashMap<>();
         if (user.isDefaultPassword()) {
+            log.info(("sending mail to user to change default password"));
             boolean isNewUser = user.isDefaultPassword();
             emailUtil.sendDefaultPasswordReminderEmail(user.getEmail(), user.getUserName(), password, isNewUser);
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -99,14 +105,16 @@ public class AuthServiceImpl implements AuthService {
         }
 
             // Step 5: Generate JWT Token
+            log.info("Generating JWT Token");
             String jwtToken = jwtUtil.generateToken(email, System.currentTimeMillis(), request);
             Cookie jwtCookie = new Cookie("JWT_TOKEN", jwtToken);
             jwtCookie.setHttpOnly(true);
-            jwtCookie.setSecure(true); // Set to true in production with HTTPS
+            jwtCookie.setSecure(true);
             jwtCookie.setPath("/");
             response.addCookie(jwtCookie);
 
             // Step 6: Prepare privilege set
+            log.info("Preparing privilege set");
             Set<String> privileges = user.getRole().getPrivilegeEntities().stream()
                     .map(PrivilegeEntity::getName)
                     .collect(Collectors.toSet());
@@ -271,32 +279,35 @@ public class AuthServiceImpl implements AuthService {
         return ResponseEntity.ok(new ApiResponse(200, "Login Successful", userData));
     }
 
-
     public ResponseEntity<ApiResponse> logoutUser(HttpServletRequest request, HttpServletResponse response) {
         String jwtToken = null;
-
+        log.info("Checking for JWT Token in Headers");
         String authHeader = request.getHeader("Authorization");
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             jwtToken = authHeader.substring(7);
         }
 
         if (jwtToken == null) {
+            log.info("Checking for JWT Token in Cookies");
             jwtToken = jwtUtil.extractJwtFromCookies(request);
         }
 
         if (jwtToken == null || jwtToken.isEmpty()) {
+            log.info("JWT Token not found in headers or cookies");
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(new ApiResponse(400, "JWT Token not found", null));
         }
 
         try {
+            log.info("Extract username form JWT Token");
             String username = jwtUtil.extractUsername(jwtToken);
             if (username == null) {
+                log.info("Username not found in JWT Token");
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                         .body(new ApiResponse(401, "Invalid JWT Token", null));
             }
-
-            jwtUtil.blacklistToken(jwtToken, request.getHeader("User-Agent"), jwtUtil.getClientIp(request));
+            log.info("Blacklisting JWT Token");
+            jwtUtil.blacklistToken(jwtToken, request.getHeader("User-Agent"));
 
             Cookie jwtCookie = new Cookie("JWT_TOKEN", "");
             jwtCookie.setHttpOnly(true);
@@ -309,6 +320,7 @@ public class AuthServiceImpl implements AuthService {
             return ResponseEntity.ok(new ApiResponse(200, "Logout Successful", null));
         } catch (Exception e) {
             e.printStackTrace();
+            log.error("Error during logout: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ApiResponse(500, "Error during logout", null));
         }

@@ -20,9 +20,7 @@ public interface UserService {
     List<Role> getAllRole(Long orgId, String role);
     List<Group> getAllTeam();
     List<Location> getAllLocation(Long orgId);
-    User createUser(User userMiddleware, Long organizationId);
     ApiResponse createUser(UserDto userDto, Long organizationId);
-
     User updateUser(CreateUserDto updates, Long orgId, Long userId);
     List<UserResponse> getUsers(Long orgId, String role);
     User deleteUser(Long orgId, Long userId);
@@ -32,7 +30,7 @@ public interface UserService {
     List<User> getMembers(Long orgId, Long roleId);
     boolean updateUserGroupType(UserGroup userGroup);
     List<GroupDto>getUserGroups(Long userId, String role, Long orgId);
-    List<Map<String, Object>> getGroupMembers(Long groupId, Long orgId, LocalDate date);
+    List<Map<String, Object>> getGroupMembers(Long groupId, Long orgId, LocalDate date, Long userIdFromToken);
     ApiResponse addUserToGroup(AddMember addMemberMiddleware, Long orgId);
     List<GroupResponseDto> getAllGroups(Long orgId, Long userId) throws JsonProcessingException;
     UserGroup createUserGroup(UserGroup userGroupMiddleware, Long orgId);
@@ -40,4 +38,5 @@ public interface UserService {
     boolean createSecondaryUser(SecondaryDetailsDto secondaryDetailsDto, UserEntity savedUser);
     List<UserNameSuggestionDto> searchUsernames(String keywords);
     UserProfileResponse getUser(Long orgId, Long userId);
+    List<UserNameSuggestionDto> getGroupUsers(List<Long> groupIds, Long orgId, Long loggedInUserId);
 }

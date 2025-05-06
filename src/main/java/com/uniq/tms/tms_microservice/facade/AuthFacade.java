@@ -25,8 +25,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ResponseStatusException;
-
-import java.security.PrivateKey;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -106,27 +104,6 @@ public class AuthFacade {
             }
         }
 
-        public ApiResponse createUser (UserDto userDto, SecondaryDetailsDto secondaryDetailsDto, String token){
-
-            if (!token.startsWith("Bearer ")) {
-                return new ApiResponse(400, "Invalid token format", null);
-            }
-            String jwt = token.substring(7);
-            Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
-
-            if (orgId == null) {
-                return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
-            }
-            User usermiddleware = userDtoMapper.toMiddleware(userDto);
-            User user = userService.createUser(usermiddleware, orgId);
-
-            if (userDto.getRoleId().equals(STUDENT_ROLE_ID)) {
-                UserEntity mappedUser = userEntityMapper.toEntity(user);
-
-                if (secondaryDetailsDto == null) {
-                    userAdapter.deleteUser(mappedUser);
-                    return new ApiResponse(400, "Secondary details are null", null);
-                }
     public ApiResponse createUser (UserDto userDto, SecondaryDetailsDto secondaryDetailsDto, String token){
 
         if (!token.startsWith("Bearer ")) {
@@ -417,8 +394,7 @@ public class AuthFacade {
             return new ApiResponse(200, "User group type updated successfully.", true);
         }
 
-        public List<TimesheetDto> getAllTimesheets (String token, LocalDate date, String timePeriod, Long
-        userId, List < Long > groupIds){
+        public List<TimesheetDto> getAllTimesheets (String token, TimesheetReportDto request) {
 
             if (!token.startsWith("Bearer ")) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid token format");
@@ -432,7 +408,7 @@ public class AuthFacade {
                 throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized - Invalid Organization");
             }
             String role = jwtUtil.extractRoleFromToken(jwt);
-            return timesheetService.getAllTimesheets(userIdFromToken, role, date, timePeriod, userId, groupIds);
+            return timesheetService.getAllTimesheets(userIdFromToken,orgId, role, request);
         }
 
         public List<TimesheetHistoryDto> processTimesheetLogs (List < TimesheetHistoryDto > timesheetLogs) {
@@ -480,8 +456,8 @@ public class AuthFacade {
             if (orgId == null) {
                 return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
             }
-
-            List<Map<String, Object>> groupMembers = userService.getGroupMembers(groupId, orgId, date);
+            Long userIdFromToken = jwtUtil.extractUserIdFromToken(jwt);
+            List<Map<String, Object>> groupMembers = userService.getGroupMembers(groupId, orgId, date, userIdFromToken);
             Map<String, Object> response = new HashMap<>();
             response.put("groupmember", groupMembers);
 
@@ -515,4 +491,20 @@ public class AuthFacade {
             List<UserNameSuggestionDto> usernames = userService.searchUsernames(keyword);
             return new ApiResponse(200, "Usernames fetched successfully", usernames);
         }
+
+    public ApiResponse getGroupUsers(String token, List<Long> groupIds) {
+        if (!token.startsWith("Bearer ")) {
+            return new ApiResponse(400, "Invalid token format", null);
+        }
+
+        String jwt = token.substring(7);
+        Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
+        Long loggedInUserId = jwtUtil.extractUserIdFromToken(jwt);
+        if (orgId == null || loggedInUserId == null) {
+            return new ApiResponse(401, "Unauthorized - Invalid Organization or User", null);
+        }
+        List<UserNameSuggestionDto> users;
+        users = userService.getGroupUsers(groupIds, orgId, loggedInUserId);
+        return new ApiResponse(200, "Users fetched successfully", users);
+    }
 }

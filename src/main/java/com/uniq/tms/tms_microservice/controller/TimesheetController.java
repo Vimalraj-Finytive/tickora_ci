@@ -4,10 +4,15 @@ import com.uniq.tms.tms_microservice.constant.UserConstant;
 import com.uniq.tms.tms_microservice.dto.ApiResponse;
 import com.uniq.tms.tms_microservice.dto.TimesheetDto;
 import com.uniq.tms.tms_microservice.dto.TimesheetHistoryDto;
+import com.uniq.tms.tms_microservice.dto.TimesheetReportDto;
 import com.uniq.tms.tms_microservice.facade.AuthFacade;
+import com.uniq.tms.tms_microservice.util.ReportUtils;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -25,20 +30,18 @@ import java.util.List;
 public class  TimesheetController {
 
     private final AuthFacade authFacade;
+    private final ReportUtils reportUtils;
 
-    public TimesheetController(AuthFacade authFacade) {
+    public TimesheetController(AuthFacade authFacade, ReportUtils reportUtils) {
         this.authFacade = authFacade;
+        this.reportUtils = reportUtils;
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse> getAllTimesheets(@RequestHeader("Authorization") String token,
-            @RequestParam(required = false) LocalDate date,
-            @RequestParam(required = false) String timePeriod,
-            @RequestParam(required = false) Long userId,
-            @RequestParam(required = false) List<Long> groupId) {
-
-        List<TimesheetDto> timesheets = authFacade.getAllTimesheets(token,date, timePeriod,userId, groupId);
-        return ResponseEntity.ok(new ApiResponse(200, "Timesheets fetched successfully", timesheets));
+    public ResponseEntity<?> getAllTimesheets(@RequestHeader("Authorization") String token,
+                                                        @ModelAttribute TimesheetReportDto request) {
+        List<TimesheetDto> timesheets = authFacade.getAllTimesheets(token,request);
+        return ResponseEntity.ok(new ApiResponse(200, "Success", timesheets));
     }
 
     @PostMapping("/clockin")
@@ -72,5 +75,32 @@ public class  TimesheetController {
         TimesheetDto timesheetDto = authFacade.upsertClockInOut(userId, date, request);
 
         return ResponseEntity.ok(new ApiResponse<>(200, "Timesheet upserted successfully", timesheetDto));
+    }
+
+    @PostMapping
+    public ResponseEntity<?> getTimesheets(
+            @RequestHeader("Authorization") String token,
+            @RequestBody(required = false) TimesheetReportDto request) {
+
+        List<TimesheetDto> timesheets = authFacade.getAllTimesheets(
+                token,
+                request
+        );
+
+        if ("csv".equalsIgnoreCase(request.getFormat())) {
+            byte[] csv = reportUtils.exportToCsv(timesheets);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=timesheetReport.csv")
+                    .contentType(MediaType.parseMediaType("text/csv"))
+                    .body(csv);
+        } else if ("xlsx".equalsIgnoreCase(request.getFormat())) {
+            byte[] xlsx = reportUtils.exportToXlsx(timesheets);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=timesheetReport.xlsx")
+                    .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                    .body(xlsx);
+        }
+
+        return ResponseEntity.ok(new ApiResponse(200, "Success", timesheets));
     }
 }

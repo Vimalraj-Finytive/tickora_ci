@@ -10,10 +10,10 @@ import com.uniq.tms.tms_microservice.entity.UserEntity;
 import com.uniq.tms.tms_microservice.mapper.RolePrivilegeMapper;
 import com.uniq.tms.tms_microservice.mapper.TimesheetDtoMapper;
 import com.uniq.tms.tms_microservice.mapper.TimesheetEntityMapper;
+import com.uniq.tms.tms_microservice.mapper.UserEntityMapper;
 import com.uniq.tms.tms_microservice.model.TimesheetHistory;
 import com.uniq.tms.tms_microservice.service.TimesheetService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
 import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -24,41 +24,56 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import org.apache.logging.log4j.Logger;
 
 @Service
 public class TimesheetServiceImpl implements TimesheetService {
+
+    private static final Logger log =  LogManager.getLogger(TimesheetServiceImpl.class);
 
     private final TimesheetAdapter timesheetAdapter;
     private final TimesheetEntityMapper timesheetEntityMapper;
     private final TimesheetDtoMapper timesheetDtoMapper;
     private final UserAdapter userAdapter;
+    private final PrivilegeService  privilegeService;
+    private final UserEntityMapper userEntityMapper;
 
-    public TimesheetServiceImpl(TimesheetAdapter timesheetAdapter, TimesheetEntityMapper timesheetEntityMapper, TimesheetDtoMapper timesheetDtoMapper, UserAdapter userAdapter) {
+    public TimesheetServiceImpl(TimesheetAdapter timesheetAdapter, TimesheetEntityMapper timesheetEntityMapper, TimesheetDtoMapper timesheetDtoMapper, UserAdapter userAdapter, PrivilegeService privilegeService, UserEntityMapper userEntityMapper) {
         this.timesheetAdapter = timesheetAdapter;
         this.timesheetEntityMapper = timesheetEntityMapper;
         this.timesheetDtoMapper = timesheetDtoMapper;
         this.userAdapter = userAdapter;
+        this.privilegeService = privilegeService;
+        this.userEntityMapper = userEntityMapper;
     }
 
-    private static final Logger log = LoggerFactory.getLogger(TimesheetServiceImpl.class);
-
-    public List<TimesheetDto> getAllTimesheets(Long userIdFromToken, String role, LocalDate date, String timePeriod, Long userId, List<Long> groupIds) {
+    public List<TimesheetDto> getAllTimesheets(Long userIdFromToken, Long orgId, String role, TimesheetReportDto request) {
+        LocalDate fromDate = request.getFromDate();
+        LocalDate toDate = request.getToDate();
+        String timePeriod = request.getTimePeriod();
+        List<Long> userId = request.getUserId();
+        List<Long> groupIds = request.getGroupId();
         LocalDate startDate = null;
         LocalDate endDate = null;
 
-        if (date != null && timePeriod != null) {
-            LocalDateRange range = calculateDateRange(date, timePeriod);
+        if (fromDate != null && timePeriod != null) {
+            LocalDateRange range = calculateDateRange(fromDate, timePeriod);
             startDate = range.startDate();
             endDate = range.endDate();
-        } else if (userId != null) {
+        }
+         else if (fromDate != null && toDate != null) {
+                startDate = fromDate;
+                endDate = toDate;
+            }
+        else if (userId != null) {
             startDate = LocalDate.of(2025, 1, 1);
             endDate = LocalDate.now();
         }
 
         // Determine target users based on privileges
-        List<UserEntity> targetUsers = (userId != null)
-                ? List.of(userAdapter.getUserById(userId))
-                : resolveTargetUsers(userIdFromToken, groupIds);
+        List<UserEntity> targetUsers = resolveTargetUsers(userIdFromToken, groupIds, userId);
 
         List<Long> userIds = targetUsers.stream()
                 .map(UserEntity::getUserId)
@@ -69,10 +84,21 @@ public class TimesheetServiceImpl implements TimesheetService {
         return timesheetDtos;
     }
 
-    private List<UserEntity> resolveTargetUsers(Long userIdFromToken, List<Long> groupIds) {
+    private List<UserEntity> resolveTargetUsers(Long userIdFromToken, List<Long> groupIds, List<Long> userId) {
 
         UserEntity currentUser = userAdapter.getUserById(userIdFromToken);
         String roleName = currentUser.getRole().getName().toUpperCase();
+
+        //Cache mechanism for getting privileges
+        Map<String, Set<String>> dbPrivileges = privilegeService.getRolePrivilegeMap();
+        log.info("dbPrivileges: {}", dbPrivileges);
+        Set<String> userPrivilege = dbPrivileges.entrySet().stream()
+                        .filter(entry -> entry.getKey().equalsIgnoreCase(roleName.trim()))
+                                .map(Map.Entry::getValue)
+                                .findFirst()
+                                        .orElseThrow(() -> new IllegalArgumentException("Invalid role name."));
+        log.info("userPrivilege: {}", userPrivilege);
+
 
         boolean canSeeOwn = RolePrivilegeMapper.hasPrivilege(RoleName.valueOf(roleName), Privilege.CAN_SEE_OWN_TIMESHEET);
         boolean canSeeAll = RolePrivilegeMapper.hasPrivilege(RoleName.valueOf(roleName), Privilege.CAN_SEE_ALL_TIMESHEETS);
@@ -93,24 +119,54 @@ public class TimesheetServiceImpl implements TimesheetService {
 
         // Admin / Manager / Staff
         if (canSeeOwn && canSeeGroup && !canSeeAll) {
-            // If groupIds are passed → get groups supervised by the logged-in user
+            List<Long> supervisedGroupIds = userAdapter.findGroupIdsBySupervisorId(userIdFromToken);
+
+            // Case 1: If groupIds are passed → only keep supervised ones
             if (groupIds != null && !groupIds.isEmpty()) {
-                List<Long> supervisedGroupIds = userAdapter.findGroupIdsBySupervisorId(userIdFromToken);
-                // Keep only groups the logged-in user actually supervises
                 List<Long> filteredGroupIds = groupIds.stream()
                         .filter(supervisedGroupIds::contains)
                         .toList();
+
                 if (filteredGroupIds.isEmpty()) {
                     throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not supervise the selected group(s)");
                 }
-                // Return only members from the supervised group(s) — exclude supervisors and logged-in user
-                return userAdapter.findMembersByGroupIds(
-                        filteredGroupIds,
-                        userIdFromToken
-                );
-            } else if (userIdFromToken!=null){
-                return List.of(userAdapter.getUserById(userIdFromToken));                }
+
+                List<UserEntity> groupUserEntities = userAdapter.findMembersByGroupIds(filteredGroupIds, userIdFromToken);
+
+                if (groupUserEntities.isEmpty()) {
+                    throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                            "No users found in the selected group(s)");
+                }
+
+                List<Long> groupUserIds = groupUserEntities.stream()
+                        .map(UserEntity::getUserId)
+                        .toList();
+
+                if (userId != null && !userId.isEmpty()) {
+                    // Filter group users to only include requested userIds
+                    List<UserEntity> matchedUsers = groupUserEntities.stream()
+                            .filter(user -> userId.contains(user.getUserId()))
+                            .toList();
+
+                    if (matchedUsers.isEmpty()) {
+                        throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                                "No user found in the selected group(s) with the given userId(s)");
+                    }
+
+                    return matchedUsers;
+                }
+
+                log.info("Requested user IDs: {}", userId);
+                log.info("Group IDs passed: {}", groupIds);
+                log.info("Filtered group IDs (supervised): {}", filteredGroupIds);
+                log.info("Users in filtered groups: {}", groupUserIds);
+                return groupUserEntities;
+            } else if (userId != null && !userId.isEmpty()) {
+                return userAdapter.getUsersByIds(userId, currentUser.getOrganizationId());
+            } else {
+                return List.of(userAdapter.getUserById(userIdFromToken));
             }
+        }
         // Student
         if (canSeeOwn && !canSeeGroup && !canSeeAll) {
             if (groupIds != null && !groupIds.isEmpty()) {
@@ -229,7 +285,7 @@ public class TimesheetServiceImpl implements TimesheetService {
                 .findActiveTimesheetsByDate(today);
 
         for (TimesheetEntity entry : openClockIns) {
-            entry.setLastClockOut(LocalTime.now());
+            entry.setLastClockOut(LocalTime.MIDNIGHT);
             calculateHours(entry);
         }
         timesheetAdapter.saveAll(openClockIns);

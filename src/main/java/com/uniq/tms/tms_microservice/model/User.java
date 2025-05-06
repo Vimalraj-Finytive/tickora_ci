@@ -15,14 +15,6 @@ public class User {
     private boolean isRegisterUser;
     private boolean active;
 
-    public boolean isRegisterUser() {
-        return isRegisterUser;
-    }
-
-    public void setRegisterUser(boolean registerUser) {
-        isRegisterUser = registerUser;
-    }
-
     public boolean isActive() {
         return active;
     }
@@ -93,5 +85,13 @@ public class User {
 
     public void setLocationId(Long locationId) {
         this.locationId = locationId;
+    }
+
+    public boolean isRegisterUser() {
+        return isRegisterUser;
+    }
+
+    public void setRegisterUser(boolean registerUser) {
+        isRegisterUser = registerUser;
     }
 }

@@ -59,4 +59,6 @@ public interface UserEntityMapper {
     @Mapping(target = "user", expression = "java(new UserEntity(userGroup.getUserId()))")
     @Mapping(target = "group", expression = "java(new GroupEntity(userGroup.getGroupId()))")
     UserGroupEntity toEntity(UserGroup userGroup);
+
+    UserEntity toMiddleware(User user);
 }

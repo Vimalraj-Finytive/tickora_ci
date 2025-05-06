@@ -92,9 +92,13 @@ public class JwtUtil {
 
         long currentTime = System.currentTimeMillis();
         String userAgent = request.getHeader("User-Agent");
+<<<<<<< Updated upstream
+//        String ipAddress = request.getRemoteAddr();
+        String ipAddress = getClientIp(request);
 
+=======
         log.info("token generated for: " + loginInput);
-
+>>>>>>> Stashed changes
         return Jwts.builder()
                 .setSubject(loginInput)
                 .claim("roles", "ROLE_" + role.getName())
@@ -108,6 +112,8 @@ public class JwtUtil {
                 .compact();
     }
 
+<<<<<<< Updated upstream
+
     public String getClientIp(HttpServletRequest request) {
         String xfHeader = request.getHeader("X-Forwarded-For");
         if (xfHeader != null && !xfHeader.isEmpty()) {
@@ -116,9 +122,13 @@ public class JwtUtil {
         return request.getRemoteAddr(); // Fallback
     }
 
+
+    public Claims parseToken(String token,  String requestUserAgent, String requestIp) {
+=======
     public Claims parseToken(String token, String requestUserAgent) {
         log.info("parsing token: {}", token);
 
+>>>>>>> Stashed changes
         if (isTokenBlacklisted(token)) {
             throw new SecurityException("Token is blacklisted");
         }
@@ -134,11 +144,18 @@ public class JwtUtil {
             log.info("claims useragent {}", requestUserAgent);
             String tokenUserAgent = claims.get("userAgent", String.class);
 
+<<<<<<< Updated upstream
+//            if (!requestUserAgent.equals(tokenUserAgent) || !requestIp.equals(tokenIpAddress)) {
+//                throw new SecurityException("Token mismatch: Possible token theft or misuse detected");
+//            }
+
+=======
             if (!requestUserAgent.equals(tokenUserAgent)) {
                 log.info("user agent mismatch: {}", token);
                 throw new SecurityException("Token mismatch: Possible token theft or misuse detected");
             }
             claims.put("lastActiveTime", currentTime);
+>>>>>>> Stashed changes
             return claims;
         } catch (ExpiredJwtException e) {
             log.info("token has expired: {} ", token, e);
@@ -160,11 +177,16 @@ public class JwtUtil {
     public void blacklistToken(String token,  String requestUserAgent) {
         log.info("blacklisting token: {}", token);
         try {
-            System.out.println("JWT_Util _________userAgent from the token: {}"+ requestUserAgent);
-            System.out.println("JWT_Util ________AuthHeader from the token: {}"+ token);
+<<<<<<< Updated upstream
 
+            System.out.println("JWT_Util _________userAgent from the token: {}"+ requestUserAgent);
+            System.out.println("JWT_Util ___________IP Address from the token: {}"+ requestIp);
+            System.out.println("JWT_Util ________AuthHeader from the token: {}"+ token);
+            Claims claims = parseToken(token, requestUserAgent, requestIp);
+=======
             log.info("parsing token: {}", token);
             Claims claims = parseToken(token, requestUserAgent);
+>>>>>>> Stashed changes
             String userEmail = claims.getSubject();
             log.info("find user by token");
             UserEntity userEntity = userRepository.findByEmail(userEmail);
