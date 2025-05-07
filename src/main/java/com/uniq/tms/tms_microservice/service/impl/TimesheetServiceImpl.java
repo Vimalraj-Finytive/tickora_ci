@@ -301,15 +301,21 @@ public class TimesheetServiceImpl implements TimesheetService {
     @Override
     @Scheduled(cron = "0 0 0 * * ?")
     public void autoClockOutForAllEmployees() {
-        LocalDate today = LocalDate.now();
-
+        log.info("Scheduled clock triggered at {}", LocalDateTime.now());
+        LocalDate yesterday = LocalDate.now().minusDays(1);
         List<TimesheetEntity> openClockIns = timesheetAdapter
-                .findActiveTimesheetsByDate(today);
-
+                .findActiveTimesheetsByDate(yesterday);
+        log.info("Timesheets fetched for {}: {}", yesterday, openClockIns.size());
         for (TimesheetEntity entry : openClockIns) {
-            entry.setLastClockOut(LocalTime.MIDNIGHT);
-            calculateHours(entry);
+            if(entry.getFirstClockIn() != null && entry.getLastClockOut() == null) {
+                log.info("setting lastClockOut to 23:59");
+                entry.setLastClockOut(LocalTime.of(23, 59));
+                calculateHours(entry);
+                log.info("Processing  firstClockIn={}, lastClockOut={}",
+                      entry.getFirstClockIn(), entry.getLastClockOut());
+            }
         }
+        log.info("Auto clock out for all employees");
         timesheetAdapter.saveAll(openClockIns);
     }
 }
