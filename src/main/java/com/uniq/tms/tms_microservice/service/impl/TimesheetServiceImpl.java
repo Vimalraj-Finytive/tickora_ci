@@ -109,7 +109,29 @@ public class TimesheetServiceImpl implements TimesheetService {
         // Superadmin
         if (canSeeOwn && canSeeGroup && canSeeAll) {
             if (groupIds != null && !groupIds.isEmpty()) {
-                return userAdapter.findUsersByGroupIds(groupIds); // includes members + all supervisors
+                List<UserEntity> groupUserEntities = userAdapter.findUsersByGroupIds(groupIds);
+                log.info("Group user entities: {}", groupUserEntities);
+                if (groupUserEntities.isEmpty()) {
+                    throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                            "No users found in the selected group(s)");
+                }
+
+                if (userId != null && !userId.isEmpty()) {
+                    // Filter group users to only include requested userIds
+                    List<UserEntity> matchedUsers = groupUserEntities.stream()
+                            .filter(user -> userId.contains(user.getUserId()))
+                            .toList();
+
+                    if (matchedUsers.isEmpty()) {
+                        throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                                "No user found in the selected group(s) with the given userId(s)");
+                    }
+
+                    return matchedUsers;
+                }
+                return groupUserEntities;
+            } else if (userId != null && !userId.isEmpty()) {
+                return userAdapter.getUsersByIds(userId,currentUser.getOrganizationId());
             } else if (userIdFromToken != null) {
                 return List.of(userAdapter.getUserById(userIdFromToken));
             } else {
@@ -132,7 +154,7 @@ public class TimesheetServiceImpl implements TimesheetService {
                 }
 
                 List<UserEntity> groupUserEntities = userAdapter.findMembersByGroupIds(filteredGroupIds, userIdFromToken);
-
+                log.info("Group user entities: {}", groupUserEntities);
                 if (groupUserEntities.isEmpty()) {
                     throw new ResponseStatusException(HttpStatus.NOT_FOUND,
                             "No users found in the selected group(s)");

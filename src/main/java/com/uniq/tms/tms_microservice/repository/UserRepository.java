@@ -4,6 +4,7 @@ import com.uniq.tms.tms_microservice.entity.UserEntity;
 import com.uniq.tms.tms_microservice.model.UserResponse;
 import com.uniq.tms.tms_microservice.dto.UserNameSuggestionDto;
 import jakarta.transaction.Transactional;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -61,6 +62,17 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
 
     @Query("SELECT new com.uniq.tms.tms_microservice.dto.UserNameSuggestionDto(u.userId, u.userName) " +
             "FROM UserEntity u " +
-            "WHERE u.organizationId = :orgId AND u.active = true")
-    List<UserNameSuggestionDto> findAllActiveUsersByOrganization(@Param("orgId") Long orgId);
+            "WHERE u.organizationId = :orgId AND u.active = true" + " AND u.role.hierarchyLevel > :hierarchyLevel")
+    List<UserNameSuggestionDto> findAllActiveUsersByOrganization(@Param("orgId") Long orgId, @Param("hierarchyLevel") int hierarchyLevel);
+
+    @Query("SELECT new com.uniq.tms.tms_microservice.dto.UserNameSuggestionDto(u.userId, u.userName) " +
+            "FROM UserGroupEntity ug " +
+            "JOIN ug.user u " +
+            "WHERE ug.group.groupId IN :groupIds AND u.organizationId = :orgId AND u.active = true")
+    List<UserNameSuggestionDto> findAllGroupUsersByOrganizationId(@Param("groupIds") List<Long> groupIds,
+                                                                  @Param("orgId") Long orgId);
+
+//    @Query("SELECT u.userId FROM UserEntity u WHERE u.userId LIKE CONCAT(:prefix, '%') ORDER BY u.userId DESC")
+//    List<String> findLatestUserId(@Param("prefix") String prefix, Pageable pageable);
+
 }

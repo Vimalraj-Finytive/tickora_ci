@@ -411,7 +411,18 @@ public class AuthFacade {
             return timesheetService.getAllTimesheets(userIdFromToken,orgId, role, request);
         }
 
-        public List<TimesheetHistoryDto> processTimesheetLogs (List < TimesheetHistoryDto > timesheetLogs) {
+        public List<TimesheetHistoryDto> processTimesheetLogs (String token, List < TimesheetHistoryDto > timesheetLogs) {
+            if (!token.startsWith("Bearer ")) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid token format");
+            }
+
+            String jwt = token.substring(7);
+            Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
+
+            if (orgId == null) {
+                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized - Invalid Organization");
+            }
+
             List<TimesheetHistory> middlewareLogs = timesheetLogs.stream()
                     .map(timesheetDtoMapper::toMiddleware)
                     .toList();
@@ -464,7 +475,17 @@ public class AuthFacade {
             return new ApiResponse(200, "Student members fetched successfully", response);
         }
 
-        public TimesheetDto upsertClockInOut (Long userId, LocalDate date, TimesheetDto request){
+        public TimesheetDto upsertClockInOut (String token, Long userId, LocalDate date, TimesheetDto request){
+            if (!token.startsWith("Bearer ")) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid token format");
+            }
+
+            String jwt = token.substring(7);
+            Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
+
+            if (orgId == null) {
+                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized - Invalid Organization");
+            }
             return timesheetService.updateClockInOut(userId, date, request);
         }
 
@@ -500,11 +521,13 @@ public class AuthFacade {
         String jwt = token.substring(7);
         Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
         Long loggedInUserId = jwtUtil.extractUserIdFromToken(jwt);
+        String role = jwtUtil.extractRoleFromToken(jwt);
+        String userRole = role.replace("ROLE_","");
         if (orgId == null || loggedInUserId == null) {
             return new ApiResponse(401, "Unauthorized - Invalid Organization or User", null);
         }
         List<UserNameSuggestionDto> users;
-        users = userService.getGroupUsers(groupIds, orgId, loggedInUserId);
+        users = userService.getGroupUsers(groupIds, orgId, loggedInUserId,userRole);
         return new ApiResponse(200, "Users fetched successfully", users);
     }
 }

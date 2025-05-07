@@ -68,6 +68,7 @@ public interface UserAdapter {
     List<UserEntity> filterUsersByGroupIds(Long userIdFromToken, List<UserEntity> targetUsers);
     List<RoleEntity> findAllWithPrivileges();
     List<UserGroupEntity> getGroupUsersByGroupId(List<Long> groupIds, Long orgId);
-    List<UserNameSuggestionDto> getAllActiveUsers(Long orgId);
+    List<UserNameSuggestionDto> getAllActiveUsers(Long orgId, int heirarchyLevel);
+    List<UserNameSuggestionDto> getAllGroupUsers(List<Long> groupIds, Long orgId);
 }
 

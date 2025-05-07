@@ -318,8 +318,13 @@ public class UserAdapterImpl implements UserAdapter {
     }
 
     @Override
-    public List<UserNameSuggestionDto> getAllActiveUsers(Long orgId) {
-        return userRepository.findAllActiveUsersByOrganization(orgId);
+    public List<UserNameSuggestionDto> getAllActiveUsers(Long orgId, int hierarchyLevel) {
+        return userRepository.findAllActiveUsersByOrganization(orgId, hierarchyLevel);
+    }
+
+    @Override
+    public List<UserNameSuggestionDto> getAllGroupUsers(List<Long> groupIds, Long orgId) {
+        return userRepository.findAllGroupUsersByOrganizationId(groupIds,orgId);
     }
 
 }
