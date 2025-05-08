@@ -7,8 +7,6 @@ public class EmailData {
     private boolean isNewUser;
 
     // Constructor
-
-
     public EmailData(String email, String userName, String generatedPass, boolean isNewUser) {
         this.email = email;
         this.userName = userName;

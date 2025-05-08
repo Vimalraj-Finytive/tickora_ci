@@ -111,7 +111,6 @@ public class UserController {
         }
     }
 
-
     @PostMapping("/createUser")
     public ResponseEntity<ApiResponse> createUser(
             @Valid @RequestBody CreateUserDto request,

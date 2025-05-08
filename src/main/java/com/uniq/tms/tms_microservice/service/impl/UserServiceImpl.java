@@ -286,7 +286,6 @@ public class UserServiceImpl implements UserService {
                     userEntities.add(userEntity);
                     emailRequests.add(new EmailData(userEntity.getEmail(), userEntity.getUserName(), generatedPass, userEntity.isRegisterUser()));
 
-
                     existingMobiles.add(mobileNumber);
                     existingEmails.add(email);
 
@@ -382,7 +381,6 @@ public class UserServiceImpl implements UserService {
         }
     }
 
-
     private UserEntity createUserEntity(UserDto userDto, Long orgId,String generatedPass) {
         UserEntity entity = userEntityMapper.toEntity(userDtoMapper.toMiddleware(userDto));
         entity.setOrganizationId(orgId);
@@ -427,8 +425,7 @@ public class UserServiceImpl implements UserService {
     private String normalizeHeader(String header) {
         return header.trim().toLowerCase().replaceAll("[ _]", "");
     }
-
-
+    
     private LocalDate parseDate(String dateStr) {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
         return LocalDate.parse(dateStr, formatter);
@@ -441,7 +438,6 @@ public class UserServiceImpl implements UserService {
                     emailUtil.sendAccountCreationEmail(emailData.getEmail(), emailData.getUserName(), emailData.getGeneratedPass(), emailData.isNewUser());
             }
     }
-// >>>>>End
 
     @Override
     public ApiResponse createUser(UserDto userDto, Long organizationId) {
@@ -638,7 +634,6 @@ public class UserServiceImpl implements UserService {
         // Return the merged list of users with secondary details
         return new ArrayList<>(userMap.values());
     }
-
 
     @Override
     public User deleteUser(Long orgId, Long userId) {
