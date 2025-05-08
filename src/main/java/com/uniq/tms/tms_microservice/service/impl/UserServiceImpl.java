@@ -263,7 +263,7 @@ public class UserServiceImpl implements UserService {
         int hierarchyLevel = UserRole.getLevel(role);
         List<UserResponse> users = userAdapter.findByOrganizationId(orgId, hierarchyLevel);
         if (users.isEmpty()) {
-            throw new RuntimeException("Unauthorized");
+            throw new RuntimeException("No Users found");
         }
         Map<Long, UserResponse> userMap = new LinkedHashMap<>();
         for (UserResponse row : users) {
