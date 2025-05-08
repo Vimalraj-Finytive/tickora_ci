@@ -109,7 +109,29 @@ public class TimesheetServiceImpl implements TimesheetService {
         // Superadmin
         if (canSeeOwn && canSeeGroup && canSeeAll) {
             if (groupIds != null && !groupIds.isEmpty()) {
-                return userAdapter.findUsersByGroupIds(groupIds); // includes members + all supervisors
+                List<UserEntity> groupUserEntities = userAdapter.findUsersByGroupIds(groupIds);
+                log.info("Group user entities: {}", groupUserEntities);
+                if (groupUserEntities.isEmpty()) {
+                    throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                            "No users found in the selected group(s)");
+                }
+
+                if (userId != null && !userId.isEmpty()) {
+                    // Filter group users to only include requested userIds
+                    List<UserEntity> matchedUsers = groupUserEntities.stream()
+                            .filter(user -> userId.contains(user.getUserId()))
+                            .toList();
+
+                    if (matchedUsers.isEmpty()) {
+                        throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                                "No user found in the selected group(s) with the given userId(s)");
+                    }
+
+                    return matchedUsers;
+                }
+                return groupUserEntities;
+            } else if (userId != null && !userId.isEmpty()) {
+                return userAdapter.getUsersByIds(userId,currentUser.getOrganizationId());
             } else if (userIdFromToken != null) {
                 return List.of(userAdapter.getUserById(userIdFromToken));
             } else {
@@ -132,7 +154,7 @@ public class TimesheetServiceImpl implements TimesheetService {
                 }
 
                 List<UserEntity> groupUserEntities = userAdapter.findMembersByGroupIds(filteredGroupIds, userIdFromToken);
-
+                log.info("Group user entities: {}", groupUserEntities);
                 if (groupUserEntities.isEmpty()) {
                     throw new ResponseStatusException(HttpStatus.NOT_FOUND,
                             "No users found in the selected group(s)");
@@ -279,15 +301,21 @@ public class TimesheetServiceImpl implements TimesheetService {
     @Override
     @Scheduled(cron = "0 0 0 * * ?")
     public void autoClockOutForAllEmployees() {
-        LocalDate today = LocalDate.now();
-
+        log.info("Scheduled clock triggered at {}", LocalDateTime.now());
+        LocalDate yesterday = LocalDate.now().minusDays(1);
         List<TimesheetEntity> openClockIns = timesheetAdapter
-                .findActiveTimesheetsByDate(today);
-
+                .findActiveTimesheetsByDate(yesterday);
+        log.info("Timesheets fetched for {}: {}", yesterday, openClockIns.size());
         for (TimesheetEntity entry : openClockIns) {
-            entry.setLastClockOut(LocalTime.MIDNIGHT);
-            calculateHours(entry);
+            if(entry.getFirstClockIn() != null && entry.getLastClockOut() == null) {
+                log.info("setting lastClockOut to 23:59");
+                entry.setLastClockOut(LocalTime.of(23, 59));
+                calculateHours(entry);
+                log.info("Processing  firstClockIn={}, lastClockOut={}",
+                      entry.getFirstClockIn(), entry.getLastClockOut());
+            }
         }
+        log.info("Auto clock out for all employees");
         timesheetAdapter.saveAll(openClockIns);
     }
 }

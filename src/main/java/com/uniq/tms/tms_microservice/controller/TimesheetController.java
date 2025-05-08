@@ -45,8 +45,8 @@ public class  TimesheetController {
     }
 
     @PostMapping("/clockin")
-    public ResponseEntity<ApiResponse> logTimesheet(@RequestBody List<TimesheetHistoryDto> timesheetLogs) {
-        List<TimesheetHistoryDto> savedLogs = authFacade.processTimesheetLogs(timesheetLogs);
+    public ResponseEntity<ApiResponse> logTimesheet(@RequestHeader("Authorization") String token,@RequestBody List<TimesheetHistoryDto> timesheetLogs) {
+        List<TimesheetHistoryDto> savedLogs = authFacade.processTimesheetLogs(token,timesheetLogs);
         return ResponseEntity.ok(new ApiResponse(201, "Timesheet logged successfully", savedLogs));
     }
 
@@ -68,11 +68,12 @@ public class  TimesheetController {
 
     @PutMapping("/editTimesheet")
     public ResponseEntity<ApiResponse<TimesheetDto>> upsertClockInOutTimes(
+            @RequestHeader("Authorization") String token,
             @RequestParam Long userId,
             @RequestParam LocalDate date,
             @RequestBody TimesheetDto request) {
 
-        TimesheetDto timesheetDto = authFacade.upsertClockInOut(userId, date, request);
+        TimesheetDto timesheetDto = authFacade.upsertClockInOut(token,userId, date, request);
 
         return ResponseEntity.ok(new ApiResponse<>(200, "Timesheet upserted successfully", timesheetDto));
     }

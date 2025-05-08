@@ -49,8 +49,7 @@ public class JwtFilter implements Filter {
         String authHeader = httpRequest.getHeader("Authorization");
         logger.debug("JWT_Filter **********userAgent from the token: {}"+ userAgent);
         logger.debug("JWT_Filter *************IP Address from the token: {}"+ ipAddress);
-        logger.debug("JWT_Filter ************AuthHeader from the token: {}"+ authHeader);
-       
+        logger.debug("JWT_Filter ************AuthHeader from the token: {}"+ authHeader);       
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             logger.info("jwt token found in header");
             jwtToken = authHeader.substring(7);

@@ -38,5 +38,5 @@ public interface UserService {
     boolean createSecondaryUser(SecondaryDetailsDto secondaryDetailsDto, UserEntity savedUser);
     List<UserNameSuggestionDto> searchUsernames(String keywords);
     UserProfileResponse getUser(Long orgId, Long userId);
-    List<UserNameSuggestionDto> getGroupUsers(List<Long> groupIds, Long orgId, Long loggedInUserId);
+    List<UserNameSuggestionDto> getGroupUsers(List<Long> groupIds, Long orgId, Long loggedInUserId, String role);
 }

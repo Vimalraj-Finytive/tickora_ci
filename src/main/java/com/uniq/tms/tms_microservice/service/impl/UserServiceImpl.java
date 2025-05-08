@@ -28,6 +28,7 @@ import com.uniq.tms.tms_microservice.model.Role;
 import com.uniq.tms.tms_microservice.repository.LocationRepository;
 import com.uniq.tms.tms_microservice.repository.OrganizationRepository;
 import com.uniq.tms.tms_microservice.repository.RoleRepository;
+import com.uniq.tms.tms_microservice.repository.UserRepository;
 import com.uniq.tms.tms_microservice.service.UserService;
 import com.uniq.tms.tms_microservice.util.EmailUtil;
 import com.uniq.tms.tms_microservice.util.PasswordUtil;
@@ -37,6 +38,7 @@ import jakarta.validation.Validator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -65,8 +67,9 @@ public class UserServiceImpl implements UserService {
     private final ObjectMapper objectMapper;
     private final SecondaryDetailsMapper secondaryDetailsMapper;
     private final Long STUDENT_ROLE_ID = 5l;
+    private final UserRepository userRepository;
 
-    public UserServiceImpl(Validator validator, UserAdapter userAdapter, TimesheetAdapter timesheetAdapter, UserEntityMapper userEntityMapper, OrganizationRepository organizationRepository, RoleRepository roleRepository, LocationRepository locationRepository, EmailUtil emailUtil, UserDtoMapper userDtoMapper, ObjectMapper objectMapper, SecondaryDetailsMapper secondaryDetailsMapper) {
+    public UserServiceImpl(Validator validator, UserAdapter userAdapter, TimesheetAdapter timesheetAdapter, UserEntityMapper userEntityMapper, OrganizationRepository organizationRepository, RoleRepository roleRepository, LocationRepository locationRepository, EmailUtil emailUtil, UserDtoMapper userDtoMapper, ObjectMapper objectMapper, SecondaryDetailsMapper secondaryDetailsMapper, UserRepository userRepository) {
         this.validator = validator;
         this.userAdapter = userAdapter;
         this.timesheetAdapter = timesheetAdapter;
@@ -78,6 +81,7 @@ public class UserServiceImpl implements UserService {
         this.userDtoMapper = userDtoMapper;
         this.objectMapper = objectMapper;
         this.secondaryDetailsMapper = secondaryDetailsMapper;
+        this.userRepository = userRepository;
     }
 
     private static final  Logger log = LoggerFactory.getLogger(UserServiceImpl.class);
@@ -111,10 +115,30 @@ public class UserServiceImpl implements UserService {
     @Override
     public ApiResponse createUser(UserDto userDto, Long organizationId) {
         User usermiddleware = userDtoMapper.toMiddleware(userDto);
+//        String mobileNumber = usermiddleware.getMobileNumber();
+//        System.out.println("Mobile number: " + mobileNumber);
+//        String mobilePrefix = mobileNumber.substring(mobileNumber.length() - 3);
+//        System.out.println("mobileNumber" + mobilePrefix);
+//        OrganizationEntity organization = organizationRepository.findById(usermiddleware.getOrganizationId())
+//                .orElseThrow(() -> new RuntimeException("Organization not found with ID: " + usermiddleware.getOrganizationId()));
+//        System.out.println("organization: " + organization);
+//
+//        String orgPrefix = organization.getOrgName().substring(0, 3).toUpperCase();
+//        System.out.println("orgPrefix:" + orgPrefix);
 
         UserEntity entity = userEntityMapper.toEntity(usermiddleware);
         entity.setOrganizationId(organizationId);
-
+//        String prefix = orgPrefix + mobilePrefix;
+//        List<String> existingIds = userRepository.findLatestUserId(prefix, PageRequest.of(0, 1));
+//        int nextIdNumber = 1;
+//        if(!existingIds.isEmpty()) {
+//            String lastId = existingIds.get(0);
+//            String idNumber = lastId.substring(prefix.length());
+//            nextIdNumber = Integer.parseInt(idNumber) + 1;
+//        }
+//
+//        String newUserId = prefix + String.format("%03d", nextIdNumber);
+//        entity.setUserId(Long.valueOf(newUserId));
         if (usermiddleware.getRoleId() == null) {
             throw new IllegalArgumentException("roleId must not be null");
 
@@ -124,7 +148,6 @@ public class UserServiceImpl implements UserService {
                 .orElseThrow(() -> new RuntimeException("Role not found with ID: " + usermiddleware.getRoleId()));
 
         entity.setRole(role);
-
         String defaultPassword = PasswordUtil.generateDefaultPassword();
         String encryptedPassword = PasswordUtil.encryptPassword(defaultPassword);
         entity.setPassword(encryptedPassword);
@@ -240,7 +263,7 @@ public class UserServiceImpl implements UserService {
         int hierarchyLevel = UserRole.getLevel(role);
         List<UserResponse> users = userAdapter.findByOrganizationId(orgId, hierarchyLevel);
         if (users.isEmpty()) {
-            throw new RuntimeException("Unauthorized");
+            throw new RuntimeException("No Users found");
         }
         Map<Long, UserResponse> userMap = new LinkedHashMap<>();
         for (UserResponse row : users) {
@@ -693,7 +716,7 @@ public class UserServiceImpl implements UserService {
                     map.put("id", user.getUserId());
                     map.put("name", user.getUserName());
                     map.put("role", user.getRole().getName());
-
+                    map.put("isRegistered", user.isRegisterUser());
                     TimesheetEntity timesheet = latestLogsMap.get(user.getUserId());
                     DateTimeFormatter formatter = DateTimeFormatter.ofPattern("hh:mm a");
 
@@ -715,17 +738,33 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public List<UserNameSuggestionDto> getGroupUsers(List<Long> groupIds, Long orgId, Long loggedInUserId) {
+    public List<UserNameSuggestionDto> getGroupUsers(List<Long> groupIds, Long orgId, Long loggedInUserId, String role) {
         // Case 1: groupIds is null or empty → return all active users
         if (groupIds == null || groupIds.isEmpty()) {
-            List<UserNameSuggestionDto> allUsers = userAdapter.getAllActiveUsers(orgId);
+            int hierarchyLevel = UserRole.getLevel(role);
+            List<UserNameSuggestionDto> allUsers = userAdapter.getAllActiveUsers(orgId,hierarchyLevel);
 
             return allUsers.stream()
                     .filter(user -> !user.getUserId().equals(loggedInUserId))  // Exclude logged-in user
                     .map(userDto -> new UserNameSuggestionDto(userDto.getUserId(), userDto.getUserName()))  // Map to UserNameSuggestionDto
                     .collect(Collectors.toList());
         }
-
+        log.info("Role: {}", role);
+        if (RoleName.SUPERADMIN.getRoleName().equalsIgnoreCase(role)) {
+            log.info("SuperAdmin role");
+            List<UserNameSuggestionDto> allUsers = userAdapter.getAllGroupUsers(groupIds,orgId);
+            List<UserNameSuggestionDto> groupMembers = allUsers.stream()
+                    .collect(Collectors.toMap(
+                            UserNameSuggestionDto::getUserId,
+                            Function.identity(),
+                            (existing, replacement) -> existing
+                    ))
+                    .values()
+                    .stream()
+                    .toList();
+            return groupMembers;
+        }
+        log.info("Role not used" + role);
         // Case 2: groupIds provided → return only members from those groups
         List<UserGroupEntity> groupEntity = userAdapter.getGroupUsersByGroupId(groupIds, orgId);
 
