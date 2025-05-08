@@ -28,25 +28,35 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        // Allow static folder
                         .requestMatchers(
-                                "/", "/browser/**", "/assets/**","/assets/images/**", "/media/**",
-                                "/*.js", "/*.css", "/*.html",
-                                "/login", // login endpoint
-                                "/tms/loginByEmail", "/tms/loginByMobile", "/tms/sendOTP", "/tms/logout",
-                                "/tms/validate-email", "/tms/reset-password", "/tms/timesheets/**"
+                                "/",
+                                "/index.html",
+                                "/*.js",
+                                "/*.css",
+                                "/*.html",
+                                "/assets/**",
+                                "/browser/**",
+                                "/favicon.ico",
+                                "/**/*.js",
+                                "/**/*.css",
+                                "/**/*.png",
+                                "/**/*.jpg",
+                                "/**/*.svg",
+                                "/**/*.woff2",
+                                "/**/*.ttf",
+                                "/**/*.map"
                         ).permitAll()
-
-                        .requestMatchers("/tms/loginByEmail","/tms/loginByMobile","/tms/sendOTP", "/tms/logout", "/tms/validate-email", "/tms/reset-password","/tms/timesheets/**","/tms/validate-token").permitAll()
-                        .requestMatchers("/tms/admin/**" ).hasAnyAuthority("Admin", "SuperAdmin", "Manager","Staff")
+                        .requestMatchers("/**").permitAll()
                         .anyRequest().authenticated()
                 )
+
                 .exceptionHandling(exception -> exception
                         .accessDeniedHandler((request, response, accessDeniedException) -> {
-                            response.setStatus(HttpStatus.FORBIDDEN.value());
-                            response.setContentType("application/json");
-                            response.getWriter().write("{\"error\": \"Access Denied\", \"message\": \"User is not authorized to access this resource\"}");
-                        }))
+                            response.setStatus(HttpStatus.OK.value());
+                            request.getRequestDispatcher("/index.html").forward(request, response);
+                        })
+                )
+
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
