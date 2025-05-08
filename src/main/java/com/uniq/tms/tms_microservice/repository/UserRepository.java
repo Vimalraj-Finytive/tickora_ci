@@ -75,4 +75,10 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
 //    @Query("SELECT u.userId FROM UserEntity u WHERE u.userId LIKE CONCAT(:prefix, '%') ORDER BY u.userId DESC")
 //    List<String> findLatestUserId(@Param("prefix") String prefix, Pageable pageable);
 
+    @Query(value = "SELECT mobile_number FROM users", nativeQuery = true)
+    List<String> findAllMobileNumbers();
+
+    @Query(value = "SELECT email FROM users", nativeQuery = true)
+    List<String> findAllEmails();
+
 }

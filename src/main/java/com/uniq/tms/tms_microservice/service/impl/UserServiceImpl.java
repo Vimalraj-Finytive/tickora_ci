@@ -3,8 +3,10 @@ package com.uniq.tms.tms_microservice.service.impl;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.opencsv.exceptions.CsvValidationException;
 import com.uniq.tms.tms_microservice.adapter.TimesheetAdapter;
 import com.uniq.tms.tms_microservice.adapter.UserAdapter;
+import com.uniq.tms.tms_microservice.constant.PrivilegeConstant;
 import com.uniq.tms.tms_microservice.dto.AddGroupDto;
 import com.uniq.tms.tms_microservice.dto.GroupDto;
 import com.uniq.tms.tms_microservice.dto.GroupResponseDto;
@@ -35,26 +37,42 @@ import com.uniq.tms.tms_microservice.util.PasswordUtil;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Validator;
+import org.apache.commons.io.FilenameUtils;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.apache.tomcat.util.http.fileupload.FileItem;
+import org.apache.tomcat.util.http.fileupload.disk.DiskFileItem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
+import java.io.*;
 import java.lang.reflect.Field;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import com.opencsv.CSVReader;
 
 @Service
 public class UserServiceImpl implements UserService {
+    @Value("${csv.upload.dir}")
+    private String uploadDir;
     private final Validator validator;
     private final UserAdapter userAdapter;
     private final TimesheetAdapter timesheetAdapter;
@@ -111,6 +129,319 @@ public class UserServiceImpl implements UserService {
         List<Location> location = userAdapter.getAllLocation(orgId).stream().map(userEntityMapper::toMiddleware).toList();
         return location;
     }
+
+    @Override
+    public ApiResponse bulkCreateUsers(MultipartFile file, Long orgId) {
+        String contentType = file.getContentType();
+        String fileName = file.getOriginalFilename();
+
+        if (contentType == null || fileName == null) {
+            throw new RuntimeException("Invalid file input.");
+        }
+        if (fileName.endsWith(".csv") || contentType.equals("text/csv") || contentType.equals("application/vnd.ms-excel")) {
+            // Process CSV
+            try {
+                String filePath = saveCsvToLocal(file);
+                return processCsvFileFromPath(filePath, orgId);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        else {
+            throw new RuntimeException("Unsupported file type. Only CSV files are supported.");
+        }
+    }
+
+    public ApiResponse processCsvFileFromPath(String filePath, Long orgId) {
+        File file = new File(filePath);
+        if (!file.exists()) throw new RuntimeException("CSV file not found: " + filePath);
+
+        try (InputStream inputStream = new FileInputStream(file)) {
+            return processCsvFile(inputStream, file.getName(), orgId);
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to read local CSV file: " + e.getMessage(), e);
+        }
+    }
+
+    private static final Logger logger = LoggerFactory.getLogger(UserServiceImpl.class);
+    public ApiResponse processCsvFile(InputStream inputStream, String originalFileName, Long orgId) {
+        logger.info("Starting processing for file: {}", originalFileName);
+        long overallStart = System.currentTimeMillis();
+
+        List<UserEntity> userEntities = new ArrayList<>();
+        List<SecondaryDetailsEntity> secondaryDetailsEntities = new ArrayList<>();
+        List<EmailData> emailRequests = new ArrayList<>();
+        List<String> successList = new ArrayList<>();
+        Map<UserEntity, Long> userGroupMappings = new HashMap<>();
+
+        int uploadedCount = 0, skippedCount = 0;
+
+        try {
+            // Preload reference data
+            long preloadStart = System.currentTimeMillis();
+            Set<String> existingMobiles = userAdapter.getAllMobileNumbers();
+            Set<String> existingEmails = userAdapter.getAllEmails();
+            Set<String> existingSecEmail = userAdapter.getAllSecondaryEmail();
+            Set<String> existingSecMobile = userAdapter.getAllSecondaryMobile();
+            Map<String, Long> roleNameToIdMap = userAdapter.getRoleNameIdMap();
+            Map<String, Long> locationNameToIdMap = userAdapter.getLocationNameToIdMap();
+            Map<String, Long> groupNameToIdMap = userAdapter.getGroupNameIdMap();
+            logger.info("Preloaded reference data in {} ms", (System.currentTimeMillis() - preloadStart));
+
+            // CSV Header structure definition
+            List<String> expectedHeaders = List.of(
+                    "username", "email", "mobilenumber", "rolename", "locationname", "dateofjoining",
+                    "secondaryusername", "secondarymobile", "secondaryemail", "relation", "groupname"
+            );
+
+            // Read CSV
+            long readCsvStart = System.currentTimeMillis();
+            try (InputStreamReader reader = new InputStreamReader(inputStream);
+                 CSVReader csvReader = new CSVReader(reader)) {
+
+                String[] headerRow = csvReader.readNext();
+                if (headerRow == null) throw new RuntimeException("CSV file missing header row.");
+                validateFixedHeaders(headerRow, expectedHeaders);
+
+                // Header index constants
+                final int USERNAME_IDX = 0;
+                final int EMAIL_IDX = 1;
+                final int MOBILE_IDX = 2;
+                final int ROLENAME_IDX = 3;
+                final int LOCATIONNAME_IDX = 4;
+                final int DOJ_IDX = 5;
+                final int SEC_USERNAME_IDX = 6;
+                final int SEC_MOBILE_IDX = 7;
+                final int SEC_EMAIL_IDX = 8;
+                final int RELATION_IDX = 9;
+                final int GROUPNAME_IDX = 10;
+
+                String[] row;
+                while ((row = csvReader.readNext()) != null) {
+                    if (row.length < expectedHeaders.size()) {
+                        skippedCount++;
+                        continue;
+                    }
+
+                    // Duplicate checks
+                    String mobileNumber = row[MOBILE_IDX].trim();
+                    if (existingMobiles.contains(mobileNumber)) { skippedCount++; continue; }
+
+                    String email = row[EMAIL_IDX].trim();
+                    if (existingEmails.contains(email)) { skippedCount++; continue; }
+
+                    // Role & Location validation
+                    String roleName = row[ROLENAME_IDX].trim();
+                    Long roleId = roleNameToIdMap.get(roleName.toLowerCase());
+                    if (roleId == null) { skippedCount++; continue; }
+
+                    String locationName = row[LOCATIONNAME_IDX].trim();
+                    Long locationId = locationNameToIdMap.get(locationName.toLowerCase());
+
+                    String dojValue = row[DOJ_IDX].trim();
+                    if (dojValue.isEmpty()) { skippedCount++; continue; }
+
+                    // Prepare UserDto
+                    UserDto userDto = new UserDto();
+                    userDto.setUserName(row[USERNAME_IDX].trim());
+                    userDto.setEmail(email);
+                    userDto.setMobileNumber(mobileNumber);
+                    userDto.setRoleId(roleId);
+                    userDto.setLocationId(locationId);
+                    userDto.setRegisterUser(true);
+                    userDto.setDateOfJoining(parseDate(dojValue));
+
+                    String groupName = row[GROUPNAME_IDX].trim();
+                    Long groupId = groupName.isEmpty() ? null : groupNameToIdMap.get(groupName.toLowerCase());
+
+                    if (!validator.validate(userDto).isEmpty()) { skippedCount++; continue; }
+
+                    // Create UserEntity
+                    String generatedPass = PasswordUtil.generateDefaultPassword();
+                    UserEntity userEntity = createUserEntity(userDto, orgId, generatedPass);
+                    userEntities.add(userEntity);
+                    emailRequests.add(new EmailData(userEntity.getEmail(), userEntity.getUserName(), generatedPass, userEntity.isRegisterUser()));
+
+                    if (groupId != null) {
+                        userGroupMappings.put(userEntity, groupId);
+                    }
+                    // If student — add secondary details
+                    if (roleId.equals(STUDENT_ROLE_ID)) {
+                        String secMobile = row[SEC_MOBILE_IDX].trim();
+                        if(existingSecMobile.contains(secMobile)){skippedCount++;continue;}
+                        String secEmail = row[SEC_EMAIL_IDX].trim();
+                        if(existingSecEmail.contains(secEmail)){skippedCount++;continue;}
+
+                        SecondaryDetailsEntity secondaryDetails = createSecondaryDetails(
+                                userEntity,
+                                secMobile,
+                                secEmail,
+                                row[SEC_USERNAME_IDX].trim(),
+                                row[RELATION_IDX].trim()
+                        );
+                        existingSecMobile.add(secMobile);
+                        existingSecEmail.add(secEmail);
+                        secondaryDetailsEntities.add(secondaryDetails);
+                    }
+                    userEntities.add(userEntity);
+                    emailRequests.add(new EmailData(userEntity.getEmail(), userEntity.getUserName(), generatedPass, userEntity.isRegisterUser()));
+
+
+                    existingMobiles.add(mobileNumber);
+                    existingEmails.add(email);
+
+                    successList.add(userDto.getUserName());
+                    uploadedCount++;
+                }
+            }
+            logger.info("CSV parsed and users prepared in {} ms", (System.currentTimeMillis() - readCsvStart));
+
+            // Save Users
+            long saveUserStart = System.currentTimeMillis();
+            List<UserEntity> savedUsers = userAdapter.saveAllUsers(userEntities);
+            logger.info("Saved users in {} ms", (System.currentTimeMillis() - saveUserStart));
+
+            // Save Secondary Details
+            long saveSecondaryStart = System.currentTimeMillis();
+            userAdapter.saveAllSecondaryDetails(secondaryDetailsEntities);
+            logger.info("Saved secondary details in {} ms", (System.currentTimeMillis() - saveSecondaryStart));
+
+            // Save UserGroups
+            long saveGroupStart = System.currentTimeMillis();
+            List<UserGroupEntity> userGroupEntities = new ArrayList<>();
+            for (UserEntity user : savedUsers) {
+                Long groupId = userGroupMappings.get(user);
+                if (groupId != null) {
+                    UserGroupEntity userGroup = new UserGroupEntity();
+                    userGroup.setUser(user);
+                    userGroup.setGroup(new GroupEntity(groupId));
+                    userGroup.setType("Member");
+                    userGroupEntities.add(userGroup);
+                }
+            }
+            userAdapter.saveAllUserGroups(userGroupEntities);
+            logger.info("Saved user groups in {} ms", (System.currentTimeMillis() - saveGroupStart));
+
+            // Send emails asynchronously
+            Long saveEmailStart = System.currentTimeMillis();
+            sendEmailsAsync(emailRequests);
+            logger.info("Send Mail to Users in {} ms",System.currentTimeMillis() - saveEmailStart);
+
+        } catch (IOException | CsvValidationException e) {
+            throw new RuntimeException("Failed to process CSV: " + e.getMessage(), e);
+        }
+
+        logger.info("Total uploaded users: {}", uploadedCount);
+        logger.info("Total skipped users: {}", skippedCount);
+        logger.info("Overall CSV processing took {} ms", (System.currentTimeMillis() - overallStart));
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("success", successList);
+        logger.info("Completed processing for file: {}", originalFileName);
+        return new ApiResponse(200, "Bulk CSV upload completed", result);
+    }
+    public String saveCsvToLocal(MultipartFile file) throws IOException {
+        Files.createDirectories(Paths.get(uploadDir));
+
+        String originalFilename = file.getOriginalFilename();
+        String baseName = FilenameUtils.getBaseName(originalFilename);
+        String extension = FilenameUtils.getExtension(originalFilename);
+        File destFile = new File(uploadDir + originalFilename);
+
+        int count = 1;
+        while (destFile.exists()) {
+            destFile = new File(uploadDir + baseName + "(" + count + ")." + extension);
+            count++;
+        }
+
+        file.transferTo(destFile);
+        return destFile.getAbsolutePath();
+    }
+
+    @Scheduled(cron = "0 0 2 * * ?") // 2 AM every day
+    public void deleteOldCsvFiles() {
+        File directory = new File(uploadDir);
+        if (!directory.exists()) {
+            logger.warn("Upload directory does not exist: {}", uploadDir);
+            return;
+        }
+
+        File[] files = directory.listFiles();
+        if (files != null) {
+            for (File file : files) {
+                long diff = System.currentTimeMillis() - file.lastModified();
+                if (diff > TimeUnit.DAYS.toMillis(1)) {
+                    boolean deleted = file.delete();
+                    if (deleted) {
+                        logger.info("Deleted file: {}", file.getName());
+                    } else {
+                        logger.error("Failed to delete file: {}", file.getName());
+                    }
+                }
+            }
+        }
+    }
+
+
+    private UserEntity createUserEntity(UserDto userDto, Long orgId,String generatedPass) {
+        UserEntity entity = userEntityMapper.toEntity(userDtoMapper.toMiddleware(userDto));
+        entity.setOrganizationId(orgId);
+        entity.setPassword(PasswordUtil.encryptPassword(generatedPass));
+        entity.setDefaultPassword(true);
+        entity.setActive(true);
+        entity.setCreatedAt(LocalDateTime.now());
+
+        if(userDto.getGroupId()!=null) {
+            createUserGroup(new UserGroup(userDto.getGroupId(), userDto.getUserId(), "Member"), orgId);
+        }
+        return entity;
+    }
+
+    private SecondaryDetailsEntity createSecondaryDetails(UserEntity user, String secMobile, String secEmail, String secUserName, String relation) {
+        SecondaryDetailsEntity entity = new SecondaryDetailsEntity();
+        entity.setUser(user);
+        entity.setMobile(secMobile);
+        if(secEmail.isEmpty())entity.setEmail(null);
+        else entity.setEmail(secEmail);
+        entity.setUserName(secUserName);
+        entity.setRelation(relation);
+        return entity;
+    }
+
+    // The Methods are using for CreateBulkUser method.. Start<<<<
+    private void validateFixedHeaders(String[] actual, List<String> expected) {
+        if (actual.length != expected.size())
+            throw new RuntimeException("Header count mismatch. Expected: " + expected.size() + " but found: " + actual.length);
+
+        for (int i = 0; i < expected.size(); i++) {
+            String expectedKey = normalizeHeader(expected.get(i));
+            String actualKey = normalizeHeader(actual[i]);
+
+            if (!expectedKey.equals(actualKey)) {
+                throw new RuntimeException("Header mismatch at position " + (i + 1) +
+                        ". Expected: '" + expected.get(i) + "' but found: '" + actual[i] + "'");
+            }
+        }
+    }
+
+    private String normalizeHeader(String header) {
+        return header.trim().toLowerCase().replaceAll("[ _]", "");
+    }
+
+
+    private LocalDate parseDate(String dateStr) {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
+        return LocalDate.parse(dateStr, formatter);
+    }
+
+    @Async
+    @Transactional
+    public void sendEmailsAsync(List<EmailData> emailRequests) {
+        for (EmailData emailData : emailRequests) {
+                    emailUtil.sendAccountCreationEmail(emailData.getEmail(), emailData.getUserName(), emailData.getGeneratedPass(), emailData.isNewUser());
+            }
+    }
+// >>>>>End
 
     @Override
     public ApiResponse createUser(UserDto userDto, Long organizationId) {
@@ -209,6 +540,9 @@ public class UserServiceImpl implements UserService {
                 System.out.println("Fetched Secondary User's User Id: " + existingSecondaryUser.getUser().getUserId());
 
                 if (secondaryDetails != null) {
+                    if (secondaryDetails.getUserName() !=null){
+                        existingSecondaryUser.setUserName(secondaryDetails.getUserName());
+                    }
                     if (secondaryDetails.getMobile() != null) {
                         existingSecondaryUser.setMobile(secondaryDetails.getMobile());
                     }
@@ -258,40 +592,53 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public List<UserResponse> getUsers(Long orgId, String role) {
+    public List<UserResponseDto> getUsers(Long orgId, String role) {
 
+        // Determine the user hierarchy level based on role
         int hierarchyLevel = UserRole.getLevel(role);
+
+        // Fetch all matching users from the user adapter
         List<UserResponse> users = userAdapter.findByOrganizationId(orgId, hierarchyLevel);
+        List<UserResponseDto> usersDto = new ArrayList<>();
+            for(UserResponse user : users){
+                usersDto.add(userDtoMapper.toDto(user));
+            }
         if (users.isEmpty()) {
             throw new RuntimeException("No Users found");
         }
-        Map<Long, UserResponse> userMap = new LinkedHashMap<>();
-        for (UserResponse row : users) {
-            userMap.compute(row.getUserId(), (id, existing) -> {
+
+        // Merge users by ID and add secondary details to each user
+        Map<Long, UserResponseDto> userMap = new LinkedHashMap<>();
+        for (UserResponseDto user : usersDto) {
+            userMap.compute(user.getUserId(), (id, existing) -> {
                 if (existing == null) {
-                    return new UserResponse(
-                            row.getUserId(),
-                            row.getUserName(),
-                            row.getEmail(),
-                            row.getMobileNumber(),
-                            row.getGroupName(),
-                            row.getRoleName(),
-                            row.getLocationName(),
-                            row.getDateOfJoining()
-                    );
+                    // Fetch secondary details for each user individually
+                    SecondaryDetailsEntity secondaryDetails = userAdapter.findSecondaryUserById(user.getUserId()).orElse(null);
+
+                    // Convert to DTO
+                    SecondaryDetailsDto secDto = secondaryDetailsMapper.toMiddleware(secondaryDetails);
+
+                    // Set the secondary details
+                    user.setSecondaryDetails(secDto);
+
+                    return user;
                 } else {
-                    // Merge group names (if not already present)
+                    // Merge group names if user belongs to multiple groups
                     String mergedGroups = existing.getGroupName();
-                    if (!mergedGroups.contains(row.getGroupName())) {
-                        mergedGroups += ", " + row.getGroupName();
+                    if (!mergedGroups.contains(user.getGroupName())) {
+                        mergedGroups += ", " + user.getGroupName();
                     }
                     existing.setGroupName(mergedGroups);
+
                     return existing;
                 }
             });
         }
+
+        // Return the merged list of users with secondary details
         return new ArrayList<>(userMap.values());
     }
+
 
     @Override
     public User deleteUser(Long orgId, Long userId) {

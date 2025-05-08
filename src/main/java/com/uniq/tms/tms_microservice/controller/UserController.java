@@ -19,6 +19,8 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
 import java.time.LocalDate;
 import java.util.List;
 
@@ -95,6 +97,20 @@ public class UserController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new ApiResponse(403, "Unauthorized", false));
         }
     }
+
+    @PostMapping("/createBulkUser")
+    public ResponseEntity<ApiResponse> createBulkUser(
+            @RequestParam("file") MultipartFile file,
+            @RequestHeader("Authorization") String token
+            ) {
+        try {
+            ApiResponse response = authFacade.createBulkUser(file, token);
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(new ApiResponse(500, e.getMessage(), null), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
 
     @PostMapping("/createUser")
     public ResponseEntity<ApiResponse> createUser(

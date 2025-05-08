@@ -12,6 +12,7 @@ public class UserResponseDto {
     private String roleName;
     private String locationName;
     private LocalDate dateOfJoining;
+    private SecondaryDetailsDto secondaryDetails;
 
     public UserResponseDto() {
     }
@@ -81,5 +82,13 @@ public class UserResponseDto {
     }
     public void setLocationName(String locationName) {
         this.locationName = locationName;
+    }
+
+    public SecondaryDetailsDto getSecondaryDetails() {
+        return secondaryDetails;
+    }
+
+    public void setSecondaryDetails(SecondaryDetailsDto secondaryDetails) {
+        this.secondaryDetails = secondaryDetails;
     }
 }

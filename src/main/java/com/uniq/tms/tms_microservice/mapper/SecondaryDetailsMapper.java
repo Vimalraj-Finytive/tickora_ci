@@ -10,5 +10,6 @@ import org.mapstruct.ReportingPolicy;
 public interface SecondaryDetailsMapper {
     SecondaryDetailsEntity toEntity(SecondaryDetails model);
     SecondaryDetails toMiddleware(SecondaryDetailsDto dto);
+    SecondaryDetailsDto toMiddleware(SecondaryDetailsEntity secondaryDetails);
 
 }

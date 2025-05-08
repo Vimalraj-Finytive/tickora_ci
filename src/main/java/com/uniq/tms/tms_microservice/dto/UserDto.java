@@ -20,6 +20,10 @@ public class UserDto {
         this.userName = userName;
     }
 
+    public UserDto() {
+
+    }
+
     public LocalDate getDateOfJoining() {
         return dateOfJoining;
     }

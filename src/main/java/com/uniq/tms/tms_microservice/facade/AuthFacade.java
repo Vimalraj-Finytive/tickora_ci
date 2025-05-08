@@ -24,6 +24,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 import java.time.LocalDate;
 import java.util.*;
@@ -103,6 +104,20 @@ public class AuthFacade {
                 return new ApiResponse(500, "Internal Server Error: " + e.getMessage(), null);
             }
         }
+
+    public ApiResponse createBulkUser (MultipartFile file, String token){
+
+        if (!token.startsWith("Bearer ")) {
+            return new ApiResponse(400, "Invalid token format", null);
+        }
+        String jwt = token.substring(7);
+        Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
+
+        if (orgId == null) {
+            return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
+        }
+        return userService.bulkCreateUsers(file,orgId);
+    }
 
     public ApiResponse createUser (UserDto userDto, SecondaryDetailsDto secondaryDetailsDto, String token){
 
@@ -221,9 +236,7 @@ public class AuthFacade {
             if (orgId == null) {
                 return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
             }
-            List<UserResponseDto> users = userService.getUsers(orgId, role).stream()
-                    .map(userDtoMapper::toDto)
-                    .toList();
+            List<UserResponseDto> users = userService.getUsers(orgId, role);
             return new ApiResponse(200, "Users fetched successfully", users);
         }
 

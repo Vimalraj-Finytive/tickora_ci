@@ -11,4 +11,10 @@ import java.util.List;
 public interface LocationRepository extends JpaRepository<LocationEntity, Long> {
     @Query("SELECT l FROM LocationEntity l WHERE l.organizationEntity.organizationId = :orgId")
     List<LocationEntity> findAllLocationsByOrganization(@Param("orgId") Long orgId);
+
+    LocationEntity findByNameIgnoreCase(String locationName);
+
+    // Custom query to fetch location name and ID mapping
+    @Query(value = "SELECT name, location_id FROM location", nativeQuery = true)
+    List<Object[]> findLocationNameIdMappings();
 }

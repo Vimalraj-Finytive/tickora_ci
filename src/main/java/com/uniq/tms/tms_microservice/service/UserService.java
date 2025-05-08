@@ -11,6 +11,8 @@ import com.uniq.tms.tms_microservice.model.Role;
 import com.uniq.tms.tms_microservice.model.User;
 import com.uniq.tms.tms_microservice.model.UserGroup;
 import com.uniq.tms.tms_microservice.model.UserResponse;
+import org.springframework.web.multipart.MultipartFile;
+
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -20,9 +22,10 @@ public interface UserService {
     List<Role> getAllRole(Long orgId, String role);
     List<Group> getAllTeam();
     List<Location> getAllLocation(Long orgId);
+    ApiResponse bulkCreateUsers(MultipartFile file, Long orgId);
     ApiResponse createUser(UserDto userDto, Long organizationId);
     User updateUser(CreateUserDto updates, Long orgId, Long userId);
-    List<UserResponse> getUsers(Long orgId, String role);
+    List<UserResponseDto> getUsers(Long orgId, String role);
     User deleteUser(Long orgId, Long userId);
     AddGroup createGroup(AddGroup groupMiddleware, Long orgId);
     void deleteMember(Long groupId, Long memberId);
