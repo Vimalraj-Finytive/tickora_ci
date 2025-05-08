@@ -48,8 +48,8 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
     @Query("SELECT u FROM UserEntity u WHERE u.organizationId = :orgId AND u.active = true AND u.role.hierarchyLevel IN :higherRoleIds")
     List<UserEntity> findByOrgIdAndRoleId(Long orgId, List<Integer> higherRoleIds);
 
-    @Query("SELECT u FROM UserEntity u WHERE u.userId IN :userIds AND u.organizationId = :orgId")
-    List<UserEntity> findByUserIdAndOrgId(@Param("userIds") List<Long> userIds, @Param("orgId") Long orgId);
+    @Query("SELECT u FROM UserEntity u WHERE u.userId IN :userIds AND u.organizationId = :orgId AND u.active = true")
+    List<UserEntity> findByUserIdAndOrgIdAndActiveTrue(@Param("userIds") List<Long> userIds, @Param("orgId") Long orgId);
 
     Optional<UserEntity> findByUserId(Long userId);
 

@@ -153,12 +153,12 @@ public class UserAdapterImpl implements UserAdapter {
 
     @Override
     public List<UserGroupEntity> getGroupMembersByGroupId(Long groupId, Long orgId) {
-        return userGroupRepository.findUserGroups(groupId, orgId);
+        return userGroupRepository.findActiveUserGroups(groupId, orgId);
     }
 
     @Override
     public List<UserEntity> getUsersByIds(List<Long> userIds, Long orgId) {
-        return userRepository.findByUserIdAndOrgId(userIds, orgId);
+        return userRepository.findByUserIdAndOrgIdAndActiveTrue(userIds, orgId);
     }
 
     @Override

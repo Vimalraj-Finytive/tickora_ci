@@ -40,8 +40,8 @@ public interface UserGroupRepository extends JpaRepository<UserGroupEntity,Long>
     @Query(value = "UPDATE user_group SET user_id = :newUserId WHERE group_id = :groupId AND type = 'supervisor' ", nativeQuery = true)
     void updateSupervisorUser(@Param("groupId") Long groupId, @Param("newUserId") Long newUserId);
 
-    @Query("SELECT ug FROM UserGroupEntity ug WHERE ug.group.groupId = :groupId AND ug.group.organizationEntity.organizationId = :orgId")
-    List<UserGroupEntity> findUserGroups(Long groupId, Long orgId);
+    @Query("SELECT ug FROM UserGroupEntity ug WHERE ug.group.groupId = :groupId AND ug.group.organizationEntity.organizationId = :orgId AND ug.user.active = true")
+    List<UserGroupEntity> findActiveUserGroups(Long groupId, Long orgId);
 
     @Query("SELECT DISTINCT ug.group.id FROM UserGroupEntity ug WHERE ug.user.userId = :supervisorId AND ug.type = 'Supervisor'")
     List<Long>  findGroupIdsBySupervisorId(Long supervisorId);

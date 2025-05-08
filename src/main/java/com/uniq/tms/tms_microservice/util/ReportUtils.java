@@ -8,12 +8,12 @@ import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
+import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
+import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.util.List;
-import java.util.stream.Stream;
 
 @Component
     public class ReportUtils {
@@ -22,8 +22,8 @@ import java.util.stream.Stream;
                  PrintWriter writer = new PrintWriter(out)) {
 
                 ClassPathResource resource = new ClassPathResource("templates/timesheet_csv_header.txt");
-                try (Stream<String> lines = Files.lines(resource.getFile().toPath(), StandardCharsets.UTF_8)) {
-                    lines.forEach(writer::println);
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8))) {
+                    reader.lines().forEach(writer::println);
                 }
                 for (TimesheetDto dto : timesheets) {
                     writer.printf("%s,%s,%s,%s,%s,%s,%s,%s%n",
@@ -50,7 +50,10 @@ import java.util.stream.Stream;
 
                 // Load headers from template
                 ClassPathResource resource = new ClassPathResource("templates/timesheet_excel_header.txt");
-                List<String> headerLines = Files.readAllLines(resource.getFile().toPath(), StandardCharsets.UTF_8);
+                List<String> headerLines;
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8))){
+                    headerLines = reader.lines().toList();
+                }
                 String[] headers = headerLines.get(0).split("\\|");
 
                 // Write header
