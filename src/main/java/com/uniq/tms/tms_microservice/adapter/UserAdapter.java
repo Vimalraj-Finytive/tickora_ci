@@ -72,7 +72,6 @@ public interface UserAdapter {
     List<UserGroupEntity> getGroupUsersByGroupId(List<Long> groupIds, Long orgId);
     List<UserNameSuggestionDto> getAllActiveUsers(Long orgId, int heirarchyLevel);
     List<UserNameSuggestionDto> getAllGroupUsers(List<Long> groupIds, Long orgId);
-    List<UserNameSuggestionDto> getAllActiveUsers(Long orgId);
     Long getRoleIdByName(String roleName);
     Long getLocationIdByName(String locationName);
     Set<String> getAllMobileNumbers();
