@@ -66,11 +66,7 @@ public class TimesheetServiceImpl implements TimesheetService {
          else if (fromDate != null && toDate != null) {
                 startDate = fromDate;
                 endDate = toDate;
-            }
-        else if (userId != null) {
-            startDate = LocalDate.of(2025, 1, 1);
-            endDate = LocalDate.now();
-        }
+         }
 
         // Determine target users based on privileges
         List<UserEntity> targetUsers = resolveTargetUsers(userIdFromToken, groupIds, userId);
@@ -132,8 +128,6 @@ public class TimesheetServiceImpl implements TimesheetService {
                 return groupUserEntities;
             } else if (userId != null && !userId.isEmpty()) {
                 return userAdapter.getUsersByIds(userId,currentUser.getOrganizationId());
-            } else if (userIdFromToken != null) {
-                return List.of(userAdapter.getUserById(userIdFromToken));
             } else {
                 return userAdapter.getAllUsers();
             }
@@ -142,7 +136,7 @@ public class TimesheetServiceImpl implements TimesheetService {
         // Admin / Manager / Staff
         if (canSeeOwn && canSeeGroup && !canSeeAll) {
             List<Long> supervisedGroupIds = userAdapter.findGroupIdsBySupervisorId(userIdFromToken);
-
+            log.info("Supervised group ids: {}", supervisedGroupIds);
             // Case 1: If groupIds are passed → only keep supervised ones
             if (groupIds != null && !groupIds.isEmpty()) {
                 List<Long> filteredGroupIds = groupIds.stream()
@@ -186,7 +180,8 @@ public class TimesheetServiceImpl implements TimesheetService {
             } else if (userId != null && !userId.isEmpty()) {
                 return userAdapter.getUsersByIds(userId, currentUser.getOrganizationId());
             } else {
-                return List.of(userAdapter.getUserById(userIdFromToken));
+                List<UserEntity> groupUserEntities = userAdapter.findMembersByGroupIds(supervisedGroupIds, userIdFromToken);
+                return groupUserEntities;
             }
         }
         // Student
