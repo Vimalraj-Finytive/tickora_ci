@@ -37,6 +37,7 @@ out/
 .vscode/
 
 *.log
+*.log.gz
 logs/app-2025-05-07-1.log.gz
 /logs/app-2025-05-07-2.log.gz
 /logs/app-2025-05-07-3.log.gz
