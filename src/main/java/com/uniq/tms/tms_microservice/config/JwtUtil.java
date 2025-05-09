@@ -38,21 +38,16 @@ public class JwtUtil {
     @Value("${jwt.secret}")
     private String secretKeyBase64;
 
-    public SecretKey getSecretKey() {
-        byte[] keyBytes = Base64.getDecoder().decode(secretKeyBase64);
-        return Keys.hmacShaKeyFor(keyBytes);
-    }
-
     private static final Logger log  = LogManager.getLogger(JwtUtil.class);
 
-    @Autowired
+
     private final BlacklistedTokenRepository blacklistedTokenRepository;
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final OrganizationRepository organizationRepository;
+    private final AuthAdapter authAdapter;
 
     private static final long INACTIVITY_TIMEOUT = 90L * 24 * 60 * 60 * 1000;
-    private final AuthAdapter authAdapter;
 
     public JwtUtil(BlacklistedTokenRepository blacklistedTokenRepository, UserRepository userRepository, RoleRepository roleRepository, OrganizationRepository organizationRepository, AuthAdapter authAdapter) {
         this.blacklistedTokenRepository = blacklistedTokenRepository;
@@ -61,6 +56,11 @@ public class JwtUtil {
         this.organizationRepository = organizationRepository;
         this.authAdapter = authAdapter;
     }
+    public SecretKey getSecretKey() {
+        byte[] keyBytes = Base64.getDecoder().decode(secretKeyBase64);
+        return Keys.hmacShaKeyFor(keyBytes);
+    }
+
 
     public String generateToken(String loginInput, long l,  HttpServletRequest request) {
         log.info("generating token for: " + loginInput);

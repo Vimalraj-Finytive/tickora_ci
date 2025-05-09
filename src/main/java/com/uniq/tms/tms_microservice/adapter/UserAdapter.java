@@ -11,7 +11,9 @@ import com.uniq.tms.tms_microservice.model.UserResponse;
 import com.uniq.tms.tms_microservice.dto.UserNameSuggestionDto;
 import com.uniq.tms.tms_microservice.entity.*;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 public interface UserAdapter {
     List<RoleEntity>getAllRole(Long orgId, int hierarchyLevel);
@@ -70,5 +72,18 @@ public interface UserAdapter {
     List<UserGroupEntity> getGroupUsersByGroupId(List<Long> groupIds, Long orgId);
     List<UserNameSuggestionDto> getAllActiveUsers(Long orgId, int heirarchyLevel);
     List<UserNameSuggestionDto> getAllGroupUsers(List<Long> groupIds, Long orgId);
+    Long getRoleIdByName(String roleName);
+    Long getLocationIdByName(String locationName);
+    Set<String> getAllMobileNumbers();
+    Set<String> getAllEmails();
+    Map<String, Long> getRoleNameIdMap();
+    Map<String, Long> getLocationNameToIdMap();
+    List<UserEntity> saveAllUsers(List<UserEntity> users);
+    List<SecondaryDetailsEntity> saveAllSecondaryDetails(List<SecondaryDetailsEntity> details);
+    Map<String, Long> getGroupNameIdMap();
+    List<UserGroupEntity> saveAllUserGroups(List<UserGroupEntity> userGroups);
+    RoleEntity getRoleWithPrivileges(Long roleId);
+    Set<String> getAllSecondaryEmail();
+    Set<String> getAllSecondaryMobile();
 }
 

@@ -327,4 +327,86 @@ public class UserAdapterImpl implements UserAdapter {
         return userRepository.findAllGroupUsersByOrganizationId(groupIds,orgId);
     }
 
+
+    @Override
+    public Long getRoleIdByName(String roleName) {
+        RoleEntity role = roleRepository.findByNameIgnoreCase(roleName);
+        return role != null ? role.getRoleId() : null;
+    }
+    @Override
+    public Long getLocationIdByName(String locationName) {
+        LocationEntity location = locationRepository.findByNameIgnoreCase(locationName);
+        return location != null ? location.getLocationId() : null;
+    }
+
+    @Override
+    public Set<String> getAllMobileNumbers() {
+        List<String> mobiles = userRepository.findAllMobileNumbers();
+        return new HashSet<>(mobiles);
+    }
+
+    @Override
+    public Set<String> getAllEmails() {
+        List<String> emails = userRepository.findAllEmails();
+        return new HashSet<>(emails);
+    }
+
+    @Override
+    public Map<String, Long> getRoleNameIdMap() {
+        List<Object[]> roles = roleRepository.findRoleNameIdMappings();
+        Map<String, Long> roleNameToIdMap = new HashMap<>();
+        for (Object[] role : roles) {
+            roleNameToIdMap.put(((String) role[0]).toLowerCase(), (Long) role[1]);
+        }
+        return roleNameToIdMap;
+    }
+
+    @Override
+    public Map<String, Long> getLocationNameToIdMap() {
+        List<Object[]> locations = locationRepository.findLocationNameIdMappings();
+        Map<String, Long> locationNameToIdMap = new HashMap<>();
+        for (Object[] location : locations) {
+            locationNameToIdMap.put(((String) location[0]).toLowerCase(), (Long) location[1]);
+        }
+        return locationNameToIdMap;
+    }
+
+    @Override
+    public List<UserEntity> saveAllUsers(List<UserEntity> users) {
+        return userRepository.saveAll(users);
+    }
+
+    @Override
+    public List<SecondaryDetailsEntity> saveAllSecondaryDetails(List<SecondaryDetailsEntity> details) {
+        return secondaryDetailsRepository.saveAll(details);
+    }
+    @Override
+    public Map<String, Long> getGroupNameIdMap() {
+        List<Object[]> groups = teamRepository.findGroupNameIdMappings();
+        Map<String, Long> groupNameToIdMap = new HashMap<>();
+        for (Object[] group : groups) {
+            groupNameToIdMap.put(((String) group[0]).toLowerCase(), (Long) group[1]);
+        }
+        return groupNameToIdMap;
+    }
+
+    @Override
+    public List<UserGroupEntity> saveAllUserGroups(List<UserGroupEntity> userGroups){
+        return userGroupRepository.saveAll(userGroups);
+    }
+
+    @Override
+    public RoleEntity getRoleWithPrivileges(Long roleId){
+        return roleRepository.findByIdWithPrivileges(roleId);
+    }
+
+    @Override
+    public Set<String> getAllSecondaryEmail(){
+        return  new HashSet<>(secondaryDetailsRepository.findAllEmail());
+    }
+
+    @Override
+    public Set<String> getAllSecondaryMobile(){
+        return  new HashSet<>(secondaryDetailsRepository.findAllMobile());
+    }
 }

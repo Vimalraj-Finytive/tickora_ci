@@ -1,5 +1,7 @@
 package com.uniq.tms.tms_microservice.model;
 
+import com.uniq.tms.tms_microservice.dto.SecondaryDetailsDto;
+
 import java.time.LocalDate;
 
 public class UserResponse {
@@ -12,6 +14,7 @@ public class UserResponse {
     private String roleName;
     private String locationName;
     private LocalDate dateOfJoining;
+    private SecondaryDetailsDto secondaryDetails;
 
     public UserResponse(Long userId, String userName, String email, String mobileNumber, String groupName, String roleName, String locationName, LocalDate dateOfJoining) {
         this.userId = userId;
@@ -86,5 +89,13 @@ public class UserResponse {
 
     public void setDateOfJoining(LocalDate dateOfJoining) {
         this.dateOfJoining = dateOfJoining;
+    }
+
+    public SecondaryDetailsDto getSecondaryDetails() {
+        return secondaryDetails;
+    }
+
+    public void setSecondaryDetails(SecondaryDetailsDto secondaryDetails) {
+        this.secondaryDetails = secondaryDetails;
     }
 }
