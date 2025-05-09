@@ -15,20 +15,23 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
     Optional<TimesheetEntity> findByUserIdAndDate(Long userId, LocalDate date);
 
     @Query(value = """
-    WITH DateSeries AS (
-        SELECT generate_series(
-            COALESCE(CAST(:startDate AS DATE), '2025-01-01'),
-            COALESCE(CAST(:endDate AS DATE), CURRENT_DATE),
-            INTERVAL '1 day'
-        ) AS work_date
-    ),
-    SelectedUsers AS (
+    WITH SelectedUsers AS (
         SELECT * FROM users WHERE active = TRUE AND (:userIds IS NULL OR user_id = ANY(:userIds))
     ),
     UserDateMatrix AS (
-        SELECT d.work_date, u.user_id, u.user_name, u.role_id
-        FROM DateSeries d
-        CROSS JOIN SelectedUsers u
+        SELECT
+            gs.work_date,
+            u.user_id,
+            u.user_name,
+            u.role_id
+        FROM SelectedUsers u
+        CROSS JOIN LATERAL (
+            SELECT generate_series(
+                COALESCE(:startDate, u.date_of_joining),
+                COALESCE(:endDate, CURRENT_DATE),
+                INTERVAL '1 day'
+            ) AS work_date
+        ) gs
     )
     SELECT
         udm.work_date,
@@ -58,15 +61,20 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
                 END
         END AS user_day_type,
         CASE
-            WHEN t.first_clock_in IS NOT NULL AND t.last_clock_out IS NOT NULL
-                 AND (EXTRACT(EPOCH FROM (t.last_clock_out - t.first_clock_in)) / 3600.0)
-                     >= (EXTRACT(EPOCH FROM (ws.end_time - ws.start_time)) / 3600.0)
-            THEN 'Sufficient Hours'
-            WHEN t.first_clock_in IS NOT NULL AND t.last_clock_out IS NOT NULL
-                 AND (EXTRACT(EPOCH FROM (t.last_clock_out - t.first_clock_in)) / 3600.0)
-                     < (EXTRACT(EPOCH FROM (ws.end_time - ws.start_time)) / 3600.0)
-            THEN 'Less Worked Hours'
-            ELSE 'No Data'
+            WHEN trim(to_char(udm.work_date, 'FMDay')) ILIKE trim(ws.rest_day) THEN
+                CASE
+                    WHEN t.date IS NOT NULL THEN 'Extra Worked Day'
+                    ELSE 'Holiday'
+                END
+            WHEN t.date IS NULL THEN 'Time Off'
+            WHEN t.first_clock_in IS NOT NULL AND t.last_clock_out IS NOT NULL THEN
+                CASE
+                    WHEN (EXTRACT(EPOCH FROM (t.last_clock_out - t.first_clock_in)) / 3600.0) >=
+                         (EXTRACT(EPOCH FROM (ws.end_time - ws.start_time)) / 3600.0)
+                    THEN 'Sufficient Hours'
+                    ELSE 'Less Worked Hours'
+                END
+            ELSE 'Time Off'
         END AS work_status,
         th.id AS history_id,
         th.log_time,

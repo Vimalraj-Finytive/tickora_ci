@@ -36,7 +36,7 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
 
     @Override
     public List<TimesheetDto> filterTimesheetsForAllUsers(LocalDate startDate, LocalDate endDate, List<Long> userIds) {
-        Long[] userIdArray = userIds.toArray(new Long[0]); // Convert list to array
+        Long[] userIdArray = userIds.toArray(new Long[0]);
 
         List<Object[]> resultList = timesheetRepository.fetchTimesheetsWithHistory(startDate, endDate, userIdArray);
 

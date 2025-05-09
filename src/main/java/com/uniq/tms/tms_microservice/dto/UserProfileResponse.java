@@ -9,20 +9,17 @@ public class UserProfileResponse {
     private String email;
     private String mobileNumber;
     private String roleName;
-    private String locationName;
     private LocalDate dateOfJoining;
+    private LocationDto location;
 
-    public UserProfileResponse() {
-    }
-
-    public UserProfileResponse(Long userId, String userName, String email, String mobileNumber,String locationName , String roleName, LocalDate dateOfJoining) {
+    public UserProfileResponse(Long userId, String userName, String email, String mobileNumber, String roleName, LocalDate dateOfJoining, LocationDto location) {
         this.userId = userId;
         this.userName = userName;
         this.email = email;
         this.mobileNumber = mobileNumber;
         this.roleName = roleName;
         this.dateOfJoining = dateOfJoining;
-        this.locationName = locationName;
+        this.location = location;
     }
 
     public LocalDate getDateOfJoining() {
@@ -65,10 +62,6 @@ public class UserProfileResponse {
     public void setRoleName(String roleName) {
         this.roleName = roleName;
     }
-    public String getLocationName() {
-        return locationName;
-    }
-    public void setLocationName(String locationName) {
-        this.locationName = locationName;
-    }
+    public LocationDto getLocation() {return location;}
+    public void setLocation(LocationDto location) {this.location = location;}
 }

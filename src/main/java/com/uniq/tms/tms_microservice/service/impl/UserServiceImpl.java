@@ -600,7 +600,7 @@ public class UserServiceImpl implements UserService {
                 usersDto.add(userDtoMapper.toDto(user));
             }
         if (users.isEmpty()) {
-            throw new RuntimeException("No Users found");
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, ("No Users found"));
         }
 
         // Merge users by ID and add secondary details to each user
@@ -878,10 +878,11 @@ public class UserServiceImpl implements UserService {
             throw new UsernameNotFoundException("User not found");
         }
         LocationEntity location = userAdapter.findLocationById(user.getLocationId());
+        LocationDto locationDto = userDtoMapper.toDto(location);
         if(location==null){
             throw new NullPointerException("Location not found.");
         }
-        UserProfileResponse response = new UserProfileResponse(user.getUserId(),user.getUserName(),user.getEmail(),user.getMobileNumber(),location.getName(),user.getRole().getName(),user.getDateOfJoining());
+        UserProfileResponse response = new UserProfileResponse(user.getUserId(),user.getUserName(),user.getEmail(),user.getMobileNumber(),user.getRole().getName(),user.getDateOfJoining(),locationDto);
         return response;
     }
 
@@ -960,7 +961,7 @@ public class UserServiceImpl implements UserService {
         }
 
         if (finalList.isEmpty()) {
-            throw new AccessDeniedException("User does not have access to any groups.");
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,"No Groups Found");
         }
 
         return finalList;

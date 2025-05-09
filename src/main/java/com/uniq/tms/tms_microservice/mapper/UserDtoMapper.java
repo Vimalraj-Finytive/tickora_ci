@@ -1,6 +1,7 @@
 package com.uniq.tms.tms_microservice.mapper;
 
 import com.uniq.tms.tms_microservice.dto.*;
+import com.uniq.tms.tms_microservice.entity.LocationEntity;
 import com.uniq.tms.tms_microservice.model.*;
 import com.uniq.tms.tms_microservice.model.Role;
 import org.mapstruct.Mapper;
@@ -31,4 +32,5 @@ public interface UserDtoMapper {
     UserDto toDto(User user);
     GroupDto toGroupDto(Group group);
     UserResponseDto toDto(UserResponse userResponse);
+    LocationDto toDto(LocationEntity locationEntity);
 }
