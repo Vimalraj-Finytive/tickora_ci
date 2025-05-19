@@ -5,6 +5,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 @Repository
 public interface WorkScheduleRepository extends JpaRepository<WorkScheduleEntity, Long> {
 
@@ -12,4 +14,5 @@ public interface WorkScheduleRepository extends JpaRepository<WorkScheduleEntity
     WorkScheduleEntity findDefaultActiveSchedule();
     WorkScheduleEntity findByScheduleId(Long scheduleId);
 
+    List<WorkScheduleEntity> findAllByOrganizationEntity_OrganizationId(Long orgId);
 }

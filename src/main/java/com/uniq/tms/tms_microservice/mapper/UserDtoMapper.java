@@ -2,6 +2,7 @@ package com.uniq.tms.tms_microservice.mapper;
 
 import com.uniq.tms.tms_microservice.dto.*;
 import com.uniq.tms.tms_microservice.entity.LocationEntity;
+import com.uniq.tms.tms_microservice.entity.UserGroupEntity;
 import com.uniq.tms.tms_microservice.model.*;
 import com.uniq.tms.tms_microservice.model.Role;
 import org.mapstruct.Mapper;
@@ -33,4 +34,11 @@ public interface UserDtoMapper {
     GroupDto toGroupDto(Group group);
     UserResponseDto toDto(UserResponse userResponse);
     LocationDto toDto(LocationEntity locationEntity);
+    WorkScheduleDto toDto(WorkSchedule workSchedule);
+    @Mapping(source = "group.groupId", target = "groupId")
+    @Mapping(source = "group.groupName", target = "groupName")
+    @Mapping(source = "group.locationEntity", target = "location")
+    @Mapping(source = "group.workSchedule", target = "workSchedule")
+    @Mapping(source = "type", target = "userType")
+    UserGroupProfileDto toGroupsDto(UserGroupEntity entity);
 }

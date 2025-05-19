@@ -141,8 +141,8 @@ public class UserController {
     }
 
     @GetMapping("/profile")
-    public ResponseEntity<ApiResponse> getUser(@RequestHeader("Authorization") String token){
-        ApiResponse response = authFacade.getUser(token);
+    public ResponseEntity<ApiResponse> getUser(@RequestHeader("Authorization") String token, @RequestParam Long userId){
+        ApiResponse response = authFacade.getUserProfile(token, userId);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
@@ -226,6 +226,7 @@ public class UserController {
         ApiResponse response = authFacade.getUserGroupMembers(token, groupId, date);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
+
     @GetMapping("/getGroupUsers")
     public ResponseEntity<ApiResponse> getGroupUsers(
             @RequestHeader("Authorization") String token,

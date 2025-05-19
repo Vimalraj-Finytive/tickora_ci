@@ -9,10 +9,12 @@ import com.uniq.tms.tms_microservice.mapper.SecondaryDetailsMapper;
 import com.uniq.tms.tms_microservice.mapper.TimesheetDtoMapper;
 import com.uniq.tms.tms_microservice.mapper.UserDtoMapper;
 import com.uniq.tms.tms_microservice.mapper.UserEntityMapper;
+import com.uniq.tms.tms_microservice.mapper.WorkScheduleDtoMapper;
 import com.uniq.tms.tms_microservice.model.*;
 import com.uniq.tms.tms_microservice.service.AuthService;
 import com.uniq.tms.tms_microservice.service.TimesheetService;
 import com.uniq.tms.tms_microservice.service.UserService;
+import com.uniq.tms.tms_microservice.service.WorkScheduleService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
@@ -44,8 +46,10 @@ public class AuthFacade {
     private final SecondaryDetailsMapper secondaryDetailsMapper;
     private final UserEntityMapper userEntityMapper;
     private final Validator validator;
+    private final WorkScheduleService workScheduleService;
+    private final WorkScheduleDtoMapper workScheduleDtoMapper;
 
-    public AuthFacade(UserAdapter userAdapter, AuthService authService, UserService userService, UserDtoMapper userDtoMapper, TimesheetService timesheetService, TimesheetDtoMapper timesheetDtoMapper, JwtUtil jwtUtil, SecondaryDetailsMapper secondaryDetailsMapper, UserEntityMapper userEntityMapper, Validator validator) {
+    public AuthFacade(UserAdapter userAdapter, AuthService authService, UserService userService, UserDtoMapper userDtoMapper, TimesheetService timesheetService, TimesheetDtoMapper timesheetDtoMapper, JwtUtil jwtUtil, SecondaryDetailsMapper secondaryDetailsMapper, UserEntityMapper userEntityMapper, Validator validator, WorkScheduleService workScheduleService, WorkScheduleDtoMapper workScheduleDtoMapper) {
 
         this.userAdapter = userAdapter;
         this.authService = authService;
@@ -57,6 +61,8 @@ public class AuthFacade {
         this.secondaryDetailsMapper = secondaryDetailsMapper;
         this.userEntityMapper = userEntityMapper;
         this.validator = validator;
+        this.workScheduleService = workScheduleService;
+        this.workScheduleDtoMapper = workScheduleDtoMapper;
     }
 
     private final Logger log = LoggerFactory.getLogger(AuthFacade.class);
@@ -172,20 +178,18 @@ public class AuthFacade {
         return new ApiResponse(201, "User Created successfully and Reset password link sent to email.", user);
     }
 
-    public ApiResponse getUser(String token){
+    public ApiResponse getUserProfile(String token, Long userId){
             if (!token.startsWith("Bearer ")) {
                 return new ApiResponse(400, "Invalid token format", null);
             }
             String jwt = token.substring(7);
             Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
             String role = jwtUtil.extractRoleFromToken(jwt);
-            Long userId = jwtUtil.extractUserIdFromToken(jwt);
-            role = role.replace("ROLE_", "").toUpperCase();
             if (orgId == null) {
                 return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
             }
-            UserProfileResponse response = userService.getUser(orgId,userId);
-            return new ApiResponse(HttpStatus.OK.value(), "User fetched successfully",response);
+            UserProfileResponse response = userService.getUserProfile(orgId,userId);
+            return new ApiResponse(HttpStatus.OK.value(), "User Profile fetched successfully",response);
         }
 
         public ResponseEntity<ApiResponse> validateEmail (EmailDto email){
@@ -542,5 +546,12 @@ public class AuthFacade {
         List<UserNameSuggestionDto> users;
         users = userService.getGroupUsers(groupIds, orgId, loggedInUserId,userRole);
         return new ApiResponse(200, "Users fetched successfully", users);
+    }
+
+    public ApiResponse getWorkSchedule(Long orgId) {
+        List<WorkScheduleDto> workScheduleDtos = workScheduleService.getAllWorkSchedules(orgId).stream()
+                .map(workScheduleDtoMapper::toDto)
+                .toList();
+        return new ApiResponse(200, "Work Schedule fetched successfully", workScheduleDtos);
     }
 }

@@ -1,10 +1,10 @@
 package com.uniq.tms.tms_microservice.repository;
 
 import com.uniq.tms.tms_microservice.entity.UserEntity;
+import com.uniq.tms.tms_microservice.entity.UserGroupEntity;
 import com.uniq.tms.tms_microservice.model.UserResponse;
 import com.uniq.tms.tms_microservice.dto.UserNameSuggestionDto;
 import jakarta.transaction.Transactional;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -16,8 +16,19 @@ import java.util.Optional;
 @Repository
 public interface UserRepository extends JpaRepository<UserEntity, Long> {
 
-    @Query(value = "SELECT * FROM users u WHERE u.organization_id = :organizationId AND u.user_id = :userId", nativeQuery = true)
-    UserEntity findUserByOrganizationIdAndUserId(@Param("organizationId") Long organizationId, @Param("userId") Long userId);
+    @Query("""
+    SELECT ug 
+    FROM UserGroupEntity ug
+    JOIN FETCH ug.user u
+    LEFT JOIN FETCH ug.group g
+    WHERE u.organizationId = :organizationId
+      AND u.userId = :userId
+      AND u.active = true
+""")
+    List<UserGroupEntity> findUserByOrganizationIdAndUserId(
+            @Param("organizationId") Long organizationId,
+            @Param("userId") Long userId
+    );
 
     UserEntity findByEmail(String email);
 
@@ -81,4 +92,5 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
     @Query(value = "SELECT email FROM users", nativeQuery = true)
     List<String> findAllEmails();
 
+    UserEntity findByOrganizationIdAndUserId(Long orgId, Long userId);
 }

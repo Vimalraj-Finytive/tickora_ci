@@ -10,7 +10,6 @@ import com.uniq.tms.tms_microservice.model.Location;
 import com.uniq.tms.tms_microservice.model.Role;
 import com.uniq.tms.tms_microservice.model.User;
 import com.uniq.tms.tms_microservice.model.UserGroup;
-import com.uniq.tms.tms_microservice.model.UserResponse;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
@@ -40,6 +39,6 @@ public interface UserService {
     ApiResponse updateGroupDetails(AddGroupDto addGroupDto, Long groupId, Long orgId);
     boolean createSecondaryUser(SecondaryDetailsDto secondaryDetailsDto, UserEntity savedUser);
     List<UserNameSuggestionDto> searchUsernames(String keywords);
-    UserProfileResponse getUser(Long orgId, Long userId);
+    UserProfileResponse getUserProfile(Long orgId, Long userId);
     List<UserNameSuggestionDto> getGroupUsers(List<Long> groupIds, Long orgId, Long loggedInUserId, String role);
 }

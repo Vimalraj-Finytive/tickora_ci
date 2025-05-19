@@ -274,16 +274,6 @@ public class UserAdapterImpl implements UserAdapter {
     }
 
     @Override
-    public WorkScheduleEntity findByWorkscheduleId(Long workScheduleId) {
-        return workScheduleRepository.findByScheduleId(workScheduleId);
-    }
-
-    @Override
-    public WorkScheduleEntity findDefaultActiveSchedule() {
-        return workScheduleRepository.findDefaultActiveSchedule();
-    }
-
-    @Override
     public List<Long> findMemberIdsByGroupId(Long groupId) {
         return userGroupRepository.findUserIdsByGroupIdAndType(groupId, "Member");
     }
@@ -294,7 +284,7 @@ public class UserAdapterImpl implements UserAdapter {
     }
 
     @Override
-    public UserEntity findUserByOrganizationIdAndUserId(Long organizationId, Long userId) {
+    public List<UserGroupEntity> findUserByOrganizationIdAndUserId(Long organizationId, Long userId) {
         return userRepository.findUserByOrganizationIdAndUserId(organizationId, userId);
     }
 
@@ -408,5 +398,10 @@ public class UserAdapterImpl implements UserAdapter {
     @Override
     public Set<String> getAllSecondaryMobile(){
         return  new HashSet<>(secondaryDetailsRepository.findAllMobile());
+    }
+
+    @Override
+    public UserEntity findUserByOrgIdAndUserId(Long orgId, Long userId) {
+        return userRepository.findByOrganizationIdAndUserId(orgId, userId);
     }
 }

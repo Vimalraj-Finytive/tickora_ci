@@ -1,6 +1,7 @@
 package com.uniq.tms.tms_microservice.dto;
 
 import java.time.LocalDate;
+import java.util.List;
 
 public class UserProfileResponse {
 
@@ -11,8 +12,9 @@ public class UserProfileResponse {
     private String roleName;
     private LocalDate dateOfJoining;
     private LocationDto location;
+    private List<UserGroupProfileDto> groupDtos;
 
-    public UserProfileResponse(Long userId, String userName, String email, String mobileNumber, String roleName, LocalDate dateOfJoining, LocationDto location) {
+    public UserProfileResponse(Long userId, String userName, String email, String mobileNumber, String roleName, LocalDate dateOfJoining, LocationDto location, List<UserGroupProfileDto> groupDtos) {
         this.userId = userId;
         this.userName = userName;
         this.email = email;
@@ -20,6 +22,7 @@ public class UserProfileResponse {
         this.roleName = roleName;
         this.dateOfJoining = dateOfJoining;
         this.location = location;
+        this.groupDtos = groupDtos;
     }
 
     public LocalDate getDateOfJoining() {
@@ -64,4 +67,12 @@ public class UserProfileResponse {
     }
     public LocationDto getLocation() {return location;}
     public void setLocation(LocationDto location) {this.location = location;}
+
+    public List<UserGroupProfileDto> getGroupDtos() {
+        return groupDtos;
+    }
+
+    public void setGroupDtos(List<UserGroupProfileDto> groupDtos) {
+        this.groupDtos = groupDtos;
+    }
 }

@@ -1,0 +1,49 @@
+package com.uniq.tms.tms_microservice.dto;
+
+public class UserGroupProfileDto {
+    private Long groupId;
+    private String groupName;
+    private LocationDto location;
+    private WorkScheduleDto workSchedule;
+    private String userType;
+
+    public Long getGroupId() {
+        return groupId;
+    }
+
+    public void setGroupId(Long groupId) {
+        this.groupId = groupId;
+    }
+
+    public String getGroupName() {
+        return groupName;
+    }
+
+    public void setGroupName(String groupName) {
+        this.groupName = groupName;
+    }
+
+    public LocationDto getLocation() {
+        return location;
+    }
+
+    public void setLocation(LocationDto location) {
+        this.location = location;
+    }
+
+    public WorkScheduleDto getWorkSchedule() {
+        return workSchedule;
+    }
+
+    public void setWorkSchedule(WorkScheduleDto workSchedule) {
+        this.workSchedule = workSchedule;
+    }
+
+    public String getUserType() {
+        return userType;
+    }
+
+    public void setUserType(String userType) {
+        this.userType = userType;
+    }
+}

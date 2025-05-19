@@ -6,7 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.opencsv.exceptions.CsvValidationException;
 import com.uniq.tms.tms_microservice.adapter.TimesheetAdapter;
 import com.uniq.tms.tms_microservice.adapter.UserAdapter;
-import com.uniq.tms.tms_microservice.constant.PrivilegeConstant;
+import com.uniq.tms.tms_microservice.adapter.WorkScheduleAapter;
 import com.uniq.tms.tms_microservice.dto.AddGroupDto;
 import com.uniq.tms.tms_microservice.dto.GroupDto;
 import com.uniq.tms.tms_microservice.dto.GroupResponseDto;
@@ -30,7 +30,6 @@ import com.uniq.tms.tms_microservice.model.Role;
 import com.uniq.tms.tms_microservice.repository.LocationRepository;
 import com.uniq.tms.tms_microservice.repository.OrganizationRepository;
 import com.uniq.tms.tms_microservice.repository.RoleRepository;
-import com.uniq.tms.tms_microservice.repository.UserRepository;
 import com.uniq.tms.tms_microservice.service.UserService;
 import com.uniq.tms.tms_microservice.util.EmailUtil;
 import com.uniq.tms.tms_microservice.util.PasswordUtil;
@@ -38,19 +37,13 @@ import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Validator;
 import org.apache.commons.io.FilenameUtils;
-import org.apache.poi.ss.usermodel.*;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.apache.tomcat.util.http.fileupload.FileItem;
-import org.apache.tomcat.util.http.fileupload.disk.DiskFileItem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -85,9 +78,9 @@ public class UserServiceImpl implements UserService {
     private final ObjectMapper objectMapper;
     private final SecondaryDetailsMapper secondaryDetailsMapper;
     private final Long STUDENT_ROLE_ID = 5l;
-    private final UserRepository userRepository;
+    private final WorkScheduleAapter workScheduleAdapter;
 
-    public UserServiceImpl(Validator validator, UserAdapter userAdapter, TimesheetAdapter timesheetAdapter, UserEntityMapper userEntityMapper, OrganizationRepository organizationRepository, RoleRepository roleRepository, LocationRepository locationRepository, EmailUtil emailUtil, UserDtoMapper userDtoMapper, ObjectMapper objectMapper, SecondaryDetailsMapper secondaryDetailsMapper, UserRepository userRepository) {
+    public UserServiceImpl(Validator validator, UserAdapter userAdapter, TimesheetAdapter timesheetAdapter, UserEntityMapper userEntityMapper, OrganizationRepository organizationRepository, RoleRepository roleRepository, LocationRepository locationRepository, EmailUtil emailUtil, UserDtoMapper userDtoMapper, ObjectMapper objectMapper, SecondaryDetailsMapper secondaryDetailsMapper, WorkScheduleAapter workScheduleAdapter) {
         this.validator = validator;
         this.userAdapter = userAdapter;
         this.timesheetAdapter = timesheetAdapter;
@@ -99,7 +92,7 @@ public class UserServiceImpl implements UserService {
         this.userDtoMapper = userDtoMapper;
         this.objectMapper = objectMapper;
         this.secondaryDetailsMapper = secondaryDetailsMapper;
-        this.userRepository = userRepository;
+        this.workScheduleAdapter = workScheduleAdapter;
     }
 
     private static final  Logger log = LoggerFactory.getLogger(UserServiceImpl.class);
@@ -666,10 +659,10 @@ public class UserServiceImpl implements UserService {
         }
 
         if (groupMiddleware.getWorkScheduleId() != null) {
-            WorkScheduleEntity ws = userAdapter.findByWorkscheduleId(groupMiddleware.getWorkScheduleId());
+            WorkScheduleEntity ws = workScheduleAdapter.findByWorkscheduleId(groupMiddleware.getWorkScheduleId());
             entity.setWorkSchedule(ws);
         } else {
-            WorkScheduleEntity defaultWs = userAdapter.findDefaultActiveSchedule();
+            WorkScheduleEntity defaultWs = workScheduleAdapter.findDefaultActiveSchedule();
             entity.setWorkSchedule(defaultWs);
         }
 
@@ -871,19 +864,46 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public UserProfileResponse getUser(Long orgId,Long userId) {
-        UserEntity user = userAdapter.findUserByOrganizationIdAndUserId(orgId,userId);
-
-        if(user==null){
-            throw new UsernameNotFoundException("User not found");
+    public UserProfileResponse getUserProfile(Long orgId, Long userId) {
+        // Fetch the user groups (may be empty if user has no group)
+        List<UserGroupEntity> userGroups = userAdapter.findUserByOrganizationIdAndUserId(orgId, userId);
+        UserEntity user;
+        if (userGroups.isEmpty()) {
+            // If no group, fetch user manually
+            user = userAdapter.findUserByOrgIdAndUserId(orgId, userId);
+            if (user == null || !user.isActive()) {
+                throw new UsernameNotFoundException("User not found");
+            }
+        } else {
+            // If in groups, get user from the first entry
+            user = userGroups.get(0).getUser();
         }
+
+        // Fetch and map user location
         LocationEntity location = userAdapter.findLocationById(user.getLocationId());
-        LocationDto locationDto = userDtoMapper.toDto(location);
-        if(location==null){
+        if (location == null) {
             throw new NullPointerException("Location not found.");
         }
-        UserProfileResponse response = new UserProfileResponse(user.getUserId(),user.getUserName(),user.getEmail(),user.getMobileNumber(),user.getRole().getName(),user.getDateOfJoining(),locationDto);
-        return response;
+        LocationDto locationDto = userDtoMapper.toDto(location);
+
+        // Map groups if present
+        List<UserGroupProfileDto> groupDtos = userGroups.isEmpty()
+                ? Collections.emptyList()
+                : userGroups.stream()
+                .map(userDtoMapper::toGroupsDto)
+                .collect(Collectors.toList());
+
+        // Construct response
+        return new UserProfileResponse(
+                user.getUserId(),
+                user.getUserName(),
+                user.getEmail(),
+                user.getMobileNumber(),
+                user.getRole().getName(),
+                user.getDateOfJoining(),
+                locationDto,
+                groupDtos
+        );
     }
 
     public List<GroupResponseDto> getAllGroups(Long orgId, Long userId) throws JsonProcessingException {
@@ -925,7 +945,6 @@ public class UserServiceImpl implements UserService {
             }
         }
 
-        // Final transformation
         List<GroupResponseDto> finalList = new ArrayList<>();
 
         for (Object[] row : results) {

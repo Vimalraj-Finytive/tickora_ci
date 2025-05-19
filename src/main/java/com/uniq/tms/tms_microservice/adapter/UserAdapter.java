@@ -53,8 +53,6 @@ public interface UserAdapter {
     List<GroupDto> getAllgroups(Long orgId);
     List<UserEntity> findUsersByGroupIds(List<Long> groupIds);
     List<UserEntity> findMembersByGroupIds(List<Long> filteredGroupIds, Long userIdFromToken);
-    WorkScheduleEntity findByWorkscheduleId(Long workScheduleId);
-    WorkScheduleEntity findDefaultActiveSchedule();
     SecondaryDetailsEntity saveSecondaryDetails(SecondaryDetailsEntity secondaryDetails);
     boolean existsMobileByMobile(String mobile);
     boolean existsEmailByEmail(String email);
@@ -66,7 +64,7 @@ public interface UserAdapter {
     Optional<GroupEntity> findByGroupId(Long groupId);
     List<Long> findMemberIdsByGroupId(Long groupId);
     LocationEntity findLocationById(Long locationId);
-    UserEntity findUserByOrganizationIdAndUserId(Long organizationId, Long userId);
+    List<UserGroupEntity> findUserByOrganizationIdAndUserId(Long organizationId, Long userId);
     List<UserEntity> filterUsersByGroupIds(Long userIdFromToken, List<UserEntity> targetUsers);
     List<RoleEntity> findAllWithPrivileges();
     List<UserGroupEntity> getGroupUsersByGroupId(List<Long> groupIds, Long orgId);
@@ -85,5 +83,6 @@ public interface UserAdapter {
     RoleEntity getRoleWithPrivileges(Long roleId);
     Set<String> getAllSecondaryEmail();
     Set<String> getAllSecondaryMobile();
+    UserEntity findUserByOrgIdAndUserId(Long orgId, Long userId);
 }
 
