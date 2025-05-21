@@ -2,9 +2,11 @@ package com.uniq.tms.tms_microservice.controller;
 
 import com.uniq.tms.tms_microservice.constant.UserConstant;
 import com.uniq.tms.tms_microservice.dto.ApiResponse;
+import com.uniq.tms.tms_microservice.dto.DashboardDto;
 import com.uniq.tms.tms_microservice.dto.TimesheetDto;
 import com.uniq.tms.tms_microservice.dto.TimesheetHistoryDto;
 import com.uniq.tms.tms_microservice.dto.TimesheetReportDto;
+import com.uniq.tms.tms_microservice.dto.UserDashboardDto;
 import com.uniq.tms.tms_microservice.facade.AuthFacade;
 import com.uniq.tms.tms_microservice.util.ReportUtils;
 import org.springframework.core.io.InputStreamResource;
@@ -12,8 +14,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -39,9 +39,9 @@ public class  TimesheetController {
         this.reportUtils = reportUtils;
     }
 
-    @GetMapping
+    @PostMapping
     public ResponseEntity<?> getAllTimesheets(@RequestHeader("Authorization") String token,
-                                                        @ModelAttribute TimesheetReportDto request) {
+                                                        @RequestBody TimesheetReportDto request) {
         List<TimesheetDto> timesheets = authFacade.getAllTimesheets(token,request);
         return ResponseEntity.ok(new ApiResponse(200, "Success", timesheets));
     }
@@ -80,7 +80,7 @@ public class  TimesheetController {
         return ResponseEntity.ok(new ApiResponse<>(200, "Timesheet upserted successfully", timesheetDto));
     }
 
-    @PostMapping
+    @PostMapping("/report")
     public ResponseEntity<?> getTimesheets(
             @RequestHeader("Authorization") String token,
             @RequestBody(required = false) TimesheetReportDto request) {
@@ -117,4 +117,12 @@ public class  TimesheetController {
         }
         return ResponseEntity.ok(new ApiResponse(200, "Report Downloaded Success", timesheets));
     }
+
+    @PostMapping("/dashboard")
+    public ResponseEntity<?> getDashboard(@RequestHeader("Authorization") String token,
+                                          @RequestBody(required = false) DashboardDto request) {
+        List<UserDashboardDto> dashboards = authFacade.getAllUserInfo(token, request);
+        return ResponseEntity.ok(new ApiResponse(200, "Dashboard Loaded Successfully", dashboards));
+    }
+
 }

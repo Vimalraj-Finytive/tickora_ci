@@ -15,7 +15,6 @@ import java.util.List;
 
 @Entity
 @Table(name = "location")
-
 public class LocationEntity {
 
     @Id

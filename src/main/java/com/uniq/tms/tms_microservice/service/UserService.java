@@ -11,7 +11,6 @@ import com.uniq.tms.tms_microservice.model.Role;
 import com.uniq.tms.tms_microservice.model.User;
 import com.uniq.tms.tms_microservice.model.UserGroup;
 import org.springframework.web.multipart.MultipartFile;
-
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -41,4 +40,5 @@ public interface UserService {
     List<UserNameSuggestionDto> searchUsernames(String keywords);
     UserProfileResponse getUserProfile(Long orgId, Long userId);
     List<UserNameSuggestionDto> getGroupUsers(List<Long> groupIds, Long orgId, Long loggedInUserId, String role);
+    Location addLocation(LocationDto locationDto, Long orgId);
 }

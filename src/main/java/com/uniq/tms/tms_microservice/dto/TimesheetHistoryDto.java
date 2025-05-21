@@ -1,5 +1,6 @@
 package com.uniq.tms.tms_microservice.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -9,9 +10,11 @@ public class TimesheetHistoryDto {
 
     private Long timesheetHistoryId;
     private Long locationId;
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "HH:mm:ss")
     private LocalTime logTime;
     private LogType logType;
     private LogFrom logFrom;
+    @JsonFormat(shape = JsonFormat.Shape.STRING)
     private LocalDateTime loggedTimestamp;
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private Long userId;

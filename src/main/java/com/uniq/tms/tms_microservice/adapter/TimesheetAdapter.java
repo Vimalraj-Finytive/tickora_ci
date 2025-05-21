@@ -1,6 +1,8 @@
 package com.uniq.tms.tms_microservice.adapter;
 
 import com.uniq.tms.tms_microservice.dto.TimesheetDto;
+import com.uniq.tms.tms_microservice.dto.UserAttendanceDto;
+import com.uniq.tms.tms_microservice.dto.UserDashboard;
 import com.uniq.tms.tms_microservice.entity.TimesheetEntity;
 import com.uniq.tms.tms_microservice.entity.TimesheetHistoryEntity;
 import java.time.LocalDate;
@@ -19,4 +21,6 @@ public interface TimesheetAdapter {
     List<TimesheetEntity> findActiveTimesheetsByDate(LocalDate today);
     void saveAll(List<TimesheetEntity> openClockIns);
     List<TimesheetEntity> getLatestLogsByTimesheetIds(List<Long> memberIds, Long orgId, LocalDate date);
+    List<UserDashboard> findAllByOrgIdExcludingUser(Long orgId, List<Long> userIds, LocalDate fromDate, LocalDate toDate, boolean isSuperAdmin, Long loggedInUserId, Long userId);
+    List<UserAttendanceDto> findAttendanceForUserInRange(List<Long> userId, LocalDate fromDate, LocalDate toDate);
 }

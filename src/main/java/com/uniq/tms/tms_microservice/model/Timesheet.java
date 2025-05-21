@@ -21,6 +21,14 @@ public class Timesheet {
     private String lastClockOutStr;
     private String trackedHoursStr;
     private String regularHoursStr;
+    private Long statusId;
+    private String mobileNumber;
+    private String Status;
+    private int presentCount;
+    private int absentCount;
+    private int notMarkedCount;
+    private int paidLeaveCount;
+    private int holidayCount;
 
     public Duration getTrackedHours() {
         return trackedHours;
@@ -132,5 +140,69 @@ public class Timesheet {
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public Long getStatusId() {
+        return statusId;
+    }
+
+    public void setStatusId(Long statusId) {
+        this.statusId = statusId;
+    }
+
+    public String getMobileNumber() {
+        return mobileNumber;
+    }
+
+    public void setMobileNumber(String mobileNumber) {
+        this.mobileNumber = mobileNumber;
+    }
+
+    public String getStatus() {
+        return Status;
+    }
+
+    public void setStatus(String status) {
+        Status = status;
+    }
+
+    public int getPresentCount() {
+        return presentCount;
+    }
+
+    public void setPresentCount(int presentCount) {
+        this.presentCount = presentCount;
+    }
+
+    public int getAbsentCount() {
+        return absentCount;
+    }
+
+    public void setAbsentCount(int absentCount) {
+        this.absentCount = absentCount;
+    }
+
+    public int getNotMarkedCount() {
+        return notMarkedCount;
+    }
+
+    public void setNotMarkedCount(int notMarkedCount) {
+        this.notMarkedCount = notMarkedCount;
+    }
+
+    public int getPaidLeaveCount() {
+        return paidLeaveCount;
+    }
+
+    public void setPaidLeaveCount(int paidLeaveCount) {
+        this.paidLeaveCount = paidLeaveCount;
+    }
+
+    public int getHolidayCount() {
+        return holidayCount;
+    }
+
+    public void setHolidayCount(int holidayCount) {
+        this.holidayCount = holidayCount;
     }
 }

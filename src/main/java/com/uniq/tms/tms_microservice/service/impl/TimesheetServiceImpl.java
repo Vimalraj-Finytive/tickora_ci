@@ -2,11 +2,22 @@ package com.uniq.tms.tms_microservice.service.impl;
 
 import com.uniq.tms.tms_microservice.adapter.TimesheetAdapter;
 import com.uniq.tms.tms_microservice.adapter.UserAdapter;
-import com.uniq.tms.tms_microservice.dto.*;
+import com.uniq.tms.tms_microservice.adapter.WorkScheduleAapter;
+import com.uniq.tms.tms_microservice.dto.LogFrom;
+import com.uniq.tms.tms_microservice.dto.LogType;
+import com.uniq.tms.tms_microservice.dto.Privilege;
 import com.uniq.tms.tms_microservice.dto.RoleName;
+import com.uniq.tms.tms_microservice.dto.Timeperiod;
+import com.uniq.tms.tms_microservice.dto.TimesheetDto;
+import com.uniq.tms.tms_microservice.dto.TimesheetReportDto;
+import com.uniq.tms.tms_microservice.dto.TimesheetStatusEnum;
+import com.uniq.tms.tms_microservice.dto.UserAttendanceDto;
+import com.uniq.tms.tms_microservice.dto.UserDashboard;
+import com.uniq.tms.tms_microservice.dto.UserDashboardDto;
 import com.uniq.tms.tms_microservice.entity.TimesheetEntity;
 import com.uniq.tms.tms_microservice.entity.TimesheetHistoryEntity;
 import com.uniq.tms.tms_microservice.entity.UserEntity;
+import com.uniq.tms.tms_microservice.entity.WorkScheduleEntity;
 import com.uniq.tms.tms_microservice.mapper.RolePrivilegeMapper;
 import com.uniq.tms.tms_microservice.mapper.TimesheetDtoMapper;
 import com.uniq.tms.tms_microservice.mapper.TimesheetEntityMapper;
@@ -15,14 +26,17 @@ import com.uniq.tms.tms_microservice.model.TimesheetHistory;
 import com.uniq.tms.tms_microservice.service.TimesheetService;
 import org.apache.logging.log4j.LogManager;
 import org.springframework.http.HttpStatus;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -39,14 +53,16 @@ public class TimesheetServiceImpl implements TimesheetService {
     private final UserAdapter userAdapter;
     private final PrivilegeService  privilegeService;
     private final UserEntityMapper userEntityMapper;
+    private final WorkScheduleAapter workScheduleAdapter;
 
-    public TimesheetServiceImpl(TimesheetAdapter timesheetAdapter, TimesheetEntityMapper timesheetEntityMapper, TimesheetDtoMapper timesheetDtoMapper, UserAdapter userAdapter, PrivilegeService privilegeService, UserEntityMapper userEntityMapper) {
+    public TimesheetServiceImpl(TimesheetAdapter timesheetAdapter, TimesheetEntityMapper timesheetEntityMapper, TimesheetDtoMapper timesheetDtoMapper, UserAdapter userAdapter, PrivilegeService privilegeService, UserEntityMapper userEntityMapper, WorkScheduleAapter workScheduleAdapter) {
         this.timesheetAdapter = timesheetAdapter;
         this.timesheetEntityMapper = timesheetEntityMapper;
         this.timesheetDtoMapper = timesheetDtoMapper;
         this.userAdapter = userAdapter;
         this.privilegeService = privilegeService;
         this.userEntityMapper = userEntityMapper;
+        this.workScheduleAdapter = workScheduleAdapter;
     }
 
     public List<TimesheetDto> getAllTimesheets(Long userIdFromToken, Long orgId, String role, TimesheetReportDto request) {
@@ -238,6 +254,7 @@ public class TimesheetServiceImpl implements TimesheetService {
                         newTimesheet.setTrackedHours(LocalTime.of(0, 0));
                         newTimesheet.setTotalBreakHours(LocalTime.of(0, 0));
                         newTimesheet.setRegularHours(LocalTime.of(0, 0));
+                        newTimesheet.setStatusId(TimesheetStatusEnum.PRESENT.getId());
                         return timesheetAdapter.saveTimesheet(newTimesheet);
                     });
 
@@ -269,15 +286,26 @@ public class TimesheetServiceImpl implements TimesheetService {
             timesheet.setUserId(userId);
             timesheet.setDate(date);
             timesheet.setCreatedAt(LocalDateTime.now());
+            timesheet.setFirstClockIn(null);
+            timesheet.setLastClockOut(null);
+            timesheet.setTrackedHours(null);
+            timesheet.setRegularHours(null);
+            timesheet.setTotalBreakHours(null);
         }
 
         if (request.getFirstClockIn() != null) {
             timesheet.setFirstClockIn(request.getFirstClockIn());
+            timesheet.setStatusId(TimesheetStatusEnum.PRESENT.getId());
+
         }
         if (request.getLastClockOut() != null) {
             timesheet.setLastClockOut(request.getLastClockOut());
         }
 
+        if(Boolean.TRUE.equals(request.getPaidLeave()))
+        {
+            timesheet.setStatusId(TimesheetStatusEnum.PAID_LEAVE.getId());
+        }
         calculateHours(timesheet);
 
         timesheet = timesheetAdapter.save(timesheet);
@@ -286,31 +314,204 @@ public class TimesheetServiceImpl implements TimesheetService {
     }
 
     private void calculateHours(TimesheetEntity timesheet) {
-        if (timesheet.getFirstClockIn() != null && timesheet.getLastClockOut() != null) {
-            Duration workedDuration = Duration.between(timesheet.getFirstClockIn(), timesheet.getLastClockOut());
-            timesheet.setRegularHours(LocalTime.ofSecondOfDay(workedDuration.toSeconds()));
-            timesheet.setTrackedHours(LocalTime.ofSecondOfDay(workedDuration.toSeconds()));
+        try {
+            if (timesheet.getFirstClockIn() != null && timesheet.getLastClockOut() != null) {
+                if (!timesheet.getLastClockOut().isBefore(timesheet.getFirstClockIn())) {
+                    Duration workedDuration = Duration.between(timesheet.getFirstClockIn(), timesheet.getLastClockOut());
+                    log.info("Worked duration: {}", workedDuration);
+                    timesheet.setRegularHours(LocalTime.ofSecondOfDay(workedDuration.toSeconds()));
+                    log.info("Regular hours: {}", timesheet.getRegularHours());
+                    timesheet.setTrackedHours(LocalTime.ofSecondOfDay(workedDuration.toSeconds()));
+                    log.info("Tracked hours: {}", timesheet.getTrackedHours());
+                }
+                else {
+                    log.warn("Invalid clock-out time: earlier than clock-in.");
+                }
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
     }
 
     @Override
-    @Scheduled(cron = "0 0 0 * * ?")
-    public void autoClockOutForAllEmployees() {
-        log.info("Scheduled clock triggered at {}", LocalDateTime.now());
+    public void autoClockOut() {
         LocalDate yesterday = LocalDate.now().minusDays(1);
-        List<TimesheetEntity> openClockIns = timesheetAdapter
-                .findActiveTimesheetsByDate(yesterday);
+        List<TimesheetEntity> openClockIns = timesheetAdapter.findActiveTimesheetsByDate(yesterday);
+        List<TimesheetHistoryEntity> historyEntries = new ArrayList<>();
+
         log.info("Timesheets fetched for {}: {}", yesterday, openClockIns.size());
+
         for (TimesheetEntity entry : openClockIns) {
-            if(entry.getFirstClockIn() != null && entry.getLastClockOut() == null) {
-                log.info("setting lastClockOut to 23:59");
+            if (entry.getFirstClockIn() != null && entry.getLastClockOut() == null) {
+                log.info("Auto clock-out for userId={}, setting lastClockOut to 23:59", entry.getUserId());
+
+                // 1. Set lastClockOut
                 entry.setLastClockOut(LocalTime.of(23, 59));
                 calculateHours(entry);
-                log.info("Processing  firstClockIn={}, lastClockOut={}",
-                      entry.getFirstClockIn(), entry.getLastClockOut());
+
+                // 2. Create history entry
+                TimesheetHistoryEntity history = new TimesheetHistoryEntity();
+                history.setLocationId(0L);
+                history.setLogTime(LocalTime.of(23, 59));
+                history.setLogType(LogType.CLOCK_OUT);
+                history.setLogFrom(LogFrom.SYSTEM_GENERATED);
+                history.setLoggedTimestamp(LocalDateTime.now());
+
+                // ✅ Properly reference timesheet
+                TimesheetEntity timesheetRef = new TimesheetEntity();
+                timesheetRef.setId(entry.getId());
+                history.setTimesheet(timesheetRef);
+
+                historyEntries.add(history);
+
+                log.info("Added SYSTEM_GENERATED CLOCK_OUT history for userId={}, date={}", entry.getUserId(), entry.getDate());
             }
         }
-        log.info("Auto clock out for all employees");
+
+        log.info("Saving updated timesheets and history entries...");
         timesheetAdapter.saveAll(openClockIns);
+    }
+
+    @Override
+    public List<UserDashboardDto> getAllUserInfo(Long orgId, Long userIdFromToken, LocalDate fromDate, LocalDate toDate, Long userId) {
+        UserEntity currentUser = userAdapter.getUserById(userIdFromToken);
+        String roleName = currentUser.getRole().getName().toUpperCase();
+
+        boolean canSeeOwn = RolePrivilegeMapper.hasPrivilege(RoleName.valueOf(roleName), Privilege.CAN_SEE_OWN_TIMESHEET);
+        boolean canSeeAll = RolePrivilegeMapper.hasPrivilege(RoleName.valueOf(roleName), Privilege.CAN_SEE_ALL_TIMESHEETS);
+        boolean canSeeGroup = RolePrivilegeMapper.hasPrivilege(RoleName.valueOf(roleName), Privilege.CAN_SEE_GROUP_LEVEL_TIMESHEETS);
+
+        List<UserDashboard> activeUsers;
+        List<Long> userIdsForAttendance;
+
+        if (canSeeOwn && canSeeAll && canSeeGroup) {
+            // Full access (Superadmin or similar)
+            if (userId != null) {
+                timesheetAdapter.findAllByOrgIdExcludingUser(orgId, Collections.emptyList(), fromDate, toDate, true, userIdFromToken, userId);
+                userIdsForAttendance = Collections.singletonList(userId);
+            } else {
+                activeUsers = timesheetAdapter.findAllByOrgIdExcludingUser(orgId, Collections.emptyList(), fromDate, toDate, true, userIdFromToken, userId);
+                userIdsForAttendance = activeUsers.stream()
+                        .map(UserDashboard::getUserId)
+                        .toList();
+            }
+        } else if (canSeeGroup) {
+            if (userId != null) {
+                timesheetAdapter.findAllByOrgIdExcludingUser(orgId, Collections.emptyList(), fromDate, toDate, true, userIdFromToken, userId);
+                userIdsForAttendance = Collections.singletonList(userId);
+            } else {
+                List<Long> supervisedGroupIds = userAdapter.findGroupIdsBySupervisorId(userIdFromToken);
+                if (supervisedGroupIds.isEmpty()) {
+                    throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not supervising any groups.");
+                }
+
+                List<UserEntity> groupMembers = userAdapter.findMembersByGroupIds(supervisedGroupIds, userIdFromToken);
+                List<Long> groupMemberIds = groupMembers.stream()
+                        .map(UserEntity::getUserId)
+                        .toList();
+
+                log.info("Group member IDs: {}", groupMemberIds);
+                if (groupMemberIds.isEmpty()) {
+                    throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No users found in your supervised groups.");
+                }
+
+                timesheetAdapter.findAllByOrgIdExcludingUser(orgId, groupMemberIds, fromDate, toDate, false, userIdFromToken, null);
+                userIdsForAttendance = groupMemberIds;
+            }
+        } else {
+            // Limited access, only own or no privilege to see others
+            timesheetAdapter.findAllByOrgIdExcludingUser(orgId, Collections.emptyList(), fromDate, toDate, false, userIdFromToken, userId);
+            userIdsForAttendance = userId != null ? Collections.singletonList(userId) : Collections.singletonList(userIdFromToken);
+        }
+
+        // Calculate attendance summary for the collected userIds
+        return calculateAttendanceSummaryForUsers(userIdsForAttendance, fromDate, toDate);
+    }
+
+
+    private List<UserDashboardDto> calculateAttendanceSummaryForUsers(List<Long> userIds, LocalDate fromDate, LocalDate toDate) {
+        if (userIds == null || userIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        // Fetch attendance for all users in the list
+        List<UserAttendanceDto> attendanceList = timesheetAdapter.findAttendanceForUserInRange(userIds, fromDate, toDate);
+
+        // Build a map of userId|date to statusId
+        Map<String, Long> attendanceMap = new HashMap<>();
+        for (UserAttendanceDto dto : attendanceList) {
+            String key = dto.getUserId() + "|" + dto.getDate();
+            attendanceMap.put(key, dto.getStatusId());
+        }
+
+        WorkScheduleEntity defaultWs = workScheduleAdapter.findDefaultActiveSchedule();
+        DayOfWeek restDay = DayOfWeek.valueOf(defaultWs.getRestDay().toUpperCase());
+
+        int present = 0, absent = 0, paidLeave = 0, notMarked = 0, holiday = 0;
+        int total = 0;
+
+        for (LocalDate date = fromDate; !date.isAfter(toDate); date = date.plusDays(1)) {
+            DayOfWeek day = date.getDayOfWeek();
+            boolean isRestDay = day.equals(restDay);
+            boolean isToday = date.equals(LocalDate.now());
+
+            for (Long userId : userIds) {
+                total++;
+                String key = userId + "|" + date;
+
+                if (isRestDay) {
+                    Long statusId = attendanceMap.get(key);
+                    if (statusId != null && statusId == 1L) {
+                        present++; // person worked on rest day
+                        // Don't count this as holiday
+                    } else {
+                        holiday++; // true holiday (rest day, not worked)
+                    }
+                    continue; // skip further checks for rest days
+                }
+
+                Long statusId = attendanceMap.get(key);
+                if (statusId == null) {
+                    if (isToday) {
+                        notMarked++;
+                    } else {
+                        absent++;
+                    }
+                } else {
+                    switch (statusId.intValue()) {
+                        case 1 -> present++;
+                        case 2 -> absent++;
+                        case 3 -> paidLeave++;
+                        case 4 -> notMarked++;
+                    }
+                }
+            }
+        }
+
+        UserDashboardDto summary = new UserDashboardDto();
+        summary.setPresentCount(present);
+        summary.setAbsentCount(absent);
+        summary.setPaidLeaveCount(paidLeave);
+        summary.setNotMarkedCount(notMarked);
+        summary.setHolidayCount(holiday);
+        summary.setTotalCount(total);
+
+        int totalDays = (int) ChronoUnit.DAYS.between(fromDate, toDate) + 1;
+        log.info("totalDays: {}", totalDays);
+        double totalCount = totalDays * userIds.size();
+        log.info("totalCount: {}", totalCount);
+        double totalCountPercentage = totalCount > 0 ? totalCount : 1.0;
+        log.info("totalCountPercentage: {}", totalCountPercentage);
+
+        summary.setPresentPercentage(roundTo2Decimals(present / totalCountPercentage) * 100.0 );
+        summary.setAbsentPercentage(roundTo2Decimals(absent / totalCountPercentage) * 100.0);
+        summary.setPaidLeavePercentage(roundTo2Decimals(paidLeave / totalCountPercentage) * 100.0);
+        summary.setNotMarkedPercentage(roundTo2Decimals(notMarked / totalCountPercentage) * 100.0);
+        summary.setHolidayPercentage(roundTo2Decimals(holiday / totalCountPercentage) * 100.0);
+        return Collections.singletonList(summary);
+    }
+
+    double roundTo2Decimals(double val) {
+        return Math.round(val * 100.0) / 100.0;
     }
 }

@@ -1,5 +1,7 @@
 package com.uniq.tms.tms_microservice.repository;
 
+import com.uniq.tms.tms_microservice.dto.UserAttendanceDto;
+import com.uniq.tms.tms_microservice.dto.UserDashboard;
 import com.uniq.tms.tms_microservice.entity.TimesheetEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -18,12 +20,21 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
     WITH SelectedUsers AS (
         SELECT * FROM users WHERE active = TRUE AND (:userIds IS NULL OR user_id = ANY(:userIds))
     ),
+    UserGroups AS (
+    SELECT
+    ug.user_id,
+    STRING_AGG(g.group_name, ', ') AS group_name
+    FROM user_group ug
+    JOIN group_table g ON ug.group_id = g.group_id
+    GROUP BY ug.user_id
+    ),
     UserDateMatrix AS (
         SELECT
             gs.work_date,
             u.user_id,
             u.user_name,
-            u.role_id
+            u.role_id,
+            u.mobile_number
         FROM SelectedUsers u
         CROSS JOIN LATERAL (
             SELECT generate_series(
@@ -38,11 +49,14 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
         udm.user_id,
         udm.user_name,
         r.name AS role,
+        udm.mobile_number,
+        ug.group_name,
         t.id AS timesheet_id,
         t.first_clock_in::TIME AS first_clock_in,
         t.last_clock_out::TIME AS last_clock_out,
         COALESCE(CAST(t.tracked_hours AS TEXT), '00:00:00') AS tracked_hours,
         COALESCE(CAST(t.regular_hours AS TEXT), '00:00:00') AS regular_hours,
+        t.status_id,
    
         CASE
             WHEN trim(to_char(udm.work_date, 'Day')) ILIKE trim(ws.rest_day) THEN 'Holiday'
@@ -67,8 +81,16 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
                     ELSE 'Holiday'
                 END
             WHEN t.date IS NULL THEN 'Time Off'
+            WHEN t.first_clock_in IS NOT NULL AND t.last_clock_out IS NULL THEN 'Present'
             WHEN t.first_clock_in IS NOT NULL AND t.last_clock_out IS NOT NULL THEN
                 CASE
+                    WHEN EXISTS (
+                    SELECT 1
+                    FROM timesheet_history th2
+                    WHERE th2.timesheet_id = t.id
+                    AND th2.log_type = 'CLOCK_OUT'
+                    AND th2.log_from = 'SYSTEM_GENERATED'
+                    ) THEN 'Failed Clock Out'
                     WHEN (EXTRACT(EPOCH FROM (t.last_clock_out - t.first_clock_in)) / 3600.0) >=
                          (EXTRACT(EPOCH FROM (ws.end_time - ws.start_time)) / 3600.0)
                     THEN 'Sufficient Hours'
@@ -87,6 +109,7 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
     LEFT JOIN role r ON udm.role_id = r.role_id
     LEFT JOIN work_schedule ws ON ws.is_active = TRUE
     LEFT JOIN timesheet_history th ON t.id = th.timesheet_id
+    LEFT JOIN UserGroups ug ON udm.user_id = ug.user_id
     ORDER BY udm.user_id, udm.work_date, th.logged_timestamp
     """, nativeQuery = true)
     List<Object[]> fetchTimesheetsWithHistory(@Param("startDate") LocalDate startDate,
@@ -94,4 +117,38 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
                                               @Param("userIds") Long[] userIds);
 
     List<TimesheetEntity> findActiveTimesheetsByDate(LocalDate today);
+
+    @Query(value = """
+    SELECT 
+        u.user_id AS userId,
+        d.log_date AS logDate,
+        t.status_id AS statusId
+    FROM (
+        SELECT generate_series(:fromDate, :toDate, interval '1 day'):: date AS log_date
+        ) d
+        CROSS JOIN users u
+    LEFT JOIN timesheet t ON u.user_id = t.user_id AND t.date = d.log_date
+    WHERE u.active = true
+      AND (
+          (:isSuperAdmin = true AND :userId IS NULL AND u.user_id != :loggedInUserId)            
+          OR (:isSuperAdmin = true AND :userId IS NOT NULL AND u.user_id = :userId)              
+          OR (:isSuperAdmin = false AND :userId IS NOT NULL AND u.user_id = :userId)              
+          OR (:isSuperAdmin = false AND :userId IS NULL AND u.user_id IN (:userIds))             
+      )
+    """, nativeQuery = true)
+    List<UserDashboard> getDashboardForSuperAdmin(
+            @Param("userIds") List<Long> userIds,
+            @Param("fromDate") LocalDate fromDate,
+            @Param("toDate") LocalDate toDate,
+            @Param("loggedInUserId") Long loggedInUserId,
+            @Param("isSuperAdmin") boolean isSuperAdmin,
+            @Param("userId") Long userId
+    );
+
+    @Query("SELECT new com.uniq.tms.tms_microservice.dto.UserAttendanceDto(t.userId, t.date, t.statusId) " +
+            "FROM TimesheetEntity t WHERE t.userId IN :userIds AND t.date BETWEEN :from AND :to")
+    List<UserAttendanceDto> findAttendanceForUsersInRange(@Param("userIds") List<Long> userIds,
+                                                          @Param("from") LocalDate from,
+                                                          @Param("to") LocalDate to);
+
 }

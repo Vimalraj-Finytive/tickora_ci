@@ -1,5 +1,6 @@
 package com.uniq.tms.tms_microservice.mapper;
 
+import com.uniq.tms.tms_microservice.dto.LocationDto;
 import com.uniq.tms.tms_microservice.entity.*;
 import com.uniq.tms.tms_microservice.model.*;
 import org.mapstruct.Mapper;
@@ -13,6 +14,7 @@ public interface UserEntityMapper {
     Role toMiddleware(RoleEntity entity);
 
     @Mapping(target = "orgId", source = "organizationEntity.organizationId")
+    @Mapping(target = "locationId", source = "locationId")
     Location toMiddleware(LocationEntity entity);
 
     @Mapping(target = "roleId", source = "role.roleId")
@@ -61,4 +63,6 @@ public interface UserEntityMapper {
     UserGroupEntity toEntity(UserGroup userGroup);
 
     UserEntity toMiddleware(User user);
+
+    Location toMiddleware(LocationDto locationDto);
 }

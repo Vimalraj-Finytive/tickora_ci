@@ -1,10 +1,13 @@
 package com.uniq.tms.tms_microservice.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import java.time.LocalTime;
 
 public class WorkScheduleDto {
     private String scheduleName;
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "HH:mm")
     private LocalTime startTime;
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "HH:mm")
     private LocalTime endTime;
     private String restDay;
     private boolean isDefault;

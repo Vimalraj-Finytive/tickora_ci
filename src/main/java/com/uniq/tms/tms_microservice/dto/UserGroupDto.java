@@ -1,5 +1,6 @@
 package com.uniq.tms.tms_microservice.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -9,6 +10,7 @@ public class UserGroupDto {
     private String role;
     private String type;
     private String email;
+    @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate dateOfJoining;
     private boolean active;
     private List<String> location;

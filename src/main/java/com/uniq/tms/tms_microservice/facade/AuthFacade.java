@@ -188,6 +188,9 @@ public class AuthFacade {
             if (orgId == null) {
                 return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
             }
+            if(userId == null){
+                userId = jwtUtil.extractUserIdFromToken(jwt);
+            }
             UserProfileResponse response = userService.getUserProfile(orgId,userId);
             return new ApiResponse(HttpStatus.OK.value(), "User Profile fetched successfully",response);
         }
@@ -554,4 +557,37 @@ public class AuthFacade {
                 .toList();
         return new ApiResponse(200, "Work Schedule fetched successfully", workScheduleDtos);
     }
+
+    public ApiResponse addLocation(String token, LocationDto locationDto) {
+        if (!token.startsWith("Bearer ")) {
+            return new ApiResponse(400, "Invalid token format", null);
+        }
+        String jwt = token.substring(7);
+        Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
+        if (orgId == null) {
+            return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
+        }
+        Location location = userService.addLocation(locationDto, orgId);
+        return new ApiResponse(200, "Location added successfully", location);
+    }
+
+    // Facade Layer
+    public List<UserDashboardDto> getAllUserInfo(String token, DashboardDto request) {
+        LocalDate fromDate = request.getFromDate();
+        LocalDate toDate = request.getToDate();
+        Long userId = request.getUserId();
+        if (!token.startsWith("Bearer ")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid token format");
+        }
+        String jwt = token.substring(7);
+        Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
+        Long userIdFromToken = jwtUtil.extractUserIdFromToken(jwt);
+
+        if (orgId == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized - Invalid Organization");
+        }
+
+        return timesheetService.getAllUserInfo(orgId, userIdFromToken, fromDate, toDate, userId);
+    }
+
 }

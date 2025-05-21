@@ -17,4 +17,5 @@ public interface TimesheetEntityMapper {
     TimesheetHistoryEntity toEntity(TimesheetHistoryDto timesheetHistory);
 
     TimesheetHistoryDto toDto(TimesheetHistory timesheetHistory);
+
 }

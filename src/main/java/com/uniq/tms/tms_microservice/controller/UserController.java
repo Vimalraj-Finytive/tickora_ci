@@ -141,7 +141,7 @@ public class UserController {
     }
 
     @GetMapping("/profile")
-    public ResponseEntity<ApiResponse> getUser(@RequestHeader("Authorization") String token, @RequestParam Long userId){
+    public ResponseEntity<ApiResponse> getUser(@RequestHeader("Authorization") String token, @RequestParam(required = false) Long userId){
         ApiResponse response = authFacade.getUserProfile(token, userId);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
@@ -237,5 +237,11 @@ public class UserController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ApiResponse(403,"Error: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
         }
+    }
+
+    @PostMapping("/addLocation")
+    public ResponseEntity<ApiResponse> addLocation(@RequestHeader("Authorization") String token, @RequestBody LocationDto locationDto) {
+        ApiResponse response = authFacade.addLocation(token, locationDto);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 }

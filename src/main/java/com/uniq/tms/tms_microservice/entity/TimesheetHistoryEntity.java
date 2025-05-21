@@ -29,7 +29,7 @@ public class TimesheetHistoryEntity {
     private TimesheetEntity timesheet;
 
     @Column(nullable = false)
-    private String locationId;
+    private Long locationId;
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "HH:mm")
     private LocalTime logTime;
     @Enumerated(EnumType.STRING)
@@ -54,11 +54,11 @@ public class TimesheetHistoryEntity {
         this.timesheet = timesheet;
     }
 
-    public String getLocationId() {
+    public Long getLocationId() {
         return locationId;
     }
 
-    public void setLocationId(String locationId) {
+    public void setLocationId(Long locationId) {
         this.locationId = locationId;
     }
 

@@ -8,6 +8,8 @@ import com.uniq.tms.tms_microservice.entity.RoleEntity;
 import com.uniq.tms.tms_microservice.entity.UserEntity;
 import com.uniq.tms.tms_microservice.entity.UserGroupEntity;
 import com.uniq.tms.tms_microservice.entity.WorkScheduleEntity;
+import com.uniq.tms.tms_microservice.mapper.LocationEntityMapper;
+import com.uniq.tms.tms_microservice.model.Location;
 import com.uniq.tms.tms_microservice.model.UserResponse;
 import com.uniq.tms.tms_microservice.dto.UserNameSuggestionDto;
 import com.uniq.tms.tms_microservice.entity.*;
@@ -28,8 +30,9 @@ public class UserAdapterImpl implements UserAdapter {
     private final UserGroupRepository userGroupRepository;
     private final WorkScheduleRepository workScheduleRepository;
     private final SecondaryDetailsRepository secondaryDetailsRepository;
+    private final LocationEntityMapper locationEntityMapper;
 
-    public UserAdapterImpl(RoleRepository roleRepository, TeamRepository teamRepository, LocationRepository locationRepository, UserRepository userRepository, UserGroupRepository userGroupRepository, WorkScheduleRepository workScheduleRepository, SecondaryDetailsRepository secondaryDetailsRepository) {
+    public UserAdapterImpl(RoleRepository roleRepository, TeamRepository teamRepository, LocationRepository locationRepository, UserRepository userRepository, UserGroupRepository userGroupRepository, WorkScheduleRepository workScheduleRepository, SecondaryDetailsRepository secondaryDetailsRepository, LocationEntityMapper locationEntityMapper) {
         this.roleRepository = roleRepository;
         this.teamRepository = teamRepository;
         this.locationRepository = locationRepository;
@@ -37,6 +40,7 @@ public class UserAdapterImpl implements UserAdapter {
         this.userGroupRepository = userGroupRepository;
         this.workScheduleRepository = workScheduleRepository;
         this.secondaryDetailsRepository = secondaryDetailsRepository;
+        this.locationEntityMapper = locationEntityMapper;
     }
 
     @Override
@@ -404,4 +408,14 @@ public class UserAdapterImpl implements UserAdapter {
     public UserEntity findUserByOrgIdAndUserId(Long orgId, Long userId) {
         return userRepository.findByOrganizationIdAndUserId(orgId, userId);
     }
+    public LocationEntity addLocation(Location location) {
+        LocationEntity locationEntity = locationEntityMapper.toEntity(location);
+        return locationRepository.save(locationEntity);
+    }
+
+    @Override
+    public Optional<UserEntity> getUserDashboard(Long userId) {
+        return userRepository.findByUserId(userId);
+    }
+
 }

@@ -1,5 +1,6 @@
 package com.uniq.tms.tms_microservice.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.uniq.tms.tms_microservice.constant.UserConstant;
@@ -14,6 +15,7 @@ import java.util.List;
 public class TimesheetDto {
     private Long id;
     private Long userId;
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     private LocalDate date;
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private LocalTime firstClockIn;
@@ -41,7 +43,16 @@ public class TimesheetDto {
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private String regularHoursDuration;
     private List<TimesheetHistoryDto> history;
-
+    private Long statusId;
+    private String groupname;
+    private Boolean paidLeave;
+    private String mobileNumber;
+    private String Status;
+    private int presentCount;
+    private int absentCount;
+    private int notMarkedCount;
+    private int paidLeaveCount;
+    private int holidayCount;
     public TimesheetDto(TimesheetEntity timesheetEntity, List<TimesheetHistoryDto> historyDtos) {
         this.id = timesheetEntity.getId();
         this.userId = timesheetEntity.getUserId();
@@ -239,5 +250,85 @@ public class TimesheetDto {
 
     public void setHistory(List<TimesheetHistoryDto> history) {
         this.history = history;
+    }
+
+    public Long getStatusId() {
+        return statusId;
+    }
+
+    public void setStatusId(Long statusId) {
+        this.statusId = statusId;
+    }
+
+    public String getGroupname() {
+        return groupname;
+    }
+
+    public void setGroupname(String groupname) {
+        this.groupname = groupname;
+    }
+
+    public Boolean getPaidLeave() {
+        return paidLeave;
+    }
+
+    public void setPaidLeave(Boolean paidLeave) {
+        this.paidLeave = paidLeave;
+    }
+
+    public String getMobileNumber() {
+        return mobileNumber;
+    }
+
+    public void setMobileNumber(String mobileNumber) {
+        this.mobileNumber = mobileNumber;
+    }
+
+    public String getStatus() {
+        return Status;
+    }
+
+    public void setStatus(String status) {
+        Status = status;
+    }
+
+    public int getPresentCount() {
+        return presentCount;
+    }
+
+    public void setPresentCount(int presentCount) {
+        this.presentCount = presentCount;
+    }
+
+    public int getAbsentCount() {
+        return absentCount;
+    }
+
+    public void setAbsentCount(int absentCount) {
+        this.absentCount = absentCount;
+    }
+
+    public int getNotMarkedCount() {
+        return notMarkedCount;
+    }
+
+    public void setNotMarkedCount(int notMarkedCount) {
+        this.notMarkedCount = notMarkedCount;
+    }
+
+    public int getPaidLeaveCount() {
+        return paidLeaveCount;
+    }
+
+    public void setPaidLeaveCount(int paidLeaveCount) {
+        this.paidLeaveCount = paidLeaveCount;
+    }
+
+    public int getHolidayCount() {
+        return holidayCount;
+    }
+
+    public void setHolidayCount(int holidayCount) {
+        this.holidayCount = holidayCount;
     }
 }

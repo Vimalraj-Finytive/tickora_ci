@@ -19,6 +19,8 @@ import com.uniq.tms.tms_microservice.entity.TimesheetEntity;
 import com.uniq.tms.tms_microservice.entity.UserEntity;
 import com.uniq.tms.tms_microservice.entity.UserGroupEntity;
 import com.uniq.tms.tms_microservice.entity.WorkScheduleEntity;
+import com.uniq.tms.tms_microservice.event.LocationCacheReloadEvent;
+import com.uniq.tms.tms_microservice.mapper.LocationEntityMapper;
 import com.uniq.tms.tms_microservice.mapper.RolePrivilegeMapper;
 import com.uniq.tms.tms_microservice.mapper.UserDtoMapper;
 import com.uniq.tms.tms_microservice.mapper.UserEntityMapper;
@@ -30,6 +32,7 @@ import com.uniq.tms.tms_microservice.model.Role;
 import com.uniq.tms.tms_microservice.repository.LocationRepository;
 import com.uniq.tms.tms_microservice.repository.OrganizationRepository;
 import com.uniq.tms.tms_microservice.repository.RoleRepository;
+import com.uniq.tms.tms_microservice.service.CacheLoaderService;
 import com.uniq.tms.tms_microservice.service.UserService;
 import com.uniq.tms.tms_microservice.util.EmailUtil;
 import com.uniq.tms.tms_microservice.util.PasswordUtil;
@@ -40,7 +43,9 @@ import org.apache.commons.io.FilenameUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -79,8 +84,12 @@ public class UserServiceImpl implements UserService {
     private final SecondaryDetailsMapper secondaryDetailsMapper;
     private final Long STUDENT_ROLE_ID = 5l;
     private final WorkScheduleAapter workScheduleAdapter;
+    private final RedisTemplate<String, Object> redisTemplate;
+    private final LocationEntityMapper locationEntityMapper;
+    private final CacheLoaderService cacheLoaderService;
+    private final ApplicationEventPublisher publisher;
 
-    public UserServiceImpl(Validator validator, UserAdapter userAdapter, TimesheetAdapter timesheetAdapter, UserEntityMapper userEntityMapper, OrganizationRepository organizationRepository, RoleRepository roleRepository, LocationRepository locationRepository, EmailUtil emailUtil, UserDtoMapper userDtoMapper, ObjectMapper objectMapper, SecondaryDetailsMapper secondaryDetailsMapper, WorkScheduleAapter workScheduleAdapter) {
+    public UserServiceImpl(Validator validator, UserAdapter userAdapter, TimesheetAdapter timesheetAdapter, UserEntityMapper userEntityMapper, OrganizationRepository organizationRepository, RoleRepository roleRepository, LocationRepository locationRepository, EmailUtil emailUtil, UserDtoMapper userDtoMapper, ObjectMapper objectMapper, SecondaryDetailsMapper secondaryDetailsMapper, RedisTemplate<String, Object> redisTemplate, LocationEntityMapper locationEntityMapper, CacheLoaderService cacheLoaderService, ApplicationEventPublisher publisher, WorkScheduleAapter workScheduleAdapter) {
         this.validator = validator;
         this.userAdapter = userAdapter;
         this.timesheetAdapter = timesheetAdapter;
@@ -93,9 +102,16 @@ public class UserServiceImpl implements UserService {
         this.objectMapper = objectMapper;
         this.secondaryDetailsMapper = secondaryDetailsMapper;
         this.workScheduleAdapter = workScheduleAdapter;
+        this.redisTemplate = redisTemplate;
+        this.locationEntityMapper = locationEntityMapper;
+        this.cacheLoaderService = cacheLoaderService;
+        this.publisher = publisher;
     }
 
     private static final  Logger log = LoggerFactory.getLogger(UserServiceImpl.class);
+
+    @Value("${CACHE_LOCATION}")
+    private String location;
 
     @Override
     public List<Role> getAllRole(Long orgId, String role) {
@@ -119,8 +135,26 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public List<Location> getAllLocation(Long orgId) {
-        List<Location> location = userAdapter.getAllLocation(orgId).stream().map(userEntityMapper::toMiddleware).toList();
-        return location;
+        CachedData<Location> cachedData = (CachedData<Location>) redisTemplate.opsForValue().get(location);
+
+        try {
+            if (cachedData == null || cachedData.getData() == null) {
+                log.info("Cache missing for key: locations, DB Called");
+                // Load and cache if missing
+                cacheLoaderService.loadLocationTable();
+                return List.of();
+            }
+
+            log.info("Cache hit for key: locations Cache called");
+            return cachedData.getData().stream()
+                    .filter(location -> location.getOrgId() != null && location.getOrgId().equals(orgId))
+                    .toList();
+
+        } catch (Exception e) {
+            log.error("Error loading data from cache: {}", e.getMessage(), e);
+            return List.of();
+        }
+
     }
 
     @Override
@@ -434,34 +468,13 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public ApiResponse createUser(UserDto userDto, Long organizationId) {
+        log.info("Evicting cache for orgId: {}", organizationId);
         User usermiddleware = userDtoMapper.toMiddleware(userDto);
-//        String mobileNumber = usermiddleware.getMobileNumber();
-//        System.out.println("Mobile number: " + mobileNumber);
-//        String mobilePrefix = mobileNumber.substring(mobileNumber.length() - 3);
-//        System.out.println("mobileNumber" + mobilePrefix);
-//        OrganizationEntity organization = organizationRepository.findById(usermiddleware.getOrganizationId())
-//                .orElseThrow(() -> new RuntimeException("Organization not found with ID: " + usermiddleware.getOrganizationId()));
-//        System.out.println("organization: " + organization);
-//
-//        String orgPrefix = organization.getOrgName().substring(0, 3).toUpperCase();
-//        System.out.println("orgPrefix:" + orgPrefix);
-
         UserEntity entity = userEntityMapper.toEntity(usermiddleware);
         entity.setOrganizationId(organizationId);
-//        String prefix = orgPrefix + mobilePrefix;
-//        List<String> existingIds = userRepository.findLatestUserId(prefix, PageRequest.of(0, 1));
-//        int nextIdNumber = 1;
-//        if(!existingIds.isEmpty()) {
-//            String lastId = existingIds.get(0);
-//            String idNumber = lastId.substring(prefix.length());
-//            nextIdNumber = Integer.parseInt(idNumber) + 1;
-//        }
-//
-//        String newUserId = prefix + String.format("%03d", nextIdNumber);
-//        entity.setUserId(Long.valueOf(newUserId));
+
         if (usermiddleware.getRoleId() == null) {
             throw new IllegalArgumentException("roleId must not be null");
-
         }
 
         RoleEntity role = roleRepository.findById(usermiddleware.getRoleId())
@@ -550,7 +563,6 @@ public class UserServiceImpl implements UserService {
         return userEntityMapper.toMiddleware(userAdapter.updateUser(existingUser));
     }
 
-
     private void setField(UserEntity user, String key, Object value) {
         try {
             Field field = UserEntity.class.getDeclaredField(key);
@@ -582,51 +594,43 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public List<UserResponseDto> getUsers(Long orgId, String role) {
+        return fetchFreshUsers(orgId, role);
+    }
 
-        // Determine the user hierarchy level based on role
+    private List<UserResponseDto> fetchFreshUsers(Long orgId, String role) {
         int hierarchyLevel = UserRole.getLevel(role);
 
-        // Fetch all matching users from the user adapter
         List<UserResponse> users = userAdapter.findByOrganizationId(orgId, hierarchyLevel);
-        List<UserResponseDto> usersDto = new ArrayList<>();
-            for(UserResponse user : users){
-                usersDto.add(userDtoMapper.toDto(user));
-            }
         if (users.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, ("No Users found"));
         }
 
-        // Merge users by ID and add secondary details to each user
+        List<UserResponseDto> usersDto = users.stream()
+                .map(userDtoMapper::toDto)
+                .toList();
+
         Map<Long, UserResponseDto> userMap = new LinkedHashMap<>();
         for (UserResponseDto user : usersDto) {
             userMap.compute(user.getUserId(), (id, existing) -> {
                 if (existing == null) {
-                    // Fetch secondary details for each user individually
                     SecondaryDetailsEntity secondaryDetails = userAdapter.findSecondaryUserById(user.getUserId()).orElse(null);
-
-                    // Convert to DTO
                     SecondaryDetailsDto secDto = secondaryDetailsMapper.toMiddleware(secondaryDetails);
-
-                    // Set the secondary details
                     user.setSecondaryDetails(secDto);
-
                     return user;
                 } else {
-                    // Merge group names if user belongs to multiple groups
                     String mergedGroups = existing.getGroupName();
                     if (!mergedGroups.contains(user.getGroupName())) {
                         mergedGroups += ", " + user.getGroupName();
+                        existing.setGroupName(mergedGroups);
                     }
-                    existing.setGroupName(mergedGroups);
-
                     return existing;
                 }
             });
         }
 
-        // Return the merged list of users with secondary details
         return new ArrayList<>(userMap.values());
     }
+
 
     @Override
     public User deleteUser(Long orgId, Long userId) {
@@ -1147,4 +1151,20 @@ public class UserServiceImpl implements UserService {
                 .collect(Collectors.toList());
     }
 
+    @Override
+    public Location addLocation(LocationDto locationDto, Long orgId) {
+        // Convert DTO to Entity
+        Location locationModel = locationEntityMapper.toModel(locationDto);
+        locationModel.setOrgId(orgId);
+
+        // Save to DB — triggers @PostPersist in listener
+        LocationEntity savedEntity = userAdapter.addLocation(locationModel);
+
+        //  No manual Redis cache update here
+
+        log.info("Publishing LocationCacheReloadEvent");
+        publisher.publishEvent(new LocationCacheReloadEvent());
+        log.info("LocationCacheReloadEvent published");
+        return locationEntityMapper.toDto(savedEntity);
+    }
 }

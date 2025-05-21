@@ -6,7 +6,7 @@ import com.uniq.tms.tms_microservice.entity.LocationEntity;
 import com.uniq.tms.tms_microservice.entity.RoleEntity;
 import com.uniq.tms.tms_microservice.entity.UserEntity;
 import com.uniq.tms.tms_microservice.entity.UserGroupEntity;
-import com.uniq.tms.tms_microservice.entity.WorkScheduleEntity;
+import com.uniq.tms.tms_microservice.model.Location;
 import com.uniq.tms.tms_microservice.model.UserResponse;
 import com.uniq.tms.tms_microservice.dto.UserNameSuggestionDto;
 import com.uniq.tms.tms_microservice.entity.*;
@@ -84,5 +84,7 @@ public interface UserAdapter {
     Set<String> getAllSecondaryEmail();
     Set<String> getAllSecondaryMobile();
     UserEntity findUserByOrgIdAndUserId(Long orgId, Long userId);
+    LocationEntity addLocation(Location location);
+    Optional<UserEntity> getUserDashboard(Long userId);
 }
 

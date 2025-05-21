@@ -1,7 +1,7 @@
 package com.uniq.tms.tms_microservice.model;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.uniq.tms.tms_microservice.dto.SecondaryDetailsDto;
-
 import java.time.LocalDate;
 
 public class UserResponse {
@@ -13,6 +13,7 @@ public class UserResponse {
     private String groupName;
     private String roleName;
     private String locationName;
+    @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate dateOfJoining;
     private SecondaryDetailsDto secondaryDetails;
 
