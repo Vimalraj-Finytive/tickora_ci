@@ -28,6 +28,9 @@ import org.apache.logging.log4j.LogManager;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+
+import java.math.RoundingMode;
+import java.text.DecimalFormat;
 import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.LocalDate;
@@ -503,15 +506,17 @@ public class TimesheetServiceImpl implements TimesheetService {
         double totalCountPercentage = totalCount > 0 ? totalCount : 1.0;
         log.info("totalCountPercentage: {}", totalCountPercentage);
 
-        summary.setPresentPercentage(roundTo2Decimals(present / totalCountPercentage) * 100.0 );
-        summary.setAbsentPercentage(roundTo2Decimals(absent / totalCountPercentage) * 100.0);
-        summary.setPaidLeavePercentage(roundTo2Decimals(paidLeave / totalCountPercentage) * 100.0);
-        summary.setNotMarkedPercentage(roundTo2Decimals(notMarked / totalCountPercentage) * 100.0);
-        summary.setHolidayPercentage(roundTo2Decimals(holiday / totalCountPercentage) * 100.0);
+        summary.setPresentPercentage(Double.parseDouble(formatToDecimal(present / totalCountPercentage * 100.0)));
+        summary.setAbsentPercentage(Double.parseDouble(formatToDecimal(absent / totalCountPercentage * 100.0)));
+        summary.setPaidLeavePercentage(Double.parseDouble(formatToDecimal(paidLeave / totalCountPercentage * 100.0)));
+        summary.setNotMarkedPercentage(Double.parseDouble(formatToDecimal(notMarked / totalCountPercentage * 100.0)));
+        summary.setHolidayPercentage(Double.parseDouble(formatToDecimal(holiday / totalCountPercentage * 100.0)));
         return Collections.singletonList(summary);
     }
 
-    double roundTo2Decimals(double val) {
-        return Math.round(val * 100.0) / 100.0;
+    private String formatToDecimal(double value) {
+        DecimalFormat df = new DecimalFormat("0.0");
+        df.setRoundingMode(RoundingMode.HALF_UP);
+        return df.format(value);
     }
 }
