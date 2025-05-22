@@ -25,7 +25,7 @@ import java.net.URISyntaxException;
 @Component
 public class RedisConfig {
 
-    @Value("${REDIS_URL}")
+    @Value("${REDISCLOUD_URL}")
     private String redisUrl;
 
     @Bean
