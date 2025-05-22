@@ -36,9 +36,13 @@ public class RedisConfig {
             String host = uri.getHost();
             int port = uri.getPort();
 
+            String userInfo = uri.getUserInfo();
+            String password = userInfo.split(":", 2)[1];
+
             RedisStandaloneConfiguration config = new RedisStandaloneConfiguration();
             config.setHostName(host);
             config.setPort(port);
+            config.setPassword(password);
 
             return new JedisConnectionFactory(config);
         } catch (URISyntaxException e) {
