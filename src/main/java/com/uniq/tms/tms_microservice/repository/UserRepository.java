@@ -93,4 +93,7 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
     List<String> findAllEmails();
 
     UserEntity findByOrganizationIdAndUserId(Long orgId, Long userId);
+
+    @Query("SELECT u FROM UserEntity u WHERE u.organizationId = :orgId AND u.active = true AND u.userId != :userId")
+    List<UserEntity> findAllUsersList(@Param("orgId") Long orgId, @Param("userId") Long userIdFromToken);
 }

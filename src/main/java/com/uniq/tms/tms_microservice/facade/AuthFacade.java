@@ -12,6 +12,7 @@ import com.uniq.tms.tms_microservice.mapper.UserEntityMapper;
 import com.uniq.tms.tms_microservice.mapper.WorkScheduleDtoMapper;
 import com.uniq.tms.tms_microservice.model.*;
 import com.uniq.tms.tms_microservice.service.AuthService;
+import com.uniq.tms.tms_microservice.service.ReportService;
 import com.uniq.tms.tms_microservice.service.TimesheetService;
 import com.uniq.tms.tms_microservice.service.UserService;
 import com.uniq.tms.tms_microservice.service.WorkScheduleService;
@@ -28,7 +29,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -48,8 +54,9 @@ public class AuthFacade {
     private final Validator validator;
     private final WorkScheduleService workScheduleService;
     private final WorkScheduleDtoMapper workScheduleDtoMapper;
+    private final ReportService reportService;
 
-    public AuthFacade(UserAdapter userAdapter, AuthService authService, UserService userService, UserDtoMapper userDtoMapper, TimesheetService timesheetService, TimesheetDtoMapper timesheetDtoMapper, JwtUtil jwtUtil, SecondaryDetailsMapper secondaryDetailsMapper, UserEntityMapper userEntityMapper, Validator validator, WorkScheduleService workScheduleService, WorkScheduleDtoMapper workScheduleDtoMapper) {
+    public AuthFacade(UserAdapter userAdapter, AuthService authService, UserService userService, UserDtoMapper userDtoMapper, TimesheetService timesheetService, TimesheetDtoMapper timesheetDtoMapper, JwtUtil jwtUtil, SecondaryDetailsMapper secondaryDetailsMapper, UserEntityMapper userEntityMapper, Validator validator, WorkScheduleService workScheduleService, WorkScheduleDtoMapper workScheduleDtoMapper, ReportService reportService) {
 
         this.userAdapter = userAdapter;
         this.authService = authService;
@@ -63,55 +70,56 @@ public class AuthFacade {
         this.validator = validator;
         this.workScheduleService = workScheduleService;
         this.workScheduleDtoMapper = workScheduleDtoMapper;
+        this.reportService = reportService;
     }
 
     private final Logger log = LoggerFactory.getLogger(AuthFacade.class);
 
-        public ResponseEntity<ApiResponse> handleLoginByEmail (String email, String password, HttpServletResponse
-        response, HttpServletRequest request){
-            return authService.authenticateUserByEmail(email, password, response, request);
-        }
+    public ResponseEntity<ApiResponse> handleLoginByEmail(String email, String password, HttpServletResponse
+            response, HttpServletRequest request) {
+        return authService.authenticateUserByEmail(email, password, response, request);
+    }
 
-        public ResponseEntity<ApiResponse> handleLogout (HttpServletRequest request, HttpServletResponse response){
-            return authService.logoutUser(request, response);
-        }
+    public ResponseEntity<ApiResponse> handleLogout(HttpServletRequest request, HttpServletResponse response) {
+        return authService.logoutUser(request, response);
+    }
 
-        public ApiResponse getAllRole (Long orgId, String role){
-            List<RoleDto> roles = userService.getAllRole(orgId, role).stream().map(userDtoMapper::toDto).toList();
+    public ApiResponse getAllRole(Long orgId, String role) {
+        List<RoleDto> roles = userService.getAllRole(orgId, role).stream().map(userDtoMapper::toDto).toList();
 
-            return new ApiResponse(
-                    200,
-                    "Roles fetched successfully",
-                    roles
-            );
-        }
+        return new ApiResponse(
+                200,
+                "Roles fetched successfully",
+                roles
+        );
+    }
 
-        public ApiResponse getAllTeam () {
-            List<GroupDto> teams = userService.getAllTeam().stream().map(userDtoMapper::toGroupDto).toList();
+    public ApiResponse getAllTeam() {
+        List<GroupDto> teams = userService.getAllTeam().stream().map(userDtoMapper::toGroupDto).toList();
 
-            return new ApiResponse(
-                    200, "Groups fetched successfully", teams
-            );
-        }
+        return new ApiResponse(
+                200, "Groups fetched successfully", teams
+        );
+    }
 
-        public ApiResponse getAllLocation (Long orgId){
-            try {
-                if (orgId == null) {
-                    return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
-                }
-
-                List<LocationDto> locations = userService.getAllLocation(orgId)
-                        .stream()
-                        .map(userDtoMapper::toDto)
-                        .toList();
-
-                return new ApiResponse(200, "Locations fetched successfully", locations);
-            } catch (Exception e) {
-                return new ApiResponse(500, "Internal Server Error: " + e.getMessage(), null);
+    public ApiResponse getAllLocation(Long orgId) {
+        try {
+            if (orgId == null) {
+                return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
             }
-        }
 
-    public ApiResponse createBulkUser (MultipartFile file, String token){
+            List<LocationDto> locations = userService.getAllLocation(orgId)
+                    .stream()
+                    .map(userDtoMapper::toDto)
+                    .toList();
+
+            return new ApiResponse(200, "Locations fetched successfully", locations);
+        } catch (Exception e) {
+            return new ApiResponse(500, "Internal Server Error: " + e.getMessage(), null);
+        }
+    }
+
+    public ApiResponse createBulkUser(MultipartFile file, String token) {
 
         if (!token.startsWith("Bearer ")) {
             return new ApiResponse(400, "Invalid token format", null);
@@ -122,10 +130,10 @@ public class AuthFacade {
         if (orgId == null) {
             return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
         }
-        return userService.bulkCreateUsers(file,orgId);
+        return userService.bulkCreateUsers(file, orgId);
     }
 
-    public ApiResponse createUser (UserDto userDto, SecondaryDetailsDto secondaryDetailsDto, String token){
+    public ApiResponse createUser(UserDto userDto, SecondaryDetailsDto secondaryDetailsDto, String token) {
 
         if (!token.startsWith("Bearer ")) {
             return new ApiResponse(400, "Invalid token format", null);
@@ -139,8 +147,8 @@ public class AuthFacade {
         if (userAdapter.existsByEmail(usermiddleware.getEmail())) {
             throw new DataIntegrityViolationException("User with email already exists");
         }
-        if(userAdapter.existsByMobileNumber(usermiddleware.getMobileNumber())){
-            throw new DataIntegrityViolationException( "User with mobile number already exists");
+        if (userAdapter.existsByMobileNumber(usermiddleware.getMobileNumber())) {
+            throw new DataIntegrityViolationException("User with mobile number already exists");
         }
         ApiResponse user = userService.createUser(userDto, orgId);
         if (userDto.getRoleId().equals(STUDENT_ROLE_ID)) {
@@ -178,360 +186,360 @@ public class AuthFacade {
         return new ApiResponse(201, "User Created successfully and Reset password link sent to email.", user);
     }
 
-    public ApiResponse getUserProfile(String token, Long userId){
-            if (!token.startsWith("Bearer ")) {
-                return new ApiResponse(400, "Invalid token format", null);
-            }
-            String jwt = token.substring(7);
-            Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
-            String role = jwtUtil.extractRoleFromToken(jwt);
-            if (orgId == null) {
-                return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
-            }
-            if(userId == null){
-                userId = jwtUtil.extractUserIdFromToken(jwt);
-            }
-            UserProfileResponse response = userService.getUserProfile(orgId,userId);
-            return new ApiResponse(HttpStatus.OK.value(), "User Profile fetched successfully",response);
+    public ApiResponse getUserProfile(String token, Long userId) {
+        if (!token.startsWith("Bearer ")) {
+            return new ApiResponse(400, "Invalid token format", null);
         }
+        String jwt = token.substring(7);
+        Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
+        String role = jwtUtil.extractRoleFromToken(jwt);
+        if (orgId == null) {
+            return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
+        }
+        if (userId == null) {
+            userId = jwtUtil.extractUserIdFromToken(jwt);
+        }
+        UserProfileResponse response = userService.getUserProfile(orgId, userId);
+        return new ApiResponse(HttpStatus.OK.value(), "User Profile fetched successfully", response);
+    }
 
-        public ResponseEntity<ApiResponse> validateEmail (EmailDto email){
-            UserEntity user = authService.validateEmailDto(email);
+    public ResponseEntity<ApiResponse> validateEmail(EmailDto email) {
+        UserEntity user = authService.validateEmailDto(email);
 
-            try {
-                if (user == null) {
-                    return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                            .body(new ApiResponse(404, "Email not registered", null));
-                }
+        try {
+            if (user == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(new ApiResponse(404, "Email not registered", null));
+            }
 
-                if (user.isDefaultPassword()) {
-                    return ResponseEntity.ok(new ApiResponse(200, "Email validated", null));
-                }
+            if (user.isDefaultPassword()) {
                 return authService.forgotPassword(email.getEmail());
-            } catch (Exception e) {
-                throw new RuntimeException(e);
             }
+            return ResponseEntity.ok(new ApiResponse(200, "Email validated", null));
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public ResponseEntity<ApiResponse> resetPassword(String email, ChangePasswordDto request) {
+        return authService.resetPassword(email, request);
+    }
+
+    public ApiResponse updateUser(String token, CreateUserDto updates, Long userId) {
+        if (!token.startsWith("Bearer ")) {
+            return new ApiResponse(400, "Invalid token format", null);
+        }
+        String jwt = token.substring(7);
+        Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
+
+        if (orgId == null) {
+            return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
         }
 
-        public ResponseEntity<ApiResponse> resetPassword (String email, ChangePasswordDto request){
-            return authService.resetPassword(email, request);
+        User user = userService.updateUser(updates, orgId, userId);
+        return new ApiResponse(200, "User Updated successfully", user);
+    }
+
+    public ApiResponse getUsers(String token) {
+        if (!token.startsWith("Bearer ")) {
+            return new ApiResponse(400, "Invalid token format", null);
+        }
+        String jwt = token.substring(7);
+        Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
+        String role = jwtUtil.extractRoleFromToken(jwt);
+        role = role.replace("ROLE_", "").toUpperCase();
+        if (orgId == null) {
+            return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
+        }
+        List<UserResponseDto> users = userService.getUsers(orgId, role);
+        return new ApiResponse(200, "Users fetched successfully", users);
+    }
+
+    public ApiResponse deleteUser(String token, Long userId) {
+        if (!token.startsWith("Bearer ")) {
+            return new ApiResponse(400, "Invalid token format", null);
+        }
+        String jwt = token.substring(7);
+        Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
+
+        if (orgId == null) {
+            return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
+        }
+        User user = userService.deleteUser(orgId, userId);
+        return new ApiResponse(204, "User Deleted successfully", "No Content");
+    }
+
+    public ApiResponse createGroup(String token, AddGroupDto addGroupDto) {
+        if (!token.startsWith("Bearer ")) {
+            return new ApiResponse(400, "Invalid token format", null);
+        }
+        String jwt = token.substring(7);
+        Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
+
+        if (orgId == null) {
+            return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
         }
 
-        public ApiResponse updateUser (String token, CreateUserDto updates, Long userId){
-            if (!token.startsWith("Bearer ")) {
-                return new ApiResponse(400, "Invalid token format", null);
-            }
-            String jwt = token.substring(7);
-            Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
+        AddGroup groupMiddleware = userDtoMapper.toMiddleware(addGroupDto);
 
-            if (orgId == null) {
-                return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
-            }
+        try {
+            AddGroup createdGroup = userService.createGroup(groupMiddleware, orgId);
+            return new ApiResponse(201, "Group created successfully", true);
+        } catch (DataIntegrityViolationException e) {
+            return new ApiResponse(409, e.getMessage(), null);
+        } catch (Exception e) {
+            return new ApiResponse(500, "Internal Server Error: " + e.getMessage(), null);
+        }
+    }
 
-            User user = userService.updateUser(updates, orgId, userId);
-            return new ApiResponse(200, "User Updated successfully", user);
+    public ApiResponse addUserToGroup(String token, AddMemberDto addMemberDto) {
+        if (!token.startsWith("Bearer ")) {
+            return new ApiResponse(400, "Invalid token format", null);
+        }
+        String jwt = token.substring(7);
+        Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
+
+        if (orgId == null) {
+            return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
         }
 
-        public ApiResponse getUsers (String token){
-            if (!token.startsWith("Bearer ")) {
-                return new ApiResponse(400, "Invalid token format", null);
-            }
-            String jwt = token.substring(7);
-            Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
-            String role = jwtUtil.extractRoleFromToken(jwt);
-            role = role.replace("ROLE_", "").toUpperCase();
-            if (orgId == null) {
-                return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
-            }
-            List<UserResponseDto> users = userService.getUsers(orgId, role);
-            return new ApiResponse(200, "Users fetched successfully", users);
+        AddMember addMemberMiddleware = userDtoMapper.toMiddleware(addMemberDto);
+
+        try {
+            return userService.addUserToGroup(addMemberMiddleware, orgId);
+
+        } catch (DataIntegrityViolationException e) {
+            return new ApiResponse(409, e.getMessage(), null);
+        } catch (ResponseStatusException e) {
+            return new ApiResponse(e.getStatusCode().value(), e.getReason(), null);
+        } catch (Exception e) {
+            return new ApiResponse(500, "Internal Server Error: " + e.getMessage(), null);
+        }
+    }
+
+    public ApiResponse updateGroupDetails(String token, AddGroupDto addGroupDto, Long groupId) {
+        if (!token.startsWith("Bearer ")) {
+            return new ApiResponse(400, "Invalid token format", null);
+        }
+        String jwt = token.substring(7);
+        Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
+
+        if (orgId == null) {
+            return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
         }
 
-        public ApiResponse deleteUser (String token, Long userId){
-            if (!token.startsWith("Bearer ")) {
-                return new ApiResponse(400, "Invalid token format", null);
-            }
-            String jwt = token.substring(7);
-            Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
+        log.info("Updating group: groupId={}, groupName={}, locationId={}",
+                groupId, addGroupDto.getGroupName(), addGroupDto.getLocationId());
+        return userService.updateGroupDetails(addGroupDto, groupId, orgId);
 
-            if (orgId == null) {
-                return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
-            }
-            User user = userService.deleteUser(orgId, userId);
-            return new ApiResponse(204, "User Deleted successfully", "No Content");
+    }
+
+    public ApiResponse getAllGroups(String token) throws JsonProcessingException {
+        if (!token.startsWith("Bearer ")) {
+            return new ApiResponse(400, "Invalid token format", null);
+        }
+        String jwt = token.substring(7);
+        Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
+        Long userId = jwtUtil.extractUserIdFromToken(jwt);
+        if (orgId == null) {
+            return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
+        }
+        List<GroupResponseDto> groups = userService.getAllGroups(orgId, userId);
+
+        return new ApiResponse(200, "All Groups Details fetched successfully", groups);
+    }
+
+    public ApiResponse deleteMember(String token, Long groupId, Long memberId) {
+        if (!token.startsWith("Bearer ")) {
+            return new ApiResponse(400, "Invalid token format", null);
+        }
+        String jwt = token.substring(7);
+        Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
+
+        if (orgId == null) {
+            return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
+        }
+        userService.deleteMember(groupId, memberId);
+        return new ApiResponse(204, "Member Deleted successfully", "No Content");
+    }
+
+    public ApiResponse deleteGroup(String token, Long groupId) {
+        if (!token.startsWith("Bearer ")) {
+            return new ApiResponse(400, "Invalid token format", null);
+        }
+        String jwt = token.substring(7);
+        Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
+        if (orgId == null) {
+            return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
         }
 
-        public ApiResponse createGroup (String token, AddGroupDto addGroupDto){
-            if (!token.startsWith("Bearer ")) {
-                return new ApiResponse(400, "Invalid token format", null);
-            }
-            String jwt = token.substring(7);
-            Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
+        userService.deleteGroup(groupId);
+        return new ApiResponse(204, "Group Deleted successfully", "No Content");
+    }
 
-            if (orgId == null) {
-                return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
-            }
-
-            AddGroup groupMiddleware = userDtoMapper.toMiddleware(addGroupDto);
-
-            try {
-                AddGroup createdGroup = userService.createGroup(groupMiddleware, orgId);
-                return new ApiResponse(201, "Group created successfully", true);
-            } catch (DataIntegrityViolationException e) {
-                return new ApiResponse(409, e.getMessage(), null);
-            } catch (Exception e) {
-                return new ApiResponse(500, "Internal Server Error: " + e.getMessage(), null);
-            }
+    public ApiResponse getMembers(String token, Long roleId) {
+        if (!token.startsWith("Bearer ")) {
+            return new ApiResponse(400, "Invalid token format", null);
         }
 
-        public ApiResponse addUserToGroup (String token, AddMemberDto addMemberDto){
-            if (!token.startsWith("Bearer ")) {
-                return new ApiResponse(400, "Invalid token format", null);
-            }
-            String jwt = token.substring(7);
-            Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
+        String jwt = token.substring(7);
+        Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
 
-            if (orgId == null) {
-                return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
-            }
-
-            AddMember addMemberMiddleware = userDtoMapper.toMiddleware(addMemberDto);
-
-            try {
-                return userService.addUserToGroup(addMemberMiddleware, orgId);
-
-            } catch (DataIntegrityViolationException e) {
-                return new ApiResponse(409, e.getMessage(), null);
-            } catch (ResponseStatusException e) {
-                return new ApiResponse(e.getStatusCode().value(), e.getReason(), null);
-            } catch (Exception e) {
-                return new ApiResponse(500, "Internal Server Error: " + e.getMessage(), null);
-            }
+        if (orgId == null) {
+            return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
         }
 
-        public ApiResponse updateGroupDetails (String token, AddGroupDto addGroupDto, Long groupId){
-            if (!token.startsWith("Bearer ")) {
-                return new ApiResponse(400, "Invalid token format", null);
-            }
-            String jwt = token.substring(7);
-            Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
+        List<User> members = userService.getMembers(orgId, roleId);
 
-            if (orgId == null) {
-                return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
-            }
+        // Convert to simplified structure: userId + userName
+        List<Map<String, Object>> result = members.stream()
+                .map(user -> {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("userId", user.getUserId());
+                    map.put("userName", user.getUserName());
+                    return map;
+                })
+                .toList();
+        return new ApiResponse(200, "Members fetched successfully", result);
+    }
 
-            log.info("Updating group: groupId={}, groupName={}, locationId={}",
-                    groupId, addGroupDto.getGroupName(), addGroupDto.getLocationId());
-            return userService.updateGroupDetails(addGroupDto, groupId, orgId);
+    public ApiResponse updateUserGroupType(String token, EditUserGroupDto editUserGroupDto) {
+        if (!token.startsWith("Bearer ")) {
+            return new ApiResponse(400, "Invalid token format", null);
+        }
+        String jwt = token.substring(7);
+        Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
 
+        if (orgId == null) {
+            return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
         }
 
-        public ApiResponse getAllGroups (String token) throws JsonProcessingException {
-            if (!token.startsWith("Bearer ")) {
-                return new ApiResponse(400, "Invalid token format", null);
-            }
-            String jwt = token.substring(7);
-            Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
-            Long userId = jwtUtil.extractUserIdFromToken(jwt);
-            if (orgId == null) {
-                return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
-            }
-            List<GroupResponseDto> groups = userService.getAllGroups(orgId, userId);
+        UserGroup userGroup = userDtoMapper.toMiddleware(editUserGroupDto);
+        boolean isUpdated = userService.updateUserGroupType(userGroup);
+        if (!isUpdated) {
+            throw new RuntimeException("Update failed: No matching user-group mapping found or type is the same.");
+        }
+        return new ApiResponse(200, "User group type updated successfully.", true);
+    }
 
-            return new ApiResponse(200, "All Groups Details fetched successfully", groups);
+    public List<UserTimesheetResponseDto> getAllTimesheets(String token, TimesheetReportDto request) {
+
+        if (!token.startsWith("Bearer ")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid token format");
         }
 
-        public ApiResponse deleteMember (String token, Long groupId, Long memberId){
-            if (!token.startsWith("Bearer ")) {
-                return new ApiResponse(400, "Invalid token format", null);
-            }
-            String jwt = token.substring(7);
-            Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
+        String jwt = token.substring(7);
+        Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
 
-            if (orgId == null) {
-                return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
-            }
-            userService.deleteMember(groupId, memberId);
-            return new ApiResponse(204, "Member Deleted successfully", "No Content");
+        Long userIdFromToken = jwtUtil.extractUserIdFromToken(jwt);
+        if (orgId == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized - Invalid Organization");
+        }
+        String role = jwtUtil.extractRoleFromToken(jwt);
+        return timesheetService.getAllTimesheets(userIdFromToken, orgId, role, request);
+    }
+
+    public List<TimesheetHistoryDto> processTimesheetLogs(String token, List<TimesheetHistoryDto> timesheetLogs) {
+        if (!token.startsWith("Bearer ")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid token format");
         }
 
-        public ApiResponse deleteGroup (String token, Long groupId){
-            if (!token.startsWith("Bearer ")) {
-                return new ApiResponse(400, "Invalid token format", null);
-            }
-            String jwt = token.substring(7);
-            Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
-            if (orgId == null) {
-                return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
-            }
+        String jwt = token.substring(7);
+        Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
 
-            userService.deleteGroup(groupId);
-            return new ApiResponse(204, "Group Deleted successfully", "No Content");
+        if (orgId == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized - Invalid Organization");
         }
 
-        public ApiResponse getMembers (String token, Long roleId){
-            if (!token.startsWith("Bearer ")) {
-                return new ApiResponse(400, "Invalid token format", null);
-            }
+        List<TimesheetHistory> middlewareLogs = timesheetLogs.stream()
+                .map(timesheetDtoMapper::toMiddleware)
+                .toList();
 
-            String jwt = token.substring(7);
-            Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
+        List<TimesheetHistory> savedLogs = timesheetService.processTimesheetLogs(middlewareLogs);
 
-            if (orgId == null) {
-                return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
-            }
+        return savedLogs.stream()
+                .map(timesheetDtoMapper::toDto)
+                .toList();
+    }
 
-            List<User> members = userService.getMembers(orgId, roleId);
+    public TimesheetDto updateClockInOut(Long userId, LocalDate date, TimesheetDto request) {
+        return timesheetService.updateClockInOut(userId, date, request);
+    }
 
-            // Convert to simplified structure: userId + userName
-            List<Map<String, Object>> result = members.stream()
-                    .map(user -> {
-                        Map<String, Object> map = new HashMap<>();
-                        map.put("userId", user.getUserId());
-                        map.put("userName", user.getUserName());
-                        return map;
-                    })
-                    .toList();
-            return new ApiResponse(200, "Members fetched successfully", result);
+    public ApiResponse getUserGroups(String token) {
+        if (!token.startsWith("Bearer ")) {
+            return new ApiResponse(400, "Invalid token format", null);
+        }
+        String jwt = token.substring(7);
+        Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
+        String role = jwtUtil.extractRoleFromToken(jwt);
+        Long userId = jwtUtil.extractUserIdFromToken(jwt);
+        if (orgId == null) {
+            return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
         }
 
-        public ApiResponse updateUserGroupType (String token, EditUserGroupDto editUserGroupDto){
-            if (!token.startsWith("Bearer ")) {
-                return new ApiResponse(400, "Invalid token format", null);
-            }
-            String jwt = token.substring(7);
-            Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
+        List<GroupDto> groups = userService.getUserGroups(userId, role, orgId).stream()
+                .toList();
 
-            if (orgId == null) {
-                return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
-            }
+        return new ApiResponse(200, "User Groups fetched successfully", groups);
+    }
 
-            UserGroup userGroup = userDtoMapper.toMiddleware(editUserGroupDto);
-            boolean isUpdated = userService.updateUserGroupType(userGroup);
-            if (!isUpdated) {
-                throw new RuntimeException("Update failed: No matching user-group mapping found or type is the same.");
-            }
-            return new ApiResponse(200, "User group type updated successfully.", true);
+    public ApiResponse getUserGroupMembers(String token, Long groupId, LocalDate date) {
+        if (!token.startsWith("Bearer ")) {
+            return new ApiResponse(400, "Invalid token format", null);
         }
 
-        public List<TimesheetDto> getAllTimesheets (String token, TimesheetReportDto request) {
+        String jwt = token.substring(7);
+        Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
 
-            if (!token.startsWith("Bearer ")) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid token format");
-            }
+        if (orgId == null) {
+            return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
+        }
+        Long userIdFromToken = jwtUtil.extractUserIdFromToken(jwt);
+        List<Map<String, Object>> groupMembers = userService.getGroupMembers(groupId, orgId, date, userIdFromToken);
+        Map<String, Object> response = new HashMap<>();
+        response.put("groupmember", groupMembers);
 
-            String jwt = token.substring(7);
-            Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
+        return new ApiResponse(200, "Student members fetched successfully", response);
+    }
 
-            Long userIdFromToken = jwtUtil.extractUserIdFromToken(jwt);
-            if (orgId == null) {
-                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized - Invalid Organization");
-            }
-            String role = jwtUtil.extractRoleFromToken(jwt);
-            return timesheetService.getAllTimesheets(userIdFromToken,orgId, role, request);
+    public TimesheetDto upsertClockInOut(String token, Long userId, LocalDate date, TimesheetDto request) {
+        if (!token.startsWith("Bearer ")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid token format");
         }
 
-        public List<TimesheetHistoryDto> processTimesheetLogs (String token, List < TimesheetHistoryDto > timesheetLogs) {
-            if (!token.startsWith("Bearer ")) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid token format");
-            }
+        String jwt = token.substring(7);
+        Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
 
-            String jwt = token.substring(7);
-            Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
+        if (orgId == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized - Invalid Organization");
+        }
+        return timesheetService.updateClockInOut(userId, date, request);
+    }
 
-            if (orgId == null) {
-                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized - Invalid Organization");
-            }
+    public ResponseEntity<ApiResponse> authenticateUserByMobile(String mobile, String otp, HttpServletResponse
+            response, HttpServletRequest request) {
+        return authService.authenticateUserByMobile(mobile, otp, response, request);
+    }
 
-            List<TimesheetHistory> middlewareLogs = timesheetLogs.stream()
-                    .map(timesheetDtoMapper::toMiddleware)
-                    .toList();
+    public ResponseEntity<ApiResponse> sendOTP(String mobile, HttpSession session) {
+        return authService.sendOtp(mobile, session);
+    }
 
-            List<TimesheetHistory> savedLogs = timesheetService.processTimesheetLogs(middlewareLogs);
-
-            return savedLogs.stream()
-                    .map(timesheetDtoMapper::toDto)
-                    .toList();
+    public ApiResponse searchUsernames(String token, String keyword) {
+        if (!token.startsWith("Bearer ")) {
+            return new ApiResponse(400, "Invalid token format", null);
         }
 
-        public TimesheetDto updateClockInOut (Long userId, LocalDate date, TimesheetDto request){
-            return timesheetService.updateClockInOut(userId, date, request);
+        String jwt = token.substring(7);
+        Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
+
+        if (orgId == null) {
+            return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
         }
-
-        public ApiResponse getUserGroups (String token){
-            if (!token.startsWith("Bearer ")) {
-                return new ApiResponse(400, "Invalid token format", null);
-            }
-            String jwt = token.substring(7);
-            Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
-            String role = jwtUtil.extractRoleFromToken(jwt);
-            Long userId = jwtUtil.extractUserIdFromToken(jwt);
-            if (orgId == null) {
-                return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
-            }
-
-            List<GroupDto> groups = userService.getUserGroups(userId, role, orgId).stream()
-                    .toList();
-
-            return new ApiResponse(200, "User Groups fetched successfully", groups);
-        }
-
-        public ApiResponse getUserGroupMembers (String token, Long groupId, LocalDate date){
-            if (!token.startsWith("Bearer ")) {
-                return new ApiResponse(400, "Invalid token format", null);
-            }
-
-            String jwt = token.substring(7);
-            Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
-
-            if (orgId == null) {
-                return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
-            }
-            Long userIdFromToken = jwtUtil.extractUserIdFromToken(jwt);
-            List<Map<String, Object>> groupMembers = userService.getGroupMembers(groupId, orgId, date, userIdFromToken);
-            Map<String, Object> response = new HashMap<>();
-            response.put("groupmember", groupMembers);
-
-            return new ApiResponse(200, "Student members fetched successfully", response);
-        }
-
-        public TimesheetDto upsertClockInOut (String token, Long userId, LocalDate date, TimesheetDto request){
-            if (!token.startsWith("Bearer ")) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid token format");
-            }
-
-            String jwt = token.substring(7);
-            Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
-
-            if (orgId == null) {
-                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized - Invalid Organization");
-            }
-            return timesheetService.updateClockInOut(userId, date, request);
-        }
-
-        public ResponseEntity<ApiResponse> authenticateUserByMobile (String mobile, String otp, HttpServletResponse
-        response, HttpServletRequest request){
-            return authService.authenticateUserByMobile(mobile, otp, response, request);
-        }
-
-        public ResponseEntity<ApiResponse> sendOTP (String mobile, HttpSession session){
-            return authService.sendOtp(mobile, session);
-        }
-
-        public ApiResponse searchUsernames (String token, String keyword){
-            if (!token.startsWith("Bearer ")) {
-                return new ApiResponse(400, "Invalid token format", null);
-            }
-
-            String jwt = token.substring(7);
-            Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
-
-            if (orgId == null) {
-                return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
-            }
-            List<UserNameSuggestionDto> usernames = userService.searchUsernames(keyword);
-            return new ApiResponse(200, "Usernames fetched successfully", usernames);
-        }
+        List<UserNameSuggestionDto> usernames = userService.searchUsernames(keyword);
+        return new ApiResponse(200, "Usernames fetched successfully", usernames);
+    }
 
     public ApiResponse getGroupUsers(String token, List<Long> groupIds) {
         if (!token.startsWith("Bearer ")) {
@@ -542,12 +550,12 @@ public class AuthFacade {
         Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
         Long loggedInUserId = jwtUtil.extractUserIdFromToken(jwt);
         String role = jwtUtil.extractRoleFromToken(jwt);
-        String userRole = role.replace("ROLE_","");
+        String userRole = role.replace("ROLE_", "");
         if (orgId == null || loggedInUserId == null) {
             return new ApiResponse(401, "Unauthorized - Invalid Organization or User", null);
         }
         List<UserNameSuggestionDto> users;
-        users = userService.getGroupUsers(groupIds, orgId, loggedInUserId,userRole);
+        users = userService.getGroupUsers(groupIds, orgId, loggedInUserId, userRole);
         return new ApiResponse(200, "Users fetched successfully", users);
     }
 
@@ -571,7 +579,6 @@ public class AuthFacade {
         return new ApiResponse(200, "Location added successfully", location);
     }
 
-    // Facade Layer
     public List<UserDashboardDto> getAllUserInfo(String token, DashboardDto request) {
         LocalDate fromDate = request.getFromDate();
         LocalDate toDate = request.getToDate();
@@ -590,4 +597,80 @@ public class AuthFacade {
         return timesheetService.getAllUserInfo(orgId, userIdFromToken, fromDate, toDate, userId);
     }
 
+    public byte[] exportTimesheetDayCsv(List<UserTimesheetResponseDto> timesheet, String sheetName) {
+        return reportService.exportTimesheetDayCsv(timesheet, sheetName);
+    }
+
+    public byte[] exportTimesheetDayXlsx(List<UserTimesheetResponseDto> timesheets) {
+        return reportService.exportTimesheetDayXlsx(timesheets);
+    }
+
+    public byte[] exportTimesheetWeekXlsx(List<UserTimesheetResponseDto> timesheets) {
+        return reportService.exportTimesheetWeekXlsx(timesheets);
+    }
+
+    public byte[] exportWeekCsv(List<UserTimesheetResponseDto> timesheets) {
+        return reportService.exportTimesheetWeekCsv(timesheets);
+    }
+
+    public FileExportResponseDto generateTimesheetFile(String token, TimesheetReportDto request) throws IOException {
+        List<UserTimesheetResponseDto> timesheets = getAllTimesheets(token, request);
+
+        String format = request.getFormat();
+        String timePeriod = request.getTimePeriod();
+        LocalDate startDate = request.getFromDate();
+
+        // 1. Build base filename
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        String datePart = timePeriod.equalsIgnoreCase("DAY") ?
+                startDate.format(formatter) :
+                (timePeriod.equalsIgnoreCase("WEEK") ? "Weekly" : "Monthly");
+
+        String baseName = "timesheetReport_" + datePart;
+        String extension = "csv".equalsIgnoreCase(format) ? ".csv" : ".xlsx";
+
+        // 2. Create directory
+        Path resourcePath = Paths.get("src/main/resources/temp");
+        if (!Files.exists(resourcePath)) {
+            Files.createDirectories(resourcePath);
+        }
+
+        // 3. Avoid filename collisions
+        String fileName = baseName + extension;
+        Path filePath = resourcePath.resolve(fileName);
+        int counter = 1;
+        while (Files.exists(filePath)) {
+            fileName = baseName + "(" + counter + ")" + extension;
+            filePath = resourcePath.resolve(fileName);
+            counter++;
+        }
+
+        //Sheet name
+        String sheetName;
+        if (timePeriod.equalsIgnoreCase("DAY")) {
+            sheetName = "Timesheet_" + startDate.format(formatter);
+        }else if (timePeriod.equalsIgnoreCase("WEEK")) {
+            sheetName = "Timesheet_Weekly";
+        }else {
+            sheetName = "Timesheet_Monthly";
+        }
+
+        // 4. Generate file content
+        byte[] data;
+        if (Timeperiod.DAY.name().equalsIgnoreCase(timePeriod)) {
+            data = "csv".equalsIgnoreCase(format) ?
+                    exportTimesheetDayCsv(timesheets,sheetName) :
+                    exportTimesheetDayXlsx(timesheets);
+        } else {
+            data = "csv".equalsIgnoreCase(format) ?
+                    exportWeekCsv(timesheets) :
+                    exportTimesheetWeekXlsx(timesheets);
+        }
+
+        // 5. Write to disk
+        Files.write(filePath, data);
+
+        // 6. Return file info
+        return new FileExportResponseDto(filePath, fileName, format);
+    }
 }

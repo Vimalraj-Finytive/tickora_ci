@@ -135,27 +135,38 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public List<Location> getAllLocation(Long orgId) {
-        CachedData<Location> cachedData = (CachedData<Location>) redisTemplate.opsForValue().get(location);
+        CachedData<Location> cachedData = null;
 
         try {
-            if (cachedData == null || cachedData.getData() == null) {
-                log.info("Cache missing for key: locations, DB Called");
-                // Load and cache if missing
-                cacheLoaderService.loadLocationTable();
-                return List.of();
+            cachedData = (CachedData<Location>) redisTemplate.opsForValue().get(location);
+        } catch (Exception redisException) {
+            log.warn("Redis not available or cache fetch failed: {}", redisException.getMessage());
+        }
+
+        try {
+            if (cachedData != null && cachedData.getData() != null) {
+                log.info("Cache hit for key: locations Cache called");
+                return cachedData.getData().stream()
+                        .filter(location -> location.getOrgId() != null && location.getOrgId().equals(orgId))
+                        .toList();
             }
 
-            log.info("Cache hit for key: locations Cache called");
-            return cachedData.getData().stream()
+            log.info("Cache missing for key: locations, DB Called");
+
+            // Load and cache if missing
+            List<Location> locations = cacheLoaderService.loadLocationTable().get();
+            log.info("Total locations fetched from DB: {}", locations.size());
+            locations.forEach(loc -> log.info("Location ID: {}, Org ID: {}", loc.getLocationId(), loc.getOrgId()));
+            return locations.stream()
                     .filter(location -> location.getOrgId() != null && location.getOrgId().equals(orgId))
                     .toList();
 
         } catch (Exception e) {
-            log.error("Error loading data from cache: {}", e.getMessage(), e);
+            log.error("Error loading data from DB/cache: {}", e.getMessage(), e);
             return List.of();
         }
-
     }
+
 
     @Override
     public ApiResponse bulkCreateUsers(MultipartFile file, Long orgId) {
@@ -525,6 +536,7 @@ public class UserServiceImpl implements UserService {
             if (userDto.getMobileNumber() != null) {
                 existingUser.setMobileNumber(userDto.getMobileNumber());
             }
+
             existingUser.setRegisterUser(userDto.isRegisterUser());
             if(userDto.getLocationId() != null){
                 existingUser.setLocationId(userDto.getLocationId());

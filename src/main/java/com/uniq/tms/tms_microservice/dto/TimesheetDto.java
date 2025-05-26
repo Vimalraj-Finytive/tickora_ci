@@ -14,6 +14,7 @@ import java.util.List;
 
 public class TimesheetDto {
     private Long id;
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private Long userId;
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     private LocalDate date;
@@ -32,7 +33,9 @@ public class TimesheetDto {
     private String dayType;
     private String workStatus;
     private String userDayType;
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String userName;
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String role;
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private String firstClockInTime;
@@ -43,16 +46,16 @@ public class TimesheetDto {
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private String regularHoursDuration;
     private List<TimesheetHistoryDto> history;
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private Long statusId;
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String groupname;
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private Boolean paidLeave;
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String mobileNumber;
     private String Status;
-    private int presentCount;
-    private int absentCount;
-    private int notMarkedCount;
-    private int paidLeaveCount;
-    private int holidayCount;
+
     public TimesheetDto(TimesheetEntity timesheetEntity, List<TimesheetHistoryDto> historyDtos) {
         this.id = timesheetEntity.getId();
         this.userId = timesheetEntity.getUserId();
@@ -290,45 +293,5 @@ public class TimesheetDto {
 
     public void setStatus(String status) {
         Status = status;
-    }
-
-    public int getPresentCount() {
-        return presentCount;
-    }
-
-    public void setPresentCount(int presentCount) {
-        this.presentCount = presentCount;
-    }
-
-    public int getAbsentCount() {
-        return absentCount;
-    }
-
-    public void setAbsentCount(int absentCount) {
-        this.absentCount = absentCount;
-    }
-
-    public int getNotMarkedCount() {
-        return notMarkedCount;
-    }
-
-    public void setNotMarkedCount(int notMarkedCount) {
-        this.notMarkedCount = notMarkedCount;
-    }
-
-    public int getPaidLeaveCount() {
-        return paidLeaveCount;
-    }
-
-    public void setPaidLeaveCount(int paidLeaveCount) {
-        this.paidLeaveCount = paidLeaveCount;
-    }
-
-    public int getHolidayCount() {
-        return holidayCount;
-    }
-
-    public void setHolidayCount(int holidayCount) {
-        this.holidayCount = holidayCount;
     }
 }

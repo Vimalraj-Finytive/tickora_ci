@@ -1,7 +1,0 @@
-package com.uniq.tms.ams.constant;
-
-public class UserConstant {
-
-    public static final String Auth_Url = "/tms";
-    public static final String User_Url = "/tms/admin";
-}
