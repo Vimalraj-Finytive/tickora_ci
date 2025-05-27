@@ -37,6 +37,9 @@ public class RedisConfig {
             int port = uri.getPort();
 
             String userInfo = uri.getUserInfo();
+            if (userInfo == null || !userInfo.contains(":")) {
+                throw new RuntimeException("Invalid Redis URL: Missing credentials in REDISCLOUD_URL");
+            }
             String password = userInfo.split(":", 2)[1];
 
             RedisStandaloneConfiguration config = new RedisStandaloneConfiguration();
