@@ -7,6 +7,7 @@ import com.uniq.tms.tms_microservice.entity.LocationEntity;
 import com.uniq.tms.tms_microservice.entity.RoleEntity;
 import com.uniq.tms.tms_microservice.entity.UserEntity;
 import com.uniq.tms.tms_microservice.entity.UserGroupEntity;
+import com.uniq.tms.tms_microservice.entity.WorkScheduleEntity;
 import com.uniq.tms.tms_microservice.mapper.LocationEntityMapper;
 import com.uniq.tms.tms_microservice.model.Location;
 import com.uniq.tms.tms_microservice.model.UserResponse;
@@ -170,8 +171,8 @@ public class UserAdapterImpl implements UserAdapter {
     }
 
     @Override
-    public List<UserEntity> getAllUsers(Long orgId, Long userIdFromToken) {
-        return userRepository.findAllUsersList(orgId, userIdFromToken);
+    public List<UserEntity> getAllUsers() {
+        return userRepository.findAll();
     }
 
     @Override

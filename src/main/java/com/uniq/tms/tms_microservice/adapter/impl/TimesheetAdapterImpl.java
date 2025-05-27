@@ -6,10 +6,8 @@ import com.uniq.tms.tms_microservice.dto.LogType;
 import com.uniq.tms.tms_microservice.dto.TimesheetDto;
 import com.uniq.tms.tms_microservice.dto.TimesheetHistoryDto;
 import com.uniq.tms.tms_microservice.dto.TimesheetStatusEnum;
-import com.uniq.tms.tms_microservice.dto.TimesheetSummaryDto;
 import com.uniq.tms.tms_microservice.dto.UserAttendanceDto;
 import com.uniq.tms.tms_microservice.dto.UserDashboard;
-import com.uniq.tms.tms_microservice.dto.UserTimesheetResponseDto;
 import com.uniq.tms.tms_microservice.entity.TimesheetEntity;
 import com.uniq.tms.tms_microservice.entity.TimesheetHistoryEntity;
 import com.uniq.tms.tms_microservice.entity.WorkScheduleEntity;
@@ -53,7 +51,7 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
     }
 
     @Override
-    public List<UserTimesheetResponseDto> filterTimesheetsForAllUsers(LocalDate startDate, LocalDate endDate, List<Long> userIds) {
+    public List<TimesheetDto> filterTimesheetsForAllUsers(LocalDate startDate, LocalDate endDate, List<Long> userIds) {
         Long[] userIdArray = userIds.toArray(new Long[0]);
 
         List<Object[]> resultList = timesheetRepository.fetchTimesheetsWithHistory(startDate, endDate, userIdArray);
@@ -70,7 +68,7 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
         Map<Long, List<TimesheetDto>> userTimesheetListMap = new HashMap<>();
 
         for (Object[] row : resultList) {
-            if (row[1] == null) continue; // skip if userId is null
+            if (row[1] == null) continue;
 
             Long userId = toLong(row[1]);
             LocalDate date = toLocalDate(row[0]);
@@ -99,7 +97,7 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
                 String finalStatus = (statusEnum != null) ? statusEnum.getLabel()
                         : (restDay != null && date.getDayOfWeek() == restDay) ? TimesheetStatusEnum.HOLIDAY.getLabel()
                         : (date.equals(today)) ? TimesheetStatusEnum.NOT_MARKED.getLabel()
-                        : (! date.isAfter(today))? TimesheetStatusEnum.ABSENT.getLabel() : "";
+                        : TimesheetStatusEnum.ABSENT.getLabel();
 
                 newDto.setStatus(finalStatus);
                 newDto.setUserDayType((String) row[13]);
@@ -137,16 +135,11 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
                 dto.getHistory().add(historyDto);
             }
 
-            // Add dto to user list if not already present for that date
-            userTimesheetListMap.computeIfAbsent(userId, k -> new ArrayList<>());
-            List<TimesheetDto> userTimesheets = userTimesheetListMap.get(userId);
-            if (userTimesheets.stream().noneMatch(t -> t.getDate().equals(dto.getDate()))) {
-                userTimesheets.add(dto);
-            }
+            userTimesheetListMap.computeIfAbsent(userId, k -> new ArrayList<>()).add(dto);
         }
 
         // Build per-user summary
-        Map<Long, TimesheetSummaryDto> userSummaryMap = new HashMap<>();
+        Map<Long, TimesheetDto> userSummaryMap = new HashMap<>();
         for (Map.Entry<Long, List<TimesheetDto>> entry : userTimesheetListMap.entrySet()) {
             Long userId = entry.getKey();
             List<TimesheetDto> timesheets = entry.getValue();
@@ -162,35 +155,30 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
                 }
             }
 
-            TimesheetSummaryDto summary = new TimesheetSummaryDto();
-            TimesheetDto first = timesheets.get(0);
-            summary.setUserId(first.getUserId());
-            summary.setUserName(first.getUserName());
-            summary.setMobileNumber(first.getMobileNumber());
-            summary.setRole(first.getRole());
-            summary.setGroupname(first.getGroupname());
-
+            TimesheetDto summary = new TimesheetDto();
+            summary.setUserId(userId);
             summary.setPresentCount(present);
             summary.setAbsentCount(absent);
             summary.setHolidayCount(holiday);
             summary.setNotMarkedCount(notMarked);
             summary.setPaidLeaveCount(paidLeave);
-            summary.setTotalCount(timesheets.size()); // total per user
 
             userSummaryMap.put(userId, summary);
         }
 
-        List<UserTimesheetResponseDto> finalResponse = new ArrayList<>();
-
-        for (Long userId : userSummaryMap.keySet()) {
-            UserTimesheetResponseDto userResponse = new UserTimesheetResponseDto();
-            userResponse.setSummary(userSummaryMap.get(userId));
-            userResponse.setTimesheets(userTimesheetListMap.getOrDefault(userId, new ArrayList<>()));
-
-            finalResponse.add(userResponse);
+        // Attach summary counts
+        for (TimesheetDto dto : timesheetMap.values()) {
+            TimesheetDto summary = userSummaryMap.get(dto.getUserId());
+            if (summary != null) {
+                dto.setPresentCount(summary.getPresentCount());
+                dto.setAbsentCount(summary.getAbsentCount());
+                dto.setHolidayCount(summary.getHolidayCount());
+                dto.setNotMarkedCount(summary.getNotMarkedCount());
+                dto.setPaidLeaveCount(summary.getPaidLeaveCount());
+            }
         }
 
-        return finalResponse;
+        return new ArrayList<>(timesheetMap.values());
     }
 
     private Long toLong(Object obj) {

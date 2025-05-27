@@ -14,7 +14,6 @@ import com.uniq.tms.tms_microservice.dto.TimesheetStatusEnum;
 import com.uniq.tms.tms_microservice.dto.UserAttendanceDto;
 import com.uniq.tms.tms_microservice.dto.UserDashboard;
 import com.uniq.tms.tms_microservice.dto.UserDashboardDto;
-import com.uniq.tms.tms_microservice.dto.UserTimesheetResponseDto;
 import com.uniq.tms.tms_microservice.entity.TimesheetEntity;
 import com.uniq.tms.tms_microservice.entity.TimesheetHistoryEntity;
 import com.uniq.tms.tms_microservice.entity.UserEntity;
@@ -29,6 +28,7 @@ import org.apache.logging.log4j.LogManager;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+
 import java.math.RoundingMode;
 import java.text.DecimalFormat;
 import java.time.DayOfWeek;
@@ -68,7 +68,7 @@ public class TimesheetServiceImpl implements TimesheetService {
         this.workScheduleAdapter = workScheduleAdapter;
     }
 
-    public List<UserTimesheetResponseDto> getAllTimesheets(Long userIdFromToken, Long orgId, String role, TimesheetReportDto request) {
+    public List<TimesheetDto> getAllTimesheets(Long userIdFromToken, Long orgId, String role, TimesheetReportDto request) {
         LocalDate fromDate = request.getFromDate();
         LocalDate toDate = request.getToDate();
         String timePeriod = request.getTimePeriod();
@@ -81,11 +81,6 @@ public class TimesheetServiceImpl implements TimesheetService {
             LocalDateRange range = calculateDateRange(fromDate, timePeriod);
             startDate = range.startDate();
             endDate = range.endDate();
-            log.info("startDate: {}, endDate: {}", startDate, endDate);
-            if(endDate.isAfter(LocalDate.now())) {
-                endDate = LocalDate.now();
-                log.info("endDate: {}", endDate);
-            }
         }
          else if (fromDate != null && toDate != null) {
                 startDate = fromDate;
@@ -93,18 +88,18 @@ public class TimesheetServiceImpl implements TimesheetService {
          }
 
         // Determine target users based on privileges
-        List<UserEntity> targetUsers = resolveTargetUsers(userIdFromToken, groupIds, userId, orgId);
+        List<UserEntity> targetUsers = resolveTargetUsers(userIdFromToken, groupIds, userId);
 
         List<Long> userIds = targetUsers.stream()
                 .map(UserEntity::getUserId)
                 .toList();
 
         // Fetch timesheets for the filtered users and date range
-        List<UserTimesheetResponseDto> timesheetDtos = timesheetAdapter.filterTimesheetsForAllUsers(startDate, endDate, userIds);
+        List<TimesheetDto> timesheetDtos = timesheetAdapter.filterTimesheetsForAllUsers(startDate, endDate, userIds);
         return timesheetDtos;
     }
 
-    private List<UserEntity> resolveTargetUsers(Long userIdFromToken, List<Long> groupIds, List<Long> userId, Long orgId) {
+    private List<UserEntity> resolveTargetUsers(Long userIdFromToken, List<Long> groupIds, List<Long> userId) {
 
         UserEntity currentUser = userAdapter.getUserById(userIdFromToken);
         String roleName = currentUser.getRole().getName().toUpperCase();
@@ -153,7 +148,7 @@ public class TimesheetServiceImpl implements TimesheetService {
             } else if (userId != null && !userId.isEmpty()) {
                 return userAdapter.getUsersByIds(userId,currentUser.getOrganizationId());
             } else {
-                return userAdapter.getAllUsers(orgId,userIdFromToken);
+                return userAdapter.getAllUsers();
             }
         }
 

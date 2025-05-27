@@ -7,10 +7,12 @@ import com.uniq.tms.tms_microservice.dto.TimesheetDto;
 import com.uniq.tms.tms_microservice.dto.TimesheetHistoryDto;
 import com.uniq.tms.tms_microservice.dto.TimesheetReportDto;
 import com.uniq.tms.tms_microservice.dto.UserDashboardDto;
-import com.uniq.tms.tms_microservice.dto.UserTimesheetResponseDto;
 import com.uniq.tms.tms_microservice.facade.AuthFacade;
 import com.uniq.tms.tms_microservice.util.ReportUtils;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -20,6 +22,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import java.io.ByteArrayInputStream;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -39,7 +42,7 @@ public class  TimesheetController {
     @PostMapping
     public ResponseEntity<?> getAllTimesheets(@RequestHeader("Authorization") String token,
                                                         @RequestBody TimesheetReportDto request) {
-        List<UserTimesheetResponseDto> timesheets = authFacade.getAllTimesheets(token,request);
+        List<TimesheetDto> timesheets = authFacade.getAllTimesheets(token,request);
         return ResponseEntity.ok(new ApiResponse(200, "Success", timesheets));
     }
 
@@ -75,6 +78,44 @@ public class  TimesheetController {
         TimesheetDto timesheetDto = authFacade.upsertClockInOut(token,userId, date, request);
 
         return ResponseEntity.ok(new ApiResponse<>(200, "Timesheet upserted successfully", timesheetDto));
+    }
+
+    @PostMapping("/report")
+    public ResponseEntity<?> getTimesheets(
+            @RequestHeader("Authorization") String token,
+            @RequestBody(required = false) TimesheetReportDto request) {
+
+        List<TimesheetDto> timesheets = authFacade.getAllTimesheets(
+                token,
+                request
+        );
+
+        if ("csv".equalsIgnoreCase(request.getFormat())) {
+            try {
+                byte[] csv = reportUtils.exportToCsv(timesheets);
+                InputStreamResource resource = new InputStreamResource(new ByteArrayInputStream(csv));
+                return ResponseEntity.ok()
+                        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=timesheetReport.csv")
+                        .contentType(MediaType.parseMediaType("text/csv"))
+                        .body(resource);
+            } catch (Exception e) {
+                e.printStackTrace();
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ApiResponse(500, "CSV export failed", e.getMessage()));
+            }
+        } else if ("xlsx".equalsIgnoreCase(request.getFormat())) {
+            try {
+                byte[] xlsx = reportUtils.exportToXlsx(timesheets);
+                InputStreamResource resource = new InputStreamResource(new ByteArrayInputStream(xlsx));
+                return ResponseEntity.ok()
+                        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=timesheetReport.xlsx")
+                        .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                        .body(resource);
+            }catch (Exception e) {
+                e.printStackTrace();
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ApiResponse(500, "XLSX export failed", e.getMessage()));
+            }
+        }
+        return ResponseEntity.ok(new ApiResponse(200, "Report Downloaded Success", timesheets));
     }
 
     @PostMapping("/dashboard")

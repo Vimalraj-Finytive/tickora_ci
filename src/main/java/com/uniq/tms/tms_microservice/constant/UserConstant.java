@@ -7,5 +7,4 @@ public class UserConstant {
     public static final String Timesheet_URL = "tms/timesheets";
     public static final String TWELVE_HOUR_FORMAT = "hh:mm a";
     public static final String WorkSchedule_Url = "tms/work-schedule";
-    public static final String REPORT_URL = "tms/report";
 }
