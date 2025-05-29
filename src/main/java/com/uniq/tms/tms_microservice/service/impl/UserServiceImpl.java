@@ -205,172 +205,222 @@ public class UserServiceImpl implements UserService {
     }
 
     public ApiResponse processCsvFile(InputStream inputStream, String originalFileName, Long orgId) {
-        log.info("Starting processing for file: {}", originalFileName);
-        long startTime = System.currentTimeMillis();
 
-        List<UserEntity> userEntities = new ArrayList<>();
-        List<SecondaryDetailsEntity> secondaryDetailsEntities = new ArrayList<>();
-        List<EmailData> emailRequests = new ArrayList<>();
-        List<String> successList = new ArrayList<>();
-        Map<UserEntity, Long> userGroupMappings = new HashMap<>();
+            log.info("Starting processing for file: {}", originalFileName);
+            long startTime = System.currentTimeMillis();
 
-        int uploadedCount = 0, skippedCount = 0;
+            List<UserEntity> userEntities = new ArrayList<>();
+            List<SecondaryDetailsEntity> secondaryDetailsEntities = new ArrayList<>();
+            List<EmailData> emailRequests = new ArrayList<>();
+            List<String> successList = new ArrayList<>();
+            Map<UserEntity, Long> userGroupMappings = new HashMap<>();
+
+            int uploadedCount = 0, skippedCount = 0;
+
+            List<Map<String, Object>> skippedRows = new ArrayList<>();
+            int rowNumber = 1;
 
         try {
-            // Preload data
-            Set<String> existingMobiles = userAdapter.getAllMobileNumbers();
-            Set<String> existingEmails = userAdapter.getAllEmails();
-            Set<String> existingSecMobiles = userAdapter.getAllSecondaryMobile();
-            Set<String> existingSecEmails = userAdapter.getAllSecondaryEmail();
-            Map<String, Long> roleMap = userAdapter.getRoleNameIdMap();
-            Map<String, Long> locationMap = userAdapter.getLocationNameToIdMap();
-            Map<String, Long> groupMap = userAdapter.getGroupNameIdMap();
+                // Preload data
+                Set<String> existingMobiles = userAdapter.getAllMobileNumbers();
+                Set<String> existingEmails = userAdapter.getAllEmails();
+                Set<String> existingSecMobiles = userAdapter.getAllSecondaryMobile();
+                Set<String> existingSecEmails = userAdapter.getAllSecondaryEmail();
+                Map<String, Long> roleMap = userAdapter.getRoleNameIdMap();
+                Map<String, Long> locationMap = userAdapter.getLocationNameToIdMap();
+                Map<String, Long> groupMap = userAdapter.getGroupNameIdMap();
 
-            // Expected headers
-            List<String> expectedHeaders = List.of(
-                    "username", "email", "mobilenumber", "rolename", "locationname", "dateofjoining",
-                    "secondaryusername", "secondarymobile", "secondaryemail", "relation", "groupname"
-            );
+                // Expected headers
+                List<String> expectedHeaders = List.of(
+                        "username", "email", "mobilenumber", "rolename", "locationname", "dateofjoining",
+                        "secondaryusername", "secondarymobile", "secondaryemail", "relation", "groupname"
+                );
 
-            try (CSVReader reader = new CSVReader(new InputStreamReader(inputStream))) {
-                String[] headerRow = reader.readNext();
-                if (headerRow == null) throw new RuntimeException("Missing header row");
-                validateFixedHeaders(headerRow, expectedHeaders);
+                try (CSVReader reader = new CSVReader(new InputStreamReader(inputStream))) {
+                    String[] headerRow = reader.readNext();
+                    if (headerRow == null) throw new RuntimeException("Missing header row");
+                    validateFixedHeaders(headerRow, expectedHeaders);
 
-                String[] row;
-                while ((row = reader.readNext()) != null) {
-                    if (row.length < expectedHeaders.size()) {
-                        skippedCount++;
-                        continue;
-                    }
+                    String[] row;
+                    while ((row = reader.readNext()) != null) {
+                        if (row.length < expectedHeaders.size()) {
+                            skippedRows.add(Map.of(
+                                    "rowNumber", rowNumber,
+                                    "data", Arrays.asList(row),
+                                    "reason", "Incomplete row"
+                            ));
+                            skippedCount++;
+                            rowNumber++;
+                            continue;
+                        }
 
-                    String username = row[0].trim();
-                    String email = row[1].trim();
-                    String mobile = row[2].trim();
-                    String roleName = row[3].trim();
-                    String locationName = row[4].trim();
-                    String doj = row[5].trim();
-                    String secName = row[6].trim();
-                    String secMobile = row[7].trim();
-                    String secEmail = row[8].trim();
-                    String relation = row[9].trim();
-                    String groupName = row[10].trim();
+                        String username = row[0].trim();
+                        String email = row[1].trim();
+                        String mobile = row[2].trim();
+                        String roleName = row[3].trim();
+                        String locationName = row[4].trim();
+                        String doj = row[5].trim();
+                        String secName = row[6].trim();
+                        String secMobile = row[7].trim();
+                        String secEmail = row[8].trim();
+                        String relation = row[9].trim();
+                        String groupName = row[10].trim();
 
-                    Long roleId = roleMap.get(roleName.toLowerCase());
-                    Long locationId = locationMap.get(locationName.toLowerCase());
-                    Long groupId = groupMap.get(groupName.toLowerCase());
+                        Long roleId = roleMap.get(roleName.toLowerCase());
+                        Long locationId = locationMap.get(locationName.toLowerCase());
+                        Long groupId = groupMap.get(groupName.toLowerCase());
 
-                    if (email.isEmpty() || mobile.isEmpty() || roleId == null || locationId == null || doj.isEmpty()) {
-                        skippedCount++;
-                        continue;
-                    }
+                        if (email.isEmpty() || mobile.isEmpty() || roleId == null || locationId == null || doj.isEmpty()) {
+                            skippedRows.add(Map.of(
+                                    "rowNumber", rowNumber,
+                                    "data", Arrays.asList(row),
+                                    "reason", "Mandatory fields  are missing"
+                            ));
+                            skippedCount++;
+                            rowNumber++;
+                            continue;
+                        }
 
-                    boolean isStudent = roleId.equals(STUDENT_ROLE_ID);
+                        boolean isStudent = roleId.equals(STUDENT_ROLE_ID);
 
-                    // Validate primary email/mobile
-                    if (existingEmails.contains(email) || existingMobiles.contains(mobile)) {
-                        skippedCount++;
-                        continue;
-                    }
-
-                    if (isStudent) {
-                        // Skip if any of the required secondary fields are missing
-                        if (secName.isEmpty() || secMobile.isEmpty() || relation.isEmpty()) {
+                        // Validate primary email/mobile
+                        if (existingEmails.contains(email) || existingMobiles.contains(mobile)) {
+                            skippedRows.add(Map.of(
+                                    "rowNumber", rowNumber,
+                                    "data", Arrays.asList(row),
+                                    "reason", "Email or mobile number already exists"
+                            ));
                             skippedCount++;
                             continue;
                         }
 
-                        // Skip if all secondary fields are empty
-                        if (secName.isEmpty() && secMobile.isEmpty() && secEmail.isEmpty() && relation.isEmpty()) {
+                        if (isStudent) {
+                            // Skip if any of the required secondary fields are missing
+                            if (secName.isEmpty() || secMobile.isEmpty() || relation.isEmpty()) {
+                                skippedRows.add(Map.of(
+                                        "rowNumber", rowNumber,
+                                        "data", Arrays.asList(row),
+                                        "reason", "Secondary fields are missing"
+                                ));
+                                skippedCount++;
+                                rowNumber++;
+                                continue;
+                            }
+
+                            // Skip if all secondary fields are empty
+                            if (secName.isEmpty() && secMobile.isEmpty() && secEmail.isEmpty() && relation.isEmpty()) {
+                                skippedRows.add(Map.of(
+                                        "rowNumber", rowNumber,
+                                        "data", Arrays.asList(row),
+                                        "reason", "All Secondary fields are missing"
+                                ));
+                                skippedCount++;
+                                rowNumber++;
+                                continue;
+                            }
+
+                            // Check secondary mobile/email duplication
+                            if (existingMobiles.contains(secMobile) || existingSecMobiles.contains(secMobile)
+                                    || existingEmails.contains(secEmail) || existingSecEmails.contains(secEmail)) {
+                                skippedRows.add(Map.of(
+                                        "rowNumber", rowNumber,
+                                        "data", Arrays.asList(row),
+                                        "reason", "Secondary email or mobile number already exists"
+                                ));
+                                skippedCount++;
+                                rowNumber++;
+                                continue;
+                            }
+
+                            // Check if student and secondary mobile are same
+                            if (mobile.equals(secMobile)) {
+                                skippedRows.add(Map.of(
+                                        "rowNumber", rowNumber,
+                                        "data", Arrays.asList(row),
+                                        "reason", "Same primary and secondary mobile number"
+                                ));
+                                skippedCount++;
+                                rowNumber++;
+                                continue;
+                            }
+                        }
+
+                        // Create and validate user DTO
+                        UserDto userDto = new UserDto();
+                        userDto.setUserName(username);
+                        userDto.setEmail(email);
+                        userDto.setMobileNumber(mobile);
+                        userDto.setRoleId(roleId);
+                        userDto.setLocationId(locationId);
+                        userDto.setIsRegisterUser(false);
+                        userDto.setDateOfJoining(parseDate(doj));
+
+                        if (!validator.validate(userDto).isEmpty()) {
                             skippedCount++;
+                            rowNumber++;
                             continue;
                         }
 
-                        // Check secondary mobile/email duplication
-                        if (existingMobiles.contains(secMobile) || existingSecMobiles.contains(secMobile)
-                                || existingEmails.contains(secEmail) || existingSecEmails.contains(secEmail)) {
-                            skippedCount++;
-                            continue;
+                        // Create and store user
+                        String defaultPass = PasswordUtil.generateDefaultPassword();
+                        UserEntity userEntity = createUserEntity(userDto, orgId, defaultPass);
+                        userEntities.add(userEntity);
+                        emailRequests.add(new EmailData(email, username, defaultPass, userDto.isRegisterUser()));
+                        successList.add(username);
+                        uploadedCount++;
+
+                        existingEmails.add(email);
+                        existingMobiles.add(mobile);
+
+                        // Group mapping
+                        if (groupId != null) {
+                            userGroupMappings.put(userEntity, groupId);
                         }
 
-                        // Check if student and secondary mobile are same
-                        if (mobile.equals(secMobile)) {
-                            skippedCount++;
-                            continue;
+                        // Save secondary details if student
+                        if (isStudent) {
+                            SecondaryDetailsEntity secDetails = createSecondaryDetails(userEntity, secMobile, secEmail, secName, relation);
+                            secondaryDetailsEntities.add(secDetails);
+                            existingSecMobiles.add(secMobile);
+                            if (!secEmail.isEmpty()) existingSecEmails.add(secEmail);
                         }
-                    }
-
-                    // Create and validate user DTO
-                    UserDto userDto = new UserDto();
-                    userDto.setUserName(username);
-                    userDto.setEmail(email);
-                    userDto.setMobileNumber(mobile);
-                    userDto.setRoleId(roleId);
-                    userDto.setLocationId(locationId);
-                    userDto.setIsRegisterUser(false);
-                    userDto.setDateOfJoining(parseDate(doj));
-
-                    if (!validator.validate(userDto).isEmpty()) {
-                        skippedCount++;
-                        continue;
-                    }
-
-                    // Create and store user
-                    String defaultPass = PasswordUtil.generateDefaultPassword();
-                    UserEntity userEntity = createUserEntity(userDto, orgId, defaultPass);
-                    userEntities.add(userEntity);
-                    emailRequests.add(new EmailData(email, username, defaultPass, userDto.isRegisterUser()));
-                    successList.add(username);
-                    uploadedCount++;
-
-                    existingEmails.add(email);
-                    existingMobiles.add(mobile);
-
-                    // Group mapping
-                    if (groupId != null) {
-                        userGroupMappings.put(userEntity, groupId);
-                    }
-
-                    // Save secondary details if student
-                    if (isStudent) {
-                        SecondaryDetailsEntity secDetails = createSecondaryDetails(userEntity, secMobile, secEmail, secName, relation);
-                        secondaryDetailsEntities.add(secDetails);
-                        existingSecMobiles.add(secMobile);
-                        if (!secEmail.isEmpty()) existingSecEmails.add(secEmail);
                     }
                 }
+
+                // Persist users and secondary details
+                List<UserEntity> savedUsers = userAdapter.saveAllUsers(userEntities);
+                userAdapter.saveAllSecondaryDetails(secondaryDetailsEntities);
+
+                // Persist user-group mappings
+                List<UserGroupEntity> groupEntities = userGroupMappings.entrySet().stream()
+                        .map(entry -> {
+                            UserGroupEntity ug = new UserGroupEntity();
+                            ug.setUser(entry.getKey());
+                            ug.setGroup(new GroupEntity(entry.getValue()));
+                            ug.setType("Member");
+                            return ug;
+                        })
+                        .collect(Collectors.toList());
+                userAdapter.saveAllUserGroups(groupEntities);
+
+                sendEmailsAsync(emailRequests);
+
+            } catch (Exception e) {
+                throw new RuntimeException("Error processing CSV: " + e.getMessage(), e);
             }
-
-            // Persist users and secondary details
-            List<UserEntity> savedUsers = userAdapter.saveAllUsers(userEntities);
-            userAdapter.saveAllSecondaryDetails(secondaryDetailsEntities);
-
-            // Persist user-group mappings
-            List<UserGroupEntity> groupEntities = userGroupMappings.entrySet().stream()
-                    .map(entry -> {
-                        UserGroupEntity ug = new UserGroupEntity();
-                        ug.setUser(entry.getKey());
-                        ug.setGroup(new GroupEntity(entry.getValue()));
-                        ug.setType("Member");
-                        return ug;
-                    })
-                    .collect(Collectors.toList());
-            userAdapter.saveAllUserGroups(groupEntities);
-
-            sendEmailsAsync(emailRequests);
-
-        } catch (Exception e) {
-            throw new RuntimeException("Error processing CSV: " + e.getMessage(), e);
-        }
 
         log.info("Uploaded: {}, Skipped: {}, Time: {} ms", uploadedCount, skippedCount, (System.currentTimeMillis() - startTime));
 
         Map<String, Object> response = new HashMap<>();
+        log.info("uploadedUsers: {}", successList);
+        log.info("uploadedCount: {}", uploadedCount);
+        log.info("skippedCount: {}", skippedCount);
+        log.info("skippedRows: {}", skippedRows);
 
-        String message = String.format(" %d Users created successfully. Duplicate/invalid users were skipped.", uploadedCount);
+        String message = String.format(" %d Users created. Duplicate/invalid users were skipped.", uploadedCount);
         return new ApiResponse(200, message, response);
-    }
 
+    }
 
     public String saveCsvToLocal(MultipartFile file) throws IOException {
         Path tempDirPath = Paths.get(uploadDir);

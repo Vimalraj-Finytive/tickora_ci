@@ -590,6 +590,9 @@ public class AuthFacade {
     public List<UserDashboardDto> getAllUserInfo(String token, DashboardDto request) {
         LocalDate fromDate = request.getFromDate();
         LocalDate toDate = request.getToDate();
+        if (toDate.isAfter(LocalDate.now())) {
+            toDate = LocalDate.now();
+        }
         Long userId = request.getUserId();
         if (!token.startsWith("Bearer ")) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid token format");

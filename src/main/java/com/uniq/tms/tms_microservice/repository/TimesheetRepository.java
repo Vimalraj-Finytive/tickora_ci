@@ -226,7 +226,7 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
                         WHERE th2.timesheet_id = t.id
                           AND th2.log_type = 'CLOCK_OUT'
                           AND th2.log_from = 'SYSTEM_GENERATED'
-                    ) THEN 'Failed Clock OUT'
+                    ) THEN 'Failed Clock Out'
                     WHEN (EXTRACT(EPOCH FROM (t.last_clock_out - t.first_clock_in)) / 3600.0) >=
                          (EXTRACT(EPOCH FROM (ws.end_time - ws.start_time)) / 3600.0)
                     THEN 'Sufficient Hours'
