@@ -8,6 +8,7 @@ import com.uniq.tms.tms_microservice.facade.AuthFacade;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.io.Resource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -20,7 +21,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
-
 import java.time.LocalDate;
 import java.util.List;
 
@@ -244,4 +244,13 @@ public class UserController {
         ApiResponse response = authFacade.addLocation(token, locationDto);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
+
+    @GetMapping("/getUserLocation")
+    public ResponseEntity<ApiResponse> getUserLocation(@RequestHeader("Authorization") String token) {
+        ApiResponse response = authFacade.getUserLocation(token);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
+
+    @GetMapping("/download-sample-file")
+    public ResponseEntity<Resource> downloadSampleFile() { return authFacade.downloadSampleFile(); }
 }

@@ -2,6 +2,7 @@ package com.uniq.tms.tms_microservice.adapter;
 
 import com.uniq.tms.tms_microservice.dto.UserAttendanceDto;
 import com.uniq.tms.tms_microservice.dto.UserDashboard;
+import com.uniq.tms.tms_microservice.dto.UserTimesheetDto;
 import com.uniq.tms.tms_microservice.dto.UserTimesheetResponseDto;
 import com.uniq.tms.tms_microservice.entity.TimesheetEntity;
 import com.uniq.tms.tms_microservice.entity.TimesheetHistoryEntity;
@@ -23,4 +24,5 @@ public interface TimesheetAdapter {
     List<TimesheetEntity> getLatestLogsByTimesheetIds(List<Long> memberIds, Long orgId, LocalDate date);
     List<UserDashboard> findAllByOrgIdExcludingUser(Long orgId, List<Long> userIds, LocalDate fromDate, LocalDate toDate, boolean isSuperAdmin, Long loggedInUserId, Long userId);
     List<UserAttendanceDto> findAttendanceForUserInRange(List<Long> userId, LocalDate fromDate, LocalDate toDate);
+    List<UserTimesheetDto> fetchUserTimesheetsWithHistory(LocalDate startDate, LocalDate endDate, List<Long> userIds);
 }

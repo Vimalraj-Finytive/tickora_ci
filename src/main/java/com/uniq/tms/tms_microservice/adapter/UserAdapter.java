@@ -86,5 +86,5 @@ public interface UserAdapter {
     UserEntity findUserByOrgIdAndUserId(Long orgId, Long userId);
     LocationEntity addLocation(Location location);
     Optional<UserEntity> getUserDashboard(Long userId);
+    Optional<LocationEntity> getUserLocation(Long locationId);
 }
-

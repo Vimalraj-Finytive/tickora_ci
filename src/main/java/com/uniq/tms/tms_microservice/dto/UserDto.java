@@ -15,9 +15,7 @@ public class UserDto {
     private Long groupId;
     private boolean active;
 
-    public UserDto() {
-
-    }
+    public UserDto() {}
 
     public LocalDate getDateOfJoining() {
         return dateOfJoining;
@@ -95,8 +93,7 @@ public class UserDto {
         return isRegisterUser;
     }
 
-    public void setRegisterUser(boolean registerUser) {
-        isRegisterUser = registerUser;
-
+    public void setIsRegisterUser(boolean isRegisterUser) {
+        this.isRegisterUser = isRegisterUser;
     }
 }

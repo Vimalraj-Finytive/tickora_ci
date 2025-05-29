@@ -6,7 +6,9 @@ public enum TimesheetStatusEnum {
     ABSENT(2L, "Absent"),
     PAID_LEAVE(3L, "Paid Leave"),
     NOT_MARKED(4L, "Not Marked"),
-    HOLIDAY(5L, "Holiday");
+    HOLIDAY(5L, "Holiday"),
+    HALF_DAY(6L, "Half Day"),
+    PERMISSION(7L, "Permission");
 
     private final Long id;
     private final String label;

@@ -23,18 +23,18 @@ public class ReportScheduler {
 
     @Scheduled(cron = "0 0 * * * ?")
     public void reportScheduler() {
-        log.info("Report Scheduler started");
-        if(! Files.exists(tempDirectory)) return;
-        try(Stream<Path> files = Files.list(tempDirectory)){
+        log.info("Report Cleanup Scheduler started");
+        if (!Files.exists(tempDirectory)) return;
+        try (Stream<Path> files = Files.list(tempDirectory)) {
             files.forEach(file -> {
-                try{
+                try {
                     Files.deleteIfExists(file);
-                }catch (IOException e){
-                    log.error("Failed to delete file: {}", file.getFileName(), e);
+                } catch (IOException e) {
+                    log.error("Failed to delete report file: {}", file.getFileName(), e);
                 }
             });
-            log.info("Reports deleted from temp directory successfully");
-        }catch (Exception e){
+            log.info("Report files deleted from temp directory successfully");
+        } catch (Exception e) {
             log.error("Failed to clean report directory", e);
         }
     }

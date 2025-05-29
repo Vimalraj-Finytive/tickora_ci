@@ -7,6 +7,7 @@ import com.uniq.tms.tms_microservice.dto.TimesheetDto;
 import com.uniq.tms.tms_microservice.dto.TimesheetHistoryDto;
 import com.uniq.tms.tms_microservice.dto.TimesheetReportDto;
 import com.uniq.tms.tms_microservice.dto.UserDashboardDto;
+import com.uniq.tms.tms_microservice.dto.UserTimesheetDto;
 import com.uniq.tms.tms_microservice.dto.UserTimesheetResponseDto;
 import com.uniq.tms.tms_microservice.facade.AuthFacade;
 import com.uniq.tms.tms_microservice.util.ReportUtils;
@@ -84,4 +85,10 @@ public class  TimesheetController {
         return ResponseEntity.ok(new ApiResponse(200, "Dashboard Loaded Successfully", dashboards));
     }
 
+    @PostMapping("/userTimesheets")
+    public ResponseEntity<?> getUserTimesheets(@RequestHeader("Authorization") String token,
+                                               @RequestBody TimesheetReportDto request) {
+        List<UserTimesheetDto> timesheets = authFacade.getUserTimesheets(token,request);
+        return ResponseEntity.ok(new ApiResponse(200, "Success", timesheets));
+    }
 }

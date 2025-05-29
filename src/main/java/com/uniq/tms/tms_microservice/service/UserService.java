@@ -10,6 +10,8 @@ import com.uniq.tms.tms_microservice.model.Location;
 import com.uniq.tms.tms_microservice.model.Role;
 import com.uniq.tms.tms_microservice.model.User;
 import com.uniq.tms.tms_microservice.model.UserGroup;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.multipart.MultipartFile;
 import java.time.LocalDate;
 import java.util.List;
@@ -41,4 +43,6 @@ public interface UserService {
     UserProfileResponse getUserProfile(Long orgId, Long userId);
     List<UserNameSuggestionDto> getGroupUsers(List<Long> groupIds, Long orgId, Long loggedInUserId, String role);
     Location addLocation(LocationDto locationDto, Long orgId);
+    List<Location> getUserLocation(Long userId);
+    ResponseEntity<Resource> downloadSampleFile();
 }

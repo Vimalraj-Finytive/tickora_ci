@@ -54,7 +54,7 @@ public class TimesheetDto {
     private Boolean paidLeave;
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String mobileNumber;
-    private String Status;
+    private String status;
 
     public TimesheetDto(TimesheetEntity timesheetEntity, List<TimesheetHistoryDto> historyDtos) {
         this.id = timesheetEntity.getId();
@@ -288,10 +288,10 @@ public class TimesheetDto {
     }
 
     public String getStatus() {
-        return Status;
+        return status;
     }
 
     public void setStatus(String status) {
-        Status = status;
+        this.status = status;
     }
 }

@@ -28,4 +28,5 @@ public interface LocationEntityMapper {
             locationEntity.setOrganizationEntity(organization);
         }
     }
+    Location toModel(LocationEntity entity);
 }

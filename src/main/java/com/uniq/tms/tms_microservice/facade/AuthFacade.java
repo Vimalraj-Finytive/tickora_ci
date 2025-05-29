@@ -5,6 +5,7 @@ import com.uniq.tms.tms_microservice.adapter.UserAdapter;
 import com.uniq.tms.tms_microservice.config.JwtUtil;
 import com.uniq.tms.tms_microservice.dto.*;
 import com.uniq.tms.tms_microservice.entity.UserEntity;
+import com.uniq.tms.tms_microservice.mapper.LocationDtoMapper;
 import com.uniq.tms.tms_microservice.mapper.SecondaryDetailsMapper;
 import com.uniq.tms.tms_microservice.mapper.TimesheetDtoMapper;
 import com.uniq.tms.tms_microservice.mapper.UserDtoMapper;
@@ -23,6 +24,8 @@ import org.slf4j.LoggerFactory;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -55,8 +58,9 @@ public class AuthFacade {
     private final WorkScheduleService workScheduleService;
     private final WorkScheduleDtoMapper workScheduleDtoMapper;
     private final ReportService reportService;
+    private final LocationDtoMapper locationDtoMapper;
 
-    public AuthFacade(UserAdapter userAdapter, AuthService authService, UserService userService, UserDtoMapper userDtoMapper, TimesheetService timesheetService, TimesheetDtoMapper timesheetDtoMapper, JwtUtil jwtUtil, SecondaryDetailsMapper secondaryDetailsMapper, UserEntityMapper userEntityMapper, Validator validator, WorkScheduleService workScheduleService, WorkScheduleDtoMapper workScheduleDtoMapper, ReportService reportService) {
+    public AuthFacade(UserAdapter userAdapter, AuthService authService, UserService userService, UserDtoMapper userDtoMapper, TimesheetService timesheetService, TimesheetDtoMapper timesheetDtoMapper, JwtUtil jwtUtil, SecondaryDetailsMapper secondaryDetailsMapper, UserEntityMapper userEntityMapper, Validator validator, WorkScheduleService workScheduleService, WorkScheduleDtoMapper workScheduleDtoMapper, ReportService reportService, LocationDtoMapper locationDtoMapper) {
 
         this.userAdapter = userAdapter;
         this.authService = authService;
@@ -71,7 +75,11 @@ public class AuthFacade {
         this.workScheduleService = workScheduleService;
         this.workScheduleDtoMapper = workScheduleDtoMapper;
         this.reportService = reportService;
+        this.locationDtoMapper = locationDtoMapper;
     }
+
+    @Value("${csv.download.dir}")
+    private String downloadDir;
 
     private final Logger log = LoggerFactory.getLogger(AuthFacade.class);
 
@@ -615,22 +623,29 @@ public class AuthFacade {
 
     public FileExportResponseDto generateTimesheetFile(String token, TimesheetReportDto request) throws IOException {
         List<UserTimesheetResponseDto> timesheets = getAllTimesheets(token, request);
+        log.info("Requested Timesheet Date Range: {} to {}", request.getFromDate(), request.getToDate());
+        log.info("Total timesheets fetched: {}", timesheets.size());
 
         String format = request.getFormat();
         String timePeriod = request.getTimePeriod();
         LocalDate startDate = request.getFromDate();
+        LocalDate endDate = request.getToDate();
 
         // 1. Build base filename
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-        String datePart = timePeriod.equalsIgnoreCase("DAY") ?
-                startDate.format(formatter) :
-                (timePeriod.equalsIgnoreCase("WEEK") ? "Weekly" : "Monthly");
+        String datePart = (timePeriod == null || timePeriod.trim().isEmpty()) ?
+                "Timesheet_" + startDate.format(formatter) + "_to_" + endDate.format(formatter) :
+                timePeriod.equalsIgnoreCase("DAY") ? "Timesheet_" + startDate.format(formatter) :
+                        timePeriod.equalsIgnoreCase("WEEK") ? "Timesheet_Weekly" :
+                                timePeriod.equalsIgnoreCase("MONTH") ? "Timesheet_Monthly" :
+                                        timePeriod.equalsIgnoreCase("YEAR") ? "Timesheet_Yearly" :
+                                                "Invalid or missing date range for time period";
 
         String baseName = "timesheetReport_" + datePart;
         String extension = "csv".equalsIgnoreCase(format) ? ".csv" : ".xlsx";
 
         // 2. Create directory
-        Path resourcePath = Paths.get("src/main/resources/temp");
+        Path resourcePath = Paths.get(downloadDir);
         if (!Files.exists(resourcePath)) {
             Files.createDirectories(resourcePath);
         }
@@ -645,15 +660,18 @@ public class AuthFacade {
             counter++;
         }
 
-        //Sheet name
+        // Sheet name
         String sheetName;
-        if (timePeriod.equalsIgnoreCase("DAY")) {
+        if ("DAY".equalsIgnoreCase(timePeriod)) {
             sheetName = "Timesheet_" + startDate.format(formatter);
-        }else if (timePeriod.equalsIgnoreCase("WEEK")) {
+        } else if ("WEEK".equalsIgnoreCase(timePeriod)) {
             sheetName = "Timesheet_Weekly";
-        }else {
+        } else if ("MONTH".equalsIgnoreCase(timePeriod)) {
             sheetName = "Timesheet_Monthly";
+        } else {
+            sheetName = "Timesheet_" + startDate.format(formatter) + "_to_" + endDate.format(formatter);
         }
+
 
         // 4. Generate file content
         byte[] data;
@@ -672,5 +690,37 @@ public class AuthFacade {
 
         // 6. Return file info
         return new FileExportResponseDto(filePath, fileName, format);
+    }
+
+    public ApiResponse getUserLocation(String token) {
+        if (!token.startsWith("Bearer ")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid token format");
+        }
+        String jwt = token.substring(7);
+        Long userId = jwtUtil.extractUserIdFromToken(jwt);
+        List<LocationDto> locations = userService.getUserLocation(userId).stream()
+                .map(locationDtoMapper::toDto)
+                .toList();
+        return new ApiResponse(200, "Student members fetched successfully", locations);
+    }
+
+    public ResponseEntity<Resource> downloadSampleFile() {
+        return userService.downloadSampleFile();}
+
+    public List<UserTimesheetDto> getUserTimesheets(String token, TimesheetReportDto request) {
+        if (!token.startsWith("Bearer ")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid token format");
+        }
+
+        String jwt = token.substring(7);
+        Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
+
+        Long userIdFromToken = jwtUtil.extractUserIdFromToken(jwt);
+        if (orgId == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized - Invalid Organization");
+        }
+        String role = jwtUtil.extractRoleFromToken(jwt);
+        return timesheetService.getUserTimesheets(userIdFromToken, orgId, role, request);
+
     }
 }

@@ -17,4 +17,5 @@ public interface LocationRepository extends JpaRepository<LocationEntity, Long> 
     // Custom query to fetch location name and ID mapping
     @Query(value = "SELECT name, location_id FROM location", nativeQuery = true)
     List<Object[]> findLocationNameIdMappings();
+
 }

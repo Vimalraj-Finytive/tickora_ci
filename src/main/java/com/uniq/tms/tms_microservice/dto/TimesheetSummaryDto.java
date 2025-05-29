@@ -11,6 +11,8 @@ public class TimesheetSummaryDto {
     private int notMarkedCount;
     private int paidLeaveCount;
     private int holidayCount;
+    private int halfDayCount;
+    private int permissionCount;
     private Integer totalCount;
 
     public Long getUserId() {
@@ -99,5 +101,21 @@ public class TimesheetSummaryDto {
 
     public void setTotalCount(Integer totalCount) {
         this.totalCount = totalCount;
+    }
+
+    public int getHalfDayCount() {
+        return halfDayCount;
+    }
+
+    public void setHalfDayCount(int halfDayCount) {
+        this.halfDayCount = halfDayCount;
+    }
+
+    public int getPermissionCount() {
+        return permissionCount;
+    }
+
+    public void setPermissionCount(int permissionCount) {
+        this.permissionCount = permissionCount;
     }
 }

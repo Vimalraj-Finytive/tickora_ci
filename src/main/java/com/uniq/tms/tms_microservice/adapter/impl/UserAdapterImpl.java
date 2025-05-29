@@ -417,4 +417,9 @@ public class UserAdapterImpl implements UserAdapter {
         return userRepository.findByUserId(userId);
     }
 
+    @Override
+    public Optional<LocationEntity> getUserLocation(Long locationId) {
+        return locationRepository.findById(locationId);
+    }
+
 }

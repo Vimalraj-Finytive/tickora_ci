@@ -7,12 +7,16 @@ public class UserDashboardDto {
     private Integer paidLeaveCount;
     private Integer notMarkedCount;
     private Integer holidayCount;
+    private Integer halfDayCount;
+    private Integer permissionCount;
     private Integer totalCount;
     private Double presentPercentage;
     private Double absentPercentage;
     private Double paidLeavePercentage;
     private Double notMarkedPercentage;
     private Double holidayPercentage;
+    private Double halfDayPercentage;
+    private Double permissionPercentage;
 
     public Integer getPresentCount() {
         return presentCount;
@@ -100,5 +104,37 @@ public class UserDashboardDto {
 
     public void setHolidayPercentage(Double holidayPercentage) {
         this.holidayPercentage = holidayPercentage;
+    }
+
+    public Integer getHalfDayCount() {
+        return halfDayCount;
+    }
+
+    public void setHalfDayCount(Integer halfDayCount) {
+        this.halfDayCount = halfDayCount;
+    }
+
+    public Integer getPermissionCount() {
+        return permissionCount;
+    }
+
+    public void setPermissionCount(Integer permissionCount) {
+        this.permissionCount = permissionCount;
+    }
+
+    public Double getHalfDayPercentage() {
+        return halfDayPercentage;
+    }
+
+    public void setHalfDayPercentage(Double halfDayPercentage) {
+        this.halfDayPercentage = halfDayPercentage;
+    }
+
+    public Double getPermissionPercentage() {
+        return permissionPercentage;
+    }
+
+    public void setPermissionPercentage(Double permissionPercentage) {
+        this.permissionPercentage = permissionPercentage;
     }
 }

@@ -9,7 +9,7 @@ public enum Timeperiod {
     DAY(fromdate -> fromdate),
     WEEK(fromdate -> fromdate.plusDays(6)),
     MONTH(fromdate -> fromdate.withDayOfMonth(fromdate.lengthOfMonth())),
-    YEAR (fromdate -> fromdate.with(Year.from(fromdate).atMonth(12).atDay(31)));
+    YEAR(fromdate -> fromdate.with(Year.from(fromdate).atMonth(12).atDay(31)));
 
     private final Function<LocalDate, LocalDate> endDateFunction;
 
@@ -22,11 +22,14 @@ public enum Timeperiod {
     }
 
     public static Timeperiod fromString(String timePeriod) {
+        if (timePeriod == null || timePeriod.trim().isEmpty()) {
+            return null;
+        }
         for (Timeperiod period : Timeperiod.values()) {
             if (period.name().equalsIgnoreCase(timePeriod)) {
                 return period;
             }
         }
-        throw new IllegalArgumentException("Invalid timePeriod: " + timePeriod + ". Allowed values: DAY, WEEK, MONTH.");
+        throw new IllegalArgumentException("Invalid timePeriod: " + timePeriod + ". Allowed values: DAY, WEEK, MONTH, YEAR.");
     }
 }

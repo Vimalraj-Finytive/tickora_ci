@@ -14,6 +14,7 @@ import com.uniq.tms.tms_microservice.dto.TimesheetStatusEnum;
 import com.uniq.tms.tms_microservice.dto.UserAttendanceDto;
 import com.uniq.tms.tms_microservice.dto.UserDashboard;
 import com.uniq.tms.tms_microservice.dto.UserDashboardDto;
+import com.uniq.tms.tms_microservice.dto.UserTimesheetDto;
 import com.uniq.tms.tms_microservice.dto.UserTimesheetResponseDto;
 import com.uniq.tms.tms_microservice.entity.TimesheetEntity;
 import com.uniq.tms.tms_microservice.entity.TimesheetHistoryEntity;
@@ -44,6 +45,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.apache.logging.log4j.Logger;
+import static com.uniq.tms.tms_microservice.dto.TimesheetStatusEnum.*;
 
 @Service
 public class TimesheetServiceImpl implements TimesheetService {
@@ -72,12 +74,13 @@ public class TimesheetServiceImpl implements TimesheetService {
         LocalDate fromDate = request.getFromDate();
         LocalDate toDate = request.getToDate();
         String timePeriod = request.getTimePeriod();
+        log.info("Time period: {}", timePeriod);
         List<Long> userId = request.getUserId();
         List<Long> groupIds = request.getGroupId();
         LocalDate startDate = null;
         LocalDate endDate = null;
 
-        if (fromDate != null && timePeriod != null) {
+        if (fromDate != null && !timePeriod.isEmpty()) {
             LocalDateRange range = calculateDateRange(fromDate, timePeriod);
             startDate = range.startDate();
             endDate = range.endDate();
@@ -90,6 +93,10 @@ public class TimesheetServiceImpl implements TimesheetService {
          else if (fromDate != null && toDate != null) {
                 startDate = fromDate;
                 endDate = toDate;
+            if(endDate.isAfter(LocalDate.now())) {
+                endDate = LocalDate.now();
+                log.info("endDate: {}", endDate);
+            }
          }
 
         // Determine target users based on privileges
@@ -310,9 +317,17 @@ public class TimesheetServiceImpl implements TimesheetService {
             timesheet.setLastClockOut(request.getLastClockOut());
         }
 
-        if(Boolean.TRUE.equals(request.getPaidLeave()))
+        if(PAID_LEAVE.getLabel().equalsIgnoreCase(request.getStatus()))
         {
-            timesheet.setStatusId(TimesheetStatusEnum.PAID_LEAVE.getId());
+            timesheet.setStatusId(PAID_LEAVE.getId());
+        }
+        else if(HALF_DAY.getLabel().equalsIgnoreCase(request.getStatus()))
+        {
+            timesheet.setStatusId(HALF_DAY.getId());
+        }
+        else if(PERMISSION.getLabel().equalsIgnoreCase(request.getStatus()))
+        {
+            timesheet.setStatusId(PERMISSION.getId());
         }
         calculateHours(timesheet);
 
@@ -365,7 +380,7 @@ public class TimesheetServiceImpl implements TimesheetService {
                 history.setLogFrom(LogFrom.SYSTEM_GENERATED);
                 history.setLoggedTimestamp(LocalDateTime.now());
 
-                // ✅ Properly reference timesheet
+                // Properly reference timesheet
                 TimesheetEntity timesheetRef = new TimesheetEntity();
                 timesheetRef.setId(entry.getId());
                 history.setTimesheet(timesheetRef);
@@ -455,7 +470,7 @@ public class TimesheetServiceImpl implements TimesheetService {
         WorkScheduleEntity defaultWs = workScheduleAdapter.findDefaultActiveSchedule();
         DayOfWeek restDay = DayOfWeek.valueOf(defaultWs.getRestDay().toUpperCase());
 
-        int present = 0, absent = 0, paidLeave = 0, notMarked = 0, holiday = 0;
+        int present = 0, absent = 0, paidLeave = 0, notMarked = 0, holiday = 0, halfDay = 0, permission = 0;
         int total = 0;
 
         for (LocalDate date = fromDate; !date.isAfter(toDate); date = date.plusDays(1)) {
@@ -491,6 +506,8 @@ public class TimesheetServiceImpl implements TimesheetService {
                         case 2 -> absent++;
                         case 3 -> paidLeave++;
                         case 4 -> notMarked++;
+                        case 6 -> halfDay++;
+                        case 7 -> permission++;
                     }
                 }
             }
@@ -501,6 +518,8 @@ public class TimesheetServiceImpl implements TimesheetService {
         summary.setAbsentCount(absent);
         summary.setPaidLeaveCount(paidLeave);
         summary.setNotMarkedCount(notMarked);
+        summary.setHalfDayCount(halfDay);
+        summary.setPermissionCount(permission);
         summary.setHolidayCount(holiday);
         summary.setTotalCount(total);
 
@@ -516,6 +535,8 @@ public class TimesheetServiceImpl implements TimesheetService {
         summary.setPaidLeavePercentage(Double.parseDouble(formatToDecimal(paidLeave / totalCountPercentage * 100.0)));
         summary.setNotMarkedPercentage(Double.parseDouble(formatToDecimal(notMarked / totalCountPercentage * 100.0)));
         summary.setHolidayPercentage(Double.parseDouble(formatToDecimal(holiday / totalCountPercentage * 100.0)));
+        summary.setHalfDayPercentage(Double.parseDouble(formatToDecimal(halfDay / totalCountPercentage * 100.0)));
+        summary.setPermissionPercentage(Double.parseDouble(formatToDecimal(permission / totalCountPercentage * 100.0)));
         return Collections.singletonList(summary);
     }
 
@@ -524,4 +545,41 @@ public class TimesheetServiceImpl implements TimesheetService {
         df.setRoundingMode(RoundingMode.HALF_UP);
         return df.format(value);
     }
+
+    @Override
+    public List<UserTimesheetDto> getUserTimesheets(Long userIdFromToken, Long orgId, String role, TimesheetReportDto request) {
+        LocalDate fromDate = request.getFromDate();
+        LocalDate toDate = request.getToDate();
+        String timePeriod = request.getTimePeriod();
+        List<Long> userIds = request.getUserId();
+
+        LocalDate startDate = null;
+        LocalDate endDate = null;
+
+        if (fromDate != null && timePeriod != null) {
+            LocalDateRange range = calculateDateRange(fromDate, timePeriod);
+            startDate = range.startDate();
+            endDate = range.endDate();
+            log.info("startDate: {}, endDate: {}", startDate, endDate);
+            if(endDate.isAfter(LocalDate.now())) {
+                endDate = LocalDate.now();
+                log.info("endDate: {}", endDate);
+            }
+        }
+        else if (fromDate != null && toDate != null) {
+            startDate = fromDate;
+            endDate = toDate;
+            log.info("startDate: {}, endDate: {}", startDate, endDate);
+            if(endDate.isAfter(LocalDate.now())) {
+                endDate = LocalDate.now();
+                log.info("endDate: {}", endDate);
+            }
+        } else if (fromDate == null && toDate == null && userIds != null) {
+            endDate = LocalDate.now();
+        }
+
+        List<UserTimesheetDto> rawResults = timesheetAdapter.fetchUserTimesheetsWithHistory(startDate, endDate, userIds);
+        return rawResults;
+    }
+
 }
