@@ -41,7 +41,7 @@ public interface UserAdapter {
     List<UserGroupEntity> getGroupMembersByGroupId(Long groupId, Long orgId);
     List<UserEntity> getUsersByIds(List<Long> userIds, Long orgId);
     boolean existsByMobileNumber(String mobileNumber);
-    List<UserEntity> getAllUsers();
+    List<UserEntity> getAllUsers(Long orgId, Long userIdFromToken);
     UserEntity getUserById(Long userId);
     boolean existsGroupNameInOrganization(String groupName, Long orgId, Long groupId);
     UserGroupEntity saveUserGroup(UserGroupEntity entity);
