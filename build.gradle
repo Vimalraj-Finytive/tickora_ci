@@ -66,7 +66,7 @@ tasks.named('test') {
 }
 
 bootJar {
-	archiveFileName = 'tms-monoservice.jar'
+	archiveFileName = 'tickora-production.jar'
 }
 
 jar {
