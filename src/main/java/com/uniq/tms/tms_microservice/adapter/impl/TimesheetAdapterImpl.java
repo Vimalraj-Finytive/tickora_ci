@@ -474,4 +474,14 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
         return finalResponse;
     }
 
+    @Override
+    public void updateTimesheetHistory(Long id, LogType logType, LocalTime firstClockIn) {
+        timesheetHistoryRepository.updateTimesheetHistory(id, logType, firstClockIn);
+    }
+
+    @Override
+    public void saveAllTimesheetHistories(List<TimesheetHistoryEntity> historyEntries) {
+        timesheetHistoryRepository.saveAll(historyEntries);
+    }
+
 }

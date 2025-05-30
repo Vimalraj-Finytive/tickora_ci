@@ -1,12 +1,16 @@
 package com.uniq.tms.tms_microservice.repository;
 
+import com.uniq.tms.tms_microservice.dto.LogType;
 import com.uniq.tms.tms_microservice.entity.TimesheetEntity;
 import com.uniq.tms.tms_microservice.entity.TimesheetHistoryEntity;
+import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 
 @Repository
@@ -18,4 +22,11 @@ public interface TimesheetHistoryRepository extends JpaRepository<TimesheetHisto
       AND t.date = :logDate
 """)
     List<TimesheetEntity> findLatestLogByTimesheet(@Param("userIds") List<Long> userIds, @Param("logDate") LocalDate date);
+
+    @Modifying
+    @Transactional
+    @Query("UPDATE TimesheetHistoryEntity th SET th.logTime = :logTime WHERE th.timesheet.id = :timesheetId AND th.logType = :logType")
+    void updateTimesheetHistory(@Param("timesheetId") Long timesheetId,
+                               @Param("logType") LogType logType,
+                               @Param("logTime") LocalTime logTime);
 }

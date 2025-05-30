@@ -295,8 +295,10 @@ public class TimesheetServiceImpl implements TimesheetService {
     @Override
     public TimesheetDto updateClockInOut(Long userId, LocalDate date, TimesheetDto request) {
         TimesheetEntity timesheet = timesheetAdapter.findUserIdAndDate(userId, date);
+        boolean isNew = false;
 
         if (timesheet == null) {
+            isNew = true;
             timesheet = new TimesheetEntity();
             timesheet.setUserId(userId);
             timesheet.setDate(date);
@@ -308,33 +310,66 @@ public class TimesheetServiceImpl implements TimesheetService {
             timesheet.setTotalBreakHours(null);
         }
 
+        // Update entity fields
         if (request.getFirstClockIn() != null) {
             timesheet.setFirstClockIn(request.getFirstClockIn());
             timesheet.setStatusId(TimesheetStatusEnum.PRESENT.getId());
-
         }
+
         if (request.getLastClockOut() != null) {
             timesheet.setLastClockOut(request.getLastClockOut());
         }
 
-        if(PAID_LEAVE.getLabel().equalsIgnoreCase(request.getStatus()))
-        {
+        if (PAID_LEAVE.getLabel().equalsIgnoreCase(request.getStatus())) {
             timesheet.setStatusId(PAID_LEAVE.getId());
-        }
-        else if(HALF_DAY.getLabel().equalsIgnoreCase(request.getStatus()))
-        {
+        } else if (HALF_DAY.getLabel().equalsIgnoreCase(request.getStatus())) {
             timesheet.setStatusId(HALF_DAY.getId());
-        }
-        else if(PERMISSION.getLabel().equalsIgnoreCase(request.getStatus()))
-        {
+        } else if (PERMISSION.getLabel().equalsIgnoreCase(request.getStatus())) {
             timesheet.setStatusId(PERMISSION.getId());
         }
-        calculateHours(timesheet);
 
+        calculateHours(timesheet);
         timesheet = timesheetAdapter.save(timesheet);
+
+        // Handle TimesheetHistory only for new timesheet
+        if (isNew) {
+            if (request.getFirstClockIn() != null) {
+                TimesheetHistoryEntity clockInHistory = new TimesheetHistoryEntity();
+                clockInHistory.setTimesheet(timesheet);
+                clockInHistory.setLogTime(request.getFirstClockIn());
+                clockInHistory.setLogType(LogType.CLOCK_IN);
+                clockInHistory.setLogFrom(LogFrom.WEB_APP);
+                clockInHistory.setLocationId(0L); // Update if location is dynamic
+                clockInHistory.setLoggedTimestamp(LocalDateTime.now());
+                timesheetAdapter.saveTimesheetHistory(clockInHistory);
+            }
+
+            if (request.getLastClockOut() != null) {
+                TimesheetHistoryEntity clockOutHistory = new TimesheetHistoryEntity();
+                clockOutHistory.setTimesheet(timesheet);
+                clockOutHistory.setLogTime(request.getLastClockOut());
+                clockOutHistory.setLogType(LogType.CLOCK_OUT);
+                clockOutHistory.setLogFrom(LogFrom.WEB_APP);
+                clockOutHistory.setLocationId(0L);
+                clockOutHistory.setLoggedTimestamp(LocalDateTime.now());
+                timesheetAdapter.saveTimesheetHistory(clockOutHistory);
+            }
+        } else {
+            // Optional: update existing history rows for clock-in/out if needed
+            if (request.getFirstClockIn() != null) {
+                timesheetAdapter.updateTimesheetHistory(
+                        timesheet.getId(), LogType.CLOCK_IN, request.getFirstClockIn());
+            }
+
+            if (request.getLastClockOut() != null) {
+                timesheetAdapter.updateTimesheetHistory(
+                        timesheet.getId(), LogType.CLOCK_OUT, request.getLastClockOut());
+            }
+        }
 
         return timesheetDtoMapper.toDto(timesheet);
     }
+
 
     private void calculateHours(TimesheetEntity timesheet) {
         try {
@@ -393,6 +428,7 @@ public class TimesheetServiceImpl implements TimesheetService {
 
         log.info("Saving updated timesheets and history entries...");
         timesheetAdapter.saveAll(openClockIns);
+        timesheetAdapter.saveAllTimesheetHistories(historyEntries);
     }
 
     @Override

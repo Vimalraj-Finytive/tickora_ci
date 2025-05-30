@@ -17,7 +17,7 @@ public class TimesheetScheduler {
         this.timesheetService = timesheetService;
     }
 
-    @Scheduled(cron = "0 0 0 * * ?")
+    @Scheduled(cron = "0 */2 * * * ?")
     public void autoClockOutForAllEmployees() {
         try{
             log.info("Scheduled clock triggered at {}");
