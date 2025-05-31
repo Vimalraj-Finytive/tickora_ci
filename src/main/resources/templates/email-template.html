@@ -28,11 +28,11 @@
 <p><b>Default Password:</b> <span style="color: #007bff; font-weight: bold;" th:text="${password}"></span></p>
 
 <p>
-    <a th:href="@{http://13.60.251.68:8000/deeplink(email=${email})}"
+    <a th:href="@{http://51.21.219.235:8000/deeplink(email=${email})}"
        th:if="${!isNewUser}" class="btn">
         Reset Password
     </a>
-    <a th:href="@{http://13.60.251.68:8000/deeplink(email=${email}, newUser='true')}"
+    <a th:href="@{http://51.21.219.235:8000/deeplink(email=${email}, newUser='true')}"
        th:if="${isNewUser}" class="btn">
         Reset Password
     </a>
