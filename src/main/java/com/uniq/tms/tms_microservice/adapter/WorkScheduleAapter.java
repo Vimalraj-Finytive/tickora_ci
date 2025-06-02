@@ -6,5 +6,5 @@ import java.util.List;
 public interface WorkScheduleAapter {
     List<WorkScheduleEntity> getWorkSchedule(Long orgId);
     WorkScheduleEntity findByWorkscheduleId(Long workScheduleId);
-    WorkScheduleEntity findDefaultActiveSchedule();
+    WorkScheduleEntity findDefaultActiveSchedule(Long orgId);
 }

@@ -107,7 +107,7 @@ public class TimesheetServiceImpl implements TimesheetService {
                 .toList();
 
         // Fetch timesheets for the filtered users and date range
-        List<UserTimesheetResponseDto> timesheetDtos = timesheetAdapter.filterTimesheetsForAllUsers(startDate, endDate, userIds);
+        List<UserTimesheetResponseDto> timesheetDtos = timesheetAdapter.filterTimesheetsForAllUsers(startDate, endDate, userIds,orgId);
         return timesheetDtos;
     }
 
@@ -484,11 +484,11 @@ public class TimesheetServiceImpl implements TimesheetService {
         }
 
         // Calculate attendance summary for the collected userIds
-        return calculateAttendanceSummaryForUsers(userIdsForAttendance, fromDate, toDate);
+        return calculateAttendanceSummaryForUsers(userIdsForAttendance, fromDate, toDate, orgId);
     }
 
 
-    private List<UserDashboardDto> calculateAttendanceSummaryForUsers(List<Long> userIds, LocalDate fromDate, LocalDate toDate) {
+    private List<UserDashboardDto> calculateAttendanceSummaryForUsers(List<Long> userIds, LocalDate fromDate, LocalDate toDate, Long orgId) {
         if (userIds == null || userIds.isEmpty()) {
             return Collections.emptyList();
         }
@@ -503,7 +503,7 @@ public class TimesheetServiceImpl implements TimesheetService {
             attendanceMap.put(key, dto.getStatusId());
         }
 
-        WorkScheduleEntity defaultWs = workScheduleAdapter.findDefaultActiveSchedule();
+        WorkScheduleEntity defaultWs = workScheduleAdapter.findDefaultActiveSchedule(orgId);
         DayOfWeek restDay = DayOfWeek.valueOf(defaultWs.getRestDay().toUpperCase());
 
         int present = 0, absent = 0, paidLeave = 0, notMarked = 0, holiday = 0, halfDay = 0, permission = 0;
@@ -614,7 +614,7 @@ public class TimesheetServiceImpl implements TimesheetService {
             endDate = LocalDate.now();
         }
 
-        List<UserTimesheetDto> rawResults = timesheetAdapter.fetchUserTimesheetsWithHistory(startDate, endDate, userIds);
+        List<UserTimesheetDto> rawResults = timesheetAdapter.fetchUserTimesheetsWithHistory(startDate, endDate, userIds, orgId);
         return rawResults;
     }
 

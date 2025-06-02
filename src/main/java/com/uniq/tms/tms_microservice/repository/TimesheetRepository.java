@@ -38,9 +38,9 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
         FROM SelectedUsers u
         CROSS JOIN LATERAL (
             SELECT generate_series(
-                COALESCE(:startDate, u.date_of_joining),
-                COALESCE(:endDate, CURRENT_DATE),
-                INTERVAL '1 day'
+            GREATEST(COALESCE(:startDate, u.date_of_joining), u.date_of_joining),
+            COALESCE(:endDate, CURRENT_DATE),
+            INTERVAL '1 day'
             ) AS work_date
         ) gs
     )
@@ -107,14 +107,15 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
     FROM UserDateMatrix udm
     LEFT JOIN timesheet t ON t.user_id = udm.user_id AND t.date = udm.work_date
     LEFT JOIN role r ON udm.role_id = r.role_id
-    LEFT JOIN work_schedule ws ON ws.is_active = TRUE
+    LEFT JOIN work_schedule ws ON ws.is_active = TRUE AND ws.organization_id = :orgId
     LEFT JOIN timesheet_history th ON t.id = th.timesheet_id
     LEFT JOIN UserGroups ug ON udm.user_id = ug.user_id
     ORDER BY udm.user_id, udm.work_date, th.logged_timestamp
     """, nativeQuery = true)
     List<Object[]> fetchTimesheetsWithHistory(@Param("startDate") LocalDate startDate,
                                               @Param("endDate") LocalDate endDate,
-                                              @Param("userIds") Long[] userIds);
+                                              @Param("userIds") Long[] userIds,
+                                              @Param("orgId") Long orgId);
 
     List<TimesheetEntity> findActiveTimesheetsByDate(LocalDate today);
 
@@ -175,7 +176,7 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
         FROM SelectedUsers u
         CROSS JOIN LATERAL (
             SELECT generate_series(
-                COALESCE(:startDate, u.date_of_joining),
+                GREATEST(COALESCE(:startDate, u.date_of_joining), u.date_of_joining),
                 COALESCE(:endDate, CURRENT_DATE),
                 INTERVAL '1 day'
             ) AS work_date

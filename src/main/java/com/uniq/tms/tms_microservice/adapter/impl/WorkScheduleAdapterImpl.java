@@ -25,7 +25,7 @@ public class WorkScheduleAdapterImpl implements WorkScheduleAapter {
     }
 
     @Override
-    public WorkScheduleEntity findDefaultActiveSchedule() {
-        return workScheduleRepository.findDefaultActiveSchedule();
+    public WorkScheduleEntity findDefaultActiveSchedule(Long orgId) {
+        return workScheduleRepository.findDefaultActiveSchedule(orgId);
     }
 }

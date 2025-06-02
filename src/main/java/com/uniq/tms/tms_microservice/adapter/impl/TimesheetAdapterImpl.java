@@ -57,15 +57,15 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
     private static final Logger log = LoggerFactory.getLogger(TimesheetAdapterImpl.class);
 
     @Override
-    public List<UserTimesheetResponseDto> filterTimesheetsForAllUsers(LocalDate startDate, LocalDate endDate, List<Long> userIds) {
+    public List<UserTimesheetResponseDto> filterTimesheetsForAllUsers(LocalDate startDate, LocalDate endDate, List<Long> userIds, Long orgId) {
         Long[] userIdArray = userIds.toArray(new Long[0]);
 
-        List<Object[]> resultList = timesheetRepository.fetchTimesheetsWithHistory(startDate, endDate, userIdArray);
+        List<Object[]> resultList = timesheetRepository.fetchTimesheetsWithHistory(startDate, endDate, userIdArray, orgId);
 
         Map<String, TimesheetDto> timesheetMap = new LinkedHashMap<>();
         LocalDate today = LocalDate.now();
 
-        WorkScheduleEntity schedule = workScheduleAdapter.findDefaultActiveSchedule();
+        WorkScheduleEntity schedule = workScheduleAdapter.findDefaultActiveSchedule(orgId);
         String restDayString = schedule.getRestDay();
         final DayOfWeek restDay = (restDayString != null && !restDayString.isEmpty())
                 ? DayOfWeek.valueOf(restDayString.toUpperCase())
@@ -376,7 +376,7 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
     }
 
     @Override
-    public List<UserTimesheetDto> fetchUserTimesheetsWithHistory(LocalDate startDate, LocalDate endDate, List<Long> userIds) {
+    public List<UserTimesheetDto> fetchUserTimesheetsWithHistory(LocalDate startDate, LocalDate endDate, List<Long> userIds, Long orgId) {
         Long[] userIdArray = userIds.toArray(new Long[0]);
 
         List<Object[]> resultList = timesheetRepository.fetchUserTimesheetsWithHistory(startDate, endDate, userIdArray);
@@ -384,7 +384,7 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
         Map<String, UserTimesheetDto> timesheetMap = new LinkedHashMap<>();
         LocalDate today = LocalDate.now();
 
-        WorkScheduleEntity schedule = workScheduleAdapter.findDefaultActiveSchedule();
+        WorkScheduleEntity schedule = workScheduleAdapter.findDefaultActiveSchedule(orgId);
         String restDayString = schedule.getRestDay();
         final DayOfWeek restDay = (restDayString != null && !restDayString.isEmpty())
                 ? DayOfWeek.valueOf(restDayString.toUpperCase())

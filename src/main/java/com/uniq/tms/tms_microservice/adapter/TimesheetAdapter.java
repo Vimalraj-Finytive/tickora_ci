@@ -14,7 +14,7 @@ import java.util.Optional;
 
 public interface TimesheetAdapter {
 
-    List<UserTimesheetResponseDto> filterTimesheetsForAllUsers(LocalDate startDate, LocalDate endDate, List<Long> userIds);
+    List<UserTimesheetResponseDto> filterTimesheetsForAllUsers(LocalDate startDate, LocalDate endDate, List<Long> userIds, Long orgId);
     Optional<TimesheetEntity> findByUserIdAndDate(Long userId, LocalDate date);
     TimesheetEntity saveTimesheet(TimesheetEntity timesheet);
     TimesheetHistoryEntity saveTimesheetHistory(TimesheetHistoryEntity history);
@@ -26,7 +26,7 @@ public interface TimesheetAdapter {
     List<TimesheetEntity> getLatestLogsByTimesheetIds(List<Long> memberIds, Long orgId, LocalDate date);
     List<UserDashboard> findAllByOrgIdExcludingUser(Long orgId, List<Long> userIds, LocalDate fromDate, LocalDate toDate, boolean isSuperAdmin, Long loggedInUserId, Long userId);
     List<UserAttendanceDto> findAttendanceForUserInRange(List<Long> userId, LocalDate fromDate, LocalDate toDate);
-    List<UserTimesheetDto> fetchUserTimesheetsWithHistory(LocalDate startDate, LocalDate endDate, List<Long> userIds);
+    List<UserTimesheetDto> fetchUserTimesheetsWithHistory(LocalDate startDate, LocalDate endDate, List<Long> userIds, Long orgId);
     void updateTimesheetHistory(Long id, LogType logType, LocalTime firstClockIn);
     void saveAllTimesheetHistories(List<TimesheetHistoryEntity> historyEntries);
 }

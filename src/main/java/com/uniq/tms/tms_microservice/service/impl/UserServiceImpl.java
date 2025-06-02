@@ -707,7 +707,7 @@ public class UserServiceImpl implements UserService {
             WorkScheduleEntity ws = workScheduleAdapter.findByWorkscheduleId(groupMiddleware.getWorkScheduleId());
             entity.setWorkSchedule(ws);
         } else {
-            WorkScheduleEntity defaultWs = workScheduleAdapter.findDefaultActiveSchedule();
+            WorkScheduleEntity defaultWs = workScheduleAdapter.findDefaultActiveSchedule(orgId);
             entity.setWorkSchedule(defaultWs);
         }
 
