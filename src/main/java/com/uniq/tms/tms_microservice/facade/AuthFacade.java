@@ -220,7 +220,7 @@ public class AuthFacade {
                         .body(new ApiResponse(404, "Email not registered", null));
             }
 
-            if (user.isDefaultPassword()) {
+            if (!user.isDefaultPassword()) {
                 return authService.forgotPassword(email.getEmail());
             }
             return ResponseEntity.ok(new ApiResponse(200, "Email validated", null));

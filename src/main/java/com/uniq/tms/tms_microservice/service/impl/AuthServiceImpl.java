@@ -357,14 +357,15 @@ public class AuthServiceImpl implements AuthService {
     public ResponseEntity<ApiResponse> forgotPassword(String email) {
         UserEntity user = userAdapter.findByEmail(email)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
-        if (Boolean.TRUE.equals(user.isDefaultPassword())) {
+        if (Boolean.FALSE.equals(user.isDefaultPassword())) {
             String defaultPassword = PasswordUtil.generateDefaultPassword();
             user.setPassword(PasswordUtil.encryptPassword(defaultPassword));
             user.setDefaultPassword(true);
             userAdapter.saveUser(user);
             boolean isNewUser = false;
             emailUtil.sendForgotPasswordReminderEmail(user.getEmail(), user.getUserName(), defaultPassword, isNewUser);
+            return ResponseEntity.ok(new ApiResponse(200, "New default password sent to email", null));
         }
-        return ResponseEntity.ok(new ApiResponse(200, "New default password sent to email", null));
+        return ResponseEntity.ok(new ApiResponse(200, "User already has a default password", null));
     }
 }
