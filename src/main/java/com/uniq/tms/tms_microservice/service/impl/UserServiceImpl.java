@@ -173,6 +173,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public ApiResponse bulkCreateUsers(MultipartFile file, Long orgId) {
+        log.info("Checking work flow for create user");
         String contentType = file.getContentType();
         String fileName = file.getOriginalFilename();
 
@@ -507,6 +508,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public ApiResponse createUser(UserDto userDto, Long organizationId) {
+        log.info("Checking work flow for create user");
         log.info("Evicting cache for orgId: {}", organizationId);
         User usermiddleware = userDtoMapper.toMiddleware(userDto);
         UserEntity entity = userEntityMapper.toEntity(usermiddleware);
