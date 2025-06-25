@@ -183,7 +183,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public ApiResponse bulkCreateUsers(MultipartFile file, Long orgId, Long userId) {
-        log.info("Checking work flow for create user");
+        log.info("Checking work flow for create bulk user");
         String contentType = file.getContentType();
         String fileName = file.getOriginalFilename();
 
