@@ -1,6 +1,7 @@
 package com.uniq.tms.tms_microservice.repository;
 
 import com.uniq.tms.tms_microservice.entity.RoleEntity;
+import com.uniq.tms.tms_microservice.entity.UserEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -24,5 +25,10 @@ public interface RoleRepository extends JpaRepository<RoleEntity, Long> {
 
     @Query("SELECT r FROM RoleEntity r JOIN FETCH r.privilegeEntities WHERE r.id = :id")
     RoleEntity findByIdWithPrivileges(Long id);
+
+    @Query("SELECT u FROM UserEntity u " +
+            "WHERE u.role.roleId IN :roleIds AND u.organizationId = :orgId")
+    List<UserEntity> findByIdIn(@Param("roleIds") List<Long> roleIds,
+                                   @Param("orgId") Long orgId);
 
 }

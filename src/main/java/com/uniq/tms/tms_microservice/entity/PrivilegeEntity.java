@@ -1,8 +1,6 @@
 package com.uniq.tms.tms_microservice.entity;
 
-import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
-
 import java.util.HashSet;
 import java.util.Set;
 
@@ -16,6 +14,8 @@ public class PrivilegeEntity {
     private Long privilegeId;
     @Column(name = "privilege_name")
     private String name;
+    @Column(name = "Constant_name")
+    private String staticName;
     @ManyToMany(mappedBy = "privilegeEntities", fetch = FetchType.LAZY)
     private Set<RoleEntity> roles= new HashSet<>();
 
@@ -41,5 +41,13 @@ public class PrivilegeEntity {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public String getStaticName() {
+        return staticName;
+    }
+
+    public void setStaticName(String staticName) {
+        this.staticName = staticName;
     }
 }

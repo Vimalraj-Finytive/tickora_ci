@@ -255,5 +255,22 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
             @Param("userIds") Long[] userIds
     );
 
-
+    @Query(value = """
+    SELECT
+        u.user_id AS userId,
+        d.log_date AS logDate,
+        t.status_id AS statusId
+    FROM (
+        SELECT generate_series(:fromDate, :toDate, interval '1 day')::date AS log_date
+    ) d
+    JOIN users u ON u.active = true
+    LEFT JOIN timesheet t ON u.user_id = t.user_id AND t.date = d.log_date
+    WHERE u.organization_id = :orgId
+    """, nativeQuery = true)
+    List<UserDashboard> getDashboard(
+            @Param("userIds") List<Long> userIds,
+            @Param("fromDate") LocalDate fromDate,
+            @Param("toDate") LocalDate toDate,
+            @Param("orgId") Long orgId
+    );
 }

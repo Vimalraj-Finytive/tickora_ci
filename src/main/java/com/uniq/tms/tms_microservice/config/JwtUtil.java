@@ -182,7 +182,7 @@ public class JwtUtil {
 
     public String extractJwtFromCookies(HttpServletRequest request) {
         if (request.getCookies() != null) {
-            log.info("extracting jwt from cookies: {}", request.getCookies());
+            log.info("extracting jwt from cookies: {}", (Object) request.getCookies());
             for (Cookie cookie : request.getCookies()) {
                 if ("JWT_TOKEN".equals(cookie.getName())) {
                     log.info("jwt token found in cookie: {}", cookie.getValue());

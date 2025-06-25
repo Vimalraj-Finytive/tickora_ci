@@ -1,6 +1,8 @@
 package com.uniq.tms.tms_microservice.listener;
 
 import com.uniq.tms.tms_microservice.event.LocationCacheReloadEvent;
+import com.uniq.tms.tms_microservice.event.PrivilegeCacheReloadEvent;
+import com.uniq.tms.tms_microservice.event.RolePrivilegesCacheReloadEvent;
 import com.uniq.tms.tms_microservice.event.UserCacheReloadEvent;
 import com.uniq.tms.tms_microservice.service.CacheLoaderService;
 import org.slf4j.Logger;
@@ -29,5 +31,19 @@ public class CacheReloadEventListener {
     public void locationCacheReload(LocationCacheReloadEvent event) {
         log.info("Received LocationCacheReloadEvent. Reloading location cache...");
         cacheLoaderService.loadLocationTable();
+    }
+
+    @EventListener
+    public void PrivilegeCacheReload(PrivilegeCacheReloadEvent event){
+        log.info("Received PrivilegeCacheReloadEvent. Reloading privilege cache...");
+        cacheLoaderService.loadPrivilegesFromDB();
+        cacheLoaderService.loadAllRolesToCache();
+    }
+
+    @EventListener
+    public void RolePrivilegeCacheReload(RolePrivilegesCacheReloadEvent event){
+        log.info("Received RolePrivilegesCacheReloadEvent. Reloading privilege cache...");
+        cacheLoaderService.loadPrivilegesFromDB();
+        cacheLoaderService.loadAllRolesToCache();
     }
 }

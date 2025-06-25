@@ -15,6 +15,6 @@ public interface TimesheetService {
     List<TimesheetHistory> processTimesheetLogs(List<TimesheetHistory> timesheetMiddlewareLogs);
     TimesheetDto updateClockInOut(Long userId, LocalDate date, TimesheetDto request);
     void autoClockOut();
-    List<UserDashboardDto> getAllUserInfo(Long orgId, Long userIdFromToken, LocalDate fromDate, LocalDate toDate, Long userId);
+    List<UserDashboardDto> getAllUserInfo(Long orgId, Long userIdFromToken, LocalDate fromDate, LocalDate toDate, Long userId, List<Long>groupIds, String type);
     List<UserTimesheetDto> getUserTimesheets(Long userIdFromToken, Long orgId, String role, TimesheetReportDto request);
 }

@@ -24,6 +24,9 @@ public class RedisScheduler {
         log.info("Scheduled cache loading triggered", LocalTime.now());
         try {
             cacheLoaderService.loadLocationTable();
+            cacheLoaderService.loadAllRolesToCache();
+            cacheLoaderService.loadPrivilegesFromDB();
+            cacheLoaderService.loadUserTable();
             log.info("Cache loading completed");
         } catch (Exception e) {
             log.error("Error during scheduled cache loading: {}", e.getMessage(), e);

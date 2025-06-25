@@ -13,10 +13,11 @@ public class UserProfileResponse {
     private String roleName;
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate dateOfJoining;
-    private LocationDto location;
+    private List<LocationDto> location;
     private List<UserGroupProfileDto> groupDtos;
+    private String organizationName;
 
-    public UserProfileResponse(Long userId, String userName, String email, String mobileNumber, String roleName, LocalDate dateOfJoining, LocationDto location, List<UserGroupProfileDto> groupDtos) {
+    public UserProfileResponse(Long userId, String userName, String email, String mobileNumber, String roleName, LocalDate dateOfJoining, List<LocationDto> location, List<UserGroupProfileDto> groupDtos, String organizationName) {
         this.userId = userId;
         this.userName = userName;
         this.email = email;
@@ -25,24 +26,21 @@ public class UserProfileResponse {
         this.dateOfJoining = dateOfJoining;
         this.location = location;
         this.groupDtos = groupDtos;
+        this.organizationName = organizationName;
     }
 
     public LocalDate getDateOfJoining() {
         return dateOfJoining;
     }
-
     public void setDateOfJoining(LocalDate dateOfJoining) {
         this.dateOfJoining = dateOfJoining;
     }
-
     public Long getUserId() {
         return userId;
     }
-
     public void setUserId(Long userId) {
         this.userId = userId;
     }
-
     public String getUserName() {
         return userName;
     }
@@ -67,14 +65,18 @@ public class UserProfileResponse {
     public void setRoleName(String roleName) {
         this.roleName = roleName;
     }
-    public LocationDto getLocation() {return location;}
-    public void setLocation(LocationDto location) {this.location = location;}
-
+    public List<LocationDto> getLocation() {return location;}
+    public void setLocation(List<LocationDto> location) {this.location = location;}
     public List<UserGroupProfileDto> getGroupDtos() {
         return groupDtos;
     }
-
     public void setGroupDtos(List<UserGroupProfileDto> groupDtos) {
         this.groupDtos = groupDtos;
+    }
+    public String getOrganizationName(){
+        return organizationName;
+    }
+    public void setOrganizationName(String organizationName){
+        this.organizationName = organizationName;
     }
 }

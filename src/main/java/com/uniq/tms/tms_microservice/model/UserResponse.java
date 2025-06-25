@@ -3,6 +3,8 @@ package com.uniq.tms.tms_microservice.model;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.uniq.tms.tms_microservice.dto.SecondaryDetailsDto;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 public class UserResponse {
 
@@ -10,9 +12,9 @@ public class UserResponse {
     private String userName;
     private String email;
     private String mobileNumber;
-    private String groupName;
+    private List<String> groupName;
     private String roleName;
-    private String locationName;
+    private List<String> locationName;
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate dateOfJoining;
     private SecondaryDetailsDto secondaryDetails;
@@ -22,9 +24,11 @@ public class UserResponse {
         this.userName = userName;
         this.email = email;
         this.mobileNumber = mobileNumber;
-        this.groupName = groupName;
+        this.groupName = new ArrayList<>();
+        this.groupName.add(groupName);
         this.roleName = roleName;
-        this.locationName = locationName;
+        this.locationName = new ArrayList<>();
+        this.locationName.add(locationName);
         this.dateOfJoining = dateOfJoining;
     }
 
@@ -60,11 +64,11 @@ public class UserResponse {
         this.mobileNumber = mobileNumber;
     }
 
-    public String getGroupName() {
+    public List<String> getGroupName() {
         return groupName;
     }
 
-    public void setGroupName(String groupName) {
+    public void setGroupName(List<String> groupName) {
         this.groupName = groupName;
     }
 
@@ -76,11 +80,11 @@ public class UserResponse {
         this.roleName = roleName;
     }
 
-    public String getLocationName() {
+    public List<String> getLocationName() {
         return locationName;
     }
 
-    public void setLocationName(String locationName) {
+    public void setLocationName(List<String> locationName) {
         this.locationName = locationName;
     }
 

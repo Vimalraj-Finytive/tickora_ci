@@ -6,17 +6,15 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-
 import java.util.List;
 import java.util.Optional;
 
 @Repository
 public interface SecondaryDetailsRepository extends JpaRepository<SecondaryDetailsEntity,Long> {
-    @Query(value = "SELECT COUNT(*) > 0 FROM secondary_details WHERE mobile = :mobile", nativeQuery = true)
-    boolean existsMobileByMobile(@Param("mobile") String mobile);
 
-    @Query(value = "SELECT COUNT(*) > 0 FROM secondary_details WHERE email = :email", nativeQuery = true)
-    boolean existsEmailByEmail(@Param("email") String email);
+    Optional<SecondaryDetailsEntity> findByMobile(@Param("mobile") String mobile);
+
+    Optional<SecondaryDetailsEntity> findByEmail(@Param("email") String email);
 
     @Query(value = "SELECT u.* FROM users u " +
             "JOIN secondary_details sd ON u.user_id = sd.user_id " +

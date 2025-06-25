@@ -4,6 +4,7 @@ import com.uniq.tms.tms_microservice.dto.*;
 import com.uniq.tms.tms_microservice.entity.LocationEntity;
 import com.uniq.tms.tms_microservice.entity.UserGroupEntity;
 import com.uniq.tms.tms_microservice.model.*;
+import com.uniq.tms.tms_microservice.model.Privilege;
 import com.uniq.tms.tms_microservice.model.Role;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -41,4 +42,12 @@ public interface UserDtoMapper {
     @Mapping(source = "group.workSchedule", target = "workSchedule")
     @Mapping(source = "type", target = "userType")
     UserGroupProfileDto toGroupsDto(UserGroupEntity entity);
+
+    Privilege toModel(PrivilegeDto privilegeDto);
+
+    PrivilegeDto toDto(Privilege savePrivilege);
+
+    RolePrivilege toModel(RolePrivilegeDto rolePrivilegeDto);
+
+    RolePrivilegeDto toDto(RolePrivilege rolePrivilege);
 }

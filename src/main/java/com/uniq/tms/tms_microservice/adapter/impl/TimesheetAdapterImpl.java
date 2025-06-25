@@ -484,4 +484,9 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
         timesheetHistoryRepository.saveAll(historyEntries);
     }
 
+    @Override
+    public List<UserDashboard> getDashboard(Long orgId, List<Long> userIds, LocalDate fromDate, LocalDate toDate) {
+        return timesheetRepository.getDashboard(userIds,fromDate, toDate,orgId);
+    }
+
 }

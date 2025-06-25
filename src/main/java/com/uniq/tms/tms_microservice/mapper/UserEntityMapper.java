@@ -65,4 +65,8 @@ public interface UserEntityMapper {
     UserEntity toMiddleware(User user);
 
     Location toMiddleware(LocationDto locationDto);
+
+    PrivilegeEntity toEntity(Privilege privilegeModel);
+
+    Privilege toModel(PrivilegeEntity privilege);
 }

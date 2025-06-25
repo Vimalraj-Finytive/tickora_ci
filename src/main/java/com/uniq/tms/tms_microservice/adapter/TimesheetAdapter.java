@@ -29,4 +29,5 @@ public interface TimesheetAdapter {
     List<UserTimesheetDto> fetchUserTimesheetsWithHistory(LocalDate startDate, LocalDate endDate, List<Long> userIds, Long orgId);
     void updateTimesheetHistory(Long id, LogType logType, LocalTime firstClockIn);
     void saveAllTimesheetHistories(List<TimesheetHistoryEntity> historyEntries);
+    List<UserDashboard> getDashboard(Long orgId, List<Long> userIds, LocalDate fromDate, LocalDate toDate);
 }

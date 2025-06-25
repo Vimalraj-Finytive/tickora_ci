@@ -6,6 +6,7 @@ public class LocationDto {
     private String latitude;
     private String longitude;
     private String radius;
+    private String address;
 
     public Long getLocationId() {
         return locationId;
@@ -45,5 +46,13 @@ public class LocationDto {
 
     public void setRadius(String radius) {
         this.radius = radius;
+    }
+
+    public String getAddress(){
+        return address;
+    }
+
+    public void setAddress(String address){
+        this.address = address;
     }
 }

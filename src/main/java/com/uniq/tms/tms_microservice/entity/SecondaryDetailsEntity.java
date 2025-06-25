@@ -13,7 +13,7 @@ public class SecondaryDetailsEntity {
     @Column(name = "secondary_user_name", nullable = false)
     private String userName;
 
-    @Column(name = "mobile", nullable = false)
+    @Column(name = "mobile", nullable = false, length = 10)
     private String mobile;
 
     @Column(name = "email")

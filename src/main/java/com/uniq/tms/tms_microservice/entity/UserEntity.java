@@ -28,14 +28,11 @@ public class UserEntity {
     @Column(name = "email", nullable = false, unique = true)
     private String email;
 
-    @Column(name = "mobile_number", nullable = false, unique = true)
+    @Column(name = "mobile_number", nullable = false, unique = true, length = 10)
     private String mobileNumber;
 
     @Column(name = "password", nullable = false)
     private String password;
-
-    @Column(name = "location_id")
-    private Long locationId;
 
     @Column(name = "organization_id")
     private Long organizationId;
@@ -67,12 +64,11 @@ public class UserEntity {
     public UserEntity() {
     }
 
-    public UserEntity(Long userId, String userName, String email, String mobileNumber, Long locationId, boolean isDefaultPassword, LocalDate dateOfJoining, boolean active, RoleEntity role, LocalDateTime createdAt, Long organizationId, String password) {
+    public UserEntity(Long userId, String userName, String email, String mobileNumber, boolean isDefaultPassword, LocalDate dateOfJoining, boolean active, RoleEntity role, LocalDateTime createdAt, Long organizationId, String password) {
         this.userId = userId;
         this.userName = userName;
         this.email = email;
         this.mobileNumber = mobileNumber;
-        this.locationId = locationId;
         this.isDefaultPassword = isDefaultPassword;
         this.dateOfJoining = dateOfJoining;
         this.active = active;
@@ -146,14 +142,6 @@ public class UserEntity {
         this.createdAt = createdAt;
     }
 
-    public Long getLocationId() {
-        return locationId;
-    }
-
-    public void setLocationId(Long locationId) {
-        this.locationId = locationId;
-    }
-
     public Long getOrganizationId() {
         return organizationId;
     }
@@ -190,5 +178,4 @@ public class UserEntity {
     public void setRegisterUser(boolean registerUser) {
         isRegisterUser = registerUser;
     }
-
 }

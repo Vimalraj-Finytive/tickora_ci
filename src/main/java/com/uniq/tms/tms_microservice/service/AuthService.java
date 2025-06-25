@@ -2,8 +2,6 @@ package com.uniq.tms.tms_microservice.service;
 
 import com.uniq.tms.tms_microservice.dto.ApiResponse;
 import com.uniq.tms.tms_microservice.dto.ChangePasswordDto;
-import com.uniq.tms.tms_microservice.dto.EmailDto;
-import com.uniq.tms.tms_microservice.entity.UserEntity;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
@@ -17,8 +15,6 @@ public interface AuthService {
                                                                HttpServletResponse response,
                                                                HttpServletRequest request);
     ResponseEntity<ApiResponse> authenticateUserByMobile(String mobile, String otp, HttpServletResponse response, HttpServletRequest request);
-
-    UserEntity validateEmailDto(EmailDto email);
 
     ResponseEntity<ApiResponse> resetPassword(String email, ChangePasswordDto request);
 

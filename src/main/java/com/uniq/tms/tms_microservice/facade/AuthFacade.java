@@ -1,17 +1,13 @@
 package com.uniq.tms.tms_microservice.facade;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.uniq.tms.tms_microservice.adapter.UserAdapter;
 import com.uniq.tms.tms_microservice.config.JwtUtil;
 import com.uniq.tms.tms_microservice.dto.*;
-import com.uniq.tms.tms_microservice.entity.UserEntity;
-import com.uniq.tms.tms_microservice.mapper.LocationDtoMapper;
-import com.uniq.tms.tms_microservice.mapper.SecondaryDetailsMapper;
 import com.uniq.tms.tms_microservice.mapper.TimesheetDtoMapper;
 import com.uniq.tms.tms_microservice.mapper.UserDtoMapper;
-import com.uniq.tms.tms_microservice.mapper.UserEntityMapper;
 import com.uniq.tms.tms_microservice.mapper.WorkScheduleDtoMapper;
 import com.uniq.tms.tms_microservice.model.*;
+import com.uniq.tms.tms_microservice.model.Privilege;
 import com.uniq.tms.tms_microservice.service.AuthService;
 import com.uniq.tms.tms_microservice.service.ReportService;
 import com.uniq.tms.tms_microservice.service.TimesheetService;
@@ -22,8 +18,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import jakarta.servlet.http.HttpSession;
-import jakarta.validation.ConstraintViolation;
-import jakarta.validation.Validator;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -39,43 +33,31 @@ import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Component
 public class AuthFacade {
 
-    private static final Long STUDENT_ROLE_ID = 5l;
-    private final UserAdapter userAdapter;
     private final AuthService authService;
     private final UserService userService;
     private final UserDtoMapper userDtoMapper;
     private final TimesheetService timesheetService;
     private final TimesheetDtoMapper timesheetDtoMapper;
     private final JwtUtil jwtUtil;
-    private final SecondaryDetailsMapper secondaryDetailsMapper;
-    private final UserEntityMapper userEntityMapper;
-    private final Validator validator;
     private final WorkScheduleService workScheduleService;
     private final WorkScheduleDtoMapper workScheduleDtoMapper;
     private final ReportService reportService;
-    private final LocationDtoMapper locationDtoMapper;
 
-    public AuthFacade(UserAdapter userAdapter, AuthService authService, UserService userService, UserDtoMapper userDtoMapper, TimesheetService timesheetService, TimesheetDtoMapper timesheetDtoMapper, JwtUtil jwtUtil, SecondaryDetailsMapper secondaryDetailsMapper, UserEntityMapper userEntityMapper, Validator validator, WorkScheduleService workScheduleService, WorkScheduleDtoMapper workScheduleDtoMapper, ReportService reportService, LocationDtoMapper locationDtoMapper) {
+    public AuthFacade(AuthService authService, UserService userService, UserDtoMapper userDtoMapper, TimesheetService timesheetService, TimesheetDtoMapper timesheetDtoMapper, JwtUtil jwtUtil, WorkScheduleService workScheduleService, WorkScheduleDtoMapper workScheduleDtoMapper, ReportService reportService) {
 
-        this.userAdapter = userAdapter;
         this.authService = authService;
         this.userService = userService;
         this.userDtoMapper = userDtoMapper;
         this.timesheetService = timesheetService;
         this.timesheetDtoMapper = timesheetDtoMapper;
         this.jwtUtil = jwtUtil;
-        this.secondaryDetailsMapper = secondaryDetailsMapper;
-        this.userEntityMapper = userEntityMapper;
-        this.validator = validator;
         this.workScheduleService = workScheduleService;
         this.workScheduleDtoMapper = workScheduleDtoMapper;
         this.reportService = reportService;
-        this.locationDtoMapper = locationDtoMapper;
     }
 
     @Value("${csv.download.dir}")
@@ -102,11 +84,11 @@ public class AuthFacade {
         );
     }
 
-    public ApiResponse getAllTeam() {
-        List<GroupDto> teams = userService.getAllTeam().stream().map(userDtoMapper::toGroupDto).toList();
+    public ApiResponse getAllGroup(Long orgId) {
+        List<GroupDto> groups = userService.getAllGroup(orgId).stream().map(userDtoMapper::toGroupDto).toList();
 
         return new ApiResponse(
-                200, "Groups fetched successfully", teams
+                200, "Groups fetched successfully", groups
         );
     }
 
@@ -134,11 +116,11 @@ public class AuthFacade {
         }
         String jwt = token.substring(7);
         Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
-
+        Long userId = jwtUtil.extractUserIdFromToken(jwt);
         if (orgId == null) {
             return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
         }
-        return userService.bulkCreateUsers(file, orgId);
+        return userService.bulkCreateUsers(file, orgId, userId);
     }
 
     public ApiResponse createUser(UserDto userDto, SecondaryDetailsDto secondaryDetailsDto, String token) {
@@ -151,47 +133,8 @@ public class AuthFacade {
         if (orgId == null) {
             return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
         }
-        User usermiddleware = userDtoMapper.toMiddleware(userDto);
-        if (userAdapter.existsByEmail(usermiddleware.getEmail())) {
-            throw new DataIntegrityViolationException("User with email already exists");
-        }
-        if (userAdapter.existsByMobileNumber(usermiddleware.getMobileNumber())) {
-            throw new DataIntegrityViolationException("User with mobile number already exists");
-        }
-        ApiResponse user = userService.createUser(userDto, orgId);
-        if (userDto.getRoleId().equals(STUDENT_ROLE_ID)) {
-            UserEntity mappedUser = userEntityMapper.toEntity((User) user.getData());
-            if (secondaryDetailsDto == null) {
-                userAdapter.deleteUser(mappedUser);
-                return new ApiResponse(400, "Secondary details are null", null);
-            }
-            Set<ConstraintViolation<SecondaryDetailsDto>> violations = validator.validate(secondaryDetailsDto);
-            if (!violations.isEmpty()) {
-                String errorMsg = violations.stream()
-                        .map(ConstraintViolation::getMessage)
-                        .collect(Collectors.joining(", "));
-                userAdapter.deleteUser(mappedUser);
-                return new ApiResponse(400, "Validation failed for secondary details: " + errorMsg, null);
-            }
-            boolean isMobileExist = userAdapter.existsMobileByMobile(secondaryDetailsDto.getMobile());
-            if (isMobileExist) {
-                userAdapter.deleteUser(mappedUser);
-                throw new RuntimeException("Secondary User Mobile Number is Exist!");
-            }
-            if (secondaryDetailsDto.getEmail() != null) {
-                boolean isEmailExist = userAdapter.existsEmailByEmail(secondaryDetailsDto.getEmail());
-                if (isEmailExist) {
-                    userAdapter.deleteUser(mappedUser);
-                    throw new RuntimeException("Secondary User Email is Exist!");
-                }
-                boolean secondaryUserCreated = userService.createSecondaryUser(secondaryDetailsDto, mappedUser);
-                if (!secondaryUserCreated) {
-                    userAdapter.deleteUser(mappedUser);
-                    return new ApiResponse(400, "Secondary details creation failed", null);
-                }
-            }
-        }
-        return new ApiResponse(201, "User Created successfully and Reset password link sent to email.", user);
+        ApiResponse user = userService.createUser(userDto, secondaryDetailsDto,orgId);
+        return new ApiResponse(HttpStatus.CREATED.value(), "User Created successfully and Reset password link sent to email.", user);
     }
 
     public ApiResponse getUserProfile(String token, Long userId) {
@@ -212,21 +155,8 @@ public class AuthFacade {
     }
 
     public ResponseEntity<ApiResponse> validateEmail(EmailDto email) {
-        UserEntity user = authService.validateEmailDto(email);
-
-        try {
-            if (user == null) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(new ApiResponse(404, "Email not registered", null));
-            }
-
-            if (!user.isDefaultPassword()) {
-                return authService.forgotPassword(email.getEmail());
-            }
-            return ResponseEntity.ok(new ApiResponse(200, "Email validated", null));
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+            ResponseEntity<ApiResponse> response = authService.forgotPassword(email.getEmail());
+            return ResponseEntity.ok(response.getBody());
     }
 
     public ResponseEntity<ApiResponse> resetPassword(String email, ChangePasswordDto request) {
@@ -381,7 +311,7 @@ public class AuthFacade {
             return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
         }
 
-        userService.deleteGroup(groupId);
+        userService.deleteGroup(groupId, orgId);
         return new ApiResponse(204, "Group Deleted successfully", "No Content");
     }
 
@@ -605,7 +535,7 @@ public class AuthFacade {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized - Invalid Organization");
         }
 
-        return timesheetService.getAllUserInfo(orgId, userIdFromToken, fromDate, toDate, userId);
+        return timesheetService.getAllUserInfo(orgId, userIdFromToken, fromDate, toDate, userId, request.getGroupIds(), request.getType());
     }
 
     public byte[] exportTimesheetDayCsv(List<UserTimesheetResponseDto> timesheet, String sheetName) {
@@ -701,10 +631,8 @@ public class AuthFacade {
         }
         String jwt = token.substring(7);
         Long userId = jwtUtil.extractUserIdFromToken(jwt);
-        List<LocationDto> locations = userService.getUserLocation(userId).stream()
-                .map(locationDtoMapper::toDto)
-                .toList();
-        return new ApiResponse(200, "Student members fetched successfully", locations);
+        List<LocationDto> locations = userService.getUserLocation(userId);
+        return new ApiResponse(200, "User Location fetched successfully", locations);
     }
 
     public ResponseEntity<Resource> downloadSampleFile() {
@@ -725,5 +653,35 @@ public class AuthFacade {
         String role = jwtUtil.extractRoleFromToken(jwt);
         return timesheetService.getUserTimesheets(userIdFromToken, orgId, role, request);
 
+    }
+
+    public ApiResponse addPrivileges(String token, PrivilegeDto privilegeDto) {
+        if (!token.startsWith("Bearer ")) {
+            return new ApiResponse(400, "Invalid token format", null);
+        }
+        String jwt = token.substring(7);
+        Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
+        if (orgId == null) {
+            return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
+        }
+        Privilege privilegeModel = userDtoMapper.toModel(privilegeDto);
+        Privilege savePrivilege = userService.addPrivileges(privilegeModel);
+        PrivilegeDto dto = userDtoMapper.toDto(savePrivilege);
+        return new ApiResponse(200, "Privilege added successfully", dto);
+    }
+
+    public ApiResponse addRolwisePrivileges(String token, RolePrivilegeDto rolePrivilegeDto) {
+        if (!token.startsWith("Bearer ")) {
+            return new ApiResponse(400, "Invalid token format", null);
+        }
+        String jwt = token.substring(7);
+        Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
+        if (orgId == null) {
+            return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
+        }
+        RolePrivilege rolePrivilegeModel = userDtoMapper.toModel(rolePrivilegeDto);
+        RolePrivilege savePrivilege = userService.addRolwisePrivileges(rolePrivilegeModel);
+        RolePrivilegeDto dto = userDtoMapper.toDto(savePrivilege);
+        return new ApiResponse(200, "Privilege added successfully", dto);
     }
 }

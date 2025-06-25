@@ -57,7 +57,6 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(new ApiResponse(400, "Email and Password are required", null));
         }
-
         return authFacade.handleLoginByEmail(loginDto.getEmail(), loginDto.getPassword(), response, request);
     }
 

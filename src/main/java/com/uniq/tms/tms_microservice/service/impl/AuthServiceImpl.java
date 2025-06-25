@@ -3,21 +3,21 @@ package com.uniq.tms.tms_microservice.service.impl;
 import com.uniq.tms.tms_microservice.adapter.AuthAdapter;
 import com.uniq.tms.tms_microservice.adapter.UserAdapter;
 import com.uniq.tms.tms_microservice.config.JwtUtil;
-import com.uniq.tms.tms_microservice.constant.PrivilegeConstant;
 import com.uniq.tms.tms_microservice.dto.ApiResponse;
 import com.uniq.tms.tms_microservice.dto.ChangePasswordDto;
-import com.uniq.tms.tms_microservice.dto.EmailDto;
+import com.uniq.tms.tms_microservice.dto.PrivilegeConstants;
 import com.uniq.tms.tms_microservice.entity.PrivilegeEntity;
 import com.uniq.tms.tms_microservice.entity.UserEntity;
 import com.uniq.tms.tms_microservice.service.AuthService;
+import com.uniq.tms.tms_microservice.service.CacheLoaderService;
 import com.uniq.tms.tms_microservice.service.NettyfishService;
+import com.uniq.tms.tms_microservice.util.CacheKeyUtil;
 import com.uniq.tms.tms_microservice.util.EmailUtil;
 import com.uniq.tms.tms_microservice.util.PasswordUtil;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
-import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -32,7 +32,6 @@ import java.util.*;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-@Slf4j
 @Service
 public class AuthServiceImpl implements AuthService {
     private static final Logger log = LoggerFactory.getLogger(AuthServiceImpl.class);
@@ -41,17 +40,19 @@ public class AuthServiceImpl implements AuthService {
     private final UserAdapter userAdapter;
     private final JwtUtil jwtUtil;
     private final PasswordEncoder passwordEncoder;
-    private final EmailService emailService;
     private final EmailUtil emailUtil;
+    private final CacheLoaderService cacheLoaderService;
+    private final CacheKeyUtil cacheKeyUtil;
 
-    public AuthServiceImpl(NettyfishService nettyfishService, AuthAdapter authAdapter, UserAdapter userAdapter, JwtUtil jwtUtil, PasswordEncoder passwordEncoder, EmailService emailService, EmailUtil emailUtil) {
+    public AuthServiceImpl(NettyfishService nettyfishService, AuthAdapter authAdapter, UserAdapter userAdapter, JwtUtil jwtUtil, PasswordEncoder passwordEncoder, EmailUtil emailUtil, CacheLoaderService cacheLoaderService, CacheKeyUtil cacheKeyUtil) {
         this.nettyfishService = nettyfishService;
         this.authAdapter = authAdapter;
         this.userAdapter = userAdapter;
         this.jwtUtil = jwtUtil;
         this.passwordEncoder = passwordEncoder;
-        this.emailService = emailService;
         this.emailUtil = emailUtil;
+        this.cacheLoaderService = cacheLoaderService;
+        this.cacheKeyUtil = cacheKeyUtil;
     }
 
     public ResponseEntity<ApiResponse> authenticateUserByEmail(String email, String password,
@@ -60,13 +61,14 @@ public class AuthServiceImpl implements AuthService {
         // Step 1: Try to find the user from multiple sources
         List<Supplier<UserEntity>> userSuppliers = List.of(
                 () -> authAdapter.findByEmail(email),
-                () -> authAdapter.findUserByEmail(email) // from SecondaryDetails
+                () -> authAdapter.findUserByEmail(email)
         );
         log.info("fetch user: {}", userSuppliers);
         List<UserEntity> users = userSuppliers.stream()
                 .map(Supplier::get)
                 .filter(Objects::nonNull)
-                .collect(Collectors.toList());
+                .toList();
+        log.info("Streamed users: {}", users);
 
         if (users.isEmpty()) {
             log.info("user not found");
@@ -74,12 +76,18 @@ public class AuthServiceImpl implements AuthService {
                     .body(new ApiResponse(401, "Invalid credentials: User not found", null));
         }
 
+        String key = cacheLoaderService.getPrivilegeKey(PrivilegeConstants.LOGIN_VIA_EMAIL);
+        boolean hasEmailLoginPrivilege = cacheKeyUtil.roleHasPrivilege(users.get(0).getRole().getName(), key);
+        log.info("has email login privilege: {}", hasEmailLoginPrivilege);
+
         // Step 2: Find the first user with email login privilege
         Optional<UserEntity> userWithEmailPrivilege = users.stream()
                 .filter(user -> user.getRole().getPrivilegeEntities().stream()
                         .map(PrivilegeEntity::getName)
-                        .anyMatch(priv -> priv.equals(PrivilegeConstant.Privilege_2)))
+                        .anyMatch(priv -> priv.equals(key)))
                 .findFirst();
+
+        log.info("user with email login privilege: {}", userWithEmailPrivilege);
 
         if (userWithEmailPrivilege.isEmpty()) {
             log.info("user with email login privilege not found");
@@ -100,11 +108,9 @@ public class AuthServiceImpl implements AuthService {
 
         Map<String, Object> userData = new HashMap<>();
         if (user.isDefaultPassword()) {
-            log.info(("sending mail to user to change default password"));
-            boolean isNewUser = user.isDefaultPassword();
-            emailUtil.sendDefaultPasswordReminderEmail(user.getEmail(), user.getUserName(), password, isNewUser);
+            log.info("Login with default password is not allowed");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(new ApiResponse(401, "You must change your default password before logging in.", null));
+                    .body(new ApiResponse(401, "You must change your default password through email before login.", null));
         }
 
             // Step 5: Generate JWT Token
@@ -145,23 +151,27 @@ public class AuthServiceImpl implements AuthService {
         List<UserEntity> users = userSuppliers.stream()
                 .map(Supplier::get)
                 .filter(Objects::nonNull)
-                .collect(Collectors.toList());
+                .toList();
 
         if (users.isEmpty()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(new ApiResponse(401, "Invalid credentials: User not found", null));
         }
 
-        // Step 2: Find the first user with email login privilege
+        String key = cacheLoaderService.getPrivilegeKey(PrivilegeConstants.LOGIN_VIA_MOBILE);
+        boolean hasMobileLoginPrivilege = cacheKeyUtil.roleHasPrivilege(users.get(0).getRole().getName(), key);
+        log.info("has email login privilege: {}", hasMobileLoginPrivilege);
+
+        // Step 2: Find the first user with mobile login privilege
         Optional<UserEntity> userWithEmailPrivilege = users.stream()
                 .filter(user -> user.getRole().getPrivilegeEntities().stream()
                         .map(PrivilegeEntity::getName)
-                        .anyMatch(priv -> priv.equals(PrivilegeConstant.Privilege_1)))
+                        .anyMatch(priv -> priv.equals(key)))
                 .findFirst();
 
         if (userWithEmailPrivilege.isEmpty()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(new ApiResponse(401, "You are not allowed to login using email.", null));
+                    .body(new ApiResponse(401, "You are not allowed to login using mobile.", null));
         }
 
         UserEntity user = userWithEmailPrivilege.get();
@@ -330,15 +340,10 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public UserEntity validateEmailDto(EmailDto email) {
-        return authAdapter.findUserByEmail(email.getEmail());
-    }
-
-    @Override
     public ResponseEntity<ApiResponse> resetPassword(String email, ChangePasswordDto request) {
 
         UserEntity user = userAdapter.findByEmail(email)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Invalid Email"));
 
         if (!passwordEncoder.matches(request.getOldPassword(), user.getPassword())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Old password is incorrect");
@@ -356,8 +361,7 @@ public class AuthServiceImpl implements AuthService {
 
     public ResponseEntity<ApiResponse> forgotPassword(String email) {
         UserEntity user = userAdapter.findByEmail(email)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
-        if (Boolean.FALSE.equals(user.isDefaultPassword())) {
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Invalid Email"));
             String defaultPassword = PasswordUtil.generateDefaultPassword();
             user.setPassword(PasswordUtil.encryptPassword(defaultPassword));
             user.setDefaultPassword(true);
@@ -365,7 +369,5 @@ public class AuthServiceImpl implements AuthService {
             boolean isNewUser = false;
             emailUtil.sendForgotPasswordReminderEmail(user.getEmail(), user.getUserName(), defaultPassword, isNewUser);
             return ResponseEntity.ok(new ApiResponse(200, "New default password sent to email", null));
-        }
-        return ResponseEntity.ok(new ApiResponse(200, "User already has a default password", null));
     }
 }

@@ -47,7 +47,6 @@ public interface TeamRepository extends JpaRepository<GroupEntity, Long> {
             u.email,
             u.date_of_joining,
             r.name AS role_name,
-            u.location_id,
             u.active
         FROM users u
         LEFT JOIN role r ON u.role_id = r.role_id
@@ -111,14 +110,14 @@ public interface TeamRepository extends JpaRepository<GroupEntity, Long> {
     );
 
     @Query(value = """
-        SELECT 
+        SELECT
             g.group_id AS groupId,
             g.group_name AS groupName
-        FROM 
+        FROM
             group_table g
-        JOIN 
+        JOIN
             user_group ug ON g.group_id = ug.group_id
-        WHERE 
+        WHERE
             ug.user_id = :userId
             AND g.organization_id = :orgId
             AND ug.type = 'Supervisor'
@@ -133,8 +132,9 @@ public interface TeamRepository extends JpaRepository<GroupEntity, Long> {
     @Query(value = """
         DELETE FROM group_table
         WHERE group_id = :groupId
+        AND organization_id = :orgId
         """, nativeQuery = true)
-    void deleteGroupById(@Param("groupId") Long groupId);
+    void deleteGroupById(@Param("groupId") Long groupId, @Param("orgId") Long orgId);
 
     @Query(value = """
         SELECT 
@@ -152,4 +152,7 @@ public interface TeamRepository extends JpaRepository<GroupEntity, Long> {
     @Query(value = "SELECT group_name, group_id FROM group_table", nativeQuery = true)
     List<Object[]> findGroupNameIdMappings();
 
+    List<GroupEntity> findAllByOrganizationEntity_OrganizationId(Long orgId);
+
+    boolean existsByGroupIdAndOrganizationEntity_OrganizationId(Long groupId, Long orgId);
 }

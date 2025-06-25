@@ -19,7 +19,7 @@ public class UserGroupEntity {
     private GroupEntity group;
 
     @Column(name = "type", nullable=false)
-    private String type;
+    private String type = "Member";
 
     public UserGroupEntity() {
     }

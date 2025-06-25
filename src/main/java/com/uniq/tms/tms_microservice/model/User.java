@@ -1,6 +1,7 @@
 package com.uniq.tms.tms_microservice.model;
 
 import java.time.LocalDate;
+import java.util.List;
 
 public class User {
 
@@ -10,9 +11,10 @@ public class User {
     private String mobileNumber;
     private Long organizationId;
     private Long roleId;
-    private Long locationId;
+    private List<Long> locationId;
     private LocalDate dateOfJoining;
     private boolean isRegisterUser;
+    private List<Long> groupId;
     private boolean active;
 
     public boolean isActive() {
@@ -79,11 +81,11 @@ public class User {
         this.roleId = roleId;
     }
 
-    public Long getLocationId() {
+    public List<Long> getLocationId() {
         return locationId;
     }
 
-    public void setLocationId(Long locationId) {
+    public void setLocationId(List<Long> locationId) {
         this.locationId = locationId;
     }
 
@@ -93,5 +95,13 @@ public class User {
 
     public void setRegisterUser(boolean registerUser) {
         isRegisterUser = registerUser;
+    }
+
+    public List<Long> getGroupId() {
+        return groupId;
+    }
+
+    public void setGroupId(List<Long> groupId) {
+        this.groupId = groupId;
     }
 }

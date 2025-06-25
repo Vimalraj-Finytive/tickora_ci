@@ -1,5 +1,6 @@
 package com.uniq.tms.tms_microservice.dto;
 
+import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
@@ -10,6 +11,8 @@ public class SecondaryDetailsDto {
     @NotBlank(message = "Secondary user mobile is required")
     @Pattern(regexp = "^[0-9]{10}$", message = "mobile must be a 10-digit number")
     private String mobile;
+    @Nullable
+    @Email
     private String email;
     @NotBlank(message = "Relation is required in Secondary details")
     private String relation;

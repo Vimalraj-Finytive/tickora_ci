@@ -147,6 +147,7 @@ public class ReportServiceImpl implements ReportService {
                     sheet.autoSizeColumn(i);
                 }
 
+                sheet.setColumnWidth(3, 15 * 256);
                 workbook.write(out);
                 return out.toByteArray();
 
@@ -298,7 +299,6 @@ public class ReportServiceImpl implements ReportService {
                     RegionUtil.setBorderRight(BorderStyle.THIN, region, sheet);
                 }
 
-
                 serialNumber++;
             }
 
@@ -307,7 +307,6 @@ public class ReportServiceImpl implements ReportService {
             for (int i = 0; i < totalCols; i++) {
                 sheet.autoSizeColumn(i);
             }
-
             workbook.write(out);
             return out.toByteArray();
 

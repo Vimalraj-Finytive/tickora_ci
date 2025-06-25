@@ -7,6 +7,7 @@ public class Location {
     private String longitude;
     private String radius;
     private Long orgId;
+    private String address;
 
     public Long getLocationId() {
         return locationId;
@@ -51,4 +52,12 @@ public class Location {
     public Long getOrgId() {return orgId;}
 
     public void setOrgId(Long orgId) {this.orgId = orgId;}
+
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
+    }
 }

@@ -1,6 +1,8 @@
 package com.uniq.tms.tms_microservice.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import java.time.LocalDate;
+import java.util.List;
 
 public class UserDto {
 
@@ -9,10 +11,11 @@ public class UserDto {
     private String email;
     private String mobileNumber;
     private Long roleId;
-    private Long locationId;
+    private List<Long> locationId;
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     private LocalDate dateOfJoining;
     private boolean isRegisterUser;
-    private Long groupId;
+    private List<Long> groupId;
     private boolean active;
 
     public UserDto() {}
@@ -65,19 +68,19 @@ public class UserDto {
         this.roleId = roleId;
     }
 
-    public Long getLocationId() {
+    public List<Long> getLocationId() {
         return locationId;
     }
 
-    public void setLocationId(Long locationId) {
+    public void setLocationId(List<Long> locationId) {
         this.locationId = locationId;
     }
 
-    public Long getGroupId() {
+    public List<Long> getGroupId() {
         return groupId;
     }
 
-    public void setGroupId(Long groupId) {
+    public void setGroupId(List<Long> groupId) {
         this.groupId = groupId;
     }
 

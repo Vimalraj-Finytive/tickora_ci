@@ -17,16 +17,15 @@ import java.util.Set;
 
 public interface UserAdapter {
     List<RoleEntity>getAllRole(Long orgId, int hierarchyLevel);
-    List<GroupEntity> getAllTeams();
+    List<GroupEntity> getAllGroup(Long orgId);
     List<LocationEntity> getAllLocation(Long orgId);
     UserEntity saveUser(UserEntity entity);
     UserEntity updateUser(UserEntity userId);
     Optional<UserEntity> findByEmail(String email);
     void updatePassword(UserEntity user);
-    boolean existsByEmail(String email);
     Optional<UserEntity> findById(Long userId);
     List<UserResponse> findByOrganizationId(Long orgId, int hierarchyLevel);
-    void deactivateUserById(Long userId);
+    void deactivateUserById(Long userId, Long orgId);
     void deleteUser(UserEntity user);
     GroupEntity saveGroup(GroupEntity entity);
     boolean findByGroup(String teamName, Long orgId);
@@ -34,13 +33,13 @@ public interface UserAdapter {
     List<Object[]> getGroupData(Long orgId);
     int updateUserGroupType(Long userId, Long groupId, String type);
     void deleteMember(Long groupId, Long memberId);
-    void deleteGroup(Long groupId);
+    void deleteGroup(Long groupId, Long orgId);
     List<UserEntity> getMembers(Long orgId, Long roleId);
     List<UserEntity> getMembersByRole(Long orgId, List<Integer> higherRoleIds);
     List<GroupDto> getUserGroups(Long userId, Long orgId);
     List<UserGroupEntity> getGroupMembersByGroupId(Long groupId, Long orgId);
     List<UserEntity> getUsersByIds(List<Long> userIds, Long orgId);
-    boolean existsByMobileNumber(String mobileNumber);
+    Optional<UserEntity> findByMobileNumber(String mobileNumber);
     List<UserEntity> getAllUsers(Long orgId, Long userIdFromToken);
     UserEntity getUserById(Long userId);
     boolean existsGroupNameInOrganization(String groupName, Long orgId, Long groupId);
@@ -54,8 +53,8 @@ public interface UserAdapter {
     List<UserEntity> findUsersByGroupIds(List<Long> groupIds);
     List<UserEntity> findMembersByGroupIds(List<Long> filteredGroupIds, Long userIdFromToken);
     SecondaryDetailsEntity saveSecondaryDetails(SecondaryDetailsEntity secondaryDetails);
-    boolean existsMobileByMobile(String mobile);
-    boolean existsEmailByEmail(String email);
+    Optional<SecondaryDetailsEntity> findByMobileByMobile(String mobile);
+    Optional<SecondaryDetailsEntity> findByEmailByEmail(String email);
     List<UserNameSuggestionDto> searchUserNamesContaining(String keyword);
     Optional<RoleEntity> findRoleById(Long roleId);
     Optional<SecondaryDetailsEntity> findSecondaryUserById(Long userId);
@@ -87,4 +86,21 @@ public interface UserAdapter {
     LocationEntity addLocation(Location location);
     Optional<UserEntity> getUserDashboard(Long userId);
     Optional<LocationEntity> getUserLocation(Long locationId);
+    PrivilegeEntity addPrivilege(PrivilegeEntity privilegeEntity);
+    Optional<PrivilegeEntity> findPrivilegeById(Long privilegeId);
+    void saveRole(RoleEntity role);
+    List<UserEntity> getUsersByRoles(Set<String> roles, Long orgId);
+    List<UserEntity> findUsersByRolesAndGroupIds(Set<String> roles, List<Long> supervisedGroupIds, Long orgId);
+    List<UserLocationEntity> findByUserIdAndlocationId(Long userId, List<Long> locationId);
+    void saveUserLocation(List<UserLocationEntity> userLocationEntities);
+    List<UserLocationEntity> findUserLocationByUserId(Long userId);
+    List<LocationEntity> findAllLocationById(List<Long> locationIds);
+    void deleteUserLocationByUserId(Long userId, Set<Long> toDelete);
+    void updateUserLocationByUserId(List<UserLocationEntity>newEntities);
+    List<UserGroupEntity> findUserGroupByUserId(Long userId);
+    void deleteUserGroupByUserId(Long userId, Set<Long> toDelete);
+    void updateUserGroupByUserId(List<UserGroupEntity> newEntities);
+    OrganizationEntity findByOrgId(Long orgId);
+    boolean findByLocation(String name, Long orgId);
+    List<UserEntity> findByRoleId(List<Long> roleIds, Long orgId);
 }

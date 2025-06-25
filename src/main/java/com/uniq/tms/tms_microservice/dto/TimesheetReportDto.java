@@ -20,6 +20,8 @@ public class TimesheetReportDto {
 
     private String format;
 
+    private List<Long> roleId;
+
     public LocalDate getFromDate() {
         return fromDate;
     }
@@ -66,5 +68,13 @@ public class TimesheetReportDto {
 
     public void setFormat(String format) {
         this.format = format;
+    }
+
+    public List<Long> getRoleId() {
+        return roleId;
+    }
+
+    public void setRoleId(List<Long> roleId) {
+        this.roleId = roleId;
     }
 }

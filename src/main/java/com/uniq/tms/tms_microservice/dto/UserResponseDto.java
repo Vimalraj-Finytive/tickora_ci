@@ -2,6 +2,8 @@ package com.uniq.tms.tms_microservice.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 public class UserResponseDto {
 
@@ -9,9 +11,9 @@ public class UserResponseDto {
     private String userName;
     private String email;
     private String mobileNumber;
-    private String groupName;
+    private List<String> groupName;
     private String roleName;
-    private String locationName;
+    private List<String> locationName;
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate dateOfJoining;
     private SecondaryDetailsDto secondaryDetails;
@@ -19,33 +21,31 @@ public class UserResponseDto {
     public UserResponseDto() {
     }
 
-    public UserResponseDto(Long userId, String userName, String email, String mobileNumber,String groupName, String roleName, LocalDate dateOfJoining, String locationName) {
+    public UserResponseDto(Long userId, String userName, String email, String mobileNumber,List<String> groupName, String roleName, LocalDate dateOfJoining, List<String> locationName) {
         this.userId = userId;
         this.userName = userName;
         this.email = email;
         this.mobileNumber = mobileNumber;
-        this.groupName = groupName;
+        this.groupName = new ArrayList<>();
+        this.groupName.addAll(groupName);
         this.roleName = roleName;
         this.dateOfJoining = dateOfJoining;
-        this.locationName = locationName;
+        this.locationName = new ArrayList<>();
+        this.locationName.addAll(locationName);
     }
 
     public LocalDate getDateOfJoining() {
         return dateOfJoining;
     }
-
     public void setDateOfJoining(LocalDate dateOfJoining) {
         this.dateOfJoining = dateOfJoining;
     }
-
     public Long getUserId() {
         return userId;
     }
-
     public void setUserId(Long userId) {
         this.userId = userId;
     }
-
     public String getUserName() {
         return userName;
     }
@@ -58,19 +58,16 @@ public class UserResponseDto {
     public void setEmail(String email) {
         this.email = email;
     }
-
     public String getMobileNumber() {
         return mobileNumber;
     }
-
     public void setMobileNumber(String mobileNumber) {
         this.mobileNumber = mobileNumber;
     }
-
-    public String getGroupName() {
+    public List<String> getGroupName() {
         return groupName;
     }
-    public void setGroupName(String groupName) {
+    public void setGroupName(List<String> groupName) {
         this.groupName = groupName;
     }
     public String getRoleName() {
@@ -79,17 +76,15 @@ public class UserResponseDto {
     public void setRoleName(String roleName) {
         this.roleName = roleName;
     }
-    public String getLocationName() {
+    public List<String> getLocationName() {
         return locationName;
     }
-    public void setLocationName(String locationName) {
+    public void setLocationName(List<String> locationName) {
         this.locationName = locationName;
     }
-
     public SecondaryDetailsDto getSecondaryDetails() {
         return secondaryDetails;
     }
-
     public void setSecondaryDetails(SecondaryDetailsDto secondaryDetails) {
         this.secondaryDetails = secondaryDetails;
     }

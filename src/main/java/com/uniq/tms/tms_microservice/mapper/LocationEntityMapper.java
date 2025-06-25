@@ -3,7 +3,9 @@ package com.uniq.tms.tms_microservice.mapper;
 import com.uniq.tms.tms_microservice.dto.LocationDto;
 import com.uniq.tms.tms_microservice.entity.LocationEntity;
 import com.uniq.tms.tms_microservice.entity.OrganizationEntity;
+import com.uniq.tms.tms_microservice.entity.UserLocationEntity;
 import com.uniq.tms.tms_microservice.model.Location;
+import com.uniq.tms.tms_microservice.model.UserLocation;
 import org.mapstruct.AfterMapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -28,5 +30,8 @@ public interface LocationEntityMapper {
             locationEntity.setOrganizationEntity(organization);
         }
     }
-    Location toModel(LocationEntity entity);
+
+    UserLocation toModel(UserLocationEntity userLocationEntity);
+
+    LocationDto tolocationDto(LocationEntity entity);
 }

@@ -62,14 +62,16 @@ public class UserController {
     }
 
     @GetMapping("/group")
-    public ResponseEntity<ApiResponse> getAllTeam(@RequestHeader(value = "Authorization", required = false) String authHeader) {
+    public ResponseEntity<ApiResponse> getAllGroup(@RequestHeader(value = "Authorization", required = false) String authHeader) {
+        Long orgId;
         try {
             String jwt = jwtUtil.extractJwt(authHeader);
+            orgId = jwtUtil.extractOrgIdFromToken(jwt);
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new ApiResponse(403, "Unauthorized", false));
         }
 
-        return ResponseEntity.ok(authFacade.getAllTeam());
+        return ResponseEntity.ok(authFacade.getAllGroup(orgId));
     }
 
     @GetMapping("/location")
@@ -253,4 +255,18 @@ public class UserController {
 
     @GetMapping("/download-sample-file")
     public ResponseEntity<Resource> downloadSampleFile() { return authFacade.downloadSampleFile(); }
+
+    @PostMapping("/addPrivileges")
+    public ResponseEntity<ApiResponse> addPrivileges(@RequestHeader("Authorization") String token,
+                                                     @RequestBody PrivilegeDto privilegeDto) {
+        ApiResponse response = authFacade.addPrivileges(token, privilegeDto);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
+
+    @PostMapping("/addRolwisePrivileges")
+    public ResponseEntity<ApiResponse> addRolwisePrivileges(@RequestHeader("Authorization") String token,
+                                                     @RequestBody RolePrivilegeDto rolePrivilegeDto) {
+        ApiResponse response = authFacade.addRolwisePrivileges(token, rolePrivilegeDto);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
 }

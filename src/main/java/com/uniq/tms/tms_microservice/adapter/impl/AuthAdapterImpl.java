@@ -1,6 +1,7 @@
 package com.uniq.tms.tms_microservice.adapter.impl;
 
 import com.uniq.tms.tms_microservice.adapter.AuthAdapter;
+import com.uniq.tms.tms_microservice.entity.SecondaryDetailsEntity;
 import com.uniq.tms.tms_microservice.entity.UserEntity;
 import com.uniq.tms.tms_microservice.repository.SecondaryDetailsRepository;
 import com.uniq.tms.tms_microservice.repository.UserRepository;
@@ -25,7 +26,7 @@ public class AuthAdapterImpl implements AuthAdapter {
 
     @Override
     public UserEntity findUserByEmail(String email) {
-        return userRepository.findUserByEmail(email);
+        return secondaryDetailsRepository.findUserByEmail(email);
     }
 
     @Override

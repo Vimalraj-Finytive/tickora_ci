@@ -20,5 +20,7 @@ public class StartCacheServiceImpl implements ApplicationRunner, StartCacheServi
     public void run(ApplicationArguments args) throws Exception {
         cacheLoaderService.loadUserTable();
         cacheLoaderService.loadLocationTable();
+        cacheLoaderService.loadAllRolesToCache();
+        cacheLoaderService.loadPrivilegesFromDB();
     }
 }

@@ -1,6 +1,8 @@
 package com.uniq.tms.tms_microservice.exception;
 
+import com.sun.jdi.request.DuplicateRequestException;
 import com.uniq.tms.tms_microservice.dto.ApiResponse;
+import org.apache.coyote.BadRequestException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -73,5 +75,18 @@ public class GlobalExceptionHandler {
         ApiResponse response = new ApiResponse(500, "An unexpected error occurred", null);
         return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
     }
+
+    @ExceptionHandler(BadRequestException.class)
+    public ResponseEntity<ApiResponse> handleBadRequestException(BadRequestException ex) {
+        ApiResponse response = new ApiResponse(400, ex.getMessage(), null);
+        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(DuplicateRequestException.class)
+    public ResponseEntity<ApiResponse> handleDuplicateUserException(DuplicateRequestException ex) {
+        ApiResponse response = new ApiResponse(409, ex.getMessage(), null);
+        return new ResponseEntity<>(response, HttpStatus.CONFLICT);
+    }
+
 
 }

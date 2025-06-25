@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import java.util.List;
+import java.util.Set;
 
 @Repository
 public interface UserGroupRepository extends JpaRepository<UserGroupEntity,Long> {
@@ -82,4 +83,7 @@ public interface UserGroupRepository extends JpaRepository<UserGroupEntity,Long>
             @Param("groupIds") List<Long> groupIds,
             @Param("orgId") Long orgId);
 
+    List<UserGroupEntity> findGroupByUser_UserId(Long userId);
+
+    void deleteByUser_UserIdAndGroup_GroupIdIn(Long userId, Set<Long> toDelete);
 }
