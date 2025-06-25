@@ -7,7 +7,6 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
-
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -42,6 +41,8 @@ public class TimesheetEntity {
 
     @OneToMany(mappedBy = "timesheet")
     public List<TimesheetHistoryEntity> timesheetHistoryEntities;
+
+    private Long statusId;
 
     public List<TimesheetHistoryEntity> getTimesheetHistoryEntities() {
         return timesheetHistoryEntities;
@@ -129,5 +130,13 @@ public class TimesheetEntity {
 
     public void setTotalBreakHours(LocalTime totalBreakHours) {
         this.totalBreakHours = totalBreakHours;
+    }
+
+    public Long getStatusId() {
+        return statusId;
+    }
+
+    public void setStatusId(Long statusId) {
+        this.statusId = statusId;
     }
 }

@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN">
+    <Appenders>
+        <!-- Console Appender for logging to the console -->
+        <Console name="ConsoleAppender" target="SYSTEM_OUT">
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss} %-5p %c{1}:%L - %m%n" />
+        </Console>
+
+        <!-- Rolling File Appender for logging to a file with both time and size-based rotation -->
+        <RollingFile name="RollingFileAppender"
+                     fileName="logs/app.log"
+                     filePattern="logs/app-%d{yyyy-MM-dd}-%i.log.gz">
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss} %-5p %c{1}:%L - %m%n" />
+            <Policies>
+                <!-- Time-based policy for daily rolling -->
+                <TimeBasedTriggeringPolicy />
+                <!-- Size-based policy for rolling when the file reaches a specific size -->
+                <SizeBasedTriggeringPolicy size="10kb" />
+            </Policies>
+            <!-- Specify the maximum number of files to keep -->
+            <DefaultRolloverStrategy max="10" fileIndex="min" />
+        </RollingFile>
+
+        <!-- File Appender for Debug Logs -->
+        <File name="DebugFileAppender" fileName="logs/debug.log">
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss} %-5p %c{1}:%L - %m%n" />
+            <Filters>
+                <ThresholdFilter level="DEBUG" onMatch="ACCEPT" onMismatch="DENY" />
+            </Filters>
+        </File>
+
+        <!-- File Appender for System Info Logs -->
+        <File name="SystemFileAppender" fileName="logs/system.log">
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss} %-5p %c{1}:%L - %m%n" />
+            <Filters>
+                <ThresholdFilter level="INFO" onMatch="ACCEPT" onMismatch="DENY" />
+            </Filters>
+        </File>
+
+        <!-- File Appender for Error Logs -->
+        <File name="ErrorFileAppender" fileName="logs/error.log">
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss} %-5p %c{1}:%L - %m%n" />
+            <Filters>
+                <ThresholdFilter level="ERROR" onMatch="ACCEPT" onMismatch="DENY" />
+            </Filters>
+        </File>
+    </Appenders>
+
+    <Loggers>
+        <!-- Root Logger Configuration -->
+        <Root level="debug">
+            <AppenderRef ref="ConsoleAppender" />
+            <AppenderRef ref="RollingFileAppender" />
+            <AppenderRef ref="DebugFileAppender" />
+            <AppenderRef ref="SystemFileAppender" />
+            <AppenderRef ref="ErrorFileAppender" />
+        </Root>
+
+
+        <!-- Debug Logger for Debug-Level Logs -->
+        <Logger name="com.example.debug" level="debug" additivity="false">
+            <AppenderRef ref="DebugFileAppender" />
+        </Logger>
+
+        <!-- System Logger for Info-Level Logs -->
+        <Logger name="com.example.system" level="info" additivity="false">
+            <AppenderRef ref="SystemFileAppender" />
+        </Logger>
+
+        <!-- Error Logger for Error-Level Logs -->
+        <Logger name="com.example.error" level="error" additivity="false">
+            <AppenderRef ref="ErrorFileAppender" />
+        </Logger>
+    </Loggers>
+</Configuration>

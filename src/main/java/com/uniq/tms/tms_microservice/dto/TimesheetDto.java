@@ -1,30 +1,60 @@
 package com.uniq.tms.tms_microservice.dto;
 
-
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.uniq.tms.tms_microservice.constant.UserConstant;
 import com.uniq.tms.tms_microservice.entity.TimesheetEntity;
-
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 public class TimesheetDto {
     private Long id;
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private Long userId;
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     private LocalDate date;
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private LocalTime firstClockIn;
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private LocalTime lastClockOut;
-    private LocalTime trackedHours;
-    private LocalTime regularHours;
+    @JsonIgnore
+    private Duration trackedHours;
+    @JsonIgnore
+    private Duration regularHours;
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private LocalDateTime createdAt;
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private LocalDateTime updatedAt;
-    private List<TimesheetHistoryDto> history;
     private String dayType;
     private String workStatus;
     private String userDayType;
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String userName;
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String role;
-
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    private String firstClockInTime;
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    private String lastClockOutTime;
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    private String trackedHoursDuration;
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    private String regularHoursDuration;
+    private List<TimesheetHistoryDto> history;
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    private Long statusId;
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    private String groupname;
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    private Boolean paidLeave;
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    private String mobileNumber;
+    private String status;
 
     public TimesheetDto(TimesheetEntity timesheetEntity, List<TimesheetHistoryDto> historyDtos) {
         this.id = timesheetEntity.getId();
@@ -32,15 +62,77 @@ public class TimesheetDto {
         this.date = timesheetEntity.getDate();
         this.firstClockIn = timesheetEntity.getFirstClockIn();
         this.lastClockOut = timesheetEntity.getLastClockOut();
-        this.regularHours = timesheetEntity.getRegularHours();
-        this.trackedHours = timesheetEntity.getTrackedHours();
+        this.regularHours = convertToDuration(timesheetEntity.getRegularHours());
+        this.trackedHours = convertToDuration(timesheetEntity.getTrackedHours());
+        this.firstClockInTime = formatTime(this.firstClockIn);
+        this.lastClockOutTime = formatTime(this.lastClockOut);
+        this.trackedHoursDuration = formatDuration(this.trackedHours);
+        this.regularHoursDuration = formatDuration(this.regularHours);
         this.history = historyDtos;
     }
 
     public TimesheetDto() {
+
     }
 
-    public TimesheetDto(Object[] obj) {
+    private Duration convertToDuration(LocalTime localTime) {
+        if (localTime == null) {
+            return Duration.ZERO;
+        }
+        return Duration.ofHours(localTime.getHour())
+                .plusMinutes(localTime.getMinute())
+                .plusSeconds(localTime.getSecond());
+    }
+
+    // Method to format LocalTime to 12-hour format (AM/PM)
+    private String formatTime(LocalTime localTime) {
+        if (localTime == null) {
+            return "00:00";
+        }
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(UserConstant.TWELVE_HOUR_FORMAT); // 12-hour format with AM/PM
+        return localTime.format(formatter);
+    }
+
+    // Method to convert Duration to "XXh XXm" format
+    private String formatDuration(Duration duration) {
+        if (duration == null) {
+            return "00h 00m";
+        }
+        long hours = duration.toHours();
+        long minutes = duration.toMinutes() % 60;
+        return String.format("%02dh %02dm", hours, minutes); // Format as "09h 00m"
+    }
+
+    public String getFirstClockInTime() {
+        return firstClockInTime;
+    }
+
+    public void setFirstClockInTime(String firstClockInTime) {
+        this.firstClockInTime = firstClockInTime;
+    }
+
+    public String getLastClockOutTime() {
+        return lastClockOutTime;
+    }
+
+    public void setLastClockOutTime(String lastClockOutTime) {
+        this.lastClockOutTime = lastClockOutTime;
+    }
+
+    public String getTrackedHoursDuration() {
+        return trackedHoursDuration;
+    }
+
+    public void setTrackedHoursDuration(String trackedHoursDuration) {
+        this.trackedHoursDuration = trackedHoursDuration;
+    }
+
+    public String getRegularHoursDuration() {
+        return regularHoursDuration;
+    }
+
+    public void setRegularHoursDuration(String regularHoursDuration) {
+        this.regularHoursDuration = regularHoursDuration;
     }
 
     public String getRole() {
@@ -123,19 +215,19 @@ public class TimesheetDto {
         this.lastClockOut = lastClockOut;
     }
 
-    public LocalTime getTrackedHours() {
+    public Duration getTrackedHours() {
         return trackedHours;
     }
 
-    public void setTrackedHours(LocalTime trackedHours) {
+    public void setTrackedHours(Duration trackedHours) {
         this.trackedHours = trackedHours;
     }
 
-    public LocalTime getRegularHours() {
+    public Duration getRegularHours() {
         return regularHours;
     }
 
-    public void setRegularHours(LocalTime regularHours) {
+    public void setRegularHours(Duration regularHours) {
         this.regularHours = regularHours;
     }
 
@@ -161,5 +253,45 @@ public class TimesheetDto {
 
     public void setHistory(List<TimesheetHistoryDto> history) {
         this.history = history;
+    }
+
+    public Long getStatusId() {
+        return statusId;
+    }
+
+    public void setStatusId(Long statusId) {
+        this.statusId = statusId;
+    }
+
+    public String getGroupname() {
+        return groupname;
+    }
+
+    public void setGroupname(String groupname) {
+        this.groupname = groupname;
+    }
+
+    public Boolean getPaidLeave() {
+        return paidLeave;
+    }
+
+    public void setPaidLeave(Boolean paidLeave) {
+        this.paidLeave = paidLeave;
+    }
+
+    public String getMobileNumber() {
+        return mobileNumber;
+    }
+
+    public void setMobileNumber(String mobileNumber) {
+        this.mobileNumber = mobileNumber;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
     }
 }

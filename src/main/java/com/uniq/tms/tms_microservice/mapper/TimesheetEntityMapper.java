@@ -1,13 +1,13 @@
 package com.uniq.tms.tms_microservice.mapper;
 
-
 import com.uniq.tms.tms_microservice.dto.TimesheetHistoryDto;
 import com.uniq.tms.tms_microservice.entity.TimesheetHistoryEntity;
 import com.uniq.tms.tms_microservice.model.TimesheetHistory;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.mapstruct.ReportingPolicy;
 
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface TimesheetEntityMapper {
 
     TimesheetHistory toMiddleware(TimesheetHistoryEntity entity);
@@ -19,4 +19,3 @@ public interface TimesheetEntityMapper {
     TimesheetHistoryDto toDto(TimesheetHistory timesheetHistory);
 
 }
-

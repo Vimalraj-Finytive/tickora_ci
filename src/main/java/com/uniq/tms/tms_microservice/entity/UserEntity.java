@@ -10,7 +10,6 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
-
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -29,20 +28,14 @@ public class UserEntity {
     @Column(name = "email", nullable = false, unique = true)
     private String email;
 
-    @Column(name = "mobile_number", nullable = false, unique = true)
+    @Column(name = "mobile_number", nullable = false, unique = true, length = 10)
     private String mobileNumber;
 
     @Column(name = "password", nullable = false)
     private String password;
 
-    @Column(name = "location_id")
-    private Long locationId;
-
     @Column(name = "organization_id")
     private Long organizationId;
-
-    @Column(name = "group_id")
-    private Long groupId;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -58,6 +51,32 @@ public class UserEntity {
     @Column(name = "date_of_joining")
     private LocalDate dateOfJoining;
 
+    @Column(name = "is_register_user", nullable = false)
+    private boolean isRegisterUser = false;
+
+    @Column(name = "active", nullable = false)
+    private boolean active;
+
+    public UserEntity(Long userId){
+        this.userId = userId;
+    }
+
+    public UserEntity() {
+    }
+
+    public UserEntity(Long userId, String userName, String email, String mobileNumber, boolean isDefaultPassword, LocalDate dateOfJoining, boolean active, RoleEntity role, LocalDateTime createdAt, Long organizationId, String password) {
+        this.userId = userId;
+        this.userName = userName;
+        this.email = email;
+        this.mobileNumber = mobileNumber;
+        this.isDefaultPassword = isDefaultPassword;
+        this.dateOfJoining = dateOfJoining;
+        this.active = active;
+        this.role = role;
+        this.createdAt = createdAt;
+        this.organizationId = organizationId;
+        this.password = password;
+    }
 
     public LocalDate getDateOfJoining() {
         return dateOfJoining;
@@ -123,14 +142,6 @@ public class UserEntity {
         this.createdAt = createdAt;
     }
 
-    public Long getLocationId() {
-        return locationId;
-    }
-
-    public void setLocationId(Long locationId) {
-        this.locationId = locationId;
-    }
-
     public Long getOrganizationId() {
         return organizationId;
     }
@@ -139,12 +150,12 @@ public class UserEntity {
         this.organizationId = organizationId;
     }
 
-    public Long getGroupId() {
-        return groupId;
+    public boolean isActive() {
+        return active;
     }
 
-    public void setGroupId(Long groupId) {
-        this.groupId = groupId;
+    public void setActive(boolean active) {
+        this.active = active;
     }
 
     @PrePersist
@@ -158,5 +169,13 @@ public class UserEntity {
 
     public void setRole(RoleEntity role) {
         this.role = role;
+    }
+
+    public boolean isRegisterUser() {
+        return isRegisterUser;
+    }
+
+    public void setRegisterUser(boolean registerUser) {
+        isRegisterUser = registerUser;
     }
 }

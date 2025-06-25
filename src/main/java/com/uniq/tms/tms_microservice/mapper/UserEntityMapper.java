@@ -1,25 +1,20 @@
 package com.uniq.tms.tms_microservice.mapper;
 
-
-
-import com.uniq.tms.tms_microservice.entity.GroupEntity;
-import com.uniq.tms.tms_microservice.entity.LocationEntity;
-import com.uniq.tms.tms_microservice.entity.RoleEntity;
-import com.uniq.tms.tms_microservice.entity.UserEntity;
-import com.uniq.tms.tms_microservice.model.AddGroup;
-import com.uniq.tms.tms_microservice.model.Group;
-import com.uniq.tms.tms_microservice.model.Location;
-import com.uniq.tms.tms_microservice.model.Member;
-import com.uniq.tms.tms_microservice.model.Role;
-import com.uniq.tms.tms_microservice.model.User;
+import com.uniq.tms.tms_microservice.dto.LocationDto;
+import com.uniq.tms.tms_microservice.entity.*;
+import com.uniq.tms.tms_microservice.model.*;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
-import org.mapstruct.Named;
+import org.mapstruct.ReportingPolicy;
 
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface UserEntityMapper {
+
+    @Mapping(target = "orgId", source = "organizationEntity.organizationId")
     Role toMiddleware(RoleEntity entity);
 
+    @Mapping(target = "orgId", source = "organizationEntity.organizationId")
+    @Mapping(target = "locationId", source = "locationId")
     Location toMiddleware(LocationEntity entity);
 
     @Mapping(target = "roleId", source = "role.roleId")
@@ -27,29 +22,51 @@ public interface UserEntityMapper {
 
     @Mapping(target = "password", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "defaultPassword", ignore = true)
     @Mapping(target = "role", expression = "java(user.getRoleId() != null ? new RoleEntity(user.getRoleId()) : null)")
+
     UserEntity toEntity(User user);
 
-    @Mapping(target = "managerIds", source = "managerIds")
-    @Mapping(target = "supervisorsId" , source = "supervisorsId")
+    @Mapping(target = "workSchedule", ignore = true)
+    @Mapping(target = "locationEntity", expression = "java(new LocationEntity(group.getLocationId()))")
+    @Mapping(target = "groupId", ignore = true)
+    @Mapping(target = "organizationEntity", ignore = true)
     GroupEntity toEntity(AddGroup group);
 
-    @Mapping(target = "managerIds", source = "managerIds")
     @Mapping(target = "locationId", source = "locationEntity.locationId")
+    @Mapping(target = "workScheduleId", source = "workSchedule.scheduleId")
     Group toMiddleware(GroupEntity entity);
 
-    @Mapping(target = "managerIds", source = "managerIds")
+    @Mapping(target = "scheduleId", source = "scheduleId")
+    @Mapping(target = "scheduleName", source = "scheduleName")
+    @Mapping(target = "startTime", source = "startTime")
+    @Mapping(target = "endTime", source = "endTime")
+    @Mapping(target = "restDay", source = "restDay")
+    @Mapping(target = "type", source = "type")
+    @Mapping(target = "organizationId", source = "organizationEntity.organizationId")
+    WorkSchedule toMiddleware(WorkScheduleEntity workScheduleEntity);
+
+    @Mapping(target = "type", ignore = true)
     @Mapping(target = "locationId", source = "locationEntity.locationId")
-    @Mapping(target = "supervisorsId" , source = "supervisorsId")
+    @Mapping(target = "workScheduleId", source = "workSchedule.scheduleId")
+    @Mapping(target = "supervisorsId", ignore = true)
     AddGroup toGroupMiddleware(GroupEntity entity);
 
-    @Named("mapLocation")
-    default LocationEntity mapLocation(Long locationId) {
-        if (locationId == null) return null;
-        return new LocationEntity(locationId);
-    }
+    @Mapping(source = "group.groupId", target = "groupId")
+    @Mapping(source = "user.userId", target = "userId")
+    @Mapping(source = "type", target = "type")
+    UserGroup toMiddleware(UserGroupEntity savedEntity);
 
-    @Mapping(target = "groupMember", source = "groupMemberIds")
-    Member toMemberMiddleware(GroupEntity entity);
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "user", expression = "java(new UserEntity(userGroup.getUserId()))")
+    @Mapping(target = "group", expression = "java(new GroupEntity(userGroup.getGroupId()))")
+    UserGroupEntity toEntity(UserGroup userGroup);
 
+    UserEntity toMiddleware(User user);
+
+    Location toMiddleware(LocationDto locationDto);
+
+    PrivilegeEntity toEntity(Privilege privilegeModel);
+
+    Privilege toModel(PrivilegeEntity privilege);
 }

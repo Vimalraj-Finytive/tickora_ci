@@ -1,10 +1,7 @@
 package com.uniq.tms.tms_microservice.model;
 
-
-
 import com.uniq.tms.tms_microservice.dto.LogFrom;
 import com.uniq.tms.tms_microservice.dto.LogType;
-
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;

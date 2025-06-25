@@ -13,7 +13,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 
@@ -30,7 +29,7 @@ public class TimesheetHistoryEntity {
     private TimesheetEntity timesheet;
 
     @Column(nullable = false)
-    private String locationId;
+    private Long locationId;
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "HH:mm")
     private LocalTime logTime;
     @Enumerated(EnumType.STRING)
@@ -55,11 +54,11 @@ public class TimesheetHistoryEntity {
         this.timesheet = timesheet;
     }
 
-    public String getLocationId() {
+    public Long getLocationId() {
         return locationId;
     }
 
-    public void setLocationId(String locationId) {
+    public void setLocationId(Long locationId) {
         this.locationId = locationId;
     }
 
@@ -94,6 +93,4 @@ public class TimesheetHistoryEntity {
     public void setLoggedTimestamp(LocalDateTime loggedTimestamp) {
         this.loggedTimestamp = loggedTimestamp;
     }
-
-
 }

@@ -11,7 +11,6 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-
 import java.util.List;
 
 @Configuration
@@ -29,20 +28,35 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        // Allow static folder
                         .requestMatchers(
-                                "/", "/browser/**", "/assets/**", "/media/**", "/*.js", "/*.css", "/*.html", "/login")
-                        .permitAll()
-                        .requestMatchers("/tms/login", "/tms/logout", "/tms/validate-email", "/tms/reset-password","/tms/timesheets/**").permitAll()
-                        .requestMatchers("/tms/admin/**" ).hasAnyAuthority("admin", "SuperAdmin", "manager")
+                                "/",
+                                "/index.html",
+                                "/*.js",
+                                "/*.css",
+                                "/*.html",
+                                "/assets/**",
+                                "/browser/**",
+                                "/favicon.ico",
+                                "/**/*.js",
+                                "/**/*.css",
+                                "/**/*.png",
+                                "/**/*.jpg",
+                                "/**/*.svg",
+                                "/**/*.woff2",
+                                "/**/*.ttf",
+                                "/**/*.map"
+                        ).permitAll()
+                        .requestMatchers("/**").permitAll()
                         .anyRequest().authenticated()
                 )
+
                 .exceptionHandling(exception -> exception
                         .accessDeniedHandler((request, response, accessDeniedException) -> {
-                            response.setStatus(HttpStatus.FORBIDDEN.value());
-                            response.setContentType("application/json");
-                            response.getWriter().write("{\"error\": \"Access Denied\", \"message\": \"User is not authorized to access this resource\"}");
-                        }))
+                            response.setStatus(HttpStatus.OK.value());
+                            request.getRequestDispatcher("/index.html").forward(request, response);
+                        })
+                )
+
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
@@ -57,12 +71,10 @@ public class SecurityConfig {
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH"));
         config.setAllowedHeaders(List.of("*"));
         config.setExposedHeaders(List.of("Authorization"));
-
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;
     }
-
 
 
     @Bean

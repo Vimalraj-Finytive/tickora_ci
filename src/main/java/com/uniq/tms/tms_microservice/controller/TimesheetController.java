@@ -1,18 +1,23 @@
 package com.uniq.tms.tms_microservice.controller;
 
-
 import com.uniq.tms.tms_microservice.constant.UserConstant;
 import com.uniq.tms.tms_microservice.dto.ApiResponse;
+import com.uniq.tms.tms_microservice.dto.DashboardDto;
 import com.uniq.tms.tms_microservice.dto.TimesheetDto;
 import com.uniq.tms.tms_microservice.dto.TimesheetHistoryDto;
+import com.uniq.tms.tms_microservice.dto.TimesheetReportDto;
+import com.uniq.tms.tms_microservice.dto.UserDashboardDto;
+import com.uniq.tms.tms_microservice.dto.UserTimesheetDto;
+import com.uniq.tms.tms_microservice.dto.UserTimesheetResponseDto;
 import com.uniq.tms.tms_microservice.facade.AuthFacade;
+import com.uniq.tms.tms_microservice.util.ReportUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -21,29 +26,27 @@ import java.util.List;
 
 @RestController
 @RequestMapping(UserConstant.Timesheet_URL)
-@CrossOrigin(origins = "http://localhost:4200")
-public class TimesheetController {
+
+public class  TimesheetController {
 
     private final AuthFacade authFacade;
+    private final ReportUtils reportUtils;
 
-    public TimesheetController(AuthFacade authFacade) {
+    public TimesheetController(AuthFacade authFacade, ReportUtils reportUtils) {
         this.authFacade = authFacade;
+        this.reportUtils = reportUtils;
     }
 
-    //working query
-    @GetMapping
-    public ResponseEntity<ApiResponse> getAllTimesheets(
-            @RequestParam(required = false) LocalDate date,
-            @RequestParam(required = false) String timePeriod,
-            @RequestParam(required = false) Long userId) {
-
-        List<TimesheetDto> timesheets = authFacade.getAllTimesheets(date, timePeriod,userId);
-        return ResponseEntity.ok(new ApiResponse(200, "Timesheets fetched successfully", timesheets));
+    @PostMapping
+    public ResponseEntity<?> getAllTimesheets(@RequestHeader("Authorization") String token,
+                                                        @RequestBody TimesheetReportDto request) {
+        List<UserTimesheetResponseDto> timesheets = authFacade.getAllTimesheets(token,request);
+        return ResponseEntity.ok(new ApiResponse(200, "Success", timesheets));
     }
 
     @PostMapping("/clockin")
-    public ResponseEntity<ApiResponse> logTimesheet(@RequestBody List<TimesheetHistoryDto> timesheetLogs) {
-        List<TimesheetHistoryDto> savedLogs = authFacade.processTimesheetLogs(timesheetLogs);
+    public ResponseEntity<ApiResponse> logTimesheet(@RequestHeader("Authorization") String token,@RequestBody List<TimesheetHistoryDto> timesheetLogs) {
+        List<TimesheetHistoryDto> savedLogs = authFacade.processTimesheetLogs(token,timesheetLogs);
         return ResponseEntity.ok(new ApiResponse(201, "Timesheet logged successfully", savedLogs));
     }
 
@@ -63,6 +66,29 @@ public class TimesheetController {
         return ResponseEntity.ok(new ApiResponse<>(200, "Timesheet updated successfully", updatedTimesheet));
     }
 
+    @PutMapping("/editTimesheet")
+    public ResponseEntity<ApiResponse<TimesheetDto>> upsertClockInOutTimes(
+            @RequestHeader("Authorization") String token,
+            @RequestParam Long userId,
+            @RequestParam LocalDate date,
+            @RequestBody TimesheetDto request) {
 
+        TimesheetDto timesheetDto = authFacade.upsertClockInOut(token,userId, date, request);
+
+        return ResponseEntity.ok(new ApiResponse<>(200, "Timesheet upserted successfully", timesheetDto));
+    }
+
+    @PostMapping("/dashboard")
+    public ResponseEntity<?> getDashboard(@RequestHeader("Authorization") String token,
+                                          @RequestBody(required = false) DashboardDto request) {
+        List<UserDashboardDto> dashboards = authFacade.getAllUserInfo(token, request);
+        return ResponseEntity.ok(new ApiResponse(200, "Dashboard Loaded Successfully", dashboards));
+    }
+
+    @PostMapping("/userTimesheets")
+    public ResponseEntity<?> getUserTimesheets(@RequestHeader("Authorization") String token,
+                                               @RequestBody TimesheetReportDto request) {
+        List<UserTimesheetDto> timesheets = authFacade.getUserTimesheets(token,request);
+        return ResponseEntity.ok(new ApiResponse(200, "Success", timesheets));
+    }
 }
-

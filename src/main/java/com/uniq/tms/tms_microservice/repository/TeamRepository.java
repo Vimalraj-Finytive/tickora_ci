@@ -8,162 +8,151 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-
 import java.util.List;
 import java.util.Optional;
 
 @Repository
 public interface TeamRepository extends JpaRepository<GroupEntity, Long> {
 
+    @Modifying
+    @Transactional
+    @Query(value = "UPDATE group_table SET group_name = :groupName, location_id = :locationId WHERE group_id = :groupId", nativeQuery = true)
+    void updateGroupNameAndLocation(@Param("groupId") Long groupId,
+                                    @Param("groupName") String groupName,
+                                    @Param("locationId") Long locationId);
 
     @Query("SELECT g FROM GroupEntity g WHERE g.groupName = :groupName AND g.organizationEntity.id = :orgId")
     Optional<GroupEntity> findBygroupNameAndOrganizationId(@Param("groupName") String teamName, @Param("orgId") Long orgId);
-
-    @Query(
-            value = """
-            WITH group_base AS (
-                SELECT 
-                    g.group_id AS groupid,
-                    g.group_name AS groupname,
-                    g.location_id,
-                    g.group_members_id,
-                    g.supervisors_id,
-                    g.managers_id
-                FROM group_table g
-                WHERE g.organization_id = 1
-            ),
-            group_members_expanded AS (
-                SELECT 
-                    gb.groupid,
-                    gb.groupname,
-                    gb.location_id,
-                    gb.managers_id,
-                    jsonb_array_elements_text(gb.group_members_id)::int AS user_id,
-                    'Member' AS type
-                FROM group_base gb
-                WHERE gb.group_members_id IS NOT NULL
-            ),
-            supervisors_expanded AS (
-                SELECT 
-                    gb.groupid,
-                    gb.groupname,
-                    gb.location_id,
-                    gb.managers_id,
-                    jsonb_array_elements_text(gb.supervisors_id)::int AS user_id,
-                    'Supervisor' AS type
-                FROM group_base gb
-                WHERE gb.supervisors_id IS NOT NULL
-            ),
-            group_users_with_type AS (
-                SELECT * FROM group_members_expanded
-                UNION ALL
-                SELECT * FROM supervisors_expanded
-            ),
-            user_group_info AS (
-                SELECT 
-                    u.user_id,
-                    ARRAY_AGG(DISTINCT g.groupname) AS groups,
-                    ARRAY_AGG(DISTINCT l.name) AS locations
-                FROM group_users_with_type g
-                JOIN users u ON u.user_id = g.user_id
-                LEFT JOIN location l ON g.location_id = l.location_id
-                GROUP BY u.user_id
-            ),
-            manager_names AS (
-                SELECT 
-                    u.user_id, 
-                    u.user_name
-                FROM users u
-            ),
-            group_members_id AS (
-                SELECT 
-                    u.user_id AS userid,
-                    u.user_name AS username,
-                    u.email AS useremail,
-                    r.name AS userrole,
-                    u.date_of_joining
-                FROM users u
-                LEFT JOIN role r ON u.role_id = r.role_id
-            ),
-            group_data_with_members AS (
-                SELECT 
-                    gb.groupid,
-                    gb.groupname,
-                    gb.location_id,
-                    gm.userid,
-                    gm.username,
-                    COALESCE(gm.userrole, 'staff') AS userrole,
-                    gm.useremail,
-                    gm.date_of_joining,
-                    guwt.type AS usertype,
-                    ugi.groups,
-                    ugi.locations,
-                    m.user_name AS managername
-                FROM group_base gb
-                LEFT JOIN group_users_with_type guwt ON gb.groupid = guwt.groupid
-                LEFT JOIN group_members_id gm ON gm.userid = guwt.user_id
-                LEFT JOIN user_group_info ugi ON ugi.user_id = guwt.user_id
-                LEFT JOIN manager_names m ON m.user_id = ANY (
-                    SELECT jsonb_array_elements_text(gb.managers_id)::int
-                )
+    @Query(value = """
+    WITH group_base AS (
+        SELECT 
+            g.group_id AS groupid,
+            g.group_name AS groupname,
+            g.location_id,
+            g.organization_id
+        FROM group_table g
+        WHERE g.organization_id = :orgId
+    ),
+    user_group_details AS (
+        SELECT 
+            ug.group_id,
+            ug.user_id,
+            ug.type
+        FROM user_group ug
+    ),
+    user_info AS (
+        SELECT 
+            u.user_id,
+            u.user_name,
+            u.email,
+            u.date_of_joining,
+            r.name AS role_name,
+            u.active
+        FROM users u
+        LEFT JOIN role r ON u.role_id = r.role_id
+    ),
+    group_data AS (
+        SELECT 
+            gb.groupid,
+            gb.groupname,
+            gb.location_id,
+            ugd.user_id,
+            ui.user_name,
+            ui.email,
+            ui.date_of_joining,
+            ui.role_name,
+            ui.active,
+            ugd.type AS user_type
+        FROM group_base gb
+        LEFT JOIN user_group_details ugd ON gb.groupid = ugd.group_id
+        LEFT JOIN user_info ui ON ui.user_id = ugd.user_id
+    )
+    SELECT 
+        gd.groupid,
+        gd.groupname,
+        COALESCE(l.name, 'Unknown Location') AS location,
+        JSONB_AGG(
+            JSONB_BUILD_OBJECT(
+                'userId', gd.user_id,
+                'userName', gd.user_name,
+                'email', gd.email,
+                'dateOfJoining', gd.date_of_joining,
+                'role', gd.role_name,
+                'type', gd.user_type,
+                'active', gd.active
             )
-            SELECT 
-                gdm.groupid,
-                gdm.groupname,
-                JSONB_AGG(DISTINCT gdm.managername) FILTER (WHERE gdm.managername IS NOT NULL) AS managername,
-                COALESCE(l.name, 'Unknown Location') AS location,
-                JSONB_AGG(
-                    DISTINCT JSONB_BUILD_OBJECT(
-                        'id', gdm.userid,
-                        'name', gdm.username,
-                        'role', gdm.userrole,
-                        'email', gdm.useremail,
-                        'dateJoined', gdm.date_of_joining,
-                        'Type', gdm.usertype,
-                        'GroupName', gdm.groups,
-                        'location', gdm.locations
-                    )
-                ) FILTER (WHERE gdm.userid IS NOT NULL) AS groupmember
-            FROM group_data_with_members gdm
-            LEFT JOIN location l ON gdm.location_id = l.location_id
-            GROUP BY gdm.groupid, gdm.groupname, l.name
-            """,
-            nativeQuery = true)
-    List<Object[]> getGroupDataNative(@Param("orgId") Long orgId);
-
+        ) FILTER (WHERE gd.user_id IS NOT NULL) AS members_details
+    FROM group_data gd
+    LEFT JOIN location l ON gd.location_id = l.location_id
+    GROUP BY gd.groupid, gd.groupname, l.name
+    """, nativeQuery = true)
+    List<Object[]> getGroupData(@Param("orgId") Long orgId);
 
     @Modifying
     @Transactional
     @Query(value = """
-    UPDATE group_table
-    SET group_members_id = (
-        SELECT jsonb_agg(elem)
-        FROM jsonb_array_elements_text(group_members_id) AS elem
-        WHERE elem::int <> :memberId
-    )
-    WHERE group_id = :groupId
+    DELETE FROM user_group
+    WHERE group_id = :groupId AND user_id = :memberId
 """, nativeQuery = true)
     void deleteMemberById(@Param("groupId") Long groupId, @Param("memberId") Long memberId);
 
+    @Query("""
+    SELECT COUNT(g) > 0
+    FROM GroupEntity g
+    WHERE g.groupName = :groupName
+      AND g.organizationEntity.organizationId = :orgId
+      AND g.groupId <> :groupId
+""")
+    boolean existsGroupNameInOrganization(
+            @Param("groupName") String groupName,
+            @Param("orgId") Long orgId,
+            @Param("groupId") Long groupId
+    );
 
     @Query(value = """
-    SELECT group_id AS groupId, group_name AS groupName
-    FROM group_table
-    WHERE (:userId = ANY (SELECT jsonb_array_elements_text(managers_id)::bigint)
-           OR :userId = ANY (SELECT jsonb_array_elements_text(supervisors_id)::bigint))
-      AND organization_id = :orgId
+        SELECT
+            g.group_id AS groupId,
+            g.group_name AS groupName
+        FROM
+            group_table g
+        JOIN
+            user_group ug ON g.group_id = ug.group_id
+        WHERE
+            ug.user_id = :userId
+            AND g.organization_id = :orgId
+            AND ug.type = 'Supervisor'
     """, nativeQuery = true)
-    List<GroupDto> findByUserIdAndOrganization_id(@Param("userId") Long userId, @Param("orgId") Long orgId);
+    List<GroupDto> findByUserIdAndOrganizationId(
+            @Param("userId") Long userId,
+            @Param("orgId") Long orgId
+    );
 
     @Modifying(clearAutomatically = true)
     @Transactional
     @Query(value = """
         DELETE FROM group_table
         WHERE group_id = :groupId
+        AND organization_id = :orgId
         """, nativeQuery = true)
-    void deleteGroupById(@Param("groupId") Long groupId);
+    void deleteGroupById(@Param("groupId") Long groupId, @Param("orgId") Long orgId);
 
-    Optional<GroupEntity> findByGroupIdAndOrganizationEntity_OrganizationId(Long groupId, Long organizationId);
+    @Query(value = """
+        SELECT 
+            g.group_id AS groupId,
+            g.group_name AS groupName
+        FROM 
+            group_table g
+        WHERE 
+            g.organization_id = :orgId
+    """, nativeQuery = true)
+    List<GroupDto> findByOrganizationId(Long orgId);
 
+    Optional<GroupEntity> findByGroupId(Long groupId);
 
+    @Query(value = "SELECT group_name, group_id FROM group_table", nativeQuery = true)
+    List<Object[]> findGroupNameIdMappings();
+
+    List<GroupEntity> findAllByOrganizationEntity_OrganizationId(Long orgId);
+
+    boolean existsByGroupIdAndOrganizationEntity_OrganizationId(Long groupId, Long orgId);
 }

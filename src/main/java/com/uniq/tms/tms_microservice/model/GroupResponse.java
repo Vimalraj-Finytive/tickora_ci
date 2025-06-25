@@ -7,16 +7,15 @@ public class GroupResponse {
 
     private Long groupId;
     private String groupName;
-    private List<String> managerIds;
     private String location;
-    private List<Map<String, Object>> groupmember;
+    private List<Map<String, Object>> groupMember;
 
-    public List<Map<String, Object>> getGroupmember() {
-        return groupmember;
+    public List<Map<String, Object>> getGroupMember() {
+        return groupMember;
     }
 
-    public void setGroupmember(List<Map<String, Object>> groupmember) {
-        this.groupmember = groupmember;
+    public void setGroupMember(List<Map<String, Object>> groupMember) {
+        this.groupMember = groupMember;
     }
 
     public Long getGroupId() {
@@ -35,14 +34,6 @@ public class GroupResponse {
         this.groupName = groupName;
     }
 
-    public List<String> getManagerIds() {
-        return managerIds;
-    }
-
-    public void setManagerIds(List<String> managerIds) {
-        this.managerIds = managerIds;
-    }
-
     public String getLocation() {
         return location;
     }
@@ -50,6 +41,4 @@ public class GroupResponse {
     public void setLocation(String location) {
         this.location = location;
     }
-
-
 }

@@ -5,24 +5,36 @@ import com.uniq.tms.tms_microservice.dto.LogFrom;
 import com.uniq.tms.tms_microservice.dto.LogType;
 import com.uniq.tms.tms_microservice.dto.TimesheetDto;
 import com.uniq.tms.tms_microservice.dto.TimesheetHistoryDto;
+import com.uniq.tms.tms_microservice.dto.TimesheetStatusEnum;
+import com.uniq.tms.tms_microservice.dto.TimesheetSummaryDto;
+import com.uniq.tms.tms_microservice.dto.UserAttendanceDto;
+import com.uniq.tms.tms_microservice.dto.UserDashboard;
+import com.uniq.tms.tms_microservice.dto.UserTimesheetDto;
+import com.uniq.tms.tms_microservice.dto.UserTimesheetResponseDto;
 import com.uniq.tms.tms_microservice.entity.TimesheetEntity;
 import com.uniq.tms.tms_microservice.entity.TimesheetHistoryEntity;
-import com.uniq.tms.tms_microservice.mapper.TimesheetDtoMapper;
-import com.uniq.tms.tms_microservice.mapper.TimesheetEntityMapper;
+import com.uniq.tms.tms_microservice.entity.WorkScheduleEntity;
 import com.uniq.tms.tms_microservice.repository.TimesheetHistoryRepository;
 import com.uniq.tms.tms_microservice.repository.TimesheetRepository;
+import com.uniq.tms.tms_microservice.repository.WorkScheduleRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
+import java.sql.Date;
+import java.sql.Time;
+import java.sql.Timestamp;
+import java.time.DayOfWeek;
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
-import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collection;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,148 +46,230 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
 
     private final TimesheetRepository timesheetRepository;
     private final TimesheetHistoryRepository timesheetHistoryRepository;
-    private final TimesheetDtoMapper timesheetDtoMapper;
-    private final TimesheetEntityMapper timesheetEntityMapper;
+    private final WorkScheduleRepository workScheduleAdapter;
 
-    public TimesheetAdapterImpl(TimesheetRepository timesheetRepository, TimesheetHistoryRepository timesheetHistoryRepository, TimesheetDtoMapper timesheetDtoMapper, TimesheetEntityMapper timesheetEntityMapper) {
+    public TimesheetAdapterImpl(TimesheetRepository timesheetRepository, TimesheetHistoryRepository timesheetHistoryRepository, WorkScheduleRepository workScheduleAdapter) {
         this.timesheetRepository = timesheetRepository;
         this.timesheetHistoryRepository = timesheetHistoryRepository;
-        this.timesheetDtoMapper = timesheetDtoMapper;
-        this.timesheetEntityMapper = timesheetEntityMapper;
+        this.workScheduleAdapter = workScheduleAdapter;
     }
 
-    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssX");
+    private static final Logger log = LoggerFactory.getLogger(TimesheetAdapterImpl.class);
 
     @Override
-    public List<TimesheetDto> filterTimesheetsForAllUsers(LocalDate startDate, LocalDate endDate, Long userId) {
-        List<Object[]> resultList = timesheetRepository.fetchTimesheetsWithHistory(startDate, endDate, userId);
-        System.out.println("Result List Size: " + (resultList == null ? "null" : resultList.size()));
+    public List<UserTimesheetResponseDto> filterTimesheetsForAllUsers(LocalDate startDate, LocalDate endDate, List<Long> userIds, Long orgId) {
+        Long[] userIdArray = userIds.toArray(new Long[0]);
 
-        Map<Long, TimesheetDto> timesheetMap = new LinkedHashMap<>();
+        List<Object[]> resultList = timesheetRepository.fetchTimesheetsWithHistory(startDate, endDate, userIdArray, orgId);
+
+        Map<String, TimesheetDto> timesheetMap = new LinkedHashMap<>();
+        LocalDate today = LocalDate.now();
+
+        WorkScheduleEntity schedule = workScheduleAdapter.findDefaultActiveSchedule(orgId);
+        String restDayString = schedule.getRestDay();
+        final DayOfWeek restDay = (restDayString != null && !restDayString.isEmpty())
+                ? DayOfWeek.valueOf(restDayString.toUpperCase())
+                : null;
+
+        Map<Long, List<TimesheetDto>> userTimesheetListMap = new HashMap<>();
 
         for (Object[] row : resultList) {
-            if (row[1] == null) continue;
+            if (row[1] == null) continue; // skip if userId is null
 
-            Long timesheetId = row[1] != null ? Long.parseLong(row[1].toString()) : null;
+            Long userId = toLong(row[1]);
+            LocalDate date = toLocalDate(row[0]);
+            if (date == null) continue;
 
-            TimesheetDto dto = timesheetMap.computeIfAbsent(timesheetId, id -> {
+            String compositeKey = userId + "-" + date;
+
+            TimesheetDto dto = timesheetMap.computeIfAbsent(compositeKey, key -> {
                 TimesheetDto newDto = new TimesheetDto();
-                newDto.setId(timesheetId);
-                newDto.setUserId(row[2] != null ? Long.parseLong(row[2].toString()) : null);
-                newDto.setDate(row[3] != null ? ((java.sql.Date) row[3]).toLocalDate() : null);
-                newDto.setUserName((String) row[4]);
-                newDto.setRole((String) row[5]);
-                newDto.setDayType((String) row[6]);
+                newDto.setId(toLong(row[6]));
+                newDto.setUserId(userId);
+                newDto.setDate(date);
+                newDto.setUserName((String) row[2]);
+                newDto.setRole((String) row[3]);
+                newDto.setMobileNumber((String) row[4]);
+                newDto.setGroupname((String) row[5]);
+                newDto.setDayType((String) row[12]);
+                newDto.setFirstClockIn(toLocalTime(row[7]));
+                newDto.setLastClockOut(toLocalTime(row[8]));
+                newDto.setTrackedHours(parseTimeToDuration(row[9], "tracked_hours"));
+                newDto.setRegularHours(parseTimeToDuration(row[10], "regular_hours"));
 
-                // Handle first_clock_in (java.sql.Time to LocalTime)
-                newDto.setFirstClockIn(row[7] != null ? ((java.sql.Time) row[7]).toLocalTime() : null);
+                Long statusId = toLong(row[11]);
+                TimesheetStatusEnum statusEnum = TimesheetStatusEnum.getStatusFromId(statusId);
 
-                // Handle last_clock_out (java.sql.Time to LocalTime)
-                newDto.setLastClockOut(row[8] != null ? ((java.sql.Time) row[8]).toLocalTime() : null);
+                String finalStatus = (statusEnum != null) ? statusEnum.getLabel()
+                        : (restDay != null && date.getDayOfWeek() == restDay) ? TimesheetStatusEnum.HOLIDAY.getLabel()
+                        : (date.equals(today)) ? TimesheetStatusEnum.NOT_MARKED.getLabel()
+                        : (! date.isAfter(today))? TimesheetStatusEnum.ABSENT.getLabel() : "";
 
-                // Handle tracked_hours
-                if (row[9] != null) {
-                    if (row[9] instanceof java.sql.Time) {
-                        // Convert java.sql.Time to LocalTime
-                        newDto.setTrackedHours(((java.sql.Time) row[9]).toLocalTime());
-                    } else if (row[9] instanceof String) {
-                        // If it's a String, parse it
-                        String timeString = (String) row[7];
-                        try {
-                            LocalTime trackedHours = LocalTime.parse(timeString);
-                            newDto.setTrackedHours(trackedHours);
-                        } catch (DateTimeParseException e) {
-                            // Handle error if parsing fails
-                            System.err.println("Error parsing tracked_hours: " + timeString);
-                            newDto.setTrackedHours(LocalTime.MIDNIGHT); // Default value on error
-                        }
-                    } else {
-                        System.err.println("Unexpected type for tracked_hours: " + row[9].getClass());
-                    }
-                }
-
-                if (row[10] != null) {
-                    if (row[10] instanceof java.sql.Time) {
-                        // Convert java.sql.Time to LocalTime
-                        newDto.setRegularHours(((java.sql.Time) row[10]).toLocalTime());
-                    } else if (row[10] instanceof String) {
-                        // If it's a String, parse it
-                        String timeString = (String) row[10];
-                        try {
-                            LocalTime regularHours = LocalTime.parse(timeString);
-                            newDto.setRegularHours(regularHours);
-                        } catch (DateTimeParseException e) {
-                            // Handle error if parsing fails
-                            System.err.println("Error parsing tracked_hours: " + timeString);
-                            newDto.setRegularHours(LocalTime.MIDNIGHT);
-                        }
-                    } else {
-                        System.err.println("Unexpected type for tracked_hours: " + row[10].getClass());
-                    }
-                }
-
-                newDto.setUserDayType((String) row[11]);
-                newDto.setWorkStatus((String) row[12]);
+                newDto.setStatus(finalStatus);
+                newDto.setUserDayType((String) row[13]);
+                newDto.setWorkStatus((String) row[14]);
                 newDto.setHistory(new ArrayList<>());
+                newDto.setFirstClockInTime(formatTime(newDto.getFirstClockIn()));
+                newDto.setLastClockOutTime(formatTime(newDto.getLastClockOut()));
+                newDto.setTrackedHoursDuration(formatDuration(newDto.getTrackedHours()));
+                newDto.setRegularHoursDuration(formatDuration(newDto.getRegularHours()));
+
                 return newDto;
             });
 
-
-            System.out.println("Row Data: " + Arrays.toString(row));
-
-            if (row[13] != null) {
+            // Add history if present
+            if (row[15] != null) {
                 TimesheetHistoryDto historyDto = new TimesheetHistoryDto();
-                historyDto.setTimesheetHistoryId(row[13] != null ? Long.parseLong(row[13].toString()) : null);
-                historyDto.setLogTime(row[14] != null ? ((java.sql.Time) row[14]).toLocalTime() : null);
+                historyDto.setTimesheetHistoryId(toLong(row[15]));
+                historyDto.setLogTime(toLocalTime(row[16]));
 
                 try {
-                    historyDto.setLogType(row[15] != null ? LogType.valueOf(row[15].toString()) : null);
+                    historyDto.setLogType(row[17] != null ? LogType.valueOf(row[17].toString()) : null);
                 } catch (IllegalArgumentException e) {
-                    System.err.println("Invalid LogType: " + row[15]);
-                    e.printStackTrace();
+                    System.err.println("Invalid LogType: " + row[17]);
                 }
 
-                try {
-                    historyDto.setLocationId(row[16] != null ? Long.parseLong(row[16].toString()) : null);
-                } catch (NumberFormatException e) {
-                    System.err.println("LocationId parsing error: " + row[16]);
-                    e.printStackTrace();
-                }
+                historyDto.setLocationId(toLong(row[18]));
 
                 try {
-                    historyDto.setLogFrom(row[17] != null ? LogFrom.valueOf(row[17].toString()) : null);
+                    historyDto.setLogFrom(row[19] != null ? LogFrom.valueOf(row[19].toString()) : null);
                 } catch (IllegalArgumentException e) {
-                    System.err.println("Invalid LogFrom: " + row[17]);
-                    e.printStackTrace();
+                    System.err.println("Invalid LogFrom: " + row[19]);
                 }
 
-                try {
-                    historyDto.setLoggedTimestamp(row[18] != null ? ((java.sql.Timestamp) row[18]).toLocalDateTime() : null);
-                } catch (ClassCastException e) {
-                    System.err.println("LoggedTimestamp conversion error: " + row[18]);
-                    e.printStackTrace();
-                }
-
+                historyDto.setLoggedTimestamp(toLocalDateTime(row[20]));
                 dto.getHistory().add(historyDto);
             }
 
+            // Add dto to user list if not already present for that date
+            userTimesheetListMap.computeIfAbsent(userId, k -> new ArrayList<>());
+            List<TimesheetDto> userTimesheets = userTimesheetListMap.get(userId);
+            if (userTimesheets.stream().noneMatch(t -> t.getDate().equals(dto.getDate()))) {
+                userTimesheets.add(dto);
+            }
         }
 
-        return new ArrayList<>(timesheetMap.values());
+        // Build per-user summary
+        Map<Long, TimesheetSummaryDto> userSummaryMap = new HashMap<>();
+        for (Map.Entry<Long, List<TimesheetDto>> entry : userTimesheetListMap.entrySet()) {
+            Long userId = entry.getKey();
+            List<TimesheetDto> timesheets = entry.getValue();
+
+            int present = 0, absent = 0, holiday = 0, notMarked = 0, paidLeave = 0, halfDay = 0, permission = 0;
+            for (TimesheetDto t : timesheets) {
+                switch (t.getStatus()) {
+                    case "Present" -> present++;
+                    case "Absent" -> absent++;
+                    case "Holiday" -> holiday++;
+                    case "Not Marked" -> notMarked++;
+                    case "Paid Leave" -> paidLeave++;
+                    case "Half Day" -> halfDay++;
+                    case "Permission" -> permission++;
+                }
+            }
+
+            TimesheetSummaryDto summary = new TimesheetSummaryDto();
+            TimesheetDto first = timesheets.get(0);
+            summary.setUserId(first.getUserId());
+            summary.setUserName(first.getUserName());
+            summary.setMobileNumber(first.getMobileNumber());
+            summary.setRole(first.getRole());
+            summary.setGroupname(first.getGroupname());
+
+            summary.setPresentCount(present);
+            summary.setAbsentCount(absent);
+            summary.setHolidayCount(holiday);
+            summary.setNotMarkedCount(notMarked);
+            summary.setPaidLeaveCount(paidLeave);
+            summary.setHalfDayCount(halfDay);
+            summary.setPermissionCount(permission);
+            summary.setTotalCount(timesheets.size()); // total per user
+
+            userSummaryMap.put(userId, summary);
+        }
+
+        List<UserTimesheetResponseDto> finalResponse = new ArrayList<>();
+
+        for (Long userId : userSummaryMap.keySet()) {
+            UserTimesheetResponseDto userResponse = new UserTimesheetResponseDto();
+            userResponse.setSummary(userSummaryMap.get(userId));
+            userResponse.setTimesheets(userTimesheetListMap.getOrDefault(userId, new ArrayList<>()));
+
+            finalResponse.add(userResponse);
+        }
+
+        return finalResponse;
     }
 
-    private LocalDate parseDate(Object obj) {
-        if (obj == null) return null;
+    private Long toLong(Object obj) {
         try {
-            return LocalDateTime.parse(obj.toString(), DATE_TIME_FORMATTER)
-                    .atZone(ZoneOffset.UTC)
-                    .withZoneSameInstant(ZoneId.systemDefault())
-                    .toLocalDate();
-        } catch (Exception e) {
-            return LocalDate.parse(obj.toString().substring(0, 10));
+            return obj != null ? Long.parseLong(obj.toString()) : null;
+        } catch (NumberFormatException e) {
+            return null;
         }
     }
 
+    private LocalDate toLocalDate(Object obj) {
+        if (obj instanceof Date) {
+            return ((Date) obj).toLocalDate();
+        } else if (obj instanceof Instant) {
+            return ((Instant) obj).atZone(ZoneId.systemDefault()).toLocalDate();
+        }
+        return null;
+    }
+
+    private LocalTime toLocalTime(Object obj) {
+        if (obj instanceof Time) {
+            return ((Time) obj).toLocalTime();
+        }
+        return null;
+    }
+
+    private LocalDateTime toLocalDateTime(Object obj) {
+        if (obj instanceof Timestamp) {
+            return ((Timestamp) obj).toLocalDateTime();
+        }
+        return null;
+    }
+
+    // Update the parseTimeToDuration method to handle SQL Time correctly
+    private Duration parseTimeToDuration(Object timeObj, String label) {
+        if (timeObj == null) return Duration.ZERO;
+
+        try {
+            if (timeObj instanceof String) {
+                String intervalStr = (String) timeObj;
+                // Parse PostgreSQL INTERVAL string format: "01:30:00"
+                LocalTime lt = LocalTime.parse(intervalStr);
+                return Duration.ofHours(lt.getHour()).plusMinutes(lt.getMinute()).plusSeconds(lt.getSecond());
+            } else {
+                System.err.println("Unexpected type for " + label + ": " + timeObj.getClass());
+            }
+        } catch (Exception e) {
+            System.err.println("Error parsing " + label + ": " + timeObj);
+            e.printStackTrace();
+        }
+        return Duration.ZERO;
+    }
+
+    // Format Duration in "XXh XXm" format
+    private String formatDuration(Duration duration) {
+        if (duration == null || duration.isZero()) {
+            return "00h 00m"; // Return this when duration is zero
+        }
+        long hours = duration.toHours();
+        long minutes = duration.toMinutes() % 60;
+        return String.format("%02dh %02dm", hours, minutes); // Format as "09h 00m"
+    }
+
+    // Method to format LocalTime to 12-hour format (AM/PM)
+    private String formatTime(LocalTime localTime) {
+        if (localTime == null) {
+            return "00:00";
+        }
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("hh:mm a"); // 12-hour format with AM/PM
+        return localTime.format(formatter);
+    }
 
     @Override
     public Optional<TimesheetEntity> findByUserIdAndDate(Long userId, LocalDate date) {
@@ -218,20 +312,11 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
             LocalTime lastClockIn = Optional.ofNullable(timesheet.getFirstClockIn()).orElse(null);
             LocalTime lastClockOut = Optional.ofNullable(timesheet.getLastClockOut()).orElse(null);
 
-            System.out.println("\n=== Processing Timesheet ID: " + timesheetId + " ===");
-            System.out.println("Initial Tracked: " + LocalTime.ofSecondOfDay(trackedSeconds));
-            System.out.println("Initial Break: " + LocalTime.ofSecondOfDay(breakSeconds));
-            System.out.println("Initial Regular Hours: " + LocalTime.ofSecondOfDay(regularSeconds));
-            System.out.println("Initial Last Clock-Out: " + lastClockOut);
-
             for (TimesheetHistoryEntity log : historyLogs) {
-                System.out.println("Processing Log: " + log.getLogType() + " at " + log.getLogTime());
-
                 if (log.getLogType() == LogType.CLOCK_IN) {
                     if (lastClockOut != null) {
                         long breakTime = Duration.between(lastClockOut, log.getLogTime()).getSeconds();
                         if (breakTime > 0) {
-                            System.out.println("Break Time: " + LocalTime.ofSecondOfDay(breakTime));
                             breakSeconds += breakTime;
                         }
                     }
@@ -239,24 +324,16 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
                 } else if (log.getLogType() == LogType.CLOCK_OUT && lastClockIn != null) {
                     long trackedTime = Duration.between(lastClockIn, log.getLogTime()).getSeconds();
                     if (trackedTime > 0) {
-                        System.out.println("Tracked Time: " + LocalTime.ofSecondOfDay(trackedTime));
                         trackedSeconds += trackedTime;
                         regularSeconds += trackedTime;
                     }
                     lastClockOut = log.getLogTime();
                 }
             }
-
-            System.out.println("Final Tracked Hours: " + LocalTime.ofSecondOfDay(trackedSeconds));
-            System.out.println("Final Break Hours: " + LocalTime.ofSecondOfDay(breakSeconds));
-            System.out.println("Final Regular Hours: " + LocalTime.ofSecondOfDay(regularSeconds));
-            System.out.println("Final Last Clock-Out: " + lastClockOut);
-
             timesheet.setTrackedHours(LocalTime.ofSecondOfDay(trackedSeconds));
             timesheet.setRegularHours(LocalTime.ofSecondOfDay(regularSeconds));
             timesheet.setTotalBreakHours(LocalTime.ofSecondOfDay(breakSeconds));
             timesheet.setLastClockOut(lastClockOut);
-
             timesheetRepository.save(timesheet);
         }
     }
@@ -269,8 +346,8 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
     }
 
     @Override
-    public List<TimesheetEntity> findByFirstClockInNotNullAndLastClockOutIsNullAndDate(LocalDate today) {
-        return timesheetRepository.findByFirstClockInNotNullAndLastClockOutIsNullAndDate(today);
+    public List<TimesheetEntity> findActiveTimesheetsByDate(LocalDate today) {
+        return timesheetRepository.findActiveTimesheetsByDate(today);
     }
 
     @Override
@@ -279,10 +356,137 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
     }
 
     @Override
+    public List<TimesheetEntity> getLatestLogsByTimesheetIds(List<Long> memberIds, Long orgId, LocalDate date) {
+        return timesheetHistoryRepository.findLatestLogByTimesheet(memberIds, date);
+    }
+
+    @Override
     public TimesheetEntity save(TimesheetEntity timesheet) {
         return timesheetRepository.save(timesheet);
     }
 
+    @Override
+    public List<UserDashboard> findAllByOrgIdExcludingUser(Long orgId, List<Long> userIds, LocalDate fromDate, LocalDate toDate, boolean superAdmin,Long loggedInUserId, Long userId ) {
+        return timesheetRepository.getDashboardForSuperAdmin(userIds, fromDate, toDate, loggedInUserId,superAdmin, userId);
+    }
+
+    @Override
+    public List<UserAttendanceDto> findAttendanceForUserInRange(List<Long> userId, LocalDate fromDate, LocalDate toDate) {
+        return timesheetRepository.findAttendanceForUsersInRange(userId, fromDate, toDate);
+    }
+
+    @Override
+    public List<UserTimesheetDto> fetchUserTimesheetsWithHistory(LocalDate startDate, LocalDate endDate, List<Long> userIds, Long orgId) {
+        Long[] userIdArray = userIds.toArray(new Long[0]);
+
+        List<Object[]> resultList = timesheetRepository.fetchUserTimesheetsWithHistory(startDate, endDate, userIdArray);
+
+        Map<String, UserTimesheetDto> timesheetMap = new LinkedHashMap<>();
+        LocalDate today = LocalDate.now();
+
+        WorkScheduleEntity schedule = workScheduleAdapter.findDefaultActiveSchedule(orgId);
+        String restDayString = schedule.getRestDay();
+        final DayOfWeek restDay = (restDayString != null && !restDayString.isEmpty())
+                ? DayOfWeek.valueOf(restDayString.toUpperCase())
+                : null;
+
+        // Map to collect DTOs grouped by userId
+        Map<Long, List<UserTimesheetDto>> userTimesheetListMap = new HashMap<>();
+
+        for (Object[] row : resultList) {
+            if (row[1] == null) continue;
+
+            Long userId = toLong(row[1]);
+            LocalDate date = toLocalDate(row[0]);
+            if (date == null) continue;
+
+            String compositeKey = userId + "-" + date;
+
+            UserTimesheetDto dto = timesheetMap.computeIfAbsent(compositeKey, key -> {
+                UserTimesheetDto newDto = new UserTimesheetDto();
+
+                newDto.setDate(date);
+                newDto.setUserName((String) row[2]);
+                newDto.setFirstClockIn(toLocalTime(row[7]));
+                newDto.setLastClockOut(toLocalTime(row[8]));
+                newDto.setTrackedHours(parseTimeToDuration(row[9], "tracked_hours"));
+                newDto.setRegularHours(parseTimeToDuration(row[10], "regular_hours"));
+
+                Long statusId = toLong(row[11]);
+                TimesheetStatusEnum statusEnum = TimesheetStatusEnum.getStatusFromId(statusId);
+
+                String finalStatus = (statusEnum != null) ? statusEnum.getLabel()
+                        : (restDay != null && date.getDayOfWeek() == restDay) ? TimesheetStatusEnum.HOLIDAY.getLabel()
+                        : (date.equals(today)) ? TimesheetStatusEnum.NOT_MARKED.getLabel()
+                        : (! date.isAfter(today))? TimesheetStatusEnum.ABSENT.getLabel() : "";
+
+                newDto.setStatus(finalStatus);
+
+                newDto.setWorkStatus((String) row[14]);
+                newDto.setHistory(new ArrayList<>());
+                newDto.setFirstClockInTime(formatTime(newDto.getFirstClockIn()));
+                newDto.setLastClockOutTime(formatTime(newDto.getLastClockOut()));
+                newDto.setTrackedHoursDuration(formatDuration(newDto.getTrackedHours()));
+                newDto.setRegularHoursDuration(formatDuration(newDto.getRegularHours()));
+
+                return newDto;
+            });
+
+            // Add history if present
+            if (row[15] != null) {
+                TimesheetHistoryDto historyDto = new TimesheetHistoryDto();
+                historyDto.setTimesheetHistoryId(toLong(row[15]));
+                historyDto.setLogTime(toLocalTime(row[16]));
+
+                try {
+                    historyDto.setLogType(row[17] != null ? LogType.valueOf(row[17].toString()) : null);
+                } catch (IllegalArgumentException e) {
+                    System.err.println("Invalid LogType: " + row[17]);
+                }
+
+                historyDto.setLocationId(toLong(row[18]));
+
+                try {
+                    historyDto.setLogFrom(row[19] != null ? LogFrom.valueOf(row[19].toString()) : null);
+                } catch (IllegalArgumentException e) {
+                    System.err.println("Invalid LogFrom: " + row[19]);
+                }
+
+                historyDto.setLoggedTimestamp(toLocalDateTime(row[20]));
+                dto.getHistory().add(historyDto);
+            }
+
+            // Add dto to user list map (group by userId)
+            userTimesheetListMap.computeIfAbsent(userId, k -> new ArrayList<>());
+            List<UserTimesheetDto> userTimesheets = userTimesheetListMap.get(userId);
+
+            // Add dto if not already present for this date
+            if (userTimesheets.stream().noneMatch(t -> t.getDate().equals(dto.getDate()))) {
+                userTimesheets.add(dto);
+            }
+        }
+
+        // Flatten all DTOs from map to a single list
+        List<UserTimesheetDto> finalResponse = userTimesheetListMap.values().stream()
+                .flatMap(Collection::stream)
+                .collect(Collectors.toList());
+
+        return finalResponse;
+    }
+
+    @Override
+    public void updateTimesheetHistory(Long id, LogType logType, LocalTime firstClockIn) {
+        timesheetHistoryRepository.updateTimesheetHistory(id, logType, firstClockIn);
+    }
+
+    @Override
+    public void saveAllTimesheetHistories(List<TimesheetHistoryEntity> historyEntries) {
+        timesheetHistoryRepository.saveAll(historyEntries);
+    }
+
+    @Override
+    public List<UserDashboard> getDashboard(Long orgId, List<Long> userIds, LocalDate fromDate, LocalDate toDate) {
+        return timesheetRepository.getDashboard(userIds,fromDate, toDate,orgId);
+    }
 
 }
-

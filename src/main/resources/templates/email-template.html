@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.w3.org/1999/xhtml">
+<html xmlns:th="http://www.w3.org/1999/xhtml" xmlns="http://www.w3.org/1999/html">
 <head>
     <style>
         body {
@@ -23,22 +23,85 @@
     </style>
 </head>
 <body>
-<p>Hello <b th:text="${userName}"></b>,</p>
-<p>Your account has been created successfully.</p>
-<p><b>Default Password:</b> <span style="color: #007bff; font-weight: bold;" th:text="${password}"></span></p>
+<h3 style="color: #3f3c3c;">Hi [[${username}]],</h3>
 
-<p>
-    <a th:href="@{http://54.234.165.77:8000/deeplink(email=${email})}"
-       th:if="${!isNewUser}" class="btn">
-        Reset Password
-    </a>
-    <a th:href="@{http://54.234.165.77:8000/deeplink(email=${email}, newUser='true')}"
-       th:if="${isNewUser}" class="btn">
-        Reset Password
-    </a>
-</p>
+<!-- Account Creation -->
+<div th:if="${emailType == 'account_creation'}">
+    <p>Your account has been successfully created on the <strong>Tickora</strong> platform.</p>
+    <p><b>Default Password:</b> <span style="color:#007bff;">[[${password}]]</span></p>
+    <h4>Please follow the steps below to reset your password:</h4>
+    <ol>
+        <li>Ensure the <strong>Tickora</strong> app is installed on your device.</li>
+        <li>Copy your default password listed above.</li>
+        <li>Click the <strong>Reset Password</strong> button below to reset your password.</li>
+        <li>Set your new password in the app.</li>
+        <li>Re-enter and confirm the new password.</li>
+    </ol>
+    <p><strong style="color: red;">Note:</strong></p>
+    <ul>
+        <li>You can reset your password only via the <strong>Reset Password</strong> button in this email. Reset links from other sources won't work.</li>
+        <li>Logging in with the default password is not allowed.</li>
+    </ul>
+    <p>
+        <a th:href="@{http://51.21.219.235:8000/deeplink(email=${email})}"
+           th:if="${!isNewUser}" class="btn">
+            Reset Password
+        </a>
+        <a th:href="@{http://51.21.219.235:8000/deeplink(email=${email}, newUser='true')}"
+           th:if="${isNewUser}" class="btn">
+            Reset Password
+        </a>
+    </p>
+    <h4>Welcome Aboard!<br>&mdash; The Tickora Team</h4>
+</div>
 
+<!-- Forgot Password -->
+<div th:if="${emailType == 'forgot_password'}">
+    <p>We received a request to reset your password for your <strong>Tickora</strong> account.</p>
+    <p>If you did not make this request, you can safely ignore this email.</p>
+    <p>Otherwise, click <strong>Reset Password</strong> and use the password below.</p>
+    <p><b>Default Password:</b> <span style="color:#007bff;">[[${password}]]</span></p>
+    <p><strong style="color: red;">Note:</strong></p>
+    <ul>
+        <li>You can reset your password only via the <strong>Reset Password</strong> button in this email. Reset links from other sources won't work.</li>
+        <li>Logging in with the default password is not allowed.</li>
+    </ul>
+    <p>
+        <a th:href="@{http://51.21.219.235:8000/deeplink(email=${email})}"
+           th:if="${!isNewUser}" class="btn">
+            Reset Password
+        </a>
+        <a th:href="@{http://51.21.219.235:8000/deeplink(email=${email}, newUser='true')}"
+           th:if="${isNewUser}" class="btn">
+            Reset Password
+        </a>
+    </p>
+    <h4>Welcome Aboard!<br>&mdash; The Tickora Team</h4>
+</div>
 
-<p>Reset your password to Login.</p>
+<div th:if="${emailType == 'success_mail'}">
+    <h4 style="font-size: 1.0em;">The file was processed, Member accounts have been created based on the data in your uploaded file.</h4>
+    <h4 style="font-size: 1.0em;"><b>Uploaded Count:</b> <span style="color:#007bff;">[[${uploadcount}]] member account has been successfully created.</span></h4>
+    <h4 style="font-size: 1.0em;"><b>Skipped Count:</b> <span style="color:#007bff;">[[${skippedcount}]] entries were skipped during the upload.</span></h4>
+    <h4><strong style="color:red">Note: Reasons for skipped entries:</strong> </h4>
+    <ul>
+        <li>Invalid or missing location</li>
+        <li>Group not found</li>
+        <li>Required primary fields are missing</li>
+        <li>Email or mobile number already exists</li>
+        <li>Missing secondary details (required for Student role)</li>
+        <li>All mandatory secondary fields are missing (Student role)</li>
+        <li>Duplicate secondary email or mobile number</li>
+        <li>Primary and secondary mobile numbers are the same</li>
+    </ul>
+    <p>The valid entries have been processed and member accounts have been created accordingly.
+        You may review the skipped entries, correct the issues, and re-upload if necessary.</p>
+    <h4>Thank you<br>&mdash; The Tickora Team</h4>
+
+</div>
+
+<h5 style="text-align:center;"><strong>Thank you for using Tickora</strong></h5>
+<h6 style="text-align:center;">This is an automated message. Please do not reply directly to this email.</h6>
+
 </body>
 </html>

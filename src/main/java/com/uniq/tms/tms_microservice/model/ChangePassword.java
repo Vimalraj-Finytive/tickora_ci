@@ -1,17 +1,9 @@
 package com.uniq.tms.tms_microservice.model;
 
 public class ChangePassword {
-    private String email;
+
     private String oldPassword;
     private String newPassword;
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
 
     public String getOldPassword() {
         return oldPassword;

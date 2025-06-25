@@ -1,27 +1,23 @@
 package com.uniq.tms.tms_microservice.dto;
 
-import java.util.List;
-
 public enum UserRole {
-    SUPERADMIN(List.of("admin", "manager", "staff", "student")),
-    ADMIN(List.of("manager", "staff", "student")),
-    MANAGER(List.of("staff", "student"));
+    SUPERADMIN(1), ADMIN(2), MANAGER(3), STAFF(4), STUDENT(5);
 
-    private final List<String> accessibleRoles;
+    private final int hierarchyLevel;
 
-    UserRole(List<String> accessibleRoles) {
-        this.accessibleRoles = accessibleRoles;
+    UserRole(int hierarchyLevel) {
+        this.hierarchyLevel = hierarchyLevel;
     }
 
-    public List<String> getAccessibleRoles() {
-        return accessibleRoles;
+    public int getHierarchyLevel(){
+        return hierarchyLevel;
     }
 
-    public static List<String> getRolesFor(String role) {
-        try {
-            return UserRole.valueOf(role.toUpperCase()).getAccessibleRoles();
-        } catch (IllegalArgumentException e) {
-            return List.of();
+    public static int getLevel(String roleName) {
+        try{
+            return UserRole.valueOf(roleName.toUpperCase()).getHierarchyLevel();
+        }catch (IllegalArgumentException e){
+            return Integer.MAX_VALUE;
         }
     }
 }

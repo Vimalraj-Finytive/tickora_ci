@@ -10,13 +10,12 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
-
+import org.springframework.boot.autoconfigure.domain.EntityScan;
 import java.util.ArrayList;
 import java.util.List;
 
 @Entity
 @Table(name = "location")
-
 public class LocationEntity {
 
     @Id
@@ -42,6 +41,9 @@ public class LocationEntity {
 
     @OneToMany(mappedBy = "locationEntity", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<GroupEntity> groups = new ArrayList<>();
+
+    @Column(name = "address", nullable = false, length = 255)
+    private String address;
 
     public LocationEntity() {}
 
@@ -113,5 +115,11 @@ public class LocationEntity {
         this.radius = radius;
     }
 
+    public String getAddress() {
+        return address;
+    }
 
+    public void setAddress(String address) {
+        this.address = address;
+    }
 }

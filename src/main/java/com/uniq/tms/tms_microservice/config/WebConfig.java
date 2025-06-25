@@ -11,19 +11,33 @@ public class WebConfig implements WebMvcConfigurer {
     // Serve static Angular files from /static/tmsweb/
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        registry.addResourceHandler("/*.js", "/*.css", "/*.html", "/assets/**")
-                .addResourceLocations("classpath:/static/browser/");
-
+        registry.addResourceHandler(
+                        "/**",
+                        "/assets/**",
+                        "/assets/images/**",
+                        "/favicon.ico",
+                        "/index.html",
+                        "/*.js",
+                        "/*.css",
+                        "/*.txt",
+                        "/browser/_redirects"
+                )
+                .addResourceLocations(
+                        "classpath:/static/browser/",
+                        "classpath:/static/browser/assets/",
+                        "classpath:/static/browser/assets/images/"
+                );
     }
+
 
     // Optional: Forward any non-API path to index.html for Angular routing support
     @Override
     public void addViewControllers(ViewControllerRegistry registry) {
-        registry.addViewController("/{spring:\\w+}")
+        registry.addViewController("/{spring:[a-zA-Z0-9-_]+}")
                 .setViewName("forward:/index.html");
-        registry.addViewController("/**/{spring:\\w+}")
+        registry.addViewController("/**/{spring:[a-zA-Z0-9-_]+}")
                 .setViewName("forward:/index.html");
-        registry.addViewController("/")
+        registry.addViewController("/{spring:[a-zA-Z0-9-_]+}/**{spring:?!(\\.js|\\.css|\\.png)$}")
                 .setViewName("forward:/index.html");
     }
 
