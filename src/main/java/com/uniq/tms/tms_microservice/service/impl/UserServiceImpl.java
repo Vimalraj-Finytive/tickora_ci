@@ -183,7 +183,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public ApiResponse bulkCreateUsers(MultipartFile file, Long orgId, Long userId) {
-        log.info("Checking work flow for create bulk user");
+        log.info("Checking work flow for create user");
         String contentType = file.getContentType();
         String fileName = file.getOriginalFilename();
 
@@ -621,7 +621,6 @@ public class UserServiceImpl implements UserService {
         log.info("Checking if the user is student: {}", userDto.getRoleId());
         Optional<RoleEntity> roleName = userAdapter.findRoleById(userDto.getRoleId());
         log.info("Role from DB for creating user: {}", roleName.get().getName());
-
         String key = cacheLoaderService.getPrivilegeKey(PrivilegeConstants.HAVE_SECONDARY_DETAILS);
         boolean hasSecondaryDetailsPrivilege = cacheKeyUtil.roleHasPrivilege(roleName.get().getName(), key);
         log.info("hasSecondaryDetailsPrivilege: {}", hasSecondaryDetailsPrivilege);
@@ -970,11 +969,6 @@ public class UserServiceImpl implements UserService {
                     user.setSecondaryDetails(secDto);
                     return user;
                 } else {
-//                    String mergedGroups = existing.getGroupName();
-//                    if (!mergedGroups.contains(user.getGroupName())) {
-//                        mergedGroups += ", " + user.getGroupName();
-//                        existing.setGroupName(mergedGroups);
-//                    }
                     List<String> existingGroups = existing.getGroupName();
                     if (!existingGroups.contains(user.getGroupName().get(0))) {
                         existingGroups.add(user.getGroupName().get(0));
@@ -1381,9 +1375,10 @@ public class UserServiceImpl implements UserService {
         } else {
             // Get the hierarchy level of the "Student" role dynamically
             int studentHierarchyLevel = UserRole.STUDENT.getHierarchyLevel();
+            int superadminHierarchyLevel = UserRole.SUPERADMIN.getHierarchyLevel();
             // Get all roles above the "Student" role hierarchy level
             List<UserRole> higherRoles = Arrays.stream(UserRole.values())
-                    .filter(r -> r.getHierarchyLevel() < studentHierarchyLevel)
+                    .filter(r -> r.getHierarchyLevel() < studentHierarchyLevel && r.getHierarchyLevel() > superadminHierarchyLevel)
                     .toList();
             List<Integer> higherRoleIds = higherRoles.stream()
                     .map(roles-> roles.getHierarchyLevel())

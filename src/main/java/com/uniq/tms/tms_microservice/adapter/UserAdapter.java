@@ -18,7 +18,6 @@ import java.util.Set;
 public interface UserAdapter {
     List<RoleEntity>getAllRole(Long orgId, int hierarchyLevel);
     List<GroupEntity> getAllGroup(Long orgId);
-    List<LocationEntity> getAllLocation(Long orgId);
     UserEntity saveUser(UserEntity entity);
     UserEntity updateUser(UserEntity userId);
     Optional<UserEntity> findByEmail(String email);
@@ -29,7 +28,6 @@ public interface UserAdapter {
     void deleteUser(UserEntity user);
     GroupEntity saveGroup(GroupEntity entity);
     boolean findByGroup(String teamName, Long orgId);
-    Optional<GroupEntity> findByTeamId(Long teamId);
     List<Object[]> getGroupData(Long orgId);
     int updateUserGroupType(Long userId, Long groupId, String type);
     void deleteMember(Long groupId, Long memberId);
@@ -40,12 +38,11 @@ public interface UserAdapter {
     List<UserGroupEntity> getGroupMembersByGroupId(Long groupId, Long orgId);
     List<UserEntity> getUsersByIds(List<Long> userIds, Long orgId);
     Optional<UserEntity> findByMobileNumber(String mobileNumber);
-    List<UserEntity> getAllUsers(Long orgId, Long userIdFromToken);
+    List<UserEntity> getAllUsers(Long orgId, Long userIdFromToken, int hierarchyLevel);
     UserEntity getUserById(Long userId);
     boolean existsGroupNameInOrganization(String groupName, Long orgId, Long groupId);
     UserGroupEntity saveUserGroup(UserGroupEntity entity);
     List<UserGroupEntity> findByUserIdAndGroupId(Long userId, Long groupId);
-    void updateGroupNameAndLocation(Long groupId, String groupName, Long locationId);
     void deleteSupervisorsByGroupId(Long groupId, Long userId);
     void deleteByGroupId(Long groupId);
     List<Long> findGroupIdsBySupervisorId(Long userIdFromToken);
@@ -64,13 +61,10 @@ public interface UserAdapter {
     List<Long> findMemberIdsByGroupId(Long groupId);
     LocationEntity findLocationById(Long locationId);
     List<UserGroupEntity> findUserByOrganizationIdAndUserId(Long organizationId, Long userId);
-    List<UserEntity> filterUsersByGroupIds(Long userIdFromToken, List<UserEntity> targetUsers);
     List<RoleEntity> findAllWithPrivileges();
     List<UserGroupEntity> getGroupUsersByGroupId(List<Long> groupIds, Long orgId);
     List<UserNameSuggestionDto> getAllActiveUsers(Long orgId, int heirarchyLevel);
     List<UserNameSuggestionDto> getAllGroupUsers(List<Long> groupIds, Long orgId);
-    Long getRoleIdByName(String roleName);
-    Long getLocationIdByName(String locationName);
     Set<String> getAllMobileNumbers();
     Set<String> getAllEmails();
     Map<String, Long> getRoleNameIdMap();
@@ -84,14 +78,11 @@ public interface UserAdapter {
     Set<String> getAllSecondaryMobile();
     UserEntity findUserByOrgIdAndUserId(Long orgId, Long userId);
     LocationEntity addLocation(Location location);
-    Optional<UserEntity> getUserDashboard(Long userId);
-    Optional<LocationEntity> getUserLocation(Long locationId);
     PrivilegeEntity addPrivilege(PrivilegeEntity privilegeEntity);
     Optional<PrivilegeEntity> findPrivilegeById(Long privilegeId);
     void saveRole(RoleEntity role);
     List<UserEntity> getUsersByRoles(Set<String> roles, Long orgId);
     List<UserEntity> findUsersByRolesAndGroupIds(Set<String> roles, List<Long> supervisedGroupIds, Long orgId);
-    List<UserLocationEntity> findByUserIdAndlocationId(Long userId, List<Long> locationId);
     void saveUserLocation(List<UserLocationEntity> userLocationEntities);
     List<UserLocationEntity> findUserLocationByUserId(Long userId);
     List<LocationEntity> findAllLocationById(List<Long> locationIds);

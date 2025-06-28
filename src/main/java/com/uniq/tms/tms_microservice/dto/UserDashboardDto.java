@@ -18,6 +18,27 @@ public class UserDashboardDto {
     private Double halfDayPercentage;
     private Double permissionPercentage;
 
+    public static UserDashboardDto empty() {
+        UserDashboardDto dto = new UserDashboardDto();
+        dto.setPresentCount(0);
+        dto.setAbsentCount(0);
+        dto.setPaidLeaveCount(0);
+        dto.setNotMarkedCount(0);
+        dto.setHalfDayCount(0);
+        dto.setPermissionCount(0);
+        dto.setHolidayCount(0);
+        dto.setTotalCount(0);
+
+        dto.setPresentPercentage(0.0);
+        dto.setAbsentPercentage(0.0);
+        dto.setPaidLeavePercentage(0.0);
+        dto.setNotMarkedPercentage(0.0);
+        dto.setHolidayPercentage(0.0);
+        dto.setHalfDayPercentage(0.0);
+        dto.setPermissionPercentage(0.0);
+        return dto;
+    }
+
     public Integer getPresentCount() {
         return presentCount;
     }

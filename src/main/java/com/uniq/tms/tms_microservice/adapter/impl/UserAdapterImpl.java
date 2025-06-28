@@ -58,12 +58,6 @@ public class UserAdapterImpl implements UserAdapter {
     }
 
     @Override
-    public List<LocationEntity> getAllLocation(Long orgId) {
-        List<LocationEntity> location = locationRepository.findAllLocationsByOrganization(orgId);
-        return location;
-    }
-
-    @Override
     @Transactional
     public UserEntity saveUser(UserEntity entity) {
         return userRepository.save(entity);
@@ -119,11 +113,6 @@ public class UserAdapterImpl implements UserAdapter {
     }
 
     @Override
-    public Optional<GroupEntity> findByTeamId(Long teamId) {
-        return teamRepository.findById(teamId);
-    }
-
-    @Override
     public List<Object[]> getGroupData(Long orgId) {
         return teamRepository.getGroupData(orgId);
     }
@@ -169,9 +158,10 @@ public class UserAdapterImpl implements UserAdapter {
     }
 
     @Override
-    public List<UserEntity> getAllUsers(Long orgId, Long userIdFromToken) {
-        return userRepository.findAllUsersList(orgId, userIdFromToken);
+    public List<UserEntity> getAllUsers(Long orgId, Long userIdFromToken, int hierarchyLevel) {
+        return userRepository.findAllUsersList(orgId, userIdFromToken, hierarchyLevel);
     }
+
 
     @Override
     public UserEntity getUserById(Long userId) {
@@ -261,11 +251,6 @@ public class UserAdapterImpl implements UserAdapter {
     };
 
     @Override
-    public void updateGroupNameAndLocation(Long groupId, String groupName, Long locationId){
-        teamRepository.updateGroupNameAndLocation(groupId,groupName,locationId);
-    }
-
-    @Override
     public void deleteSupervisorsByGroupId( Long groupId, Long userId){
         userGroupRepository.deleteSupervisorsByGroupId(groupId, userId);
     }
@@ -290,15 +275,6 @@ public class UserAdapterImpl implements UserAdapter {
         return userRepository.findUserByOrganizationIdAndUserId(organizationId, userId);
     }
 
-    public List<UserEntity> filterUsersByGroupIds(Long supervisorId, List<UserEntity> targetUsers) {
-        // Extract userIds from the targetUsers list
-        List<Long> userIds = targetUsers.stream()
-                .map(UserEntity::getUserId)
-                .toList();
-        // Query the repository to filter users based on their groups and supervisorId
-        return userGroupRepository.filterUsersByGroupIds(supervisorId, userIds);
-    }
-
     @Override
     public List<RoleEntity> findAllWithPrivileges() {
         return roleRepository.findAllWithPrivileges();
@@ -317,18 +293,6 @@ public class UserAdapterImpl implements UserAdapter {
     @Override
     public List<UserNameSuggestionDto> getAllGroupUsers(List<Long> groupIds, Long orgId) {
         return userRepository.findAllGroupUsersByOrganizationId(groupIds,orgId);
-    }
-
-
-    @Override
-    public Long getRoleIdByName(String roleName) {
-        RoleEntity role = roleRepository.findByNameIgnoreCase(roleName);
-        return role != null ? role.getRoleId() : null;
-    }
-    @Override
-    public Long getLocationIdByName(String locationName) {
-        LocationEntity location = locationRepository.findByNameIgnoreCase(locationName);
-        return location != null ? location.getLocationId() : null;
     }
 
     @Override
@@ -412,16 +376,6 @@ public class UserAdapterImpl implements UserAdapter {
     }
 
     @Override
-    public Optional<UserEntity> getUserDashboard(Long userId) {
-        return userRepository.findByUserId(userId);
-    }
-
-    @Override
-    public Optional<LocationEntity> getUserLocation(Long locationId) {
-        return locationRepository.findById(locationId);
-    }
-
-    @Override
     public PrivilegeEntity addPrivilege(PrivilegeEntity privilegeEntity) {
         return privilegeRepository.save(privilegeEntity);
     }
@@ -447,13 +401,8 @@ public class UserAdapterImpl implements UserAdapter {
     }
 
     @Override
-    public List<UserLocationEntity> findByUserIdAndlocationId(Long userId, List<Long> locationId) {
-        return userLocationRepository.findByUser_UserIdAndLocation_LocationIdIn(userId, locationId);
-    }
-
-    @Override
     public void saveUserLocation(List<UserLocationEntity> entityList) {
-         userLocationRepository.saveAll(entityList);
+        userLocationRepository.saveAll(entityList);
     }
 
     @Override

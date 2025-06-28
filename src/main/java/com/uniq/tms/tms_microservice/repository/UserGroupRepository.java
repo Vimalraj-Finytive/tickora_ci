@@ -36,11 +36,6 @@ public interface UserGroupRepository extends JpaRepository<UserGroupEntity,Long>
     @Query("DELETE FROM UserGroupEntity ug WHERE ug.group.groupId = :groupId")
     void deleteByGroupId(@Param("groupId") Long groupId);
 
-    @Modifying
-    @Transactional
-    @Query(value = "UPDATE user_group SET user_id = :newUserId WHERE group_id = :groupId AND type = 'supervisor' ", nativeQuery = true)
-    void updateSupervisorUser(@Param("groupId") Long groupId, @Param("newUserId") Long newUserId);
-
     @Query("SELECT ug FROM UserGroupEntity ug WHERE ug.group.groupId = :groupId AND ug.group.organizationEntity.organizationId = :orgId AND ug.user.active = true")
     List<UserGroupEntity> findActiveUserGroups(Long groupId, Long orgId);
 
@@ -49,10 +44,11 @@ public interface UserGroupRepository extends JpaRepository<UserGroupEntity,Long>
 
     @Query("SELECT u FROM UserEntity u " +
             "JOIN UserGroupEntity ug ON u.userId = ug.user.userId " +
-            "WHERE ug.group.groupId IN :groupIds")
+            "WHERE u.active = true AND ug.group.groupId IN :groupIds")
     List<UserEntity> findUsersByGroupId(@Param("groupIds") List<Long> groupIds);
 
-    @Query("SELECT ug.user FROM UserGroupEntity ug WHERE ug.group.groupId IN :filteredGroupIds AND ug.type = 'Member' AND ug.user.id != :userIdFromToken")
+    @Query("SELECT ug.user FROM UserGroupEntity ug WHERE ug.group.groupId IN :filteredGroupIds AND ug.type = 'Member' AND ug.user.id <> :userIdFromToken")
+
     List<UserEntity> findMembersByGroupIds(
             @Param("filteredGroupIds") List<Long> filteredGroupIds,
             @Param("userIdFromToken") Long userIdFromToken);
@@ -62,21 +58,6 @@ public interface UserGroupRepository extends JpaRepository<UserGroupEntity,Long>
 
     @Query("SELECT u.user.userId FROM UserGroupEntity u WHERE u.group.groupId = :groupId AND u.type = :type")
     List<Long> findUserIdsByGroupIdAndType(@Param("groupId") Long groupId, @Param("type") String type);
-
-    @Query(value = """
-    SELECT DISTINCT u.* FROM users u
-    JOIN user_group ug ON u.user_id = ug.user_id
-    WHERE u.user_id IN (:userIds)
-      AND ug.group_id IN (
-          SELECT group_id FROM user_group
-          WHERE user_id = :supervisorId
-            AND type = 'Supervisor'
-      )
-""", nativeQuery = true)
-    List<UserEntity> filterUsersByGroupIds(
-            @Param("supervisorId") Long supervisorId,
-            @Param("userIds") List<Long> userIds
-    );
 
     @Query("SELECT ug FROM UserGroupEntity ug WHERE ug.group.groupId IN :groupIds AND ug.group.organizationEntity.organizationId = :orgId")
     List<UserGroupEntity> findActiveGroupMembersExcludingSupervisors(

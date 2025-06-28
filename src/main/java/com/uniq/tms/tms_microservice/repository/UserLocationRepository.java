@@ -9,8 +9,6 @@ import java.util.Set;
 @Repository
 public interface UserLocationRepository extends JpaRepository<UserLocationEntity, Long> {
 
-    List<UserLocationEntity> findByUser_UserIdAndLocation_LocationIdIn(Long userId, List<Long> locationId);
-
     List<UserLocationEntity> findByUser_UserId(Long userId);
 
     void deleteByUser_UserIdAndLocation_LocationIdIn(Long userId, Set<Long> toDelete);

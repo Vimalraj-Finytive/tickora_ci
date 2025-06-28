@@ -14,13 +14,6 @@ import java.util.Optional;
 @Repository
 public interface TeamRepository extends JpaRepository<GroupEntity, Long> {
 
-    @Modifying
-    @Transactional
-    @Query(value = "UPDATE group_table SET group_name = :groupName, location_id = :locationId WHERE group_id = :groupId", nativeQuery = true)
-    void updateGroupNameAndLocation(@Param("groupId") Long groupId,
-                                    @Param("groupName") String groupName,
-                                    @Param("locationId") Long locationId);
-
     @Query("SELECT g FROM GroupEntity g WHERE g.groupName = :groupName AND g.organizationEntity.id = :orgId")
     Optional<GroupEntity> findBygroupNameAndOrganizationId(@Param("groupName") String teamName, @Param("orgId") Long orgId);
     @Query(value = """
