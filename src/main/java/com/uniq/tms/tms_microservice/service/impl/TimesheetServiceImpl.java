@@ -25,7 +25,6 @@ import com.uniq.tms.tms_microservice.model.TimesheetHistory;
 import com.uniq.tms.tms_microservice.service.CacheLoaderService;
 import com.uniq.tms.tms_microservice.service.TimesheetService;
 import com.uniq.tms.tms_microservice.util.CacheKeyUtil;
-import io.lettuce.core.models.role.RedisInstance;
 import org.apache.logging.log4j.LogManager;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -45,14 +44,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-
 import org.apache.logging.log4j.Logger;
 import static com.uniq.tms.tms_microservice.dto.TimesheetStatusEnum.*;
 
 @Service
 public class TimesheetServiceImpl implements TimesheetService {
 
-    private static final Logger log =  LogManager.getLogger(TimesheetServiceImpl.class);
+    private static final Logger log = LogManager.getLogger(TimesheetServiceImpl.class);
 
     private final TimesheetAdapter timesheetAdapter;
     private final TimesheetEntityMapper timesheetEntityMapper;
@@ -88,19 +86,18 @@ public class TimesheetServiceImpl implements TimesheetService {
             startDate = range.startDate();
             endDate = range.endDate();
             log.info("startDate: {}, endDate: {}", startDate, endDate);
-            if(endDate.isAfter(LocalDate.now())) {
+            if (endDate.isAfter(LocalDate.now())) {
+                endDate = LocalDate.now();
+                log.info("endDate: {}", endDate);
+            }
+        } else if (fromDate != null && toDate != null) {
+            startDate = fromDate;
+            endDate = toDate;
+            if (endDate.isAfter(LocalDate.now())) {
                 endDate = LocalDate.now();
                 log.info("endDate: {}", endDate);
             }
         }
-         else if (fromDate != null && toDate != null) {
-                startDate = fromDate;
-                endDate = toDate;
-            if(endDate.isAfter(LocalDate.now())) {
-                endDate = LocalDate.now();
-                log.info("endDate: {}", endDate);
-            }
-         }
 
         // Determine target users based on privileges
         List<UserEntity> targetUsers = resolveTargetUsers(userIdFromToken, groupIds, userId, orgId, roleIds);
@@ -110,7 +107,7 @@ public class TimesheetServiceImpl implements TimesheetService {
                 .toList();
 
         // Fetch timesheets for the filtered users and date range
-        List<UserTimesheetResponseDto> timesheetDtos = timesheetAdapter.filterTimesheetsForAllUsers(startDate, endDate, userIds,orgId);
+        List<UserTimesheetResponseDto> timesheetDtos = timesheetAdapter.filterTimesheetsForAllUsers(startDate, endDate, userIds, orgId);
         return timesheetDtos;
     }
 
@@ -120,7 +117,7 @@ public class TimesheetServiceImpl implements TimesheetService {
         String roleName = currentUser.getRole().getName().toUpperCase();
         log.info("Role name: {}", roleName);
 
-        String canSeeOwnKey  = cacheLoaderService.getPrivilegeKey(PrivilegeConstants.CAN_SEE_OWN_TIMESHEET);
+        String canSeeOwnKey = cacheLoaderService.getPrivilegeKey(PrivilegeConstants.CAN_SEE_OWN_TIMESHEET);
         boolean canSeeOwn = cacheKeyUtil.roleHasPrivilege(roleName, canSeeOwnKey);
         String canSeeGroupKey = cacheLoaderService.getPrivilegeKey(PrivilegeConstants.CAN_SEE_GROUP_LEVEL_TIMESHEETS);
         boolean canSeeGroup = cacheKeyUtil.roleHasPrivilege(roleName, canSeeGroupKey);
@@ -152,17 +149,17 @@ public class TimesheetServiceImpl implements TimesheetService {
                     return matchedUsers;
                 }
                 return groupUserEntities;
-            }else if (roleIds != null && !roleIds.isEmpty()) {
-                List<UserEntity> userRole = userAdapter.findByRoleId(roleIds,orgId);
+            } else if (roleIds != null && !roleIds.isEmpty()) {
+                List<UserEntity> userRole = userAdapter.findByRoleId(roleIds, orgId);
                 if (userRole.isEmpty()) {
                     throw new ResponseStatusException(HttpStatus.NOT_FOUND,
                             "No user found in the selected role(s)");
                 }
-                if(userId != null && !userId.isEmpty()) {
+                if (userId != null && !userId.isEmpty()) {
                     List<UserEntity> matchedUsers = userRole.stream()
                             .filter(user -> userId.contains(user.getUserId()))
                             .toList();
-                    if(matchedUsers.isEmpty()){
+                    if (matchedUsers.isEmpty()) {
                         throw new ResponseStatusException(HttpStatus.NOT_FOUND,
                                 "No user found in the selected roles with the given userIds");
                     }
@@ -170,12 +167,12 @@ public class TimesheetServiceImpl implements TimesheetService {
                 }
                 return userRole;
             } else if (userId != null && !userId.isEmpty()) {
-                return userAdapter.getUsersByIds(userId,currentUser.getOrganizationId());
-            }  else {
+                return userAdapter.getUsersByIds(userId, currentUser.getOrganizationId());
+            } else {
                 int hierarchyLevel = UserRole.SUPERADMIN.getHierarchyLevel();
-                return userAdapter.getAllUsers(orgId,userIdFromToken, hierarchyLevel);
+                return userAdapter.getAllUsers(orgId, userIdFromToken, hierarchyLevel);
             }
-            }
+        }
         // Admin / Manager / Staff
         if (canSeeOwn && canSeeGroup && !canSeeAll) {
             List<Long> supervisedGroupIds = userAdapter.findGroupIdsBySupervisorId(userIdFromToken);
@@ -220,23 +217,23 @@ public class TimesheetServiceImpl implements TimesheetService {
                 log.info("Users in filtered groups: {}", groupUserIds);
                 return groupUserEntities;
             } else if (roleIds != null && !roleIds.isEmpty()) {
-                List<UserEntity> userRole = userAdapter.findByRoleId(roleIds,orgId);
+                List<UserEntity> userRole = userAdapter.findByRoleId(roleIds, orgId);
                 if (userRole.isEmpty()) {
                     throw new ResponseStatusException(HttpStatus.NOT_FOUND,
                             "No user found in the selected role(s)");
                 }
-                if(userId != null && !userId.isEmpty()) {
+                if (userId != null && !userId.isEmpty()) {
                     List<UserEntity> matchedUsers = userRole.stream()
                             .filter(user -> userId.contains(user.getUserId()))
                             .toList();
-                    if(matchedUsers.isEmpty()){
+                    if (matchedUsers.isEmpty()) {
                         throw new ResponseStatusException(HttpStatus.NOT_FOUND,
                                 "No user found in the selected roles with the given userIds");
                     }
                     return matchedUsers;
                 }
                 return userRole;
-            }else if (userId != null && !userId.isEmpty()) {
+            } else if (userId != null && !userId.isEmpty()) {
                 return userAdapter.getUsersByIds(userId, currentUser.getOrganizationId());
             } else {
                 List<UserEntity> groupUserEntities = userAdapter.findMembersByGroupIds(supervisedGroupIds, userIdFromToken);
@@ -426,8 +423,7 @@ public class TimesheetServiceImpl implements TimesheetService {
                     log.info("Regular hours: {}", timesheet.getRegularHours());
                     timesheet.setTrackedHours(LocalTime.ofSecondOfDay(workedDuration.toSeconds()));
                     log.info("Tracked hours: {}", timesheet.getTrackedHours());
-                }
-                else {
+                } else {
                     log.warn("Invalid clock-out time: earlier than clock-in.");
                 }
             }
@@ -507,10 +503,10 @@ public class TimesheetServiceImpl implements TimesheetService {
             } else if ((type == null || type.isBlank()) && groupIds != null && !groupIds.isEmpty()) {
                 List<UserEntity> groupFilteredUsers = userAdapter.findUsersByGroupIds(groupIds);
                 filterUsers = groupFilteredUsers;
-            }else {
+            } else {
                 log.info("userIdFrom Token: {}, orgId:{}", userIdFromToken, orgId);
                 int heriarchyLevel = UserRole.SUPERADMIN.getHierarchyLevel();
-                filterUsers = userAdapter.getAllUsers(orgId,userIdFromToken, heriarchyLevel);
+                filterUsers = userAdapter.getAllUsers(orgId, userIdFromToken, heriarchyLevel);
                 log.info("filteredUsers:{}", filterUsers);
             }
         } else if (canSeeGroup) {
@@ -651,16 +647,15 @@ public class TimesheetServiceImpl implements TimesheetService {
             startDate = range.startDate();
             endDate = range.endDate();
             log.info("startDate: {}, endDate: {}", startDate, endDate);
-            if(endDate.isAfter(LocalDate.now())) {
+            if (endDate.isAfter(LocalDate.now())) {
                 endDate = LocalDate.now();
                 log.info("endDate: {}", endDate);
             }
-        }
-        else if (fromDate != null && toDate != null) {
+        } else if (fromDate != null && toDate != null) {
             startDate = fromDate;
             endDate = toDate;
             log.info("startDate: {}, endDate: {}", startDate, endDate);
-            if(endDate.isAfter(LocalDate.now())) {
+            if (endDate.isAfter(LocalDate.now())) {
                 endDate = LocalDate.now();
                 log.info("endDate: {}", endDate);
             }

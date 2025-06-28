@@ -402,7 +402,7 @@ public class UserAdapterImpl implements UserAdapter {
 
     @Override
     public void saveUserLocation(List<UserLocationEntity> entityList) {
-         userLocationRepository.saveAll(entityList);
+        userLocationRepository.saveAll(entityList);
     }
 
     @Override
