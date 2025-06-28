@@ -119,33 +119,6 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
 
     List<TimesheetEntity> findActiveTimesheetsByDate(LocalDate today);
 
-    @Query(value = """
-    SELECT 
-        u.user_id AS userId,
-        d.log_date AS logDate,
-        t.status_id AS statusId
-    FROM (
-        SELECT generate_series(:fromDate, :toDate, interval '1 day'):: date AS log_date
-        ) d
-        CROSS JOIN users u
-    LEFT JOIN timesheet t ON u.user_id = t.user_id AND t.date = d.log_date
-    WHERE u.active = true
-      AND (
-          (:isSuperAdmin = true AND :userId IS NULL AND u.user_id != :loggedInUserId)            
-          OR (:isSuperAdmin = true AND :userId IS NOT NULL AND u.user_id = :userId)              
-          OR (:isSuperAdmin = false AND :userId IS NOT NULL AND u.user_id = :userId)              
-          OR (:isSuperAdmin = false AND :userId IS NULL AND u.user_id IN (:userIds))             
-      )
-    """, nativeQuery = true)
-    List<UserDashboard> getDashboardForSuperAdmin(
-            @Param("userIds") List<Long> userIds,
-            @Param("fromDate") LocalDate fromDate,
-            @Param("toDate") LocalDate toDate,
-            @Param("loggedInUserId") Long loggedInUserId,
-            @Param("isSuperAdmin") boolean isSuperAdmin,
-            @Param("userId") Long userId
-    );
-
     @Query("SELECT new com.uniq.tms.tms_microservice.dto.UserAttendanceDto(t.userId, t.date, t.statusId) " +
             "FROM TimesheetEntity t WHERE t.userId IN :userIds AND t.date BETWEEN :from AND :to")
     List<UserAttendanceDto> findAttendanceForUsersInRange(@Param("userIds") List<Long> userIds,

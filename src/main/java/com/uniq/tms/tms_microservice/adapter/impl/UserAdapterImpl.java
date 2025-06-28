@@ -58,12 +58,6 @@ public class UserAdapterImpl implements UserAdapter {
     }
 
     @Override
-    public List<LocationEntity> getAllLocation(Long orgId) {
-        List<LocationEntity> location = locationRepository.findAllLocationsByOrganization(orgId);
-        return location;
-    }
-
-    @Override
     @Transactional
     public UserEntity saveUser(UserEntity entity) {
         return userRepository.save(entity);
@@ -119,11 +113,6 @@ public class UserAdapterImpl implements UserAdapter {
     }
 
     @Override
-    public Optional<GroupEntity> findByTeamId(Long teamId) {
-        return teamRepository.findById(teamId);
-    }
-
-    @Override
     public List<Object[]> getGroupData(Long orgId) {
         return teamRepository.getGroupData(orgId);
     }
@@ -169,9 +158,10 @@ public class UserAdapterImpl implements UserAdapter {
     }
 
     @Override
-    public List<UserEntity> getAllUsers(Long orgId, Long userIdFromToken) {
-        return userRepository.findAllUsersList(orgId, userIdFromToken);
+    public List<UserEntity> getAllUsers(Long orgId, Long userIdFromToken, int hierarchyLevel) {
+        return userRepository.findAllUsersList(orgId, userIdFromToken, hierarchyLevel);
     }
+
 
     @Override
     public UserEntity getUserById(Long userId) {
@@ -261,11 +251,6 @@ public class UserAdapterImpl implements UserAdapter {
     };
 
     @Override
-    public void updateGroupNameAndLocation(Long groupId, String groupName, Long locationId){
-        teamRepository.updateGroupNameAndLocation(groupId,groupName,locationId);
-    }
-
-    @Override
     public void deleteSupervisorsByGroupId( Long groupId, Long userId){
         userGroupRepository.deleteSupervisorsByGroupId(groupId, userId);
     }
@@ -290,15 +275,6 @@ public class UserAdapterImpl implements UserAdapter {
         return userRepository.findUserByOrganizationIdAndUserId(organizationId, userId);
     }
 
-    public List<UserEntity> filterUsersByGroupIds(Long supervisorId, List<UserEntity> targetUsers) {
-        // Extract userIds from the targetUsers list
-        List<Long> userIds = targetUsers.stream()
-                .map(UserEntity::getUserId)
-                .toList();
-        // Query the repository to filter users based on their groups and supervisorId
-        return userGroupRepository.filterUsersByGroupIds(supervisorId, userIds);
-    }
-
     @Override
     public List<RoleEntity> findAllWithPrivileges() {
         return roleRepository.findAllWithPrivileges();
@@ -317,18 +293,6 @@ public class UserAdapterImpl implements UserAdapter {
     @Override
     public List<UserNameSuggestionDto> getAllGroupUsers(List<Long> groupIds, Long orgId) {
         return userRepository.findAllGroupUsersByOrganizationId(groupIds,orgId);
-    }
-
-
-    @Override
-    public Long getRoleIdByName(String roleName) {
-        RoleEntity role = roleRepository.findByNameIgnoreCase(roleName);
-        return role != null ? role.getRoleId() : null;
-    }
-    @Override
-    public Long getLocationIdByName(String locationName) {
-        LocationEntity location = locationRepository.findByNameIgnoreCase(locationName);
-        return location != null ? location.getLocationId() : null;
     }
 
     @Override
@@ -412,13 +376,86 @@ public class UserAdapterImpl implements UserAdapter {
     }
 
     @Override
-    public Optional<UserEntity> getUserDashboard(Long userId) {
-        return userRepository.findByUserId(userId);
+    public PrivilegeEntity addPrivilege(PrivilegeEntity privilegeEntity) {
+        return privilegeRepository.save(privilegeEntity);
     }
 
     @Override
-    public Optional<LocationEntity> getUserLocation(Long locationId) {
-        return locationRepository.findById(locationId);
+    public Optional<PrivilegeEntity> findPrivilegeById(Long privilegeId) {
+        return privilegeRepository.findById(privilegeId);
+    }
+
+    @Override
+    public void saveRole(RoleEntity role) {
+        roleRepository.save(role);
+    }
+
+    @Override
+    public List<UserEntity> getUsersByRoles(Set<String> roles, Long orgId) {
+        return userRepository.findUserByRoles(roles, orgId);
+    }
+
+    @Override
+    public List<UserEntity> findUsersByRolesAndGroupIds(Set<String> roles, List<Long> supervisedGroupIds, Long orgId) {
+        return userRepository.findUsersByRolesAndGroupIds(roles, supervisedGroupIds, orgId);
+    }
+
+    @Override
+    public void saveUserLocation(List<UserLocationEntity> entityList) {
+         userLocationRepository.saveAll(entityList);
+    }
+
+    @Override
+    public List<UserLocationEntity> findUserLocationByUserId(Long userId) {
+        return userLocationRepository.findByUser_UserId(userId);
+    }
+
+    @Override
+    public List<LocationEntity> findAllLocationById(List<Long> locationIds) {
+        return locationRepository.findAllById(locationIds);
+    }
+
+    @Override
+    @Transactional
+    public void deleteUserLocationByUserId(Long userId, Set<Long> toDelete) {
+        userLocationRepository.deleteByUser_UserIdAndLocation_LocationIdIn(userId, toDelete);
+    }
+
+    @Override
+    @Transactional
+    public void updateUserLocationByUserId(List<UserLocationEntity> newEntities) {
+        userLocationRepository.saveAll(newEntities);
+    }
+
+    @Override
+    public List<UserGroupEntity> findUserGroupByUserId(Long userId){
+        return userGroupRepository.findGroupByUser_UserId(userId);
+    }
+
+    @Override
+    @Transactional
+    public void deleteUserGroupByUserId(Long userId, Set<Long> toDelete) {
+        userGroupRepository.deleteByUser_UserIdAndGroup_GroupIdIn(userId, toDelete);
+    }
+
+    @Override
+    public void updateUserGroupByUserId(List<UserGroupEntity> newEntities) {
+        userGroupRepository.saveAll(newEntities);
+    }
+
+    @Override
+    public OrganizationEntity findByOrgId(Long orgId) {
+        return organizationRepository.findById(orgId).orElse(null);
+    }
+
+    @Override
+    public boolean findByLocation(String name, Long orgId) {
+        return locationRepository.findByNameAndOrganizationId(name, orgId).isPresent();
+    }
+
+    @Override
+    public List<UserEntity> findByRoleId(List<Long> roleIds, Long orgId){
+        return roleRepository.findByIdIn(roleIds, orgId);
     }
 
     @Override

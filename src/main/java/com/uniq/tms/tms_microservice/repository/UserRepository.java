@@ -81,9 +81,6 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
     List<UserNameSuggestionDto> findAllGroupUsersByOrganizationId(@Param("groupIds") List<Long> groupIds,
                                                                   @Param("orgId") Long orgId);
 
-//    @Query("SELECT u.userId FROM UserEntity u WHERE u.userId LIKE CONCAT(:prefix, '%') ORDER BY u.userId DESC")
-//    List<String> findLatestUserId(@Param("prefix") String prefix, Pageable pageable);
-
     @Query(value = "SELECT mobile_number FROM users", nativeQuery = true)
     List<String> findAllMobileNumbers();
 
@@ -92,8 +89,8 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
 
     UserEntity findByOrganizationIdAndUserId(Long orgId, Long userId);
 
-    @Query("SELECT u FROM UserEntity u WHERE u.organizationId = :orgId AND u.active = true AND u.userId != :userId")
-    List<UserEntity> findAllUsersList(@Param("orgId") Long orgId, @Param("userId") Long userIdFromToken);
+    @Query("SELECT u FROM UserEntity u WHERE u.organizationId = :orgId AND u.active = true AND u.userId <> :userId AND u.role.hierarchyLevel > :hierarchyLevel")
+    List<UserEntity> findAllUsersList(@Param("orgId") Long orgId, @Param("userId") Long userIdFromToken, @Param("hierarchyLevel") int hierarchyLevel);
 
     @Query("SELECT u FROM UserEntity u WHERE u.organizationId = :orgId AND u.active = true AND u.role.name IN :roles")
     List<UserEntity> findUserByRoles(Set<String> roles, Long orgId);

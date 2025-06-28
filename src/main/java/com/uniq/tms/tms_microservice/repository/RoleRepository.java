@@ -18,7 +18,6 @@ public interface RoleRepository extends JpaRepository<RoleEntity, Long> {
     @Query("SELECT r FROM RoleEntity r JOIN FETCH r.privilegeEntities")
     List<RoleEntity> findAllWithPrivileges();
 
-    RoleEntity findByNameIgnoreCase(String roleName);
     // Custom query to fetch role name and ID mapping
     @Query(value = "SELECT name, role_id FROM role", nativeQuery = true)
     List<Object[]> findRoleNameIdMappings();

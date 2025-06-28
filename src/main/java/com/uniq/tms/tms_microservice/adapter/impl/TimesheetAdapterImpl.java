@@ -366,11 +366,6 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
     }
 
     @Override
-    public List<UserDashboard> findAllByOrgIdExcludingUser(Long orgId, List<Long> userIds, LocalDate fromDate, LocalDate toDate, boolean superAdmin,Long loggedInUserId, Long userId ) {
-        return timesheetRepository.getDashboardForSuperAdmin(userIds, fromDate, toDate, loggedInUserId,superAdmin, userId);
-    }
-
-    @Override
     public List<UserAttendanceDto> findAttendanceForUserInRange(List<Long> userId, LocalDate fromDate, LocalDate toDate) {
         return timesheetRepository.findAttendanceForUsersInRange(userId, fromDate, toDate);
     }

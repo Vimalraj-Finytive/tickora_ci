@@ -24,7 +24,6 @@ public interface TimesheetAdapter {
     List<TimesheetEntity> findActiveTimesheetsByDate(LocalDate today);
     void saveAll(List<TimesheetEntity> openClockIns);
     List<TimesheetEntity> getLatestLogsByTimesheetIds(List<Long> memberIds, Long orgId, LocalDate date);
-    List<UserDashboard> findAllByOrgIdExcludingUser(Long orgId, List<Long> userIds, LocalDate fromDate, LocalDate toDate, boolean isSuperAdmin, Long loggedInUserId, Long userId);
     List<UserAttendanceDto> findAttendanceForUserInRange(List<Long> userId, LocalDate fromDate, LocalDate toDate);
     List<UserTimesheetDto> fetchUserTimesheetsWithHistory(LocalDate startDate, LocalDate endDate, List<Long> userIds, Long orgId);
     void updateTimesheetHistory(Long id, LogType logType, LocalTime firstClockIn);
