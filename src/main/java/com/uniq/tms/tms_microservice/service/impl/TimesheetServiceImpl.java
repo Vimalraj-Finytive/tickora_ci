@@ -175,10 +175,7 @@ public class TimesheetServiceImpl implements TimesheetService {
                 int hierarchyLevel = UserRole.SUPERADMIN.getHierarchyLevel();
                 return userAdapter.getAllUsers(orgId,userIdFromToken, hierarchyLevel);
             }
-
-                return userAdapter.getAllUsers(orgId,userIdFromToken);
             }
-        }
         // Admin / Manager / Staff
         if (canSeeOwn && canSeeGroup && !canSeeAll) {
             List<Long> supervisedGroupIds = userAdapter.findGroupIdsBySupervisorId(userIdFromToken);
