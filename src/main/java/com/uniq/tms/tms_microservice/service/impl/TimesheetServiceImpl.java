@@ -3,7 +3,6 @@ package com.uniq.tms.tms_microservice.service.impl;
 import com.uniq.tms.tms_microservice.adapter.TimesheetAdapter;
 import com.uniq.tms.tms_microservice.adapter.UserAdapter;
 import com.uniq.tms.tms_microservice.adapter.WorkScheduleAapter;
-import com.uniq.tms.tms_microservice.dto.*;
 import com.uniq.tms.tms_microservice.dto.LogFrom;
 import com.uniq.tms.tms_microservice.dto.LogType;
 import com.uniq.tms.tms_microservice.dto.PrivilegeConstants;
@@ -98,6 +97,14 @@ public class TimesheetServiceImpl implements TimesheetService {
                 log.info("endDate: {}", endDate);
             }
         }
+         else if (fromDate != null && toDate != null) {
+                startDate = fromDate;
+                endDate = toDate;
+            if(endDate.isAfter(LocalDate.now())) {
+                endDate = LocalDate.now();
+                log.info("endDate: {}", endDate);
+            }
+         }
 
         // Determine target users based on privileges
         List<UserEntity> targetUsers = resolveTargetUsers(userIdFromToken, groupIds, userId, orgId, roleIds);
@@ -351,6 +358,7 @@ public class TimesheetServiceImpl implements TimesheetService {
             if (request.getLastClockOut() != null && request.getFirstClockIn() == null && timesheet.getFirstClockIn() == null) {
                 throw new IllegalArgumentException("Cannot set clock-out without a clock-in.");
             }
+
             // Allow clock in and mark as present
             if (request.getFirstClockIn() != null) {
                 timesheet.setFirstClockIn(request.getFirstClockIn());

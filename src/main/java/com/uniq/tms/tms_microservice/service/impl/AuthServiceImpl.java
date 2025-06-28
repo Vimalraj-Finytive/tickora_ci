@@ -101,6 +101,7 @@ public class AuthServiceImpl implements AuthService {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(new ApiResponse<>(401, "Your account is inactive",null));
         }
+
         boolean isPasswordValid = PasswordUtil.isPasswordMatch(password, user.getPassword());
         log.info("password valid: {}", isPasswordValid);
         // Step 3: Validate password
