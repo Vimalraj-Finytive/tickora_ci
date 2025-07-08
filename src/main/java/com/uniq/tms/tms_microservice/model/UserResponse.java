@@ -19,7 +19,8 @@ public class UserResponse {
     private LocalDate dateOfJoining;
     private SecondaryDetailsDto secondaryDetails;
 
-    public UserResponse(Long userId, String userName, String email, String mobileNumber, String groupName, String roleName, String locationName, LocalDate dateOfJoining) {
+    public UserResponse(Long userId, String userName, String email, String mobileNumber, String groupName, String roleName,
+                        String locationName, LocalDate dateOfJoining,String secName, String secMobile, String secEmail, String relation) {
         this.userId = userId;
         this.userName = userName;
         this.email = email;
@@ -30,6 +31,14 @@ public class UserResponse {
         this.locationName = new ArrayList<>();
         this.locationName.add(locationName);
         this.dateOfJoining = dateOfJoining;
+
+        if (secName != null && secMobile != null){
+            this.secondaryDetails = new SecondaryDetailsDto();
+            this.secondaryDetails.setUserName(secName);
+            this.secondaryDetails.setMobile(secMobile);
+            this.secondaryDetails.setEmail(secEmail);
+            this.secondaryDetails.setRelation(relation);
+        }
     }
 
     public Long getUserId() {

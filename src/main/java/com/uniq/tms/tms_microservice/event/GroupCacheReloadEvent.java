@@ -1,10 +1,10 @@
 package com.uniq.tms.tms_microservice.event;
 
-public class UserCacheReloadEvent {
+public class GroupCacheReloadEvent {
 
     private final Long orgId;
 
-    public UserCacheReloadEvent(Long orgId){
+    public GroupCacheReloadEvent(Long orgId){
         this.orgId = orgId;
     }
 

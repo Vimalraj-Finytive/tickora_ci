@@ -297,7 +297,7 @@ public class AuthFacade {
         if (orgId == null) {
             return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
         }
-        userService.deleteMember(groupId, memberId);
+        userService.deleteMember(groupId, memberId,orgId);
         return new ApiResponse(204, "Member Deleted successfully", "No Content");
     }
 
@@ -665,7 +665,7 @@ public class AuthFacade {
             return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
         }
         Privilege privilegeModel = userDtoMapper.toModel(privilegeDto);
-        Privilege savePrivilege = userService.addPrivileges(privilegeModel);
+        Privilege savePrivilege = userService.addPrivileges(privilegeModel, orgId);
         PrivilegeDto dto = userDtoMapper.toDto(savePrivilege);
         return new ApiResponse(200, "Privilege added successfully", dto);
     }
@@ -680,8 +680,25 @@ public class AuthFacade {
             return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
         }
         RolePrivilege rolePrivilegeModel = userDtoMapper.toModel(rolePrivilegeDto);
-        RolePrivilege savePrivilege = userService.addRolwisePrivileges(rolePrivilegeModel);
+        RolePrivilege savePrivilege = userService.addRolwisePrivileges(rolePrivilegeModel, orgId);
         RolePrivilegeDto dto = userDtoMapper.toDto(savePrivilege);
         return new ApiResponse(200, "Privilege added successfully", dto);
+    }
+
+    public ApiResponse updateLocation(String token, LocationDto locationDto) {
+        if (!token.startsWith("Bearer ")) {
+            return new ApiResponse(400, "Invalid token format", null);
+        }
+        String jwt = token.substring(7);
+        Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
+        String role = jwtUtil.extractRoleFromToken(jwt);
+        String roleName = role.replace("ROLE_" , "");
+        if (orgId == null) {
+            return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
+        }
+
+        Location location = userDtoMapper.toModel(locationDto);
+        Location response = userService.updateLocation(orgId, location);
+        return new ApiResponse(200, "Updated location successfully", response);
     }
 }

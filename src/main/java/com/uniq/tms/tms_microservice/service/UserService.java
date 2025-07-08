@@ -29,7 +29,7 @@ public interface UserService {
     List<UserResponseDto> getUsers(Long orgId, String role);
     User deleteUser(Long orgId, Long userId);
     AddGroup createGroup(AddGroup groupMiddleware, Long orgId);
-    void deleteMember(Long groupId, Long memberId);
+    void deleteMember(Long groupId, Long memberId, Long orgId);
     void deleteGroup(Long groupId, Long orgId);
     List<User> getMembers(Long orgId, Long roleId);
     boolean updateUserGroupType(UserGroup userGroup);
@@ -45,6 +45,7 @@ public interface UserService {
     Location addLocation(LocationDto locationDto, Long orgId);
     List<LocationDto> getUserLocation(Long userId);
     ResponseEntity<Resource> downloadSampleFile();
-    Privilege addPrivileges(Privilege privilegeModel);
-    RolePrivilege addRolwisePrivileges(RolePrivilege rolePrivilegeModel);
+    Privilege addPrivileges(Privilege privilegeModel, Long orgId);
+    RolePrivilege addRolwisePrivileges(RolePrivilege rolePrivilegeModel, Long orgId);
+    Location updateLocation(Long orgId, Location location);
 }

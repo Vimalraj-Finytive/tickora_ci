@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface RoleRepository extends JpaRepository<RoleEntity, Long> {
@@ -30,4 +31,6 @@ public interface RoleRepository extends JpaRepository<RoleEntity, Long> {
     List<UserEntity> findByIdIn(@Param("roleIds") List<Long> roleIds,
                                    @Param("orgId") Long orgId);
 
+    @Query("SELECT r FROM RoleEntity r JOIN FETCH r.privilegeEntities WHERE LOWER(r.name) = LOWER(:name)")
+    Optional<RoleEntity> findByNameWithPrivileges(@Param("name") String name);
 }

@@ -37,13 +37,15 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
 
     @Query("SELECT new com.uniq.tms.tms_microservice.model.UserResponse(" +
             "u.userId, u.userName, u.email, u.mobileNumber, " +
-            "COALESCE(g.groupName, '-'), r.name, l.name, u.dateOfJoining) " +
+            "COALESCE(g.groupName, '-'), r.name, l.name, u.dateOfJoining, " +
+            "sd.userName, sd.mobile, sd.email, sd.relation) " +
             "FROM UserEntity u " +
             "LEFT JOIN UserGroupEntity ug ON ug.user.userId = u.userId " +
             "LEFT JOIN GroupEntity g ON ug.group.groupId = g.groupId " +
             "JOIN RoleEntity r ON u.role = r " +
             "JOIN UserLocationEntity ul ON ul.user.userId= u.userId " +
             "JOIN LocationEntity l ON ul.location.locationId = l.locationId " +
+            "LEFT JOIN SecondaryDetailsEntity sd ON sd.user.userId = u.userId " +
             "WHERE u.organizationId = :orgId AND u.active = true AND r.hierarchyLevel > :hierarchyLevel")
     List<UserResponse> findAllUsers(@Param("orgId") Long orgId, @Param("hierarchyLevel") int hierarchyLevel);
 
@@ -107,4 +109,6 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
     List<UserEntity> findUsersByRolesAndGroupIds(@Param("roles") Set<String> roles,
                                                  @Param("groupIds") List<Long> groupIds,
                                                  @Param("orgId") Long orgId);
+
+    List<UserEntity> findAllActiveUsersByorganizationId(Long orgId);
 }

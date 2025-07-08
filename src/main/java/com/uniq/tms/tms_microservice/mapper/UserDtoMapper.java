@@ -50,4 +50,6 @@ public interface UserDtoMapper {
     RolePrivilege toModel(RolePrivilegeDto rolePrivilegeDto);
 
     RolePrivilegeDto toDto(RolePrivilege rolePrivilege);
+
+    Location toModel(LocationDto locationDto);
 }

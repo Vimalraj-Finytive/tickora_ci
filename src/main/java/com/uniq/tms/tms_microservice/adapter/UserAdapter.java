@@ -1,6 +1,7 @@
 package com.uniq.tms.tms_microservice.adapter;
 
 import com.uniq.tms.tms_microservice.dto.GroupDto;
+import com.uniq.tms.tms_microservice.dto.GroupsData;
 import com.uniq.tms.tms_microservice.entity.GroupEntity;
 import com.uniq.tms.tms_microservice.entity.LocationEntity;
 import com.uniq.tms.tms_microservice.entity.RoleEntity;
@@ -28,7 +29,7 @@ public interface UserAdapter {
     void deleteUser(UserEntity user);
     GroupEntity saveGroup(GroupEntity entity);
     boolean findByGroup(String teamName, Long orgId);
-    List<Object[]> getGroupData(Long orgId);
+    List<GroupsData> getGroupData(Long orgId);
     int updateUserGroupType(Long userId, Long groupId, String type);
     void deleteMember(Long groupId, Long memberId);
     void deleteGroup(Long groupId, Long orgId);
@@ -94,4 +95,5 @@ public interface UserAdapter {
     OrganizationEntity findByOrgId(Long orgId);
     boolean findByLocation(String name, Long orgId);
     List<UserEntity> findByRoleId(List<Long> roleIds, Long orgId);
+    LocationEntity updateLocation(LocationEntity entity);
 }

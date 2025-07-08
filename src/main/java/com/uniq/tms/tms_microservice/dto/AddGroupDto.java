@@ -1,7 +1,5 @@
 package com.uniq.tms.tms_microservice.dto;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-
 import java.util.List;
 
 public class AddGroupDto {

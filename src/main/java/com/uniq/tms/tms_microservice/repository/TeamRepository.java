@@ -1,6 +1,7 @@
 package com.uniq.tms.tms_microservice.repository;
 
 import com.uniq.tms.tms_microservice.dto.GroupDto;
+import com.uniq.tms.tms_microservice.dto.GroupsData;
 import com.uniq.tms.tms_microservice.entity.GroupEntity;
 import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -79,7 +80,7 @@ public interface TeamRepository extends JpaRepository<GroupEntity, Long> {
     LEFT JOIN location l ON gd.location_id = l.location_id
     GROUP BY gd.groupid, gd.groupname, l.name
     """, nativeQuery = true)
-    List<Object[]> getGroupData(@Param("orgId") Long orgId);
+    List<GroupsData> getGroupData(@Param("orgId") Long orgId);
 
     @Modifying
     @Transactional

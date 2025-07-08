@@ -1,15 +1,15 @@
 package com.uniq.tms.tms_microservice.service.impl;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.uniq.tms.tms_microservice.adapter.TimesheetAdapter;
 import com.uniq.tms.tms_microservice.adapter.UserAdapter;
 import com.uniq.tms.tms_microservice.adapter.WorkScheduleAapter;
+import com.uniq.tms.tms_microservice.config.CacheKeyConfig;
+import com.uniq.tms.tms_microservice.config.CacheReloadHandlerRegistry;
 import com.uniq.tms.tms_microservice.dto.AddGroupDto;
 import com.uniq.tms.tms_microservice.dto.GroupDto;
 import com.uniq.tms.tms_microservice.dto.GroupResponseDto;
-import com.uniq.tms.tms_microservice.dto.UserGroupDto;
 import com.uniq.tms.tms_microservice.dto.UserRole;
 import com.uniq.tms.tms_microservice.entity.GroupEntity;
 import com.uniq.tms.tms_microservice.entity.LocationEntity;
@@ -18,9 +18,6 @@ import com.uniq.tms.tms_microservice.entity.TimesheetEntity;
 import com.uniq.tms.tms_microservice.entity.UserEntity;
 import com.uniq.tms.tms_microservice.entity.UserGroupEntity;
 import com.uniq.tms.tms_microservice.entity.WorkScheduleEntity;
-import com.uniq.tms.tms_microservice.event.LocationCacheReloadEvent;
-import com.uniq.tms.tms_microservice.event.PrivilegeCacheReloadEvent;
-import com.uniq.tms.tms_microservice.event.RolePrivilegesCacheReloadEvent;
 import com.uniq.tms.tms_microservice.exception.CommonExceptionHandler;
 import com.uniq.tms.tms_microservice.mapper.LocationEntityMapper;
 import com.uniq.tms.tms_microservice.mapper.UserDtoMapper;
@@ -37,10 +34,8 @@ import com.uniq.tms.tms_microservice.repository.RoleRepository;
 import com.uniq.tms.tms_microservice.repository.TeamRepository;
 import com.uniq.tms.tms_microservice.service.CacheLoaderService;
 import com.uniq.tms.tms_microservice.service.UserService;
-import com.uniq.tms.tms_microservice.util.CacheKeyUtil;
-import com.uniq.tms.tms_microservice.util.EmailUtil;
-import com.uniq.tms.tms_microservice.util.PasswordUtil;
-import com.uniq.tms.tms_microservice.util.TextUtil;
+import com.uniq.tms.tms_microservice.util.*;
+import jakarta.annotation.Nullable;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Validator;
@@ -72,6 +67,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import com.opencsv.CSVReader;
@@ -98,8 +94,10 @@ public class UserServiceImpl implements UserService {
     private final ApplicationEventPublisher publisher;
     private final CacheKeyUtil cacheKeyUtil;
     private final TeamRepository teamRepository;
+    private final CacheKeyConfig cacheKeyConfig;
+    private final CacheReloadHandlerRegistry cacheReloadHandlerRegistry;
 
-    public UserServiceImpl(Validator validator, UserAdapter userAdapter, TimesheetAdapter timesheetAdapter, UserEntityMapper userEntityMapper, OrganizationRepository organizationRepository, RoleRepository roleRepository, LocationRepository locationRepository, EmailUtil emailUtil, UserDtoMapper userDtoMapper, ObjectMapper objectMapper, SecondaryDetailsMapper secondaryDetailsMapper, RedisTemplate<String, Object> redisTemplate, LocationEntityMapper locationEntityMapper, CacheLoaderService cacheLoaderService, ApplicationEventPublisher publisher, WorkScheduleAapter workScheduleAdapter, CacheKeyUtil cacheKeyUtil, TeamRepository teamRepository) {
+    public UserServiceImpl(Validator validator, UserAdapter userAdapter, TimesheetAdapter timesheetAdapter, UserEntityMapper userEntityMapper, OrganizationRepository organizationRepository, RoleRepository roleRepository, LocationRepository locationRepository, EmailUtil emailUtil, UserDtoMapper userDtoMapper, ObjectMapper objectMapper, SecondaryDetailsMapper secondaryDetailsMapper, @Nullable RedisTemplate<String, Object> redisTemplate, LocationEntityMapper locationEntityMapper, CacheLoaderService cacheLoaderService, ApplicationEventPublisher publisher, WorkScheduleAapter workScheduleAdapter, CacheKeyUtil cacheKeyUtil, TeamRepository teamRepository, CacheKeyConfig cacheKeyConfig, CacheReloadHandlerRegistry cacheReloadHandlerRegistry) {
         this.validator = validator;
         this.userAdapter = userAdapter;
         this.timesheetAdapter = timesheetAdapter;
@@ -118,14 +116,14 @@ public class UserServiceImpl implements UserService {
         this.publisher = publisher;
         this.cacheKeyUtil = cacheKeyUtil;
         this.teamRepository = teamRepository;
+        this.cacheKeyConfig = cacheKeyConfig;
+        this.cacheReloadHandlerRegistry = cacheReloadHandlerRegistry;
     }
 
     private static final  Logger log = LoggerFactory.getLogger(UserServiceImpl.class);
 
     @Value("${csv.upload.dir}")
     private String uploadDir;
-    @Value("${CACHE_LOCATION}")
-    private String location;
 
     @Override
     public List<Role> getAllRole(Long orgId, String role) {
@@ -149,37 +147,40 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public List<Location> getAllLocation(Long orgId) {
+        String redisKey = cacheKeyUtil.getLocationKey(orgId);
         CachedData<Location> cachedData = null;
 
-        try {
-            cachedData = (CachedData<Location>) redisTemplate.opsForValue().get(location);
-        } catch (Exception redisException) {
-            log.warn("Redis not available or cache fetch failed: {}", redisException.getMessage());
+        // Only try Redis if redisTemplate is not null
+        if (redisTemplate != null) {
+            try {
+                cachedData = (CachedData<Location>) redisTemplate.opsForValue().get(redisKey);
+            } catch (Exception redisException) {
+                log.warn("Redis not available or cache fetch failed: {}", redisException.getMessage());
+            }
+        } else {
+            log.warn("RedisTemplate is null, skipping cache fetch for key: {}", redisKey);
         }
 
         try {
             if (cachedData != null && cachedData.getData() != null) {
-                log.info("Cache hit for key: locations Cache called");
-                return cachedData.getData().stream()
-                        .filter(location -> location.getOrgId() != null && location.getOrgId().equals(orgId))
-                        .toList();
+                log.info("Cache hit for key orgId: {} locations Cache called", orgId);
+                return cachedData.getData();
             }
 
             log.info("Cache missing for key: locations, DB Called");
 
             // Load and cache if missing
-            List<Location> locations = cacheLoaderService.loadLocationTable().get();
+            List<Location> locations = cacheLoaderService.loadLocationTable(orgId).get();
             log.info("Total locations fetched from DB: {}", locations.size());
             locations.forEach(loc -> log.info("Location ID: {}, Org ID: {}", loc.getLocationId(), loc.getOrgId()));
-            return locations.stream()
-                    .filter(location -> location.getOrgId() != null && location.getOrgId().equals(orgId))
-                    .toList();
+            return locations;
 
         } catch (Exception e) {
             log.error("Error loading data from DB/cache: {}", e.getMessage(), e);
             return List.of();
         }
     }
+
 
     @Override
     public ApiResponse bulkCreateUsers(MultipartFile file, Long orgId, Long userId) {
@@ -506,6 +507,13 @@ public class UserServiceImpl implements UserService {
         String message = String.format(" %d Users created. Duplicate/invalid users were skipped.", uploadedCount);
         log.info("useremail: {} , username: {}", userFromToken.getEmail(),userFromToken.getUserName());
         emailUtil.sendSuccessEmail(userFromToken.getEmail(),userFromToken.getUserName(),uploadedCount,skippedCount);
+        CacheEventPublisherUtil.syncReloadThenPublish(
+                publisher,
+                cacheKeyConfig.getUsers(),
+                orgId,
+                cacheReloadHandlerRegistry
+        );
+        log.info("UserCacheReloadEvent published after User bulk creation");
         return new ApiResponse(200, message, response);
 
     }
@@ -717,7 +725,12 @@ public class UserServiceImpl implements UserService {
         emailUtil.sendAccountCreationEmail(
                 userMiddleware.getEmail(), userMiddleware.getUserName(), defaultPassword, isNewUser
         );
-
+        CacheEventPublisherUtil.syncReloadThenPublish(
+                publisher,
+                cacheKeyConfig.getUsers(),
+                organizationId,
+                cacheReloadHandlerRegistry
+        );        log.info("UserCacheReloadEvent published after User creation");
         return new ApiResponse(201, "Successfully saved user", finalUser);
     }
 
@@ -910,8 +923,15 @@ public class UserServiceImpl implements UserService {
                 userAdapter.saveSecondaryDetails(existingSecondaryUser);
             }else{System.out.println("User Role Id: "+existingUser.getRole().getRoleId());}
         }
-
-        return userEntityMapper.toMiddleware(userAdapter.updateUser(existingUser));
+        userAdapter.updateUser(existingUser);
+        CacheEventPublisherUtil.syncReloadThenPublish(
+                publisher,
+                cacheKeyConfig.getUsers(),
+                orgId,
+                cacheReloadHandlerRegistry
+        );
+        log.info("UserCacheReloadEvent published after User update");
+        return userEntityMapper.toMiddleware(existingUser);
     }
 
     private void setField(UserEntity user, String key, Object value) {
@@ -949,42 +969,39 @@ public class UserServiceImpl implements UserService {
     }
 
     private List<UserResponseDto> fetchActiveUsers(Long orgId, String role) {
-        int hierarchyLevel = UserRole.getLevel(role);
-
-        List<UserResponse> users = userAdapter.findByOrganizationId(orgId, hierarchyLevel);
-        if (users.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, ("No Users found"));
-        }
-
-        List<UserResponseDto> usersDto = users.stream()
-                .map(userDtoMapper::toDto)
-                .toList();
-
-        Map<Long, UserResponseDto> userMap = new LinkedHashMap<>();
-        for (UserResponseDto user : usersDto) {
-            userMap.compute(user.getUserId(), (id, existing) -> {
-                if (existing == null) {
-                    SecondaryDetailsEntity secondaryDetails = userAdapter.findSecondaryUserById(user.getUserId()).orElse(null);
-                    SecondaryDetailsDto secDto = secondaryDetailsMapper.toMiddleware(secondaryDetails);
-                    user.setSecondaryDetails(secDto);
-                    return user;
-                } else {
-                    List<String> existingGroups = existing.getGroupName();
-                    if (!existingGroups.contains(user.getGroupName().get(0))) {
-                        existingGroups.add(user.getGroupName().get(0));
-                    }
-                    List<String> existingLocations = existing.getLocationName();
-                    if (!existingLocations.contains(user.getLocationName().get(0))) {
-                        existingLocations.add(user.getLocationName().get(0));
-                    }
-                    return existing;
+        String userCacheKey = cacheKeyUtil.getMemberKey(orgId); // e.g., "members:org:1"
+        String roleField = role.toLowerCase(); // hash field for this role
+        log.info("roleField:{}", roleField);
+        try {
+            // 1. Try from Redis only if redisTemplate is not null
+            if (redisTemplate != null) {
+                Object cachedObj = redisTemplate.opsForHash().get(userCacheKey, roleField);
+                if (cachedObj != null) {
+                    log.info("Cache hit for orgId={}, role={}", orgId, role);
+                    return (List<UserResponseDto>) cachedObj;
                 }
-            });
+            } else {
+                log.warn("RedisTemplate is null, skipping cache fetch for key: {}, field: {}", userCacheKey, roleField);
+            }
+
+            // 2. Cache miss or Redis unavailable - load all into Redis (and also get fresh data)
+            log.info("Cache miss for orgId={}, role={}. Loading from DB...", orgId, role);
+            Map<String, List<UserResponseDto>> roleMap = cacheLoaderService.loadAllUsers(orgId).get();
+            log.info("rolemap:{}",roleMap);
+            String loggedRole = roleField.toUpperCase();
+            List<UserResponseDto> fallbackList = roleMap.get(loggedRole);
+            if (fallbackList != null && !fallbackList.isEmpty()) {
+                log.info("Returning response from DB for All Users");
+                return fallbackList;
+            }
+
+        } catch (Exception e) {
+            log.error("Failed to fetch users for orgId={}, role={}. Error: {}", orgId, role, e.getMessage(), e);
         }
 
-        return new ArrayList<>(userMap.values());
+        // 3. Final fallback
+        throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No Users found for orgId=" + orgId + " and role=" + role);
     }
-
 
     @Override
     public User deleteUser(Long orgId, Long userId) {
@@ -995,6 +1012,13 @@ public class UserServiceImpl implements UserService {
             throw new RuntimeException("Unauthorized");
         }
         userAdapter.deactivateUserById(userId,orgId);
+        CacheEventPublisherUtil.syncReloadThenPublish(
+                publisher,
+                cacheKeyConfig.getUsers(),
+                orgId,
+                cacheReloadHandlerRegistry
+        );
+        log.info("UserCacheReloadEvent published after User Delete");
         return userEntityMapper.toMiddleware(user);
     }
 
@@ -1032,6 +1056,13 @@ public class UserServiceImpl implements UserService {
             createUserGroup(new UserGroup(savedEntity.getGroupId(), id, groupMiddleware.getType()),orgId);
 
         }
+        CacheEventPublisherUtil.syncReloadThenPublish(
+                publisher,
+                cacheKeyConfig.getGroups(),
+                orgId,
+                cacheReloadHandlerRegistry
+        );
+        log.info("GroupCacheReloadEvent published after Group Creation");
         return userEntityMapper.toGroupMiddleware(savedEntity);
     }
 
@@ -1074,6 +1105,13 @@ public class UserServiceImpl implements UserService {
 
         String finalMessage = addedMessage + existsMessage;
 
+        CacheEventPublisherUtil.syncReloadThenPublish(
+                publisher,
+                cacheKeyConfig.getGroups(),
+                orgId,
+                cacheReloadHandlerRegistry
+        );
+        log.info("GroupCacheReloadEvent published after Adding user to the Group");
         // Return ApiResponse — no need to return data list of users
         return new ApiResponse<>(200, finalMessage, null);
     }
@@ -1188,6 +1226,13 @@ public class UserServiceImpl implements UserService {
         if (!conflictMessages.isEmpty()) {
             return new ApiResponse<>(HttpStatus.CONFLICT.value(), finalMessage, Collections.emptyList());
         }
+        CacheEventPublisherUtil.syncReloadThenPublish(
+                publisher,
+                cacheKeyConfig.getGroups(),
+                orgId,
+                cacheReloadHandlerRegistry
+        );
+        log.info("GroupCacheReloadEvent published after Group Update");
         // If no conflicts and no supervisors added, indicate that no changes were made
         return new ApiResponse<>(HttpStatus.OK.value(), "Group updated Successfully.", Collections.emptyList());
     }
@@ -1203,54 +1248,45 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserProfileResponse getUserProfile(Long orgId, Long userId) {
-        // Fetch the user groups (may be empty if user has no group)
-        List<UserGroupEntity> userGroups = userAdapter.findUserByOrganizationIdAndUserId(orgId, userId);
-        UserEntity user;
-        if (userGroups.isEmpty()) {
-            // If no group, fetch user manually
-            user = userAdapter.findUserByOrgIdAndUserId(orgId, userId);
-            if (user == null || !user.isActive()) {
-                throw new UsernameNotFoundException("User not found");
+        String redisKey = cacheKeyUtil.getprofileKey(orgId);
+        String field = userId.toString();
+
+        try {
+            // Try from cache only if redisTemplate is not null
+            if (redisTemplate != null) {
+                UserProfileResponse cachedData = (UserProfileResponse) redisTemplate.opsForHash().get(redisKey, field);
+                if (cachedData != null) {
+                    log.info("Cache hit for userId {} in orgId {}", userId, orgId);
+                    return cachedData;
+                }
+            } else {
+                log.warn("RedisTemplate is null, skipping cache fetch for userId {} in orgId {}", userId, orgId);
             }
-        } else {
-            // If in groups, get user from the first entry
-            user = userGroups.get(0).getUser();
-        }
 
-        // Fetch and map user location
-        List<UserLocationEntity> userLocation = userAdapter.findUserLocationByUserId(userId);
-        List<LocationDto> locationDtos = new ArrayList<>();
-        if (userLocation.isEmpty()) {
-            throw new NullPointerException("No Location found to a user.");
-        }
-        for (UserLocationEntity ul : userLocation) {
-            if (ul.getLocation() == null) continue;
-            locationDtos.add(userDtoMapper.toDto(ul.getLocation()));
-        }
+            // Cache miss → load entire org user profiles from DB and cache
+            log.info("Cache miss for userId {}, loading from DB...", userId);
+            Map<String, UserProfileResponse> loadedProfiles = cacheLoaderService.loadUsersProfile(orgId).get();
 
-        // Map groups if present
-        List<UserGroupProfileDto> groupDtos = userGroups.isEmpty()
-                ? Collections.emptyList()
-                : userGroups.stream()
-                .map(userDtoMapper::toGroupsDto)
-                .collect(Collectors.toList());
+            // Return directly from DB-loaded map (even if Redis write fails)
+            UserProfileResponse response = loadedProfiles.get(field);
+            if (response != null) {
+                log.info("Fallback DB profile returned for userId {}", userId);
+                return response;
+            } else {
+                log.warn("User profile not found even in DB for userId {}", userId);
+                return null;
+            }
 
-        OrganizationEntity org = userAdapter.findByOrgId(orgId);
-        // Construct response
-        return new UserProfileResponse(
-                user.getUserId(),
-                user.getUserName(),
-                user.getEmail(),
-                user.getMobileNumber(),
-                user.getRole().getName(),
-                user.getDateOfJoining(),
-                locationDtos,
-                groupDtos,
-                org != null ? org.getOrgName() : null
-        );
+        } catch (Exception e) {
+            log.error("Error in user profile fetch logic for userId {}: {}", userId, e.getMessage(), e);
+            return null;
+        }
     }
 
     public List<GroupResponseDto> getAllGroups(Long orgId, Long userId) throws JsonProcessingException {
+
+        String cacheGroupkey = cacheKeyUtil.getAllGroupsKey(orgId);
+        String cacheSupervisedGroupKey = cacheKeyUtil.getSupervisedGroupsKey(orgId);
 
         UserEntity currentUser = userAdapter.getUserById(userId);
         String roleName = currentUser.getRole().getName().toUpperCase();
@@ -1261,76 +1297,68 @@ public class UserServiceImpl implements UserService {
         boolean canSeeSupervisingGroups = cacheKeyUtil.roleHasPrivilege(roleName, canSeeSupervisingGroupsKey);
 
         log.info("canSeeAllGroups={}, canSeeSupervisingGroups={}", canSeeAllGroups, canSeeSupervisingGroups);
-        List<Object[]> results = userAdapter.getGroupData(orgId);
+        try {
+            // CASE 1: SuperAdmin → Fetch all from groups:org:{orgId}
+            if (canSeeAllGroups && redisTemplate != null) {
+                Map<Object, Object> allGroups = redisTemplate.opsForHash().entries(cacheGroupkey);
+                if (!allGroups.isEmpty()) {
+                    log.info("Cache hit for All groups key");
+                    return allGroups.values().stream()
+                            .map(obj -> (GroupResponseDto) obj)
+                            .toList();
+                }
+                log.warn("Cache miss for all groups. Loading from DB...");
+            } else if (canSeeAllGroups) {
+                log.warn("RedisTemplate is null, skipping cache fetch for all groups.");
+            }
 
-        // Maps for collecting union data
-        Map<Long, Set<String>> userToGroups = new HashMap<>();
-        Map<Long, Set<String>> userToLocations = new HashMap<>();
-        Map<Long, List<UserGroupDto>> groupIdToActiveMembers = new HashMap<>();
-
-        for (Object[] row : results) {
-            Long groupId = ((Number) row[0]).longValue();
-            String groupName = (String) row[1];
-            String location = (String) row[2];
-
-            if (row[3] != null) {
-                String json = row[3].toString();
-                List<UserGroupDto> allMembers = objectMapper.readValue(json, new TypeReference<>() {});
-
-                for (UserGroupDto member : allMembers) {
-                    if (Boolean.TRUE.equals(member.getActive())) {
-                        Long memberUserId = member.getUserId();
-
-                        // Collect unions
-                        userToGroups.computeIfAbsent(memberUserId, k -> new HashSet<>()).add(groupName);
-                        userToLocations.computeIfAbsent(memberUserId, k -> new HashSet<>()).add(location);
-
-                        // Assign member to group
-                        groupIdToActiveMembers.computeIfAbsent(groupId, k -> new ArrayList<>()).add(member);
+            // CASE 2: Supervisor → Fetch supervised groupIds, then group objects
+            else if (canSeeSupervisingGroups && redisTemplate != null) {
+                Object groupIdSetObj = redisTemplate.opsForHash().get(cacheSupervisedGroupKey, String.valueOf(userId));
+                if (groupIdSetObj instanceof Set<?> groupIdSet && !groupIdSet.isEmpty()) {
+                    List<GroupResponseDto> result = new ArrayList<>();
+                    for (Object gid : groupIdSet) {
+                        GroupResponseDto group = (GroupResponseDto) redisTemplate.opsForHash().get(cacheGroupkey, String.valueOf(gid));
+                        if (group != null) result.add(group);
                     }
-                }
-            }
-        }
-
-        List<GroupResponseDto> finalList = new ArrayList<>();
-
-        for (Object[] row : results) {
-            Long groupId = ((Number) row[0]).longValue();
-            String groupName = (String) row[1];
-            String location = (String) row[2];
-
-            List<UserGroupDto> members = groupIdToActiveMembers.get(groupId);
-            if (members == null) {
-                members = new ArrayList<>();
-            }
-
-            // If user has CAN_SEE_ALL_GROUPS, allow all groups
-            if (canSeeAllGroups) {
-                for (UserGroupDto member : members) {
-                    member.setGroupName(new ArrayList<>(userToGroups.getOrDefault(member.getUserId(), Set.of())));
-                    member.setLocation(new ArrayList<>(userToLocations.getOrDefault(member.getUserId(), Set.of())));
-                }
-                finalList.add(new GroupResponseDto(groupId, groupName, location, members));
-            }
-            // If user has CAN_SEE_SUPERVISING_GROUPS, only show groups where user is supervisor
-            else if (canSeeSupervisingGroups) {
-                boolean isSupervisor = members.stream()
-                        .anyMatch(member -> member.getUserId().equals(userId) && MemberType.SUPERVISOR.getValue().equals(member.getType()));
-                if (isSupervisor) {
-                    for (UserGroupDto member : members) {
-                        member.setGroupName(new ArrayList<>(userToGroups.getOrDefault(member.getUserId(), Set.of())));
-                        member.setLocation(new ArrayList<>(userToLocations.getOrDefault(member.getUserId(), Set.of())));
+                    if (!result.isEmpty()) {
+                        log.info("Fetched {} groups from supervisor cache for userId={}", result.size(), userId);
+                        return result;
                     }
-                    finalList.add(new GroupResponseDto(groupId, groupName, location, members));
+                    log.warn("Supervisor group cache empty or group details not found. Loading from DB...");
                 }
+            } else if (canSeeSupervisingGroups) {
+                log.warn("RedisTemplate is null, skipping supervisor cache fetch.");
             }
-        }
 
-        if (finalList.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND,"No Groups Found");
-        }
+            // DB fallback
+            log.info("Loading from DB as cache is missing for orgId={}, userId={}", orgId, userId);
+            try {
+                List<GroupResponseDto> groupsFromDb = cacheLoaderService
+                        .loadGroupsCache(orgId)
+                        .get(); // Now returns ALL groups
 
-        return finalList;
+                if (canSeeAllGroups) {
+                    return groupsFromDb;
+                } else if (canSeeSupervisingGroups) {
+                    // Manually filter groups where this user is a supervisor
+                    return groupsFromDb.stream()
+                            .filter(group -> group.getMembersDetails().stream()
+                                    .anyMatch(m -> m.getUserId().equals(userId) && "SUPERVISOR".equalsIgnoreCase(m.getType())))
+                            .toList();
+                } else {
+                    throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not allowed to view any groups");
+                }
+
+            } catch (InterruptedException | ExecutionException e) {
+                log.error("Failed to load group cache: {}", e.getMessage(), e);
+                throw new RuntimeException("Cache loading failed", e);
+            }
+
+        } catch (Exception e) {
+            log.error("Failed to get groups from cache or DB: {}", e.getMessage(), e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to load groups");
+        }
     }
 
     @Override
@@ -1352,8 +1380,15 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public void deleteMember(Long groupId, Long memberId) {
+    public void deleteMember(Long groupId, Long memberId, Long orgId) {
         userAdapter.deleteMember(groupId, memberId);
+        CacheEventPublisherUtil.syncReloadThenPublish(
+                publisher,
+                cacheKeyConfig.getGroups(),
+                orgId,
+                cacheReloadHandlerRegistry
+        );
+        log.info("GroupCacheReloadEvent published after Group Member Deletion");
     }
 
     @Override
@@ -1364,6 +1399,13 @@ public class UserServiceImpl implements UserService {
         }
         userAdapter.deleteByGroupId(groupId);
         userAdapter.deleteGroup(groupId, orgId);
+        CacheEventPublisherUtil.syncReloadThenPublish(
+                publisher,
+                cacheKeyConfig.getGroups(),
+                orgId,
+                cacheReloadHandlerRegistry
+        );
+        log.info("GroupCacheReloadEvent published after Group Deletion");
     }
 
     @Override
@@ -1518,9 +1560,13 @@ public class UserServiceImpl implements UserService {
         // Save to DB — triggers @PostPersist in listener
         LocationEntity savedEntity = userAdapter.addLocation(locationModel);
 
-        log.info("Publishing LocationCacheReloadEvent");
-        publisher.publishEvent(new LocationCacheReloadEvent());
-        log.info("LocationCacheReloadEvent published");
+        CacheEventPublisherUtil.syncReloadThenPublish(
+                publisher,
+                cacheKeyConfig.getLocation(),
+                orgId,
+                cacheReloadHandlerRegistry
+        );
+        log.info("LocationCacheReloadEvent published after location Added");
         return locationEntityMapper.toDto(savedEntity);
     }
 
@@ -1564,17 +1610,21 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public Privilege addPrivileges(Privilege privilegeModel) {
+    public Privilege addPrivileges(Privilege privilegeModel, Long orgId) {
         PrivilegeEntity privilegeEntity = userEntityMapper.toEntity(privilegeModel);
         PrivilegeEntity privilege = userAdapter.addPrivilege(privilegeEntity);
-        log.info("Publishing PrivilegeCacheReloadEvent");
-        publisher.publishEvent(new PrivilegeCacheReloadEvent());
-        log.info("PrivilegeCacheReloadEvent published");
+        CacheEventPublisherUtil.syncReloadThenPublish(
+                publisher,
+                cacheKeyConfig.getRoleprivilege(),
+                orgId,
+                cacheReloadHandlerRegistry
+        );
+        log.info("Privilege CacheReloadEvent published after Privilege Creation");
         return userEntityMapper.toModel(privilege);
     }
 
     @Override
-    public RolePrivilege addRolwisePrivileges(RolePrivilege rolePrivilege) {
+    public RolePrivilege addRolwisePrivileges(RolePrivilege rolePrivilege, Long orgId) {
 
         //Find Role
         RoleEntity role = userAdapter.findRoleById(rolePrivilege.getRoleId())
@@ -1590,10 +1640,42 @@ public class UserServiceImpl implements UserService {
         }
         userAdapter.saveRole(role);
 
-        log.info("Publishing RolePrivilegesCacheReloadEvent");
-        publisher.publishEvent(new RolePrivilegesCacheReloadEvent());
-        log.info("RolePrivilegesCacheReloadEvent published");
-
+        CacheEventPublisherUtil.syncReloadThenPublish(
+                publisher,
+                cacheKeyConfig.getRoleprivilege(),
+                orgId,
+                cacheReloadHandlerRegistry
+        );
+        log.info("RolewisePrivilege CacheReloadEvent published after Role wise privilege creation");
         return rolePrivilege;
+    }
+
+    @Override
+    public Location updateLocation(Long orgId, Location location){
+        LocationEntity entity1 = userAdapter.findLocationById(location.getLocationId());
+
+        // Only update non-null fields
+        if (location.getName() != null) entity1.setName(location.getName());
+        if (location.getAddress() != null) entity1.setAddress(location.getAddress());
+        if (location.getLatitude() != null) entity1.setLatitude(location.getLatitude());
+        if (location.getLongitude() != null) entity1.setLongitude(location.getLongitude());
+        if (location.getRadius() != null) entity1.setRadius(location.getRadius());
+
+        // Set orgId properly if needed
+        OrganizationEntity organization = new OrganizationEntity();
+        organization.setOrganizationId(orgId);
+        entity1.setOrganizationEntity(organization);
+
+        // Now save the updated original entity
+        LocationEntity updatedEntity = userAdapter.updateLocation(entity1);
+
+        CacheEventPublisherUtil.syncReloadThenPublish(
+                publisher,
+                cacheKeyConfig.getLocation(),
+                orgId,
+                cacheReloadHandlerRegistry
+        );
+        log.info("LocationCacheReloadEvent published after location update");
+        return userEntityMapper.toMiddleware(updatedEntity);
     }
 }

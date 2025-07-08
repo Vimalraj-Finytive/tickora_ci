@@ -269,4 +269,10 @@ public class UserController {
         ApiResponse response = authFacade.addRolwisePrivileges(token, rolePrivilegeDto);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
+
+    @PatchMapping("/updateLocation")
+    public ResponseEntity<ApiResponse> updateLocation(@RequestHeader("Authorization") String token,@RequestBody LocationDto locationDto) {
+        ApiResponse response = authFacade.updateLocation(token, locationDto);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
 }

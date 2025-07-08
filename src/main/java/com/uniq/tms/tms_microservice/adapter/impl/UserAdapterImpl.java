@@ -2,6 +2,7 @@ package com.uniq.tms.tms_microservice.adapter.impl;
 
 import com.uniq.tms.tms_microservice.adapter.UserAdapter;
 import com.uniq.tms.tms_microservice.dto.GroupDto;
+import com.uniq.tms.tms_microservice.dto.GroupsData;
 import com.uniq.tms.tms_microservice.entity.GroupEntity;
 import com.uniq.tms.tms_microservice.entity.LocationEntity;
 import com.uniq.tms.tms_microservice.entity.RoleEntity;
@@ -113,7 +114,7 @@ public class UserAdapterImpl implements UserAdapter {
     }
 
     @Override
-    public List<Object[]> getGroupData(Long orgId) {
+    public List<GroupsData> getGroupData(Long orgId) {
         return teamRepository.getGroupData(orgId);
     }
 
@@ -456,6 +457,11 @@ public class UserAdapterImpl implements UserAdapter {
     @Override
     public List<UserEntity> findByRoleId(List<Long> roleIds, Long orgId){
         return roleRepository.findByIdIn(roleIds, orgId);
+    }
+
+    @Override
+    public LocationEntity updateLocation(LocationEntity entity){
+        return locationRepository.save(entity);
     }
 
 }

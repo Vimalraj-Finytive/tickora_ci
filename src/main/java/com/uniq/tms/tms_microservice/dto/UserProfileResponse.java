@@ -17,6 +17,8 @@ public class UserProfileResponse {
     private List<UserGroupProfileDto> groupDtos;
     private String organizationName;
 
+    public UserProfileResponse(){}
+
     public UserProfileResponse(Long userId, String userName, String email, String mobileNumber, String roleName, LocalDate dateOfJoining, List<LocationDto> location, List<UserGroupProfileDto> groupDtos, String organizationName) {
         this.userId = userId;
         this.userName = userName;
