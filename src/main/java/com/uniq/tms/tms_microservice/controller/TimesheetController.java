@@ -10,7 +10,6 @@ import com.uniq.tms.tms_microservice.dto.UserDashboardDto;
 import com.uniq.tms.tms_microservice.dto.UserTimesheetDto;
 import com.uniq.tms.tms_microservice.dto.UserTimesheetResponseDto;
 import com.uniq.tms.tms_microservice.facade.AuthFacade;
-import com.uniq.tms.tms_microservice.util.ReportUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -30,11 +29,8 @@ import java.util.List;
 public class  TimesheetController {
 
     private final AuthFacade authFacade;
-    private final ReportUtils reportUtils;
-
-    public TimesheetController(AuthFacade authFacade, ReportUtils reportUtils) {
+    public TimesheetController(AuthFacade authFacade) {
         this.authFacade = authFacade;
-        this.reportUtils = reportUtils;
     }
 
     @PostMapping
