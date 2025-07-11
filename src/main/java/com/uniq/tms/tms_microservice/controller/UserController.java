@@ -271,8 +271,14 @@ public class UserController {
     }
 
     @PatchMapping("/updateLocation")
-    public ResponseEntity<ApiResponse> updateLocation(@RequestHeader("Authorization") String token,@RequestBody LocationDto locationDto) {
+    public ResponseEntity<ApiResponse> updateLocation(@RequestHeader("Authorization") String token,@RequestBody LocationListDto locationDto) {
         ApiResponse response = authFacade.updateLocation(token, locationDto);
         return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
+
+    @PostMapping("/delete")
+    public ResponseEntity<Void> deleteLocation(@RequestHeader("Authorization") String token, @RequestBody LocationListDto locationIds) {
+        authFacade.deleteLocation(token, locationIds);
+        return ResponseEntity.noContent().build();
     }
 }

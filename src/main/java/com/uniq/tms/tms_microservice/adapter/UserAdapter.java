@@ -60,7 +60,7 @@ public interface UserAdapter {
     List<Long> findSupervisorIdsByGroupId( Long groupId);
     Optional<GroupEntity> findByGroupId(Long groupId);
     List<Long> findMemberIdsByGroupId(Long groupId);
-    LocationEntity findLocationById(Long locationId);
+    LocationEntity findLocationById(Long locationId, Long orgId);
     List<UserGroupEntity> findUserByOrganizationIdAndUserId(Long organizationId, Long userId);
     List<RoleEntity> findAllWithPrivileges();
     List<UserGroupEntity> getGroupUsersByGroupId(List<Long> groupIds, Long orgId);
@@ -92,8 +92,14 @@ public interface UserAdapter {
     List<UserGroupEntity> findUserGroupByUserId(Long userId);
     void deleteUserGroupByUserId(Long userId, Set<Long> toDelete);
     void updateUserGroupByUserId(List<UserGroupEntity> newEntities);
-    OrganizationEntity findByOrgId(Long orgId);
     boolean findByLocation(String name, Long orgId);
     List<UserEntity> findByRoleId(List<Long> roleIds, Long orgId);
-    LocationEntity updateLocation(LocationEntity entity);
+    List<LocationEntity> updateMultipleLocations(List<LocationEntity> updatedEntities);
+    void deleteLocation(List<Long> locationIds, Long orgId);
+    Optional<LocationEntity> findAllDefaultLocationById(List<Long> locationIds, Long orgId);
+    LocationEntity findDefaultLocationByOrgId(Long orgId);
+    List<GroupEntity> findByLocation_LocationIdIn(List<Long> defaultLocationId);
+    void saveAllGroups(List<GroupEntity> groupsToUpdate);
+    List<UserLocationEntity> findUserLocationByLocationId(List<Long> defaultLocationId);
+    void saveAllLocations(List<UserLocationEntity> userLocationToUpdate);
 }

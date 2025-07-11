@@ -12,4 +12,6 @@ public interface UserLocationRepository extends JpaRepository<UserLocationEntity
     List<UserLocationEntity> findByUser_UserId(Long userId);
 
     void deleteByUser_UserIdAndLocation_LocationIdIn(Long userId, Set<Long> toDelete);
+
+    List<UserLocationEntity> findByLocation_LocationIdIn(List<Long> defaultLocationId);
 }

@@ -10,7 +10,6 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
-import org.springframework.boot.autoconfigure.domain.EntityScan;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -44,6 +43,9 @@ public class LocationEntity {
 
     @Column(name = "address", nullable = false, length = 255)
     private String address;
+
+    @Column(name = "is_default", nullable = false)
+    private boolean isDefault = false;
 
     public LocationEntity() {}
 
@@ -121,5 +123,13 @@ public class LocationEntity {
 
     public void setAddress(String address) {
         this.address = address;
+    }
+
+    public boolean isDefault() {
+        return isDefault;
+    }
+
+    public void setDefault(boolean aDefault) {
+        isDefault = aDefault;
     }
 }

@@ -1161,7 +1161,7 @@ public class UserServiceImpl implements UserService {
 
         // Update location if provided
         if (addGroup.getLocationId() != null) {
-            LocationEntity locationEntity = userAdapter.findLocationById(addGroup.getLocationId());
+            LocationEntity locationEntity = userAdapter.findLocationById(addGroup.getLocationId(), orgId);
             if (locationEntity == null) {
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Location not found with ID: " + addGroup.getLocationId());
             }
@@ -1556,6 +1556,9 @@ public class UserServiceImpl implements UserService {
         if (userAdapter.findByLocation(locationModel.getName(), orgId)) {
             throw new DataIntegrityViolationException("Location '" + locationModel.getName() + "' already exists in this organization");
         }
+        if(locationModel.isDefault()) {
+            locationRepository.resetDefaultLocation(orgId);
+        }
 
         // Save to DB — triggers @PostPersist in listener
         LocationEntity savedEntity = userAdapter.addLocation(locationModel);
@@ -1651,31 +1654,111 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public Location updateLocation(Long orgId, Location location){
-        LocationEntity entity1 = userAdapter.findLocationById(location.getLocationId());
+    public ApiResponse updateLocation(Long orgId, LocationList location) {
+        List<Long> locationIds = location.getLocationId();
+        if (locationIds == null || locationIds.isEmpty()) {
+            throw new RuntimeException("No location IDs provided");
+        }
+        if(location.isDefault() && location.getLocationId().size()> 1){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Only one Location can be marked as Default"
+            );
+        }
+        Long defaultLocationId = location.isDefault() ? locationIds.get(0) : null;
+        if (location.isDefault()) {
+            locationRepository.resetDefaultLocation(orgId, defaultLocationId);
+        }
+        List<LocationEntity> updatedEntities = new ArrayList<>();
+        int count = 0;
+        for (Long id : locationIds) {
+            LocationEntity entity = userAdapter.findLocationById(id, orgId);
+            if(entity == null){
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "No Location Found for the provided Location Id");
+            }
+            if (location.getName() != null) entity.setName(location.getName());
+            if (location.getAddress() != null) entity.setAddress(location.getAddress());
+            if (location.getLatitude() != null) entity.setLatitude(location.getLatitude());
+            if (location.getLongitude() != null) entity.setLongitude(location.getLongitude());
+            if (location.getRadius() != null) entity.setRadius(location.getRadius());
+            entity.setDefault(location.isDefault() && id.equals(defaultLocationId));
 
-        // Only update non-null fields
-        if (location.getName() != null) entity1.setName(location.getName());
-        if (location.getAddress() != null) entity1.setAddress(location.getAddress());
-        if (location.getLatitude() != null) entity1.setLatitude(location.getLatitude());
-        if (location.getLongitude() != null) entity1.setLongitude(location.getLongitude());
-        if (location.getRadius() != null) entity1.setRadius(location.getRadius());
+            // Set orgId
+            OrganizationEntity organization = new OrganizationEntity();
+            organization.setOrganizationId(orgId);
+            entity.setOrganizationEntity(organization);
 
-        // Set orgId properly if needed
-        OrganizationEntity organization = new OrganizationEntity();
-        organization.setOrganizationId(orgId);
-        entity1.setOrganizationEntity(organization);
+            updatedEntities.add(entity);
+            count++;
+        }
 
-        // Now save the updated original entity
-        LocationEntity updatedEntity = userAdapter.updateLocation(entity1);
+        List<LocationEntity> savedEntities = userAdapter.updateMultipleLocations(updatedEntities);
 
+        // Cache reload after bulk update
         CacheEventPublisherUtil.syncReloadThenPublish(
                 publisher,
                 cacheKeyConfig.getLocation(),
                 orgId,
                 cacheReloadHandlerRegistry
         );
-        log.info("LocationCacheReloadEvent published after location update");
-        return userEntityMapper.toMiddleware(updatedEntity);
+        log.info("LocationCacheReloadEvent published after bulk update");
+
+        // Return just one (or the list, depending on API response design)
+        String message = String.format("%d locations updated successfully", count);
+        return new ApiResponse(200, message, null);
     }
+
+    @Override
+    public void deleteLocation(LocationListDto locationDto, Long orgId) {
+        List<Long> locationIdList = locationDto.getLocationId();
+
+        boolean exist = locationRepository.existsBylocationIdInAndOrganizationEntity_OrganizationId(locationIdList, orgId);
+        if (!exist) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Location not found or access denied");
+        }
+
+        Optional<LocationEntity> defaultLocationExist = userAdapter.findAllDefaultLocationById(locationIdList, orgId);
+        if (defaultLocationExist.isPresent()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot delete default location");
+        }
+
+        LocationEntity defaultLocation = userAdapter.findDefaultLocationByOrgId(orgId);
+        if (defaultLocation == null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "No default location exists for this organization");
+        }
+
+        Long defaultLocationId = defaultLocation.getLocationId();
+
+        // Update groups
+        List<GroupEntity> groupsToUpdate = userAdapter.findByLocation_LocationIdIn(locationIdList);
+        for (GroupEntity group : groupsToUpdate) {
+            if (!group.getLocationEntity().getLocationId().equals(defaultLocationId)) {
+                group.setLocationEntity(defaultLocation);
+            }
+        }
+        userAdapter.saveAllGroups(groupsToUpdate);
+
+        // Update users
+        List<UserLocationEntity> userLocationsToUpdate = userAdapter.findUserLocationByLocationId(locationIdList);
+        for (UserLocationEntity userLoc : userLocationsToUpdate) {
+            if (!userLoc.getLocation().getLocationId().equals(defaultLocationId)) {
+                userLoc.setLocation(defaultLocation);
+            }
+        }
+        userAdapter.saveAllLocations(userLocationsToUpdate);
+
+        // Delete
+        userAdapter.deleteLocation(locationIdList, orgId);
+
+        // Cache reload
+        CacheEventPublisherUtil.syncReloadThenPublish(
+                publisher,
+                cacheKeyConfig.getLocation(),
+                orgId,
+                cacheReloadHandlerRegistry
+        );
+
+        log.info("Location deleted and references updated. Cache reloaded.");
+    }
+
 }

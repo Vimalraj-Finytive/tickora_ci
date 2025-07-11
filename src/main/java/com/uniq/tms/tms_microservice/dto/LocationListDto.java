@@ -1,20 +1,22 @@
-package com.uniq.tms.tms_microservice.model;
+package com.uniq.tms.tms_microservice.dto;
 
-public class Location {
-    private Long locationId;
+import java.util.List;
+
+public class LocationListDto {
+
+    private List<Long> locationId;
     private String name;
     private String latitude;
     private String longitude;
     private String radius;
-    private Long orgId;
     private String address;
     private boolean isDefault;
 
-    public Long getLocationId() {
+    public List<Long> getLocationId() {
         return locationId;
     }
 
-    public void setLocationId(Long locationId) {
+    public void setLocationId(List<Long> locationId) {
         this.locationId = locationId;
     }
 
@@ -50,15 +52,11 @@ public class Location {
         this.radius = radius;
     }
 
-    public Long getOrgId() {return orgId;}
-
-    public void setOrgId(Long orgId) {this.orgId = orgId;}
-
-    public String getAddress() {
+    public String getAddress(){
         return address;
     }
 
-    public void setAddress(String address) {
+    public void setAddress(String address){
         this.address = address;
     }
 
@@ -69,4 +67,5 @@ public class Location {
     public void setDefault(boolean aDefault) {
         isDefault = aDefault;
     }
+
 }

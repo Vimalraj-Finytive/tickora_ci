@@ -149,4 +149,7 @@ public interface TeamRepository extends JpaRepository<GroupEntity, Long> {
     List<GroupEntity> findAllByOrganizationEntity_OrganizationId(Long orgId);
 
     boolean existsByGroupIdAndOrganizationEntity_OrganizationId(Long groupId, Long orgId);
+
+    List<GroupEntity> findByLocationEntity_LocationIdIn(List<Long> defaultLocationId);
+
 }

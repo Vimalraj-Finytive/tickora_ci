@@ -267,8 +267,8 @@ public class UserAdapterImpl implements UserAdapter {
     }
 
     @Override
-    public LocationEntity findLocationById(Long locationId) {
-        return locationRepository.findById(locationId).orElse(null);
+    public LocationEntity findLocationById(Long locationId, Long orgId) {
+        return locationRepository.findByLocationIdAndOrganizationEntity_OrganizationId(locationId, orgId);
     }
 
     @Override
@@ -445,11 +445,6 @@ public class UserAdapterImpl implements UserAdapter {
     }
 
     @Override
-    public OrganizationEntity findByOrgId(Long orgId) {
-        return organizationRepository.findById(orgId).orElse(null);
-    }
-
-    @Override
     public boolean findByLocation(String name, Long orgId) {
         return locationRepository.findByNameAndOrganizationId(name, orgId).isPresent();
     }
@@ -460,8 +455,42 @@ public class UserAdapterImpl implements UserAdapter {
     }
 
     @Override
-    public LocationEntity updateLocation(LocationEntity entity){
-        return locationRepository.save(entity);
+    public List<LocationEntity> updateMultipleLocations(List<LocationEntity> updatedEntities) {
+        return locationRepository.saveAll(updatedEntities);
     }
 
+    @Override
+    public void deleteLocation(List<Long> locationIds, Long orgId) {
+        locationRepository.deleteAllLocationById(locationIds, orgId);
+    }
+
+    @Override
+    public Optional<LocationEntity> findAllDefaultLocationById(List<Long> locationIds, Long orgId) {
+        return locationRepository.findDefaultLocationByOrgId(locationIds, orgId);
+    }
+
+    @Override
+    public LocationEntity findDefaultLocationByOrgId(Long orgId) {
+        return locationRepository.findDefaultLocationById(orgId);
+    }
+
+    @Override
+    public List<GroupEntity> findByLocation_LocationIdIn(List<Long> defaultLocationId) {
+        return teamRepository.findByLocationEntity_LocationIdIn(defaultLocationId);
+    }
+
+    @Override
+    public void saveAllGroups(List<GroupEntity> groupsToUpdate) {
+        teamRepository.saveAll(groupsToUpdate);
+    }
+
+    @Override
+    public List<UserLocationEntity> findUserLocationByLocationId(List<Long> defaultLocationId) {
+        return  userLocationRepository.findByLocation_LocationIdIn(defaultLocationId);
+    }
+
+    @Override
+    public void saveAllLocations(List<UserLocationEntity> userLocationToUpdate) {
+        userLocationRepository.saveAll(userLocationToUpdate);
+    }
 }

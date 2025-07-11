@@ -2,15 +2,7 @@ package com.uniq.tms.tms_microservice.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.uniq.tms.tms_microservice.dto.*;
-import com.uniq.tms.tms_microservice.model.AddGroup;
-import com.uniq.tms.tms_microservice.model.AddMember;
-import com.uniq.tms.tms_microservice.model.Group;
-import com.uniq.tms.tms_microservice.model.Location;
-import com.uniq.tms.tms_microservice.model.Privilege;
-import com.uniq.tms.tms_microservice.model.Role;
-import com.uniq.tms.tms_microservice.model.RolePrivilege;
-import com.uniq.tms.tms_microservice.model.User;
-import com.uniq.tms.tms_microservice.model.UserGroup;
+import com.uniq.tms.tms_microservice.model.*;
 import org.springframework.core.io.Resource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.multipart.MultipartFile;
@@ -47,5 +39,6 @@ public interface UserService {
     ResponseEntity<Resource> downloadSampleFile();
     Privilege addPrivileges(Privilege privilegeModel, Long orgId);
     RolePrivilege addRolwisePrivileges(RolePrivilege rolePrivilegeModel, Long orgId);
-    Location updateLocation(Long orgId, Location location);
+    ApiResponse updateLocation(Long orgId, LocationList location);
+    void deleteLocation(LocationListDto locationIds, Long orgId);
 }

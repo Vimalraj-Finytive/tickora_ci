@@ -685,7 +685,7 @@ public class AuthFacade {
         return new ApiResponse(200, "Privilege added successfully", dto);
     }
 
-    public ApiResponse updateLocation(String token, LocationDto locationDto) {
+    public ApiResponse updateLocation(String token, LocationListDto locationDto) {
         if (!token.startsWith("Bearer ")) {
             return new ApiResponse(400, "Invalid token format", null);
         }
@@ -697,8 +697,21 @@ public class AuthFacade {
             return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
         }
 
-        Location location = userDtoMapper.toModel(locationDto);
-        Location response = userService.updateLocation(orgId, location);
-        return new ApiResponse(200, "Updated location successfully", response);
+        LocationList location = userDtoMapper.toModel(locationDto);
+        ApiResponse response = userService.updateLocation(orgId, location);
+        return response;
+    }
+
+    public void deleteLocation(String token, LocationListDto locationIds) {
+        if (!token.startsWith("Bearer ")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid token format");
+        }
+        String jwt = token.substring(7);
+        Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
+        if (orgId == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized - Invalid Organization");
+        }
+
+        userService.deleteLocation(locationIds, orgId);
     }
 }
