@@ -348,6 +348,7 @@ public class CacheLoaderServiceImpl implements CacheLoaderService {
         return CompletableFuture.completedFuture(new ArrayList<>(groupMap.values()));
     }
 
+    @Transactional
     public CompletableFuture<Map<Long, List<WorkSchedule>>> loadWorkSchedule(Long orgId) {
 
         List<WorkSchedule> workSchedules = workScheduleRepository.findAllWithChildrenByOrgId(orgId).stream()

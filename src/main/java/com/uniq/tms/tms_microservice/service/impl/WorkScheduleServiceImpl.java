@@ -19,6 +19,7 @@ import com.uniq.tms.tms_microservice.service.IdGeneratorService;
 import com.uniq.tms.tms_microservice.service.WorkScheduleService;
 import com.uniq.tms.tms_microservice.util.CacheEventPublisherUtil;
 import com.uniq.tms.tms_microservice.util.CacheKeyUtil;
+import jakarta.annotation.Nullable;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.transaction.Transactional;
@@ -44,7 +45,6 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
 
     private final WorkScheduleAdapter workScheduleAdapter;
     private final WorkScheduleEntityMapper workScheduleEntityMapper;
-    private final WorkScheduleDtoMapper workScheduleDtoMapper;
     private final IdGeneratorService idGeneratorService;
     private final UserAdapter userAdapter;
     private final CacheKeyUtil cacheKeyUtil;
@@ -54,10 +54,9 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
     private final CacheKeyConfig cacheKeyConfig;
     private final CacheReloadHandlerRegistry cacheReloadHandlerRegistry;
 
-    public WorkScheduleServiceImpl(WorkScheduleAdapter workScheduleAdapter, WorkScheduleEntityMapper workScheduleEntityMapper, WorkScheduleDtoMapper workScheduleDtoMapper, IdGeneratorService idGeneratorService, UserAdapter userAdapter, CacheKeyUtil cacheKeyUtil, RedisTemplate<String, Object> redisTemplate, CacheLoaderService cacheLoaderService, ApplicationEventPublisher publisher, CacheKeyConfig cacheKeyConfig, CacheReloadHandlerRegistry cacheReloadHandlerRegistry) {
+    public WorkScheduleServiceImpl(WorkScheduleAdapter workScheduleAdapter, WorkScheduleEntityMapper workScheduleEntityMapper, IdGeneratorService idGeneratorService, UserAdapter userAdapter, CacheKeyUtil cacheKeyUtil, @Nullable RedisTemplate<String, Object> redisTemplate, CacheLoaderService cacheLoaderService, ApplicationEventPublisher publisher, CacheKeyConfig cacheKeyConfig, CacheReloadHandlerRegistry cacheReloadHandlerRegistry) {
         this.workScheduleAdapter = workScheduleAdapter;
         this.workScheduleEntityMapper = workScheduleEntityMapper;
-        this.workScheduleDtoMapper = workScheduleDtoMapper;
         this.idGeneratorService = idGeneratorService;
         this.userAdapter = userAdapter;
         this.cacheKeyUtil = cacheKeyUtil;
