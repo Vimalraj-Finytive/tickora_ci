@@ -21,9 +21,10 @@ public class Timesheet {
     private String lastClockOutStr;
     private String trackedHoursStr;
     private String regularHoursStr;
-    private Long statusId;
+    private String statusId;
     private String mobileNumber;
     private String Status;
+    private String workScheduleName;
     private int presentCount;
     private int absentCount;
     private int notMarkedCount;
@@ -142,11 +143,11 @@ public class Timesheet {
         this.id = id;
     }
 
-    public Long getStatusId() {
+    public String getStatusId() {
         return statusId;
     }
 
-    public void setStatusId(Long statusId) {
+    public void setStatusId(String statusId) {
         this.statusId = statusId;
     }
 
@@ -204,5 +205,13 @@ public class Timesheet {
 
     public void setHolidayCount(int holidayCount) {
         this.holidayCount = holidayCount;
+    }
+
+    public String getWorkScheduleName() {
+        return workScheduleName;
+    }
+
+    public void setWorkScheduleName(String workScheduleName) {
+        this.workScheduleName = workScheduleName;
     }
 }

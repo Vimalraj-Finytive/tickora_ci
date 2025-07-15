@@ -3,16 +3,13 @@ package com.uniq.tms.tms_microservice.facade;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.uniq.tms.tms_microservice.config.JwtUtil;
 import com.uniq.tms.tms_microservice.dto.*;
+import com.uniq.tms.tms_microservice.exception.CommonExceptionHandler;
 import com.uniq.tms.tms_microservice.mapper.TimesheetDtoMapper;
 import com.uniq.tms.tms_microservice.mapper.UserDtoMapper;
 import com.uniq.tms.tms_microservice.mapper.WorkScheduleDtoMapper;
 import com.uniq.tms.tms_microservice.model.*;
 import com.uniq.tms.tms_microservice.model.Privilege;
-import com.uniq.tms.tms_microservice.service.AuthService;
-import com.uniq.tms.tms_microservice.service.ReportService;
-import com.uniq.tms.tms_microservice.service.TimesheetService;
-import com.uniq.tms.tms_microservice.service.UserService;
-import com.uniq.tms.tms_microservice.service.WorkScheduleService;
+import com.uniq.tms.tms_microservice.service.*;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
@@ -46,8 +43,9 @@ public class AuthFacade {
     private final WorkScheduleService workScheduleService;
     private final WorkScheduleDtoMapper workScheduleDtoMapper;
     private final ReportService reportService;
+    private final IdGeneratorService idGeneratorService;
 
-    public AuthFacade(AuthService authService, UserService userService, UserDtoMapper userDtoMapper, TimesheetService timesheetService, TimesheetDtoMapper timesheetDtoMapper, JwtUtil jwtUtil, WorkScheduleService workScheduleService, WorkScheduleDtoMapper workScheduleDtoMapper, ReportService reportService) {
+    public AuthFacade(AuthService authService, UserService userService, UserDtoMapper userDtoMapper, TimesheetService timesheetService, TimesheetDtoMapper timesheetDtoMapper, JwtUtil jwtUtil, WorkScheduleService workScheduleService, WorkScheduleDtoMapper workScheduleDtoMapper, ReportService reportService, IdGeneratorService idGeneratorService) {
 
         this.authService = authService;
         this.userService = userService;
@@ -58,6 +56,7 @@ public class AuthFacade {
         this.workScheduleService = workScheduleService;
         this.workScheduleDtoMapper = workScheduleDtoMapper;
         this.reportService = reportService;
+        this.idGeneratorService = idGeneratorService;
     }
 
     @Value("${csv.download.dir}")
@@ -499,7 +498,7 @@ public class AuthFacade {
 
     public ApiResponse getWorkSchedule(Long orgId) {
         List<WorkScheduleDto> workScheduleDtos = workScheduleService.getAllWorkSchedules(orgId).stream()
-                .map(workScheduleDtoMapper::toDto)
+                .map(workScheduleDtoMapper::toDtoWithFormattedTimes)
                 .toList();
         return new ApiResponse(200, "Work Schedule fetched successfully", workScheduleDtos);
     }
@@ -713,5 +712,75 @@ public class AuthFacade {
         }
 
         userService.deleteLocation(locationIds, orgId);
+    }
+
+    public ApiResponse createWorkSchedule(Long orgId, WorkScheduleDto dto) {
+        WorkSchedule model = workScheduleDtoMapper.toModel(dto);
+        ApiResponse response = workScheduleService.createWorkSchedule(model, dto, orgId);
+        return ResponseEntity.ok(response).getBody();
+    }
+
+    public ApiResponse addType(WorkScheduleTypeDto type) {
+        return workScheduleService.addType(type);
+    }
+
+    public ApiResponse updateWorkSchedule(Long orgId, WorkScheduleDto dto) {
+        WorkSchedule model = workScheduleDtoMapper.toModel(dto);
+        workScheduleService.updateWorkSchedule( model, dto, orgId);
+        return new ApiResponse(200, "WorkSchedule Updated Successfully", true);
+    }
+
+    public void deleteSchedule(String token, String scheduleId) {
+        if (token == null || token.isBlank()) {
+           throw new CommonExceptionHandler.BadRequestException("Invalid token");
+        }
+
+        try {
+            String jwt = jwtUtil.extractJwt(token);
+            Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
+            if (orgId == null) {
+                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,"Unauthorized - Invalid Organization");
+            }
+            workScheduleService.deleteWorkSchedule(orgId, scheduleId);
+        } catch (RuntimeException e) {
+            log.error("Error occurred while updating work schedule: {}", e.getMessage(), e);
+            throw new RuntimeException( "Update failed: " + e.getMessage());
+        }
+    }
+
+    public ApiResponse getStatus(String token) {
+        if (token == null || token.isBlank()) {
+            throw new CommonExceptionHandler.BadRequestException("Invalid token");
+        }
+        if (!token.startsWith("Bearer ")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid token format");
+        }
+        String jwt = token.substring(7);
+        Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
+        if (orgId == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized - Invalid Organization");
+        }
+        List<TimesheetStatusDto> status = timesheetService.getStatus().stream()
+                .map(timesheetDtoMapper::toStatusDto).
+                toList();
+        return new ApiResponse<>(200,"Timesheet Status fetched successfully",status);
+    }
+
+    public ApiResponse getType(String token) {
+        if (token == null || token.isBlank()) {
+            throw new CommonExceptionHandler.BadRequestException("Invalid token");
+        }
+        if (!token.startsWith("Bearer ")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid token format");
+        }
+        String jwt = token.substring(7);
+        Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
+        if (orgId == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized - Invalid Organization");
+        }
+        List<WorkScheduleTypeDto> scheduleTypeEntities = workScheduleService.getAllTypes().stream()
+                .map(workScheduleDtoMapper::toTypeDto)
+                .toList();
+        return new ApiResponse(200, "WorkSchedule Types fetched successfully", scheduleTypeEntities);
     }
 }

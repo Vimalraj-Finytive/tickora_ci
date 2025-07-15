@@ -26,6 +26,8 @@ public class CacheKeyUtil {
     private String users;
     @Value("${cache.keys.groups}")
     private String groups;
+    @Value("${cache.keys.workSchedule}")
+    private String workSchedule;
 
     private static final Logger log = LogManager.getLogger(CacheKeyUtil.class);
 
@@ -84,9 +86,13 @@ public class CacheKeyUtil {
 
     public String getAllGroupsKey(Long orgId){ return groups +":orgId:" + orgId; }
 
-    public String getSupervisedGroupsKey(Long orgId){ return groups+ "supervised:" +":orgId" + orgId;}
+    public String getSupervisedGroupsKey(Long orgId){ return groups+ "supervised:" +":orgId:" + orgId;}
 
     public String getRoleKey() {
         return roleprivilege;
+    }
+
+    public String getWorkSchedule(Long orgId){
+        return workSchedule +":orgId:" + orgId;
     }
 }

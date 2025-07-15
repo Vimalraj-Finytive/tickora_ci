@@ -6,5 +6,5 @@ public interface GroupsData {
     String getGroupName();
     String getLocation();
     String getMembersDetails();
-
+    String getWorkSchedule();
 }

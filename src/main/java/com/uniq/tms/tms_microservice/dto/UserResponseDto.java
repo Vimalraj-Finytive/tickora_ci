@@ -17,16 +17,18 @@ public class UserResponseDto {
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate dateOfJoining;
     private SecondaryDetailsDto secondaryDetails;
+    private String scheduleName;
 
     public UserResponseDto() {
     }
 
-    public UserResponseDto(Long userId, String userName, String email, String mobileNumber,List<String> groupName,
+    public UserResponseDto(Long userId, String userName, String email, String mobileNumber, String scheduleName,List<String> groupName,
                            String roleName, LocalDate dateOfJoining, List<String> locationName, String secName, String secMobile, String secEmail, String relation) {
         this.userId = userId;
         this.userName = userName;
         this.email = email;
         this.mobileNumber = mobileNumber;
+        this.scheduleName = scheduleName;
         this.groupName = new ArrayList<>();
         this.groupName.addAll(groupName);
         this.roleName = roleName;
@@ -96,5 +98,13 @@ public class UserResponseDto {
     }
     public void setSecondaryDetails(SecondaryDetailsDto secondaryDetails) {
         this.secondaryDetails = secondaryDetails;
+    }
+
+    public String getScheduleName() {
+        return scheduleName;
+    }
+
+    public void setScheduleName(String scheduleName) {
+        this.scheduleName = scheduleName;
     }
 }

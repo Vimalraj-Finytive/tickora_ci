@@ -57,6 +57,10 @@ public class UserEntity {
     @Column(name = "active", nullable = false)
     private boolean active;
 
+    @ManyToOne
+    @JoinColumn(name = "work_schedule_id")
+    private WorkScheduleEntity workSchedule;
+
     public UserEntity(Long userId){
         this.userId = userId;
     }
@@ -64,7 +68,8 @@ public class UserEntity {
     public UserEntity() {
     }
 
-    public UserEntity(Long userId, String userName, String email, String mobileNumber, boolean isDefaultPassword, LocalDate dateOfJoining, boolean active, RoleEntity role, LocalDateTime createdAt, Long organizationId, String password) {
+    public UserEntity(Long userId, String userName, String email, String mobileNumber, boolean isDefaultPassword, LocalDate dateOfJoining, boolean active,
+                      RoleEntity role, LocalDateTime createdAt, Long organizationId, String password, WorkScheduleEntity workSchedule) {
         this.userId = userId;
         this.userName = userName;
         this.email = email;
@@ -76,6 +81,7 @@ public class UserEntity {
         this.createdAt = createdAt;
         this.organizationId = organizationId;
         this.password = password;
+        this.workSchedule = workSchedule;
     }
 
     public LocalDate getDateOfJoining() {
@@ -177,5 +183,13 @@ public class UserEntity {
 
     public void setRegisterUser(boolean registerUser) {
         isRegisterUser = registerUser;
+    }
+
+    public WorkScheduleEntity getWorkSchedule() {
+        return workSchedule;
+    }
+
+    public void setWorkSchedule(WorkScheduleEntity workSchedule) {
+        this.workSchedule = workSchedule;
     }
 }

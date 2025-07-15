@@ -18,13 +18,15 @@ public class UserResponse {
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate dateOfJoining;
     private SecondaryDetailsDto secondaryDetails;
+    private String scheduleName;
 
-    public UserResponse(Long userId, String userName, String email, String mobileNumber, String groupName, String roleName,
+    public UserResponse(Long userId, String userName, String email, String mobileNumber, String scheduleName, String groupName, String roleName,
                         String locationName, LocalDate dateOfJoining,String secName, String secMobile, String secEmail, String relation) {
         this.userId = userId;
         this.userName = userName;
         this.email = email;
         this.mobileNumber = mobileNumber;
+        this.scheduleName = scheduleName;
         this.groupName = new ArrayList<>();
         this.groupName.add(groupName);
         this.roleName = roleName;
@@ -111,5 +113,13 @@ public class UserResponse {
 
     public void setSecondaryDetails(SecondaryDetailsDto secondaryDetails) {
         this.secondaryDetails = secondaryDetails;
+    }
+
+    public String getScheduleName() {
+        return scheduleName;
+    }
+
+    public void setScheduleName(String scheduleName) {
+        this.scheduleName = scheduleName;
     }
 }

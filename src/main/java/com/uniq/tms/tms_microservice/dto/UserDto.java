@@ -17,6 +17,7 @@ public class UserDto {
     private boolean isRegisterUser;
     private List<Long> groupId;
     private boolean active;
+    private String workSchedule;
 
     public UserDto() {}
 
@@ -98,5 +99,17 @@ public class UserDto {
 
     public void setIsRegisterUser(boolean isRegisterUser) {
         this.isRegisterUser = isRegisterUser;
+    }
+
+    public void setRegisterUser(boolean registerUser) {
+        isRegisterUser = registerUser;
+    }
+
+    public String getWorkSchedule() {
+        return workSchedule;
+    }
+
+    public void setWorkSchedule(String workSchedule) {
+        this.workSchedule = workSchedule;
     }
 }

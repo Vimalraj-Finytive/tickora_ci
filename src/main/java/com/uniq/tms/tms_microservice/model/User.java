@@ -16,6 +16,7 @@ public class User {
     private boolean isRegisterUser;
     private List<Long> groupId;
     private boolean active;
+    private String workSchedule;
 
     public boolean isActive() {
         return active;
@@ -103,5 +104,13 @@ public class User {
 
     public void setGroupId(List<Long> groupId) {
         this.groupId = groupId;
+    }
+
+    public String getWorkSchedule() {
+        return workSchedule;
+    }
+
+    public void setWorkSchedule(String workSchedule) {
+        this.workSchedule = workSchedule;
     }
 }

@@ -1,22 +1,12 @@
 package com.uniq.tms.tms_microservice.adapter.impl;
 
 import com.uniq.tms.tms_microservice.adapter.TimesheetAdapter;
-import com.uniq.tms.tms_microservice.dto.LogFrom;
-import com.uniq.tms.tms_microservice.dto.LogType;
-import com.uniq.tms.tms_microservice.dto.TimesheetDto;
-import com.uniq.tms.tms_microservice.dto.TimesheetHistoryDto;
-import com.uniq.tms.tms_microservice.dto.TimesheetStatusEnum;
-import com.uniq.tms.tms_microservice.dto.TimesheetSummaryDto;
-import com.uniq.tms.tms_microservice.dto.UserAttendanceDto;
-import com.uniq.tms.tms_microservice.dto.UserDashboard;
-import com.uniq.tms.tms_microservice.dto.UserTimesheetDto;
-import com.uniq.tms.tms_microservice.dto.UserTimesheetResponseDto;
-import com.uniq.tms.tms_microservice.entity.TimesheetEntity;
-import com.uniq.tms.tms_microservice.entity.TimesheetHistoryEntity;
-import com.uniq.tms.tms_microservice.entity.WorkScheduleEntity;
+import com.uniq.tms.tms_microservice.adapter.WorkScheduleAdapter;
+import com.uniq.tms.tms_microservice.dto.*;
+import com.uniq.tms.tms_microservice.entity.*;
 import com.uniq.tms.tms_microservice.repository.TimesheetHistoryRepository;
 import com.uniq.tms.tms_microservice.repository.TimesheetRepository;
-import com.uniq.tms.tms_microservice.repository.WorkScheduleRepository;
+import com.uniq.tms.tms_microservice.repository.TimesheetStatusRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -31,27 +21,24 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
+import static com.uniq.tms.tms_microservice.enums.WorkScheduleTypeEnum.FIXED;
+import static com.uniq.tms.tms_microservice.enums.WorkScheduleTypeEnum.FLEXIBLE;
 
 @Component
 public class TimesheetAdapterImpl implements TimesheetAdapter {
 
     private final TimesheetRepository timesheetRepository;
     private final TimesheetHistoryRepository timesheetHistoryRepository;
-    private final WorkScheduleRepository workScheduleAdapter;
+    private final WorkScheduleAdapter workScheduleAdapter;
+    private final TimesheetStatusRepository timesheetStatusRepository;
 
-    public TimesheetAdapterImpl(TimesheetRepository timesheetRepository, TimesheetHistoryRepository timesheetHistoryRepository, WorkScheduleRepository workScheduleAdapter) {
+    public TimesheetAdapterImpl(TimesheetRepository timesheetRepository, TimesheetHistoryRepository timesheetHistoryRepository, WorkScheduleAdapter workScheduleAdapter, TimesheetStatusRepository timesheetStatusRepository) {
         this.timesheetRepository = timesheetRepository;
         this.timesheetHistoryRepository = timesheetHistoryRepository;
         this.workScheduleAdapter = workScheduleAdapter;
+        this.timesheetStatusRepository = timesheetStatusRepository;
     }
 
     private static final Logger log = LoggerFactory.getLogger(TimesheetAdapterImpl.class);
@@ -65,15 +52,15 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
         Map<String, TimesheetDto> timesheetMap = new LinkedHashMap<>();
         LocalDate today = LocalDate.now();
 
-        WorkScheduleEntity schedule = workScheduleAdapter.findDefaultActiveSchedule(orgId);
-        String restDayString = schedule.getRestDay();
-        final DayOfWeek restDay = (restDayString != null && !restDayString.isEmpty())
-                ? DayOfWeek.valueOf(restDayString.toUpperCase())
-                : null;
-
         Map<Long, List<TimesheetDto>> userTimesheetListMap = new HashMap<>();
 
         for (Object[] row : resultList) {
+            log.info("---- Row Start ----");
+            for (int i = 0; i < row.length; i++) {
+                log.info("Column {}: {}", i, row[i]);
+            }
+            log.info("---- Row End ----");
+
             if (row[1] == null) continue; // skip if userId is null
 
             Long userId = toLong(row[1]);
@@ -84,30 +71,22 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
 
             TimesheetDto dto = timesheetMap.computeIfAbsent(compositeKey, key -> {
                 TimesheetDto newDto = new TimesheetDto();
-                newDto.setId(toLong(row[6]));
+                newDto.setId(toLong(row[7]));
                 newDto.setUserId(userId);
                 newDto.setDate(date);
                 newDto.setUserName((String) row[2]);
                 newDto.setRole((String) row[3]);
                 newDto.setMobileNumber((String) row[4]);
-                newDto.setGroupname((String) row[5]);
-                newDto.setDayType((String) row[12]);
-                newDto.setFirstClockIn(toLocalTime(row[7]));
-                newDto.setLastClockOut(toLocalTime(row[8]));
-                newDto.setTrackedHours(parseTimeToDuration(row[9], "tracked_hours"));
-                newDto.setRegularHours(parseTimeToDuration(row[10], "regular_hours"));
-
-                Long statusId = toLong(row[11]);
-                TimesheetStatusEnum statusEnum = TimesheetStatusEnum.getStatusFromId(statusId);
-
-                String finalStatus = (statusEnum != null) ? statusEnum.getLabel()
-                        : (restDay != null && date.getDayOfWeek() == restDay) ? TimesheetStatusEnum.HOLIDAY.getLabel()
-                        : (date.equals(today)) ? TimesheetStatusEnum.NOT_MARKED.getLabel()
-                        : (! date.isAfter(today))? TimesheetStatusEnum.ABSENT.getLabel() : "";
-
-                newDto.setStatus(finalStatus);
-                newDto.setUserDayType((String) row[13]);
-                newDto.setWorkStatus((String) row[14]);
+                newDto.setWorkScheduleName((String) row[5]);
+                newDto.setGroupname((String) row[6]);
+                newDto.setDayType((String) row[14]);
+                newDto.setFirstClockIn(toLocalTime(row[8]));
+                newDto.setLastClockOut(toLocalTime(row[9]));
+                newDto.setTrackedHours(parseTimeToDuration(row[10], "tracked_hours"));
+                newDto.setRegularHours(parseTimeToDuration(row[11], "regular_hours"));
+                newDto.setStatus((String)row[13]);
+                newDto.setUserDayType((String) row[15]);
+                newDto.setWorkStatus((String) row[16]);
                 newDto.setHistory(new ArrayList<>());
                 newDto.setFirstClockInTime(formatTime(newDto.getFirstClockIn()));
                 newDto.setLastClockOutTime(formatTime(newDto.getLastClockOut()));
@@ -118,26 +97,26 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
             });
 
             // Add history if present
-            if (row[15] != null) {
+            if (row[17] != null) {
                 TimesheetHistoryDto historyDto = new TimesheetHistoryDto();
-                historyDto.setTimesheetHistoryId(toLong(row[15]));
-                historyDto.setLogTime(toLocalTime(row[16]));
+                historyDto.setTimesheetHistoryId(toLong(row[17]));
+                historyDto.setLogTime(toLocalTime(row[18]));
 
                 try {
-                    historyDto.setLogType(row[17] != null ? LogType.valueOf(row[17].toString()) : null);
+                    historyDto.setLogType(row[19] != null ? LogType.valueOf(row[19].toString()) : null);
                 } catch (IllegalArgumentException e) {
-                    System.err.println("Invalid LogType: " + row[17]);
+                    System.err.println("Invalid LogType: " + row[19]);
                 }
 
-                historyDto.setLocationId(toLong(row[18]));
+                historyDto.setLocationId(toLong(row[20]));
 
                 try {
-                    historyDto.setLogFrom(row[19] != null ? LogFrom.valueOf(row[19].toString()) : null);
+                    historyDto.setLogFrom(row[21] != null ? LogFrom.valueOf(row[21].toString()) : null);
                 } catch (IllegalArgumentException e) {
-                    System.err.println("Invalid LogFrom: " + row[19]);
+                    System.err.println("Invalid LogFrom: " + row[21]);
                 }
 
-                historyDto.setLoggedTimestamp(toLocalDateTime(row[20]));
+                historyDto.setLoggedTimestamp(toLocalDateTime(row[22]));
                 dto.getHistory().add(historyDto);
             }
 
@@ -149,6 +128,26 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
             }
         }
 
+        Map<Long, Set<DayOfWeek>> userWorkingDaysMap = new HashMap<>();
+
+        for (Long userId : userIds) {
+            WorkScheduleEntity ws = workScheduleAdapter.getScheduleForUser(userId); // get user work schedule
+
+            Set<DayOfWeek> workingDays = new HashSet<>();
+            if (ws.getType().getType().name().equalsIgnoreCase(FLEXIBLE.getScheduleType())) { // Flexible
+                List<FlexibleWorkScheduleEntity> flexDays = workScheduleAdapter.findByWorkScheduleId(ws.getScheduleId());
+                for (FlexibleWorkScheduleEntity f : flexDays) {
+                    workingDays.add(DayOfWeek.valueOf(f.getDay().toString()));
+                }
+            } else if (ws.getType().getType().name().equalsIgnoreCase(FIXED.getScheduleType())) { // Fixed
+                List<FixedWorkScheduleEntity> fixedDays = workScheduleAdapter.findByFixedScheduleId(ws.getScheduleId());
+                for (FixedWorkScheduleEntity f : fixedDays) {
+                    workingDays.add(DayOfWeek.valueOf(f.getDay().toString()));
+                }
+            }
+            userWorkingDaysMap.put(userId, workingDays);
+        }
+
         // Build per-user summary
         Map<Long, TimesheetSummaryDto> userSummaryMap = new HashMap<>();
         for (Map.Entry<Long, List<TimesheetDto>> entry : userTimesheetListMap.entrySet()) {
@@ -157,14 +156,28 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
 
             int present = 0, absent = 0, holiday = 0, notMarked = 0, paidLeave = 0, halfDay = 0, permission = 0;
             for (TimesheetDto t : timesheets) {
-                switch (t.getStatus()) {
-                    case "Present" -> present++;
-                    case "Absent" -> absent++;
-                    case "Holiday" -> holiday++;
-                    case "Not Marked" -> notMarked++;
-                    case "Paid Leave" -> paidLeave++;
-                    case "Half Day" -> halfDay++;
-                    case "Permission" -> permission++;
+                Set<DayOfWeek> userWorkingDays = userWorkingDaysMap.getOrDefault(t.getUserId(), Collections.emptySet());
+                DayOfWeek currentDay = t.getDate().getDayOfWeek();
+
+                if (!userWorkingDays.contains(currentDay)) {
+                    // It's a rest day for this user
+                    holiday++;
+                    if (t.getStatus() == null) t.setStatus(TimesheetStatusEnum.HOLIDAY.getLabel());
+                } else if (t.getStatus() == null) {
+                    if (endDate.equals(LocalDate.now())) {
+                        notMarked++;
+                        t.setStatus(TimesheetStatusEnum.NOT_MARKED.getLabel());
+                    } else {
+                        absent++;
+                        t.setStatus(TimesheetStatusEnum.ABSENT.getLabel());
+                    }
+                } else {
+                    switch (t.getStatus()) {
+                        case "Present" -> present++;
+                        case "Paid Leave" -> paidLeave++;
+                        case "Half Day" -> halfDay++;
+                        case "Permission" -> permission++;
+                    }
                 }
             }
 
@@ -380,10 +393,6 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
         LocalDate today = LocalDate.now();
 
         WorkScheduleEntity schedule = workScheduleAdapter.findDefaultActiveSchedule(orgId);
-        String restDayString = schedule.getRestDay();
-        final DayOfWeek restDay = (restDayString != null && !restDayString.isEmpty())
-                ? DayOfWeek.valueOf(restDayString.toUpperCase())
-                : null;
 
         // Map to collect DTOs grouped by userId
         Map<Long, List<UserTimesheetDto>> userTimesheetListMap = new HashMap<>();
@@ -406,16 +415,7 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
                 newDto.setLastClockOut(toLocalTime(row[8]));
                 newDto.setTrackedHours(parseTimeToDuration(row[9], "tracked_hours"));
                 newDto.setRegularHours(parseTimeToDuration(row[10], "regular_hours"));
-
-                Long statusId = toLong(row[11]);
-                TimesheetStatusEnum statusEnum = TimesheetStatusEnum.getStatusFromId(statusId);
-
-                String finalStatus = (statusEnum != null) ? statusEnum.getLabel()
-                        : (restDay != null && date.getDayOfWeek() == restDay) ? TimesheetStatusEnum.HOLIDAY.getLabel()
-                        : (date.equals(today)) ? TimesheetStatusEnum.NOT_MARKED.getLabel()
-                        : (! date.isAfter(today))? TimesheetStatusEnum.ABSENT.getLabel() : "";
-
-                newDto.setStatus(finalStatus);
+                newDto.setStatus((String) row[11]);
 
                 newDto.setWorkStatus((String) row[14]);
                 newDto.setHistory(new ArrayList<>());
@@ -484,4 +484,18 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
         return timesheetRepository.getDashboard(userIds,fromDate, toDate,orgId);
     }
 
+    @Override
+    public List<TimesheetStatusEntity> getStatus(){
+        return timesheetStatusRepository.findAll();
+    }
+
+    @Override
+    public Optional<TimesheetStatusEntity> findById(String status) {
+        return timesheetStatusRepository.findById(status);
+    }
+
+    @Override
+    public Optional<TimesheetStatusEntity> findByStatusName(String label) {
+        return timesheetStatusRepository.findByStatusName(label);
+    }
 }

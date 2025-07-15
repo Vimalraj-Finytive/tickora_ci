@@ -6,6 +6,7 @@ import com.uniq.tms.tms_microservice.dto.UserDashboardDto;
 import com.uniq.tms.tms_microservice.dto.UserTimesheetDto;
 import com.uniq.tms.tms_microservice.dto.UserTimesheetResponseDto;
 import com.uniq.tms.tms_microservice.model.TimesheetHistory;
+import com.uniq.tms.tms_microservice.model.TimesheetStatus;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -17,4 +18,5 @@ public interface TimesheetService {
     void autoClockOut();
     List<UserDashboardDto> getAllUserInfo(Long orgId, Long userIdFromToken, LocalDate fromDate, LocalDate toDate, Long userId, List<Long>groupIds, String type);
     List<UserTimesheetDto> getUserTimesheets(Long userIdFromToken, Long orgId, String role, TimesheetReportDto request);
+    List<TimesheetStatus> getStatus();
 }

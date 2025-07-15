@@ -19,23 +19,24 @@ public interface TeamRepository extends JpaRepository<GroupEntity, Long> {
     Optional<GroupEntity> findBygroupNameAndOrganizationId(@Param("groupName") String teamName, @Param("orgId") Long orgId);
     @Query(value = """
     WITH group_base AS (
-        SELECT 
+        SELECT
             g.group_id AS groupid,
             g.group_name AS groupname,
             g.location_id,
+            g.work_schedule_id,
             g.organization_id
         FROM group_table g
         WHERE g.organization_id = :orgId
     ),
     user_group_details AS (
-        SELECT 
+        SELECT
             ug.group_id,
             ug.user_id,
             ug.type
         FROM user_group ug
     ),
     user_info AS (
-        SELECT 
+        SELECT
             u.user_id,
             u.user_name,
             u.email,
@@ -46,10 +47,11 @@ public interface TeamRepository extends JpaRepository<GroupEntity, Long> {
         LEFT JOIN role r ON u.role_id = r.role_id
     ),
     group_data AS (
-        SELECT 
+        SELECT
             gb.groupid,
             gb.groupname,
             gb.location_id,
+            gb.work_schedule_id,
             ugd.user_id,
             ui.user_name,
             ui.email,
@@ -61,10 +63,11 @@ public interface TeamRepository extends JpaRepository<GroupEntity, Long> {
         LEFT JOIN user_group_details ugd ON gb.groupid = ugd.group_id
         LEFT JOIN user_info ui ON ui.user_id = ugd.user_id
     )
-    SELECT 
+    SELECT
         gd.groupid,
         gd.groupname,
         COALESCE(l.name, 'Unknown Location') AS location,
+        ws.work_schedule_name AS work_schedule,
         JSONB_AGG(
             JSONB_BUILD_OBJECT(
                 'userId', gd.user_id,
@@ -78,7 +81,8 @@ public interface TeamRepository extends JpaRepository<GroupEntity, Long> {
         ) FILTER (WHERE gd.user_id IS NOT NULL) AS members_details
     FROM group_data gd
     LEFT JOIN location l ON gd.location_id = l.location_id
-    GROUP BY gd.groupid, gd.groupname, l.name
+    LEFT JOIN work_schedule ws ON gd.work_schedule_id = ws.work_schedule_id
+    GROUP BY gd.groupid, gd.groupname, l.name, ws.work_schedule_name
     """, nativeQuery = true)
     List<GroupsData> getGroupData(@Param("orgId") Long orgId);
 
@@ -152,4 +156,8 @@ public interface TeamRepository extends JpaRepository<GroupEntity, Long> {
 
     List<GroupEntity> findByLocationEntity_LocationIdIn(List<Long> defaultLocationId);
 
+    @Modifying
+    @Transactional
+    @Query("UPDATE GroupEntity g SET g.workSchedule.scheduleId = :newId WHERE g.workSchedule.scheduleId = :oldId")
+    void updateGroupWorkSchedule(@Param("oldId") String oldId, @Param("newId") String newId);
 }

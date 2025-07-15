@@ -1,16 +1,21 @@
 package com.uniq.tms.tms_microservice.service.impl;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.uniq.tms.tms_microservice.adapter.WorkScheduleAdapter;
 import com.uniq.tms.tms_microservice.dto.*;
 import com.uniq.tms.tms_microservice.entity.*;
 import com.uniq.tms.tms_microservice.mapper.LocationDtoMapper;
 import com.uniq.tms.tms_microservice.mapper.UserDtoMapper;
+import com.uniq.tms.tms_microservice.mapper.WorkScheduleEntityMapper;
 import com.uniq.tms.tms_microservice.model.Location;
 import com.uniq.tms.tms_microservice.model.UserResponse;
+import com.uniq.tms.tms_microservice.model.WorkSchedule;
 import com.uniq.tms.tms_microservice.repository.*;
 import com.uniq.tms.tms_microservice.service.CacheLoaderService;
 import com.uniq.tms.tms_microservice.util.CacheKeyUtil;
 import com.uniq.tms.tms_microservice.util.TextUtil;
 import jakarta.annotation.Nullable;
+import jakarta.transaction.Transactional;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
@@ -39,8 +44,10 @@ public class CacheLoaderServiceImpl implements CacheLoaderService {
     private final UserDtoMapper userDtoMapper;
     private final TeamRepository teamRepository;
     private final TextUtil textUtil;
+    private final WorkScheduleEntityMapper workScheduleEntityMapper;
+    private final WorkScheduleRepository workScheduleRepository;
 
-    public CacheLoaderServiceImpl(UserRepository userRepository, LocationRepository locationRepository, LocationDtoMapper locationDtoMapper, @Nullable RedisTemplate<String, Object> redisTemplate, RoleRepository roleRepository, PrivilegeRepository privilegeRepository, CacheKeyUtil cacheKeyUtil, OrganizationRepository organizationRepository, UserLocationRepository userLocationRepository, UserDtoMapper userDtoMapper, TeamRepository teamRepository, TextUtil textUtil) {
+    public CacheLoaderServiceImpl(UserRepository userRepository, LocationRepository locationRepository, LocationDtoMapper locationDtoMapper, @Nullable RedisTemplate<String, Object> redisTemplate, RoleRepository roleRepository, PrivilegeRepository privilegeRepository, CacheKeyUtil cacheKeyUtil, OrganizationRepository organizationRepository, UserLocationRepository userLocationRepository, UserDtoMapper userDtoMapper, TeamRepository teamRepository, TextUtil textUtil, WorkScheduleEntityMapper workScheduleEntityMapper, WorkScheduleRepository workScheduleRepository) {
         this.userRepository = userRepository;
         this.locationRepository = locationRepository;
         this.locationDtoMapper = locationDtoMapper;
@@ -53,6 +60,8 @@ public class CacheLoaderServiceImpl implements CacheLoaderService {
         this.userDtoMapper = userDtoMapper;
         this.teamRepository = teamRepository;
         this.textUtil = textUtil;
+        this.workScheduleEntityMapper = workScheduleEntityMapper;
+        this.workScheduleRepository = workScheduleRepository;
     }
 
     LocalDateTime now = LocalDateTime.now();
@@ -289,6 +298,7 @@ public class CacheLoaderServiceImpl implements CacheLoaderService {
             Long groupId = row.getGroupId();
             String groupName = row.getGroupName();
             String location = row.getLocation();
+            String workSchedule= row.getWorkSchedule();
             List<UserGroupDto> members = textUtil.parseMembers(row.getMembersDetails());
             List<UserGroupDto> activeMembers = members.stream().filter(m -> Boolean.TRUE.equals(m.getActive())).toList();
 
@@ -314,7 +324,7 @@ public class CacheLoaderServiceImpl implements CacheLoaderService {
             }
 
             GroupsData row = groupRows.stream().filter(r -> r.getGroupId().equals(groupId)).findFirst().orElseThrow();
-            groupMap.put(groupId, new GroupResponseDto(groupId, row.getGroupName(), row.getLocation(), enrichedMembers));
+            groupMap.put(groupId, new GroupResponseDto(groupId, row.getGroupName(), row.getLocation(), row.getWorkSchedule(), enrichedMembers));
         }
 
         String orgGroupKey = cacheKeyUtil.getAllGroupsKey(orgId);
@@ -336,5 +346,39 @@ public class CacheLoaderServiceImpl implements CacheLoaderService {
         log.info("Group cache fully refreshed for orgId={}, groups={}, supervisors={}", orgId, groupMap.size(), supervisorToGroupIds.size());
 
         return CompletableFuture.completedFuture(new ArrayList<>(groupMap.values()));
+    }
+
+    public CompletableFuture<Map<Long, List<WorkSchedule>>> loadWorkSchedule(Long orgId) {
+
+        List<WorkSchedule> workSchedules = workScheduleRepository.findAllWithChildrenByOrgId(orgId).stream()
+                .map(workScheduleEntityMapper::toMiddleware)
+                .toList();
+
+        Map<Long, List<WorkSchedule>> userWorkScheduleMap = new HashMap<>();
+
+        if (workSchedules.isEmpty()) {
+            log.warn("No active workSchedules found for orgId: {}", orgId);
+            return CompletableFuture.completedFuture(userWorkScheduleMap);
+        }
+
+        userWorkScheduleMap.put(orgId,workSchedules);
+        // Cache all workSchedules
+        try {
+            if (redisTemplate != null) {
+                String redisKey = cacheKeyUtil.getWorkSchedule(orgId);
+                ObjectMapper mapper = new ObjectMapper();
+                Map<String, String> redisMap = new HashMap<>();
+                for(WorkSchedule ws : workSchedules){
+                    redisMap.put(ws.getScheduleId(), mapper.writeValueAsString(ws));
+                }
+                redisTemplate.opsForHash().putAll(redisKey, redisMap);
+                log.info("Cached {} workSchedules under key: {}", redisMap.size(), redisKey);
+            } else {
+                log.warn("RedisTemplate is null, skipping cache for workSchedules for orgId: {}", orgId);
+            }
+        } catch (Exception e) {
+            log.warn("Redis putAll failed for orgId {}: {}", orgId, e.getMessage());
+        }
+        return CompletableFuture.completedFuture(userWorkScheduleMap);
     }
 }

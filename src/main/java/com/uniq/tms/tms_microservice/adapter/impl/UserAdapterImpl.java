@@ -493,4 +493,19 @@ public class UserAdapterImpl implements UserAdapter {
     public void saveAllLocations(List<UserLocationEntity> userLocationToUpdate) {
         userLocationRepository.saveAll(userLocationToUpdate);
     }
+
+    @Override
+    public Optional<OrganizationEntity> findByOrgId(Long orgId) {
+        return organizationRepository.findByOrganizationId(orgId);
+    }
+
+    @Override
+    public void updateUserWorkSchedule(String scheduleId, String scheduleId1) {
+        userRepository.updateUserWorkSchedule(scheduleId, scheduleId1);
+    }
+
+    @Override
+    public void updateGroupWorkSchedule(String scheduleId, String scheduleId1) {
+        teamRepository.updateGroupWorkSchedule(scheduleId, scheduleId1);
+    }
 }

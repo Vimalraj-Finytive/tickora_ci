@@ -12,6 +12,7 @@ public class CacheKeyConfig {
     private String groups;
     private String userprofile;
     private String roleprivilege;
+    private String workSchedule;
 
     public String getLocation() {
         return location;
@@ -51,5 +52,13 @@ public class CacheKeyConfig {
 
     public void setRoleprivilege(String roleprivilege) {
         this.roleprivilege = roleprivilege;
+    }
+
+    public String getWorkSchedule() {
+        return workSchedule;
+    }
+
+    public void setWorkSchedule(String workSchedule) {
+        this.workSchedule = workSchedule;
     }
 }

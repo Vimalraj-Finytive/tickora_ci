@@ -20,6 +20,7 @@ public class CacheDependencyConfig {
     private String users;
     private String groups;
     private String userprofile;
+    private String workSchedule;
 
     private final CacheKeyConfig cacheKeyConfig;
 
@@ -35,6 +36,7 @@ public class CacheDependencyConfig {
         if (groups != null) dependency.put(cacheKeyConfig.getGroups(), groups);
         if (location != null) dependency.put(cacheKeyConfig.getLocation(), location);
         if (userprofile != null) dependency.put(cacheKeyConfig.getUserprofile(), userprofile);
+        if (workSchedule != null) dependency.put(cacheKeyConfig.getWorkSchedule(), workSchedule);
     }
 
     public List<String> getDependent(String cacheName){
@@ -62,5 +64,9 @@ public class CacheDependencyConfig {
     }
     public void setUserprofile(String userprofile) {
         this.userprofile = userprofile;
+    }
+
+    public void setWorkSchedule(String workSchedule) {
+        this.workSchedule = workSchedule;
     }
 }

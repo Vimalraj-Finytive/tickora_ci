@@ -4,7 +4,7 @@ public class UserGroupProfileDto {
     private Long groupId;
     private String groupName;
     private LocationDto location;
-    private WorkScheduleDto workSchedule;
+    private String workSchedule;
     private String userType;
 
     public Long getGroupId() {
@@ -31,11 +31,11 @@ public class UserGroupProfileDto {
         this.location = location;
     }
 
-    public WorkScheduleDto getWorkSchedule() {
+    public String getWorkSchedule() {
         return workSchedule;
     }
 
-    public void setWorkSchedule(WorkScheduleDto workSchedule) {
+    public void setWorkSchedule(String workSchedule) {
         this.workSchedule = workSchedule;
     }
 

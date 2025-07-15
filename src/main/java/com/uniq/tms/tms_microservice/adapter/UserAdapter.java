@@ -11,6 +11,7 @@ import com.uniq.tms.tms_microservice.model.Location;
 import com.uniq.tms.tms_microservice.model.UserResponse;
 import com.uniq.tms.tms_microservice.dto.UserNameSuggestionDto;
 import com.uniq.tms.tms_microservice.entity.*;
+import java.lang.String;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -102,4 +103,7 @@ public interface UserAdapter {
     void saveAllGroups(List<GroupEntity> groupsToUpdate);
     List<UserLocationEntity> findUserLocationByLocationId(List<Long> defaultLocationId);
     void saveAllLocations(List<UserLocationEntity> userLocationToUpdate);
+    Optional<OrganizationEntity> findByOrgId(Long orgId);
+    void updateUserWorkSchedule(String scheduleId, String scheduleId1);
+    void updateGroupWorkSchedule(String scheduleId, String scheduleId1);
 }

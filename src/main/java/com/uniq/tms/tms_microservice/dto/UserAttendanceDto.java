@@ -5,12 +5,12 @@ import java.time.LocalDate;
 public class UserAttendanceDto {
     private Long userId;
     private LocalDate date;
-    private Long statusId;
+    private String status;
 
-    public UserAttendanceDto(Long userId,LocalDate date, Long statusId) {
+    public UserAttendanceDto(Long userId,LocalDate date, String status) {
         this.userId = userId;
         this.date = date;
-        this.statusId = statusId;
+        this.status = status;
     }
 
     public UserAttendanceDto() {
@@ -24,12 +24,12 @@ public class UserAttendanceDto {
         this.date = date;
     }
 
-    public Long getStatusId() {
-        return statusId;
+    public String getStatus() {
+        return status;
     }
 
-    public void setStatusId(Long statusId) {
-        this.statusId = statusId;
+    public void setStatus(String status) {
+        this.status = status;
     }
 
     public Long getUserId() {

@@ -7,6 +7,7 @@ import com.uniq.tms.tms_microservice.dto.UserTimesheetDto;
 import com.uniq.tms.tms_microservice.dto.UserTimesheetResponseDto;
 import com.uniq.tms.tms_microservice.entity.TimesheetEntity;
 import com.uniq.tms.tms_microservice.entity.TimesheetHistoryEntity;
+import com.uniq.tms.tms_microservice.entity.TimesheetStatusEntity;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
@@ -29,4 +30,7 @@ public interface TimesheetAdapter {
     void updateTimesheetHistory(Long id, LogType logType, LocalTime firstClockIn);
     void saveAllTimesheetHistories(List<TimesheetHistoryEntity> historyEntries);
     List<UserDashboard> getDashboard(Long orgId, List<Long> userIds, LocalDate fromDate, LocalDate toDate);
+    List<TimesheetStatusEntity> getStatus();
+    Optional<TimesheetStatusEntity> findById(String status);
+    Optional<TimesheetStatusEntity> findByStatusName(String label);
 }

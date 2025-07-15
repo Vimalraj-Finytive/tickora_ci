@@ -38,6 +38,9 @@ public class OrganizationEntity {
     @OneToMany(mappedBy = "organizationEntity", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<GroupEntity> groups = new ArrayList<>();
 
+    @OneToMany(mappedBy = "organizationEntity", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<WorkScheduleEntity> workSchedule = new ArrayList<>();
+
     public List<GroupEntity> getGroups() {
         return groups;
     }
@@ -92,5 +95,13 @@ public class OrganizationEntity {
 
     public void setOrgName(String orgName) {
         this.orgName = orgName;
+    }
+
+    public List<WorkScheduleEntity > getWorkSchedule() {
+        return workSchedule;
+    }
+
+    public void setWorkSchedule(List<WorkScheduleEntity > workSchedule) {
+        this.workSchedule = workSchedule;
     }
 }

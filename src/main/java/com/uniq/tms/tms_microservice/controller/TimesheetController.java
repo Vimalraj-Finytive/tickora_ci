@@ -12,20 +12,12 @@ import com.uniq.tms.tms_microservice.dto.UserTimesheetResponseDto;
 import com.uniq.tms.tms_microservice.facade.AuthFacade;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 import java.util.List;
 
 @RestController
 @RequestMapping(UserConstant.Timesheet_URL)
-
 public class  TimesheetController {
 
     private final AuthFacade authFacade;
@@ -86,5 +78,10 @@ public class  TimesheetController {
                                                @RequestBody TimesheetReportDto request) {
         List<UserTimesheetDto> timesheets = authFacade.getUserTimesheets(token,request);
         return ResponseEntity.ok(new ApiResponse(200, "Success", timesheets));
+    }
+    
+    @GetMapping("/status")
+    public ResponseEntity<ApiResponse> addStatus(@RequestHeader("Authorization") String token){
+        return ResponseEntity.ok(authFacade.getStatus(token));
     }
 }

@@ -4,7 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.uniq.tms.tms_microservice.adapter.TimesheetAdapter;
 import com.uniq.tms.tms_microservice.adapter.UserAdapter;
-import com.uniq.tms.tms_microservice.adapter.WorkScheduleAapter;
+import com.uniq.tms.tms_microservice.adapter.WorkScheduleAdapter;
 import com.uniq.tms.tms_microservice.config.CacheKeyConfig;
 import com.uniq.tms.tms_microservice.config.CacheReloadHandlerRegistry;
 import com.uniq.tms.tms_microservice.dto.AddGroupDto;
@@ -85,9 +85,8 @@ public class UserServiceImpl implements UserService {
     private final LocationRepository locationRepository;
     private final EmailUtil emailUtil;
     private final UserDtoMapper userDtoMapper;
-    private final ObjectMapper objectMapper;
     private final SecondaryDetailsMapper secondaryDetailsMapper;
-    private final WorkScheduleAapter workScheduleAdapter;
+    private final WorkScheduleAdapter workScheduleAdapter;
     private final RedisTemplate<String, Object> redisTemplate;
     private final LocationEntityMapper locationEntityMapper;
     private final CacheLoaderService cacheLoaderService;
@@ -97,7 +96,7 @@ public class UserServiceImpl implements UserService {
     private final CacheKeyConfig cacheKeyConfig;
     private final CacheReloadHandlerRegistry cacheReloadHandlerRegistry;
 
-    public UserServiceImpl(Validator validator, UserAdapter userAdapter, TimesheetAdapter timesheetAdapter, UserEntityMapper userEntityMapper, OrganizationRepository organizationRepository, RoleRepository roleRepository, LocationRepository locationRepository, EmailUtil emailUtil, UserDtoMapper userDtoMapper, ObjectMapper objectMapper, SecondaryDetailsMapper secondaryDetailsMapper, @Nullable RedisTemplate<String, Object> redisTemplate, LocationEntityMapper locationEntityMapper, CacheLoaderService cacheLoaderService, ApplicationEventPublisher publisher, WorkScheduleAapter workScheduleAdapter, CacheKeyUtil cacheKeyUtil, TeamRepository teamRepository, CacheKeyConfig cacheKeyConfig, CacheReloadHandlerRegistry cacheReloadHandlerRegistry) {
+    public UserServiceImpl(Validator validator, UserAdapter userAdapter, TimesheetAdapter timesheetAdapter, UserEntityMapper userEntityMapper, OrganizationRepository organizationRepository, RoleRepository roleRepository, LocationRepository locationRepository, EmailUtil emailUtil, UserDtoMapper userDtoMapper, SecondaryDetailsMapper secondaryDetailsMapper, @Nullable RedisTemplate<String, Object> redisTemplate, LocationEntityMapper locationEntityMapper, CacheLoaderService cacheLoaderService, ApplicationEventPublisher publisher, WorkScheduleAdapter workScheduleAdapter, CacheKeyUtil cacheKeyUtil, TeamRepository teamRepository, CacheKeyConfig cacheKeyConfig, CacheReloadHandlerRegistry cacheReloadHandlerRegistry) {
         this.validator = validator;
         this.userAdapter = userAdapter;
         this.timesheetAdapter = timesheetAdapter;
@@ -107,7 +106,6 @@ public class UserServiceImpl implements UserService {
         this.locationRepository = locationRepository;
         this.emailUtil = emailUtil;
         this.userDtoMapper = userDtoMapper;
-        this.objectMapper = objectMapper;
         this.secondaryDetailsMapper = secondaryDetailsMapper;
         this.workScheduleAdapter = workScheduleAdapter;
         this.redisTemplate = redisTemplate;
@@ -658,9 +656,16 @@ public class UserServiceImpl implements UserService {
         String encryptedPassword = PasswordUtil.encryptPassword(defaultPassword);
         entity.setPassword(encryptedPassword);
         entity.setDefaultPassword(true);
+        if (userMiddleware.getWorkSchedule() == null){
+            WorkScheduleEntity defaultSchedule = workScheduleAdapter.findDefaultActiveSchedule(organizationId);
+            if (defaultSchedule == null){
+                throw new IllegalStateException("No default work schedule found for this organization");
+            }
+            entity.setWorkSchedule(defaultSchedule);
+        }
+        entity.setWorkSchedule(workScheduleAdapter.findByScheduleId(userDto.getWorkSchedule()));
         entity.setActive(true);
         entity.setCreatedAt(LocalDateTime.now());
-
         log.info("Saving user: {}", userMiddleware.getUserName());
         UserEntity savedUserEntity = userAdapter.saveUser(entity);
         List<Long> locationIds = null;
@@ -843,6 +848,9 @@ public class UserServiceImpl implements UserService {
             }
             if (userDto.isRegisterUser() ) {
                 existingUser.setRegisterUser(userDto.isRegisterUser());
+            }
+            if (userDto.getWorkSchedule() != null){
+                existingUser.setWorkSchedule(workScheduleAdapter.findByScheduleId(userDto.getWorkSchedule()));
             }
             if(location != null) {
                 Set<Long> toDelete = new HashSet<>(userLocation);
@@ -1045,6 +1053,7 @@ public class UserServiceImpl implements UserService {
             entity.setWorkSchedule(ws);
         } else {
             WorkScheduleEntity defaultWs = workScheduleAdapter.findDefaultActiveSchedule(orgId);
+            log.info("Default schedule:{}", defaultWs);
             entity.setWorkSchedule(defaultWs);
         }
 

@@ -8,7 +8,7 @@ public class AddGroupDto {
     private Long locationId;
     private List<Long> supervisorsId;
     private String type;
-    private Long workScheduleId;
+    private String workScheduleId;
 
     public List<Long> getSupervisorsId() {
         return supervisorsId;
@@ -40,11 +40,11 @@ public class AddGroupDto {
         this.locationId = locationId;
     }
 
-    public Long getWorkScheduleId() {
+    public String getWorkScheduleId() {
         return workScheduleId;
     }
 
-    public void setWorkScheduleId(Long workScheduleId) {
+    public void setWorkScheduleId(String workScheduleId) {
         this.workScheduleId = workScheduleId;
     }
 }
