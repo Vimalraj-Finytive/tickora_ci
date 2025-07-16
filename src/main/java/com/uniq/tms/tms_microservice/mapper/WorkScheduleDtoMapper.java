@@ -44,6 +44,19 @@ public interface WorkScheduleDtoMapper {
                });
           }
 
+          if (dto.getFlexibleSchedule() != null) {
+               dto.getFlexibleSchedule().forEach(flexSchedule -> {
+                    if (flexSchedule.getDuration() != null) {
+                         try {
+                              double raw = Double.parseDouble(flexSchedule.getDuration());
+                              flexSchedule.setDuration(formatDuration(raw)); // formatted string like 07h 30m
+                         } catch (NumberFormatException e) {
+                              flexSchedule.setDuration(null);
+                         }
+                    }
+               });
+          }
+
           return dto;
      }
 

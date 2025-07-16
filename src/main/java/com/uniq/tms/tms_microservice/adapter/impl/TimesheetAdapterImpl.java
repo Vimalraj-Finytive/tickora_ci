@@ -418,6 +418,7 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
                 UserTimesheetDto newDto = new UserTimesheetDto();
 
                 newDto.setDate(date);
+                newDto.setUserId(userId);
                 newDto.setUserName((String) row[2]);
                 newDto.setWorkScheduleName((String) row[5]);
                 newDto.setFirstClockIn(toLocalTime(row[8]));
@@ -437,26 +438,26 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
             });
 
             // Add history if present
-            if (row[16] != null) {
+            if (row[17] != null) {
                 TimesheetHistoryDto historyDto = new TimesheetHistoryDto();
-                historyDto.setTimesheetHistoryId(toLong(row[16]));
-                historyDto.setLogTime(toLocalTime(row[17]));
+                historyDto.setTimesheetHistoryId(toLong(row[17]));
+                historyDto.setLogTime(toLocalTime(row[18]));
 
                 try {
-                    historyDto.setLogType(row[18] != null ? LogType.valueOf(row[18].toString()) : null);
+                    historyDto.setLogType(row[19] != null ? LogType.valueOf(row[19].toString()) : null);
                 } catch (IllegalArgumentException e) {
-                    System.err.println("Invalid LogType: " + row[18]);
+                    System.err.println("Invalid LogType: " + row[19]);
                 }
 
-                historyDto.setLocationId(toLong(row[19]));
+                historyDto.setLocationId(toLong(row[20]));
 
                 try {
-                    historyDto.setLogFrom(row[20] != null ? LogFrom.valueOf(row[20].toString()) : null);
+                    historyDto.setLogFrom(row[21] != null ? LogFrom.valueOf(row[21].toString()) : null);
                 } catch (IllegalArgumentException e) {
-                    System.err.println("Invalid LogFrom: " + row[20]);
+                    System.err.println("Invalid LogFrom: " + row[21]);
                 }
 
-                historyDto.setLoggedTimestamp(toLocalDateTime(row[21]));
+                historyDto.setLoggedTimestamp(toLocalDateTime(row[22]));
                 dto.getHistory().add(historyDto);
             }
 

@@ -59,7 +59,7 @@ public interface WorkScheduleEntityMapper {
     @AfterMapping
     default void enrichFlexible(@MappingTarget FlexibleWorkScheduleEntity entity, FlexibleScheduleDto dto) {
         entity.setDay(DayOfWeekEnum.valueOf(dto.getDay()));
-        entity.setDuration(dto.getDuration());
+        entity.setDuration(Double.valueOf(dto.getDuration()));
     }
 
     @AfterMapping

@@ -364,10 +364,12 @@ public class CacheLoaderServiceImpl implements CacheLoaderService {
         }
 
         userWorkScheduleMap.put(orgId,workSchedules);
+        String redisKey = cacheKeyUtil.getWorkSchedule(orgId);
+
         // Cache all workSchedules
         try {
             if (redisTemplate != null) {
-                String redisKey = cacheKeyUtil.getWorkSchedule(orgId);
+                redisTemplate.delete(redisKey);
                 ObjectMapper mapper = new ObjectMapper();
                 Map<String, String> redisMap = new HashMap<>();
                 for(WorkSchedule ws : workSchedules){

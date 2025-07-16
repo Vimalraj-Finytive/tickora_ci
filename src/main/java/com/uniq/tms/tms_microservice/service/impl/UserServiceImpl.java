@@ -656,14 +656,16 @@ public class UserServiceImpl implements UserService {
         String encryptedPassword = PasswordUtil.encryptPassword(defaultPassword);
         entity.setPassword(encryptedPassword);
         entity.setDefaultPassword(true);
-        if (userMiddleware.getWorkSchedule() == null){
-            WorkScheduleEntity defaultSchedule = workScheduleAdapter.findDefaultActiveSchedule(organizationId);
-            if (defaultSchedule == null){
+        WorkScheduleEntity scheduleToSet = null;
+        if (userMiddleware.getWorkSchedule() == null || userMiddleware.getWorkSchedule().isEmpty()) {
+            scheduleToSet = workScheduleAdapter.findDefaultActiveSchedule(organizationId);
+            if (scheduleToSet == null) {
                 throw new IllegalStateException("No default work schedule found for this organization");
             }
-            entity.setWorkSchedule(defaultSchedule);
+        } else {
+            scheduleToSet = workScheduleAdapter.findByScheduleId(userDto.getWorkSchedule());
         }
-        entity.setWorkSchedule(workScheduleAdapter.findByScheduleId(userDto.getWorkSchedule()));
+        entity.setWorkSchedule(scheduleToSet);
         entity.setActive(true);
         entity.setCreatedAt(LocalDateTime.now());
         log.info("Saving user: {}", userMiddleware.getUserName());

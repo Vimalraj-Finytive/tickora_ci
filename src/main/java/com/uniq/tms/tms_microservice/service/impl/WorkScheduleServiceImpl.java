@@ -245,6 +245,7 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
         }
 
     @Override
+    @Transactional
     public void deleteWorkSchedule(Long orgId, String scheduleId) {
         WorkScheduleEntity workSchedule = workScheduleAdapter.findByScheduleId(scheduleId);
 
