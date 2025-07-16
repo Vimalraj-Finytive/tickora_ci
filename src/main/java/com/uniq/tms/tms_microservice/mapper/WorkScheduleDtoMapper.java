@@ -1,16 +1,11 @@
 package com.uniq.tms.tms_microservice.mapper;
 
 import com.uniq.tms.tms_microservice.dto.*;
-import com.uniq.tms.tms_microservice.entity.FixedWorkScheduleEntity;
-import com.uniq.tms.tms_microservice.entity.FlexibleWorkScheduleEntity;
-import com.uniq.tms.tms_microservice.entity.WeeklyWorkScheduleEntity;
 import com.uniq.tms.tms_microservice.model.WorkSchedule;
 import com.uniq.tms.tms_microservice.model.WorkScheduleType;
-import org.mapstruct.AfterMapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
-import org.mapstruct.MappingTarget;
-import java.time.format.DateTimeFormatter;
+import java.sql.Time;
 
 @Mapper(componentModel = "spring")
 public interface WorkScheduleDtoMapper {
@@ -25,11 +20,26 @@ public interface WorkScheduleDtoMapper {
 
           if (dto.getFixedSchedule() != null) {
                dto.getFixedSchedule().forEach(schedule -> {
-                    if (schedule.getStartTime() != null && schedule.getStartTime().contains("T")) {
-                         schedule.setStartTime(schedule.getStartTime().substring(11, 16)); // "HH:mm"
-                    }
-                    if (schedule.getEndTime() != null && schedule.getEndTime().contains("T")) {
-                         schedule.setEndTime(schedule.getEndTime().substring(11, 16)); // "HH:mm"
+                    try {
+                         // Convert ISO time string to Time object
+                         String startRaw = schedule.getStartTime();
+                         String endRaw = schedule.getEndTime();
+
+                         Time start = Time.valueOf(startRaw.substring(11, 16) + ":00");
+                         Time end = Time.valueOf(endRaw.substring(11, 16) + ":00");
+
+                         // Format start and end time to hh mm
+                         schedule.setStartTime(formatTimeToHhMm(start));
+                         schedule.setEndTime(formatTimeToHhMm(end));
+
+                         // Calculate and format duration
+                         double duration = (end.getTime() - start.getTime()) / (1000.0 * 60 * 60);
+                         schedule.setDuration(formatDuration(duration));
+                    } catch (Exception e) {
+                         // Log if needed
+                         schedule.setStartTime(null);
+                         schedule.setEndTime(null);
+                         schedule.setDuration(null);
                     }
                });
           }
@@ -37,26 +47,21 @@ public interface WorkScheduleDtoMapper {
           return dto;
      }
 
-     WorkSchedule toModel(WorkScheduleDto workScheduleDto);
-
-     @Mapping(target = "startTime", ignore = true)
-     @Mapping(target = "endTime", ignore = true)
-     FixedScheduleDto toDto(FixedWorkScheduleEntity entity);
-
-     FlexibleScheduleDto toDto(FlexibleWorkScheduleEntity entity);
-
-     WeeklyScheduleDto toDto(WeeklyWorkScheduleEntity entity);
-
-     @AfterMapping
-     default void formatTimes(@MappingTarget FixedScheduleDto dto, FixedWorkScheduleEntity entity) {
-          DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
-          if (entity.getStartTime() != null) {
-               dto.setStartTime(entity.getStartTime().toLocalTime().format(formatter));
-          }
-          if (entity.getEndTime() != null) {
-               dto.setEndTime(entity.getEndTime().toLocalTime().format(formatter));
-          }
+     default String formatTimeToHhMm(Time time) {
+          if (time == null) return null;
+          int hour = time.toLocalTime().getHour();
+          int minute = time.toLocalTime().getMinute();
+          return String.format("%02dh %02dm", hour, minute);
      }
 
-    WorkScheduleTypeDto toTypeDto(WorkScheduleType workScheduleType);
+     default String formatDuration(Double duration) {
+          if (duration == null) return null;
+          int hours = duration.intValue();
+          int minutes = (int) Math.round((duration - hours) * 60);
+          return String.format("%02dh %02dm", hours, minutes);
+     }
+
+     WorkSchedule toModel(WorkScheduleDto workScheduleDto);
+
+     WorkScheduleTypeDto toTypeDto(WorkScheduleType workScheduleType);
 }

@@ -10,7 +10,6 @@ import com.uniq.tms.tms_microservice.entity.*;
 import com.uniq.tms.tms_microservice.entity.WorkScheduleEntity;
 import com.uniq.tms.tms_microservice.enums.IdGenerationType;
 import com.uniq.tms.tms_microservice.enums.WorkScheduleTypeEnum;
-import com.uniq.tms.tms_microservice.mapper.WorkScheduleDtoMapper;
 import com.uniq.tms.tms_microservice.mapper.WorkScheduleEntityMapper;
 import com.uniq.tms.tms_microservice.model.WorkSchedule;
 import com.uniq.tms.tms_microservice.model.WorkScheduleType;
@@ -110,12 +109,12 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
                 return uniqueSchedules;
             } else {
                 log.warn("WorkSchedule not found even in DB for orgId {}", orgId);
-                return List.of(); // avoid returning null
+                return List.of();
             }
 
         } catch (Exception e) {
             log.error("Error in WorkSchedule fetch logic for orgId {}: {}", orgId, e.getMessage(), e);
-            return List.of(); // avoid returning null
+            return List.of();
         }
     }
 

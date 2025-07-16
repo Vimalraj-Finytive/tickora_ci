@@ -1008,7 +1008,7 @@ public class UserServiceImpl implements UserService {
         }
 
         // 3. Final fallback
-        throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No Users found for orgId=" + orgId + " and role=" + role);
+        throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No Users found for this organization");
     }
 
     @Override

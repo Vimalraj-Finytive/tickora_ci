@@ -4,7 +4,7 @@ public class Group {
 
     private Long groupId;
     private String groupName;
-    private Long workScheduleId;
+    private String workScheduleId;
     private Long locationId;
     private Long organizationId;
 
@@ -24,11 +24,11 @@ public class Group {
         this.groupName = groupName;
     }
 
-    public Long getWorkScheduleId() {
+    public String getWorkScheduleId() {
         return workScheduleId;
     }
 
-    public void setWorkScheduleId(Long workScheduleId) {
+    public void setWorkScheduleId(String workScheduleId) {
         this.workScheduleId = workScheduleId;
     }
 
