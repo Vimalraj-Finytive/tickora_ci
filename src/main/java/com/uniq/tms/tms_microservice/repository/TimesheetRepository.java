@@ -274,11 +274,10 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
                                                           @Param("to") LocalDate to);
 
     @Query(value = """
-    WITH SelectedUsers AS (
-        SELECT * FROM users
-        WHERE active = TRUE
-          AND (ARRAY[:userIds] IS NULL OR user_id = ANY(ARRAY[:userIds]))
+        WITH SelectedUsers AS (
+        SELECT * FROM users WHERE active = TRUE AND (:userIds IS NULL OR user_id = ANY(:userIds))
     ),
+    
     UserGroups AS (
         SELECT
             ug.user_id,
@@ -287,13 +286,27 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
         JOIN group_table g ON ug.group_id = g.group_id
         GROUP BY ug.user_id
     ),
+    
+    DayNumbers AS (
+        SELECT 'Sunday' AS day_name, 0 AS day_num UNION ALL
+        SELECT 'Monday', 1 UNION ALL
+        SELECT 'Tuesday', 2 UNION ALL
+        SELECT 'Wednesday', 3 UNION ALL
+        SELECT 'Thursday', 4 UNION ALL
+        SELECT 'Friday', 5 UNION ALL
+        SELECT 'Saturday', 6
+    ),
+    
     UserDateMatrix AS (
         SELECT
             gs.work_date,
+            TO_CHAR(gs.work_date, 'FMDay') AS day_name,
+            EXTRACT(DOW FROM gs.work_date)::INT AS day_num,
             u.user_id,
             u.user_name,
             u.role_id,
-            u.mobile_number
+            u.mobile_number,
+            u.work_schedule_id
         FROM SelectedUsers u
         CROSS JOIN LATERAL (
             SELECT generate_series(
@@ -302,13 +315,37 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
                 INTERVAL '1 day'
             ) AS work_date
         ) gs
+    ),
+    
+    WorkScheduleDuration AS (
+        SELECT
+            ws.work_schedule_id,
+            wst.type_id,
+            wst.type,
+            CASE
+                WHEN wst.type = 'FIXED' THEN (
+                    SELECT SUM(EXTRACT(EPOCH FROM (fws.end_time - fws.start_time))) / COUNT(*)
+                    FROM fixed_work_schedule fws
+                    WHERE fws.work_schedule_id = ws.work_schedule_id
+                )
+                WHEN wst.type = 'FLEXIBLE' THEN (
+                    SELECT SUM(flws.duration * 3600) / COUNT(*)
+                    FROM flexible_work_schedule flws
+                    WHERE flws.work_schedule_id = ws.work_schedule_id
+                )
+                ELSE NULL
+            END AS expected_seconds
+        FROM work_schedule ws
+        JOIN work_schedule_type wst ON ws.work_schedule_type = wst.type_id
     )
+
     SELECT
         udm.work_date,
         udm.user_id,
         udm.user_name,
         r.name AS role,
         udm.mobile_number,
+        ws.work_schedule_name AS work_schedule,
         ug.group_name,
         t.id AS timesheet_id,
         t.first_clock_in::TIME AS first_clock_in,
@@ -316,56 +353,161 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
         COALESCE(CAST(t.tracked_hours AS TEXT), '00:00:00') AS tracked_hours,
         COALESCE(CAST(t.regular_hours AS TEXT), '00:00:00') AS regular_hours,
         t.status_id,
+        ts.status_name AS status,
+
+        -- DAY TYPE
         CASE
-            WHEN trim(to_char(udm.work_date, 'Day')) ILIKE trim(ws.rest_day) THEN 'Holiday'
-            ELSE 'Working Day'
+            WHEN wst.type = 'FIXED' AND EXISTS (
+                SELECT 1 FROM fixed_work_schedule fws
+                WHERE fws.work_schedule_id = ws.work_schedule_id
+                  AND fws.day ILIKE udm.day_name
+            ) THEN 'Working Day'
+            WHEN wst.type = 'FLEXIBLE' AND EXISTS (
+                SELECT 1 FROM flexible_work_schedule flws
+                WHERE flws.work_schedule_id = ws.work_schedule_id
+                  AND flws.day ILIKE udm.day_name
+            ) THEN 'Working Day'
+            WHEN wst.type = 'WEEKLY_EXCEPTION' AND EXISTS (
+                SELECT 1
+                FROM weekly_work_schedule wws
+                JOIN DayNumbers sd ON wws.start_day = sd.day_name
+                JOIN DayNumbers ed ON wws.end_day = ed.day_name
+                WHERE wws.work_schedule_id = ws.work_schedule_id
+                  AND (
+                    (sd.day_num <= ed.day_num AND udm.day_num BETWEEN sd.day_num AND ed.day_num)
+                    OR
+                    (sd.day_num > ed.day_num AND (
+                        udm.day_num >= sd.day_num OR udm.day_num <= ed.day_num
+                    ))
+                  )
+            ) THEN 'Working Day'
+            ELSE 'Holiday'
         END AS day_type,
+
+        -- USER DAY TYPE
         CASE
-            WHEN t.date IS NULL THEN
-                CASE
-                    WHEN trim(to_char(udm.work_date, 'Day')) ILIKE trim(ws.rest_day) THEN 'Holiday'
-                    ELSE 'Time Off'
-                END
-            ELSE
-                CASE
-                    WHEN trim(to_char(udm.work_date, 'Day')) ILIKE trim(ws.rest_day) THEN 'Extra Worked Day'
-                    ELSE 'Working Day'
-                END
+            WHEN t.first_clock_in IS NULL AND NOT (
+                (wst.type = 'FIXED' AND EXISTS (
+                    SELECT 1 FROM fixed_work_schedule fws
+                    WHERE fws.work_schedule_id = ws.work_schedule_id
+                      AND fws.day ILIKE udm.day_name
+                ))
+                OR
+                (wst.type = 'FLEXIBLE' AND EXISTS (
+                    SELECT 1 FROM flexible_work_schedule flws
+                    WHERE flws.work_schedule_id = ws.work_schedule_id
+                      AND flws.day ILIKE udm.day_name
+                ))
+                OR
+                (wst.type = 'WEEKLY_EXCEPTION' AND EXISTS (
+                    SELECT 1
+                    FROM weekly_work_schedule wws
+                    JOIN DayNumbers sd ON wws.start_day = sd.day_name
+                    JOIN DayNumbers ed ON wws.end_day = ed.day_name
+                    WHERE wws.work_schedule_id = ws.work_schedule_id
+                      AND (
+                        (sd.day_num <= ed.day_num AND udm.day_num BETWEEN sd.day_num AND ed.day_num)
+                        OR
+                        (sd.day_num > ed.day_num AND (
+                            udm.day_num >= sd.day_num OR udm.day_num <= ed.day_num
+                        ))
+                      )
+                ))
+            ) THEN 'Holiday'
+            WHEN t.first_clock_in IS NULL THEN 'Time Off'
+            WHEN t.first_clock_in IS NOT NULL AND NOT (
+                (wst.type = 'FIXED' AND EXISTS (
+                    SELECT 1 FROM fixed_work_schedule fws
+                    WHERE fws.work_schedule_id = ws.work_schedule_id
+                      AND fws.day ILIKE udm.day_name
+                ))
+                OR
+                (wst.type = 'FLEXIBLE' AND EXISTS (
+                    SELECT 1 FROM flexible_work_schedule flws
+                    WHERE flws.work_schedule_id = ws.work_schedule_id
+                      AND flws.day ILIKE udm.day_name
+                ))
+                OR
+                (wst.type = 'WEEKLY_EXCEPTION' AND EXISTS (
+                    SELECT 1
+                    FROM weekly_work_schedule wws
+                    JOIN DayNumbers sd ON wws.start_day = sd.day_name
+                    JOIN DayNumbers ed ON wws.end_day = ed.day_name
+                    WHERE wws.work_schedule_id = ws.work_schedule_id
+                      AND (
+                        (sd.day_num <= ed.day_num AND udm.day_num BETWEEN sd.day_num AND ed.day_num)
+                        OR
+                        (sd.day_num > ed.day_num AND (
+                            udm.day_num >= sd.day_num OR udm.day_num <= ed.day_num
+                        ))
+                      )
+                ))
+            ) THEN 'Extra Worked Day'
+            ELSE 'Working Day'
         END AS user_day_type,
+
+        -- WORK STATUS
         CASE
-            WHEN trim(to_char(udm.work_date, 'FMDay')) ILIKE trim(ws.rest_day) THEN
-                CASE
-                    WHEN t.date IS NOT NULL THEN 'Extra Worked Day'
-                    ELSE 'Holiday'
-                END
+            WHEN t.first_clock_in IS NULL AND NOT (
+                (wst.type = 'FIXED' AND EXISTS (
+                    SELECT 1 FROM fixed_work_schedule fws
+                    WHERE fws.work_schedule_id = ws.work_schedule_id
+                      AND fws.day ILIKE udm.day_name
+                ))
+                OR
+                (wst.type = 'FLEXIBLE' AND EXISTS (
+                    SELECT 1 FROM flexible_work_schedule flws
+                    WHERE flws.work_schedule_id = ws.work_schedule_id
+                      AND flws.day ILIKE udm.day_name
+                ))
+                OR
+                (wst.type = 'WEEKLY_EXCEPTION' AND EXISTS (
+                    SELECT 1
+                    FROM weekly_work_schedule wws
+                    JOIN DayNumbers sd ON wws.start_day = sd.day_name
+                    JOIN DayNumbers ed ON wws.end_day = ed.day_name
+                    WHERE wws.work_schedule_id = ws.work_schedule_id
+                      AND (
+                        (sd.day_num <= ed.day_num AND udm.day_num BETWEEN sd.day_num AND ed.day_num)
+                        OR
+                        (sd.day_num > ed.day_num AND (
+                            udm.day_num >= sd.day_num OR udm.day_num <= ed.day_num
+                        ))
+                      )
+                ))
+            ) THEN 'Holiday'
             WHEN t.date IS NULL THEN 'Time Off'
             WHEN t.first_clock_in IS NOT NULL AND t.last_clock_out IS NULL THEN 'Present'
             WHEN t.first_clock_in IS NOT NULL AND t.last_clock_out IS NOT NULL THEN
                 CASE
                     WHEN EXISTS (
-                        SELECT 1
-                        FROM timesheet_history th2
+                        SELECT 1 FROM timesheet_history th2
                         WHERE th2.timesheet_id = t.id
                           AND th2.log_type = 'CLOCK_OUT'
                           AND th2.log_from = 'SYSTEM_GENERATED'
                     ) THEN 'Failed Clock Out'
-                    WHEN (EXTRACT(EPOCH FROM (t.last_clock_out - t.first_clock_in)) / 3600.0) >=
-                         (EXTRACT(EPOCH FROM (ws.end_time - ws.start_time)) / 3600.0)
+                    WHEN (EXTRACT(EPOCH FROM (t.last_clock_out - t.first_clock_in))) >= COALESCE(wsd.expected_seconds, 0)
                     THEN 'Sufficient Hours'
                     ELSE 'Less Worked Hours'
                 END
-            ELSE 'Time Off'
+            ELSE 'Not Marked'
         END AS work_status,
+
         th.id AS history_id,
         th.log_time,
         th.log_type,
         th.location_id,
         th.log_from,
         th.logged_timestamp
+
     FROM UserDateMatrix udm
     LEFT JOIN timesheet t ON t.user_id = udm.user_id AND t.date = udm.work_date
+    LEFT JOIN timesheet_status ts ON t.status_id = ts.status_id
     LEFT JOIN role r ON udm.role_id = r.role_id
-    LEFT JOIN work_schedule ws ON ws.is_active = TRUE
+    LEFT JOIN users u ON udm.user_id = u.user_id
+    LEFT JOIN work_schedule ws ON ws.work_schedule_id = u.work_schedule_id AND ws.organization_id = :orgId
+    LEFT JOIN work_schedule_type wst ON ws.work_schedule_type = wst.type_id
+    LEFT JOIN WorkScheduleDuration wsd ON ws.work_schedule_id = wsd.work_schedule_id
     LEFT JOIN timesheet_history th ON t.id = th.timesheet_id
     LEFT JOIN UserGroups ug ON udm.user_id = ug.user_id
     ORDER BY udm.user_id, udm.work_date, th.logged_timestamp
@@ -373,7 +515,8 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
     List<Object[]> fetchUserTimesheetsWithHistory(
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate,
-            @Param("userIds") Long[] userIds
+            @Param("userIds") Long[] userIds,
+            @Param("orgId") Long orgId
     );
 
     @Query(value = """

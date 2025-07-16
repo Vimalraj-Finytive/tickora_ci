@@ -32,8 +32,9 @@ public class UserTimesheetDto {
     private String regularHoursDuration;
     private List<TimesheetHistoryDto> history;
     private String status;
+    private String workScheduleName;
 
-    public UserTimesheetDto(Long userId, String userName, LocalDate date, String workStatus, LocalTime firstClockIn, LocalTime lastClockOut, Duration trackedHours, Duration regularHours, String firstClockInTime, String lastClockOutTime, String trackedHoursDuration, String regularHoursDuration, List<TimesheetHistoryDto> history, String status) {
+    public UserTimesheetDto(Long userId, String userName, LocalDate date, String workStatus, LocalTime firstClockIn, LocalTime lastClockOut, Duration trackedHours, Duration regularHours, String firstClockInTime, String lastClockOutTime, String trackedHoursDuration, String regularHoursDuration, List<TimesheetHistoryDto> history, String status, String workScheduleName) {
         this.userId = userId;
         this.userName = userName;
         this.date = date;
@@ -43,6 +44,7 @@ public class UserTimesheetDto {
         this.trackedHours = trackedHours;
         this.regularHours = regularHours;
         this.status = status;
+        this.workScheduleName = workScheduleName;
         this.firstClockInTime = formatTime(this.firstClockIn);
         this.lastClockOutTime = formatTime(this.lastClockOut);
         this.trackedHoursDuration = formatDuration(this.trackedHours);
@@ -191,5 +193,13 @@ public class UserTimesheetDto {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public String getWorkScheduleName() {
+        return workScheduleName;
+    }
+
+    public void setWorkScheduleName(String workScheduleName) {
+        this.workScheduleName = workScheduleName;
     }
 }

@@ -263,7 +263,8 @@ public class CacheLoaderServiceImpl implements CacheLoaderService {
                     user.getDateOfJoining(),
                     locationDtos,
                     groupDtos,
-                    org != null ? org.getOrgName() : null
+                    org != null ? org.getOrgName() : null,
+                    user.getWorkSchedule().getScheduleName()
             );
 
             userProfileMap.put(userId.toString(), profile);

@@ -16,10 +16,11 @@ public class UserProfileResponse {
     private List<LocationDto> location;
     private List<UserGroupProfileDto> groupDtos;
     private String organizationName;
+    private String workSchedule;
 
     public UserProfileResponse(){}
 
-    public UserProfileResponse(Long userId, String userName, String email, String mobileNumber, String roleName, LocalDate dateOfJoining, List<LocationDto> location, List<UserGroupProfileDto> groupDtos, String organizationName) {
+    public UserProfileResponse(Long userId, String userName, String email, String mobileNumber, String roleName, LocalDate dateOfJoining, List<LocationDto> location, List<UserGroupProfileDto> groupDtos, String organizationName, String workSchedule) {
         this.userId = userId;
         this.userName = userName;
         this.email = email;
@@ -29,6 +30,7 @@ public class UserProfileResponse {
         this.location = location;
         this.groupDtos = groupDtos;
         this.organizationName = organizationName;
+        this.workSchedule = workSchedule;
     }
 
     public LocalDate getDateOfJoining() {
@@ -80,5 +82,13 @@ public class UserProfileResponse {
     }
     public void setOrganizationName(String organizationName){
         this.organizationName = organizationName;
+    }
+
+    public String getWorkSchedule() {
+        return workSchedule;
+    }
+
+    public void setWorkSchedule(String workSchedule) {
+        this.workSchedule = workSchedule;
     }
 }
