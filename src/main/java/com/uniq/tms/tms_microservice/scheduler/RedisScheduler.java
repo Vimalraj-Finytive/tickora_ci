@@ -105,4 +105,18 @@ public class RedisScheduler {
             log.error("Error during scheduled Groups cache loading: {}", e.getMessage(), e);
         }
     }
+    @Scheduled(cron = "0 0 * * * *")
+    public void reloadWorkScheduleCacheHourly() {
+        log.info("Scheduled WorkSchedule cache loading triggered : {}", LocalTime.now());
+        try {
+            List<Long> orgIds = organizationRepository.findAllOrgIds();
+            for(Long orgId : orgIds) {
+                cacheLoaderService.loadWorkSchedule(orgId);
+            }
+            log.info("Cache WorkSchedule loading completed");
+        } catch (Exception e) {
+            log.error("Error during scheduled WorkSchedule cache loading: {}", e.getMessage(), e);
+        }
+    }
+
 }
