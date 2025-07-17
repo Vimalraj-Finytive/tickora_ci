@@ -67,7 +67,7 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
     }
 
     @Override
-    public List<WorkSchedule> getAllWorkSchedules(Long orgId) {
+    public List<WorkScheduleDto> getAllWorkSchedules(Long orgId) {
         String redisKey = cacheKeyUtil.getWorkSchedule(orgId);
         ObjectMapper mapper = new ObjectMapper();
 
@@ -78,11 +78,10 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
                 if (entries != null && !entries.isEmpty()) {
                     log.info("Cache hit for orgId {}", orgId);
 
-                    List<WorkSchedule> cachedSchedules = new ArrayList<>();
+                    List<WorkScheduleDto> cachedSchedules = new ArrayList<>();
                     for (Object value : entries.values()) {
-                        // Deserialize JSON string to WorkSchedule
-                        WorkSchedule ws = mapper.readValue(value.toString(), WorkSchedule.class);
-                        cachedSchedules.add(ws);
+                        WorkScheduleDto dto = mapper.readValue(value.toString(), WorkScheduleDto.class);
+                        cachedSchedules.add(dto);
                     }
 
                     return cachedSchedules;
@@ -91,34 +90,36 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
                 log.warn("RedisTemplate is null, skipping cache fetch for orgId {}", orgId);
             }
 
-            // Fallback to DB
+            // Cache miss, load from DB and repopulate cache
             log.info("Cache miss for workSchedule, loading from DB...");
-            Map<Long, List<WorkSchedule>> loadedWorkSchedule = cacheLoaderService.loadWorkSchedule(orgId).get();
+            Map<Long, List<WorkScheduleDto>> loadedMap = cacheLoaderService.loadWorkSchedule(orgId).get();
+            List<WorkScheduleDto> response = loadedMap.get(orgId);
 
-            List<WorkSchedule> response = loadedWorkSchedule.get(orgId);
             if (response != null && !response.isEmpty()) {
-                log.info("Fallback DB WorkSchedule returned for orgId {}", orgId);
-                Map<String, WorkSchedule> schedule = response.stream()
+                log.info("Loaded {} workSchedules from DB for orgId {}", response.size(), orgId);
+
+                // Deduplicate by scheduleId if needed
+                Map<String, WorkScheduleDto> uniqueMap = response.stream()
                         .collect(Collectors.toMap(
-                                WorkSchedule::getScheduleId,
-                                ws -> ws,
+                                WorkScheduleDto::getScheduleId,
+                                dto -> dto,
                                 (existing, replacement) -> existing
                         ));
-                List<WorkSchedule> uniqueSchedules = new ArrayList<>(schedule.values());
 
-                return uniqueSchedules;
+                return new ArrayList<>(uniqueMap.values());
             } else {
-                log.warn("WorkSchedule not found even in DB for orgId {}", orgId);
+                log.warn("No workSchedules found in DB for orgId {}", orgId);
                 return List.of();
             }
 
         } catch (Exception e) {
-            log.error("Error in WorkSchedule fetch logic for orgId {}: {}", orgId, e.getMessage(), e);
+            log.error("Error fetching work schedules for orgId {}: {}", orgId, e.getMessage(), e);
             return List.of();
         }
     }
 
     @Override
+    @Transactional
     public ApiResponse createWorkSchedule(WorkSchedule model, com.uniq.tms.tms_microservice.dto.WorkScheduleDto dto, Long orgId) {
 
         boolean exist = workScheduleAdapter.findByWorkschedule(dto.getScheduleName(), orgId);

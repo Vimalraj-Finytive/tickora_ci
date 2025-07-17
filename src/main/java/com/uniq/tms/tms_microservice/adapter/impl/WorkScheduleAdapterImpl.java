@@ -24,11 +24,6 @@ public class WorkScheduleAdapterImpl implements WorkScheduleAdapter {
         this.workScheduleTypeRepository = workScheduleTypeRepository;
     }
 
-    public List<WorkScheduleEntity> getWorkSchedule(Long orgId) {
-        return workScheduleRepository.findAllWithChildrenByOrgId(orgId);
-    }
-
-
     @Override
     public WorkScheduleEntity findByWorkscheduleId(String workScheduleId) {
         return workScheduleRepository.findByScheduleId(workScheduleId);

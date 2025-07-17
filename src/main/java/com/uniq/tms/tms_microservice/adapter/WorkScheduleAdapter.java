@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.Optional;
 
 public interface WorkScheduleAdapter {
-    List<WorkScheduleEntity> getWorkSchedule(Long orgId);
     WorkScheduleEntity findByWorkscheduleId(String workScheduleId);
     WorkScheduleEntity findDefaultActiveSchedule(Long orgId);
     void saveAll(List<FixedWorkScheduleEntity> entities);

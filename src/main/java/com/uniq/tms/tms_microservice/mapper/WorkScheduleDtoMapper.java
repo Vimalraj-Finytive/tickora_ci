@@ -5,7 +5,8 @@ import com.uniq.tms.tms_microservice.model.WorkSchedule;
 import com.uniq.tms.tms_microservice.model.WorkScheduleType;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
-import java.sql.Time;
+import java.time.Duration;
+import java.time.LocalTime;
 
 @Mapper(componentModel = "spring")
 public interface WorkScheduleDtoMapper {
@@ -21,22 +22,21 @@ public interface WorkScheduleDtoMapper {
           if (dto.getFixedSchedule() != null) {
                dto.getFixedSchedule().forEach(schedule -> {
                     try {
-                         // Convert ISO time string to Time object
                          String startRaw = schedule.getStartTime();
                          String endRaw = schedule.getEndTime();
 
-                         Time start = Time.valueOf(startRaw.substring(11, 16) + ":00");
-                         Time end = Time.valueOf(endRaw.substring(11, 16) + ":00");
+                         if (startRaw != null && endRaw != null) {
+                              LocalTime start = LocalTime.parse(startRaw);
+                              LocalTime end = LocalTime.parse(endRaw);
 
-                         // Format start and end time to hh mm
-                         schedule.setStartTime(formatTimeToHhMm(start));
-                         schedule.setEndTime(formatTimeToHhMm(end));
+                              schedule.setStartTime(formatLocalTime(start));
+                              schedule.setEndTime(formatLocalTime(end));
 
-                         // Calculate and format duration
-                         double duration = (end.getTime() - start.getTime()) / (1000.0 * 60 * 60);
-                         schedule.setDuration(formatDuration(duration));
+                              long minutes = Duration.between(start, end).toMinutes();
+                              schedule.setDuration(String.format("%02dh %02dm", minutes / 60, minutes % 60));
+                         }
                     } catch (Exception e) {
-                         // Log if needed
+                         System.out.printf("Time format failed for fixed schedule day {}: {}", schedule.getDay(), e.getMessage());
                          schedule.setStartTime(null);
                          schedule.setEndTime(null);
                          schedule.setDuration(null);
@@ -49,7 +49,7 @@ public interface WorkScheduleDtoMapper {
                     if (flexSchedule.getDuration() != null) {
                          try {
                               double raw = Double.parseDouble(flexSchedule.getDuration());
-                              flexSchedule.setDuration(formatDuration(raw)); // formatted string like 07h 30m
+                              flexSchedule.setDuration(formatDuration(raw));
                          } catch (NumberFormatException e) {
                               flexSchedule.setDuration(null);
                          }
@@ -60,11 +60,9 @@ public interface WorkScheduleDtoMapper {
           return dto;
      }
 
-     default String formatTimeToHhMm(Time time) {
+     default String formatLocalTime(LocalTime time) {
           if (time == null) return null;
-          int hour = time.toLocalTime().getHour();
-          int minute = time.toLocalTime().getMinute();
-          return String.format("%02dh %02dm", hour, minute);
+          return String.format("%02dh %02dm", time.getHour(), time.getMinute());
      }
 
      default String formatDuration(Double duration) {

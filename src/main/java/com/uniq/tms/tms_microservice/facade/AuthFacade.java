@@ -43,9 +43,8 @@ public class AuthFacade {
     private final WorkScheduleService workScheduleService;
     private final WorkScheduleDtoMapper workScheduleDtoMapper;
     private final ReportService reportService;
-    private final IdGeneratorService idGeneratorService;
 
-    public AuthFacade(AuthService authService, UserService userService, UserDtoMapper userDtoMapper, TimesheetService timesheetService, TimesheetDtoMapper timesheetDtoMapper, JwtUtil jwtUtil, WorkScheduleService workScheduleService, WorkScheduleDtoMapper workScheduleDtoMapper, ReportService reportService, IdGeneratorService idGeneratorService) {
+    public AuthFacade(AuthService authService, UserService userService, UserDtoMapper userDtoMapper, TimesheetService timesheetService, TimesheetDtoMapper timesheetDtoMapper, JwtUtil jwtUtil, WorkScheduleService workScheduleService, WorkScheduleDtoMapper workScheduleDtoMapper, ReportService reportService) {
 
         this.authService = authService;
         this.userService = userService;
@@ -56,7 +55,6 @@ public class AuthFacade {
         this.workScheduleService = workScheduleService;
         this.workScheduleDtoMapper = workScheduleDtoMapper;
         this.reportService = reportService;
-        this.idGeneratorService = idGeneratorService;
     }
 
     @Value("${csv.download.dir}")
@@ -497,9 +495,7 @@ public class AuthFacade {
     }
 
     public ApiResponse getWorkSchedule(Long orgId) {
-        List<WorkScheduleDto> workScheduleDtos = workScheduleService.getAllWorkSchedules(orgId).stream()
-                .map(workScheduleDtoMapper::toDtoWithFormattedTimes)
-                .toList();
+        List<WorkScheduleDto> workScheduleDtos = workScheduleService.getAllWorkSchedules(orgId);
         return new ApiResponse(200, "Work Schedule fetched successfully", workScheduleDtos);
     }
 
