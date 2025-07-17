@@ -1,7 +1,6 @@
 package com.uniq.tms.tms_microservice.service.impl;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.uniq.tms.tms_microservice.adapter.TimesheetAdapter;
 import com.uniq.tms.tms_microservice.adapter.UserAdapter;
 import com.uniq.tms.tms_microservice.adapter.WorkScheduleAdapter;
@@ -1050,13 +1049,13 @@ public class UserServiceImpl implements UserService {
             entity.setLocationEntity(locationEntity);
         }
 
-        if (groupMiddleware.getWorkScheduleId() != null) {
-            WorkScheduleEntity ws = workScheduleAdapter.findByWorkscheduleId(groupMiddleware.getWorkScheduleId());
-            entity.setWorkSchedule(ws);
-        } else {
+        if (groupMiddleware.getWorkScheduleId() == null || groupMiddleware.getWorkScheduleId().isEmpty()) {
             WorkScheduleEntity defaultWs = workScheduleAdapter.findDefaultActiveSchedule(orgId);
             log.info("Default schedule:{}", defaultWs);
             entity.setWorkSchedule(defaultWs);
+        } else {
+            WorkScheduleEntity ws = workScheduleAdapter.findByWorkscheduleId(groupMiddleware.getWorkScheduleId());
+            entity.setWorkSchedule(ws);
         }
 
         GroupEntity savedEntity = userAdapter.saveGroup(entity);

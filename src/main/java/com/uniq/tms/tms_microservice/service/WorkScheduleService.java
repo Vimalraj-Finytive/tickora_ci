@@ -8,7 +8,7 @@ import com.uniq.tms.tms_microservice.model.WorkScheduleType;
 import java.util.List;
 
 public interface WorkScheduleService {
-    List<WorkSchedule> getAllWorkSchedules(Long orgId);
+    List<WorkScheduleDto> getAllWorkSchedules(Long orgId);
     ApiResponse createWorkSchedule(WorkSchedule model, WorkScheduleDto dto, Long orgId);
     ApiResponse addType(WorkScheduleTypeDto type);
     void updateWorkSchedule(WorkSchedule model, WorkScheduleDto dto, Long orgId);

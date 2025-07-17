@@ -1,12 +1,12 @@
 package com.uniq.tms.tms_microservice.service.impl;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.uniq.tms.tms_microservice.adapter.WorkScheduleAdapter;
 import com.uniq.tms.tms_microservice.dto.*;
 import com.uniq.tms.tms_microservice.entity.*;
 import com.uniq.tms.tms_microservice.mapper.LocationDtoMapper;
 import com.uniq.tms.tms_microservice.mapper.UserDtoMapper;
-import com.uniq.tms.tms_microservice.mapper.WorkScheduleEntityMapper;
+import com.uniq.tms.tms_microservice.mapper.WorkScheduleDtoMapper;
 import com.uniq.tms.tms_microservice.model.Location;
 import com.uniq.tms.tms_microservice.model.UserResponse;
 import com.uniq.tms.tms_microservice.model.WorkSchedule;
@@ -44,10 +44,10 @@ public class CacheLoaderServiceImpl implements CacheLoaderService {
     private final UserDtoMapper userDtoMapper;
     private final TeamRepository teamRepository;
     private final TextUtil textUtil;
-    private final WorkScheduleEntityMapper workScheduleEntityMapper;
+    private final WorkScheduleDtoMapper workScheduleDtoMapper;
     private final WorkScheduleRepository workScheduleRepository;
 
-    public CacheLoaderServiceImpl(UserRepository userRepository, LocationRepository locationRepository, LocationDtoMapper locationDtoMapper, @Nullable RedisTemplate<String, Object> redisTemplate, RoleRepository roleRepository, PrivilegeRepository privilegeRepository, CacheKeyUtil cacheKeyUtil, OrganizationRepository organizationRepository, UserLocationRepository userLocationRepository, UserDtoMapper userDtoMapper, TeamRepository teamRepository, TextUtil textUtil, WorkScheduleEntityMapper workScheduleEntityMapper, WorkScheduleRepository workScheduleRepository) {
+    public CacheLoaderServiceImpl(UserRepository userRepository, LocationRepository locationRepository, LocationDtoMapper locationDtoMapper, @Nullable RedisTemplate<String, Object> redisTemplate, RoleRepository roleRepository, PrivilegeRepository privilegeRepository, CacheKeyUtil cacheKeyUtil, OrganizationRepository organizationRepository, UserLocationRepository userLocationRepository, UserDtoMapper userDtoMapper, TeamRepository teamRepository, TextUtil textUtil, WorkScheduleDtoMapper workScheduleDtoMapper, WorkScheduleRepository workScheduleRepository) {
         this.userRepository = userRepository;
         this.locationRepository = locationRepository;
         this.locationDtoMapper = locationDtoMapper;
@@ -60,7 +60,7 @@ public class CacheLoaderServiceImpl implements CacheLoaderService {
         this.userDtoMapper = userDtoMapper;
         this.teamRepository = teamRepository;
         this.textUtil = textUtil;
-        this.workScheduleEntityMapper = workScheduleEntityMapper;
+        this.workScheduleDtoMapper = workScheduleDtoMapper;
         this.workScheduleRepository = workScheduleRepository;
     }
 
@@ -172,6 +172,11 @@ public class CacheLoaderServiceImpl implements CacheLoaderService {
         }
     }
 
+    /**
+     *
+     * @param orgId
+     * @return roles from db and cache it redis cache using keys
+     */
     public void loadAllRolesToCache(Long orgId) {
        List<RoleEntity> roles = roleRepository.findAllWithPrivileges();
 
@@ -264,7 +269,7 @@ public class CacheLoaderServiceImpl implements CacheLoaderService {
                     locationDtos,
                     groupDtos,
                     org != null ? org.getOrgName() : null,
-                    user.getWorkSchedule().getScheduleName()
+                    (user.getWorkSchedule() != null ? user.getWorkSchedule().getScheduleName() : "-")
             );
 
             userProfileMap.put(userId.toString(), profile);
@@ -286,6 +291,11 @@ public class CacheLoaderServiceImpl implements CacheLoaderService {
         return CompletableFuture.completedFuture(userProfileMap);
     }
 
+    /**
+     *
+     * @param orgId
+     * @return group based on organization from db and cache it redis cache using keys
+     */
     public CompletableFuture<List<GroupResponseDto>> loadGroupsCache(Long orgId) {
         List<GroupsData> groupRows = teamRepository.getGroupData(orgId);
 
@@ -349,40 +359,84 @@ public class CacheLoaderServiceImpl implements CacheLoaderService {
         return CompletableFuture.completedFuture(new ArrayList<>(groupMap.values()));
     }
 
+    /**
+     *
+     * @param orgId
+     * @return workSchedule based on organization from db and cache it redis cache using keys
+     */
     @Transactional
-    public CompletableFuture<Map<Long, List<WorkSchedule>>> loadWorkSchedule(Long orgId) {
+    public CompletableFuture<Map<Long, List<WorkScheduleDto>>> loadWorkSchedule(Long orgId) {
+        List<WorkScheduleData> rawSchedules = workScheduleRepository.findAllWithChildrenByOrgId(orgId);
+        ObjectMapper mapper = new ObjectMapper();
 
-        List<WorkSchedule> workSchedules = workScheduleRepository.findAllWithChildrenByOrgId(orgId).stream()
-                .map(workScheduleEntityMapper::toMiddleware)
-                .toList();
+        List<WorkScheduleDto> workScheduleDtos = new ArrayList<>();
 
-        Map<Long, List<WorkSchedule>> userWorkScheduleMap = new HashMap<>();
+        for (WorkScheduleData raw : rawSchedules) {
+            // Convert entity JSON fields into WorkSchedule (intermediate object)
+            WorkSchedule schedule = new WorkSchedule();
+            schedule.setScheduleId(raw.getWorkScheduleId());
+            schedule.setScheduleName(raw.getWorkScheduleName());
+            schedule.setDefault(raw.getIsDefault());
+            schedule.setActive(raw.getIsActive());
+            schedule.setType(raw.getWorkScheduleType());
+            schedule.setOrgId(raw.getOrganizationId());
+            schedule.setWeeklySchedule(raw.getWeeklySchedule());
 
-        if (workSchedules.isEmpty()) {
-            log.warn("No active workSchedules found for orgId: {}", orgId);
-            return CompletableFuture.completedFuture(userWorkScheduleMap);
+            // Parse fixed and flexible schedules from JSON strings
+            try {
+                if (raw.getFixedSchedule() != null && !raw.getFixedSchedule().isBlank()) {
+                    List<FixedScheduleDto> fixed = mapper.readValue(
+                            raw.getFixedSchedule(),
+                            new TypeReference<List<FixedScheduleDto>>() {
+                            }
+                    );
+                    schedule.setFixedSchedule(fixed);
+                }
+            } catch (Exception e) {
+                log.error("FixedSchedule parse error for ID {}: {}", raw.getWorkScheduleId(), e.getMessage());
+                schedule.setFixedSchedule(Collections.emptyList());
+            }
+
+            try {
+                if (raw.getFlexibleSchedule() != null && !raw.getFlexibleSchedule().isBlank()) {
+                    List<FlexibleScheduleDto> flex = mapper.readValue(
+                            raw.getFlexibleSchedule(),
+                            new TypeReference<List<FlexibleScheduleDto>>() {
+                            }
+                    );
+                    schedule.setFlexibleSchedule(flex);
+                }
+            } catch (Exception e) {
+                log.error("FlexibleSchedule parse error for ID {}: {}", raw.getWorkScheduleId(), e.getMessage());
+                schedule.setFlexibleSchedule(Collections.emptyList());
+            }
+
+            log.info("Parsed fixedSchedule for {}: {}", raw.getWorkScheduleId(), schedule.getFixedSchedule());
+
+            WorkScheduleDto dto = workScheduleDtoMapper.toDtoWithFormattedTimes(schedule);
+            workScheduleDtos.add(dto);
         }
 
-        userWorkScheduleMap.put(orgId,workSchedules);
-        String redisKey = cacheKeyUtil.getWorkSchedule(orgId);
+        Map<Long, List<WorkScheduleDto>> userWorkScheduleMap = new HashMap<>();
+        userWorkScheduleMap.put(orgId, workScheduleDtos);
 
-        // Cache all workSchedules
+        // Redis Caching
+        String redisKey = cacheKeyUtil.getWorkSchedule(orgId);
         try {
             if (redisTemplate != null) {
                 redisTemplate.delete(redisKey);
-                ObjectMapper mapper = new ObjectMapper();
                 Map<String, String> redisMap = new HashMap<>();
-                for(WorkSchedule ws : workSchedules){
-                    redisMap.put(ws.getScheduleId(), mapper.writeValueAsString(ws));
+                for (WorkScheduleDto dto : workScheduleDtos) {
+                    redisMap.put(dto.getScheduleId(), mapper.writeValueAsString(dto));
                 }
                 redisTemplate.opsForHash().putAll(redisKey, redisMap);
                 log.info("Cached {} workSchedules under key: {}", redisMap.size(), redisKey);
-            } else {
-                log.warn("RedisTemplate is null, skipping cache for workSchedules for orgId: {}", orgId);
             }
         } catch (Exception e) {
-            log.warn("Redis putAll failed for orgId {}: {}", orgId, e.getMessage());
+            log.warn("Redis caching failed for orgId {}: {}", orgId, e.getMessage());
         }
+
         return CompletableFuture.completedFuture(userWorkScheduleMap);
     }
+
 }

@@ -1,11 +1,7 @@
 package com.uniq.tms.tms_microservice.service;
 
-import com.uniq.tms.tms_microservice.dto.GroupResponseDto;
-import com.uniq.tms.tms_microservice.dto.PrivilegeConstants;
-import com.uniq.tms.tms_microservice.dto.UserProfileResponse;
-import com.uniq.tms.tms_microservice.dto.UserResponseDto;
+import com.uniq.tms.tms_microservice.dto.*;
 import com.uniq.tms.tms_microservice.model.Location;
-import com.uniq.tms.tms_microservice.model.WorkSchedule;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -18,5 +14,5 @@ public interface CacheLoaderService {
     String getPrivilegeKey(PrivilegeConstants constant);
     CompletableFuture<Map<String, UserProfileResponse>> loadUsersProfile(Long orgId);
     CompletableFuture<List<GroupResponseDto>> loadGroupsCache(Long orgId);
-    CompletableFuture<Map<Long, List<WorkSchedule>>> loadWorkSchedule(Long orgId);
+    CompletableFuture<Map<Long, List<WorkScheduleDto>>> loadWorkSchedule(Long orgId);
 }
