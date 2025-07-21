@@ -225,7 +225,7 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
             throw new DataIntegrityViolationException("WorkScheduleName already exists in this organization");
         }
         // Validate
-        WorkScheduleEntity existing = workScheduleAdapter.findByScheduleId(model.getScheduleId());
+        WorkScheduleEntity existing = workScheduleAdapter.findByScheduleId(model.getScheduleId(), orgId);
 
             OrganizationEntity organizationEntity = userAdapter.findByOrgId(orgId)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "Organization not found"));
@@ -264,7 +264,7 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
     @Override
     @Transactional
     public void deleteWorkSchedule(String orgId, String scheduleId) {
-        WorkScheduleEntity workSchedule = workScheduleAdapter.findByScheduleId(scheduleId);
+        WorkScheduleEntity workSchedule = workScheduleAdapter.findByScheduleId(scheduleId, orgId);
 
         // 1. Validate organization ownership
         if (!workSchedule.getOrganizationEntity().getOrganizationId().equals(orgId)) {

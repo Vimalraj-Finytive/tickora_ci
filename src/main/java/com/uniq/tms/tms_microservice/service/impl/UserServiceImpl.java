@@ -677,7 +677,7 @@ public class UserServiceImpl implements UserService {
                 throw new IllegalStateException("No default work schedule found for this organization");
             }
         } else {
-            scheduleToSet = workScheduleAdapter.findByScheduleId(userDto.getWorkSchedule());
+            scheduleToSet = workScheduleAdapter.findByScheduleId(userDto.getWorkSchedule(), organizationId);
         }
         entity.setWorkSchedule(scheduleToSet);
         entity.setActive(true);
@@ -866,7 +866,7 @@ public class UserServiceImpl implements UserService {
                 existingUser.setRegisterUser(userDto.isRegisterUser());
             }
             if (userDto.getWorkSchedule() != null){
-                existingUser.setWorkSchedule(workScheduleAdapter.findByScheduleId(userDto.getWorkSchedule()));
+                existingUser.setWorkSchedule(workScheduleAdapter.findByScheduleId(userDto.getWorkSchedule(), orgId));
             }
             if(location != null) {
                 Set<Long> toDelete = new HashSet<>(userLocation);
@@ -1069,7 +1069,7 @@ public class UserServiceImpl implements UserService {
             log.info("Default schedule:{}", defaultWs);
             entity.setWorkSchedule(defaultWs);
         } else {
-            WorkScheduleEntity ws = workScheduleAdapter.findByWorkscheduleId(groupMiddleware.getWorkScheduleId());
+            WorkScheduleEntity ws = workScheduleAdapter.findByScheduleId(groupMiddleware.getWorkScheduleId(), orgId);
             entity.setWorkSchedule(ws);
         }
 
@@ -1191,6 +1191,14 @@ public class UserServiceImpl implements UserService {
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Location not found with ID: " + addGroup.getLocationId());
             }
             existingGroup.setLocationEntity(locationEntity);
+        }
+
+        if(addGroup.getWorkScheduleId() != null){
+            WorkScheduleEntity workScheduleEntity = workScheduleAdapter.findByScheduleId(addGroup.getWorkScheduleId(), orgId);
+            if (workScheduleEntity == null){
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "WorkSchedule Not found with ID: " + addGroup.getWorkScheduleId());
+            }
+            existingGroup.setWorkSchedule(workScheduleEntity);
         }
 
         // Save updated group details (name/location)

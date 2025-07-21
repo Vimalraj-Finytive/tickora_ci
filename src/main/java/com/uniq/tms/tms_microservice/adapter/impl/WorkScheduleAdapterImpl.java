@@ -25,11 +25,6 @@ public class WorkScheduleAdapterImpl implements WorkScheduleAdapter {
     }
 
     @Override
-    public WorkScheduleEntity findByWorkscheduleId(String workScheduleId) {
-        return workScheduleRepository.findByScheduleId(workScheduleId);
-    }
-
-    @Override
     public WorkScheduleEntity findDefaultActiveSchedule(String orgId) {
         return workScheduleRepository.findDefaultActiveSchedule(orgId);
     }
@@ -65,8 +60,8 @@ public class WorkScheduleAdapterImpl implements WorkScheduleAdapter {
     }
 
     @Override
-    public WorkScheduleEntity findByScheduleId(String scheduleId) {
-        return workScheduleRepository.findByScheduleId(scheduleId);
+    public WorkScheduleEntity findByScheduleId(String scheduleId, String orgId) {
+        return workScheduleRepository.findByScheduleIdAndOrganizationEntity_OrganizationId(scheduleId, orgId);
     }
 
     @Override

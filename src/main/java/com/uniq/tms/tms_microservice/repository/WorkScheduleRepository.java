@@ -18,7 +18,7 @@ public interface WorkScheduleRepository extends JpaRepository<WorkScheduleEntity
     WorkScheduleEntity findDefaultActiveSchedule(@Param("orgId") String orgId);
 
 
-    WorkScheduleEntity findByScheduleId(String scheduleId);
+    WorkScheduleEntity findByScheduleIdAndOrganizationEntity_OrganizationId(String scheduleId, String orgId);
 
     @Query("SELECT MAX(w.scheduleId) FROM WorkScheduleEntity w WHERE w.scheduleId LIKE CONCAT(:prefix, '%')")
     String findMaxIdByPrefix(@Param("prefix") String prefix);

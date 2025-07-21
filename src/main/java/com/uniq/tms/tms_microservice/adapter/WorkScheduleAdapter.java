@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.Optional;
 
 public interface WorkScheduleAdapter {
-    WorkScheduleEntity findByWorkscheduleId(String workScheduleId);
     WorkScheduleEntity findDefaultActiveSchedule(String orgId);
     void saveAll(List<FixedWorkScheduleEntity> entities);
     void saveAllFlexible(List<FlexibleWorkScheduleEntity> entities);
@@ -13,7 +12,7 @@ public interface WorkScheduleAdapter {
     WorkScheduleEntity saveWorkSchedule(WorkScheduleEntity entity);
     Optional<WorkScheduleTypeEntity> findById(String type);
     void addType(WorkScheduleTypeEntity entity);
-    WorkScheduleEntity findByScheduleId(String scheduleId);
+    WorkScheduleEntity findByScheduleId(String scheduleId, String orgId);
     void deleteAllChildren(String scheduleId);
     boolean findByWorkschedule(String scheduleName, String orgId);
     void resetDefaultWorkSchedule(String orgId);
