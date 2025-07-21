@@ -67,4 +67,8 @@ public interface UserEntityMapper {
     Privilege toModel(PrivilegeEntity privilege);
 
     LocationEntity toEntity(Location location);
+
+    OrganizationEntity toEntity(Organization organization);
+
+    Organization toModel(OrganizationEntity organizationEntity);
 }

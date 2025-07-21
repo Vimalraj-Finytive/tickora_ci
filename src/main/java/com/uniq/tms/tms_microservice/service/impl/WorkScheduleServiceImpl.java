@@ -67,7 +67,7 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
     }
 
     @Override
-    public List<WorkScheduleDto> getAllWorkSchedules(Long orgId) {
+    public List<WorkScheduleDto> getAllWorkSchedules(String orgId) {
         String redisKey = cacheKeyUtil.getWorkSchedule(orgId);
         ObjectMapper mapper = new ObjectMapper();
 
@@ -92,7 +92,7 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
 
             // Cache miss, load from DB and repopulate cache
             log.info("Cache miss for workSchedule, loading from DB...");
-            Map<Long, List<WorkScheduleDto>> loadedMap = cacheLoaderService.loadWorkSchedule(orgId).get();
+            Map<String, List<WorkScheduleDto>> loadedMap = cacheLoaderService.loadWorkSchedule(orgId).get();
             List<WorkScheduleDto> response = loadedMap.get(orgId);
 
             if (response != null && !response.isEmpty()) {
@@ -120,18 +120,17 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
 
     @Override
     @Transactional
-    public ApiResponse createWorkSchedule(WorkSchedule model, com.uniq.tms.tms_microservice.dto.WorkScheduleDto dto, Long orgId) {
-
-        boolean exist = workScheduleAdapter.findByWorkschedule(dto.getScheduleName(), orgId);
-        if (exist) {
-            return new ApiResponse(403, "WorkSchedule Name already Exist", false);
+    public ApiResponse createWorkSchedule(WorkSchedule model, String orgId) {
+        if (workScheduleAdapter.findByWorkschedule(model.getScheduleName(), orgId)) {
+            return new ApiResponse(403, "WorkSchedule Name already exists", false);
         }
 
-        if(dto.isDefault()){
+        if (model.isDefault()) {
             workScheduleAdapter.resetDefaultWorkSchedule(orgId);
         }
-        WorkScheduleTypeEntity typeEntity = workScheduleAdapter.findById(dto.getType())
-                .orElseThrow(() -> new IllegalArgumentException("Invalid work schedule type ID: " + dto.getType()));
+
+        WorkScheduleTypeEntity typeEntity = workScheduleAdapter.findById(model.getType())
+                .orElseThrow(() -> new IllegalArgumentException("Invalid WorkScheduleType ID: " + model.getType()));
 
         OrganizationEntity organizationEntity = userAdapter.findByOrgId(orgId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "Organization not found"));
@@ -141,13 +140,29 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
         entity.setScheduleId(idGeneratorService.generateNextId(IdGenerationType.WORK_SCHEDULE));
         entity.setType(typeEntity);
         entity.setActive(true);
-        workScheduleAdapter.saveWorkSchedule(entity);
 
-        switch (typeEntity.getType()) {
-            case FIXED -> saveFixedSchedule(dto.getFixedSchedule(), entity);
-            case FLEXIBLE -> saveFlexibleSchedule(dto.getFlexibleSchedule(), entity);
-            case WEEKLY -> saveWeeklySchedule(dto.getWeeklySchedule(), entity);
+        boolean shouldAssignToSuperAdmin = model.isDefault() || workScheduleAdapter.countByOrgId(orgId) == 1;
+
+        WorkScheduleEntity savedEntity = workScheduleAdapter.saveWorkSchedule(entity);
+
+        if (shouldAssignToSuperAdmin) {
+            int superAdminRoleLevel = UserRole.SUPERADMIN.getHierarchyLevel();
+            UserEntity superAdminUser = userAdapter.findUserByOrgIdAndRoleId(orgId, superAdminRoleLevel);
+
+            if (superAdminUser != null) {
+                superAdminUser.setWorkSchedule(savedEntity);
+                userAdapter.save(superAdminUser);
+            }
         }
+
+        // Step 6: Save specific schedule type
+        switch (typeEntity.getType()) {
+            case FIXED -> saveFixedSchedule(model.getFixedSchedule(), entity);
+            case FLEXIBLE -> saveFlexibleSchedule(model.getFlexibleSchedule(), entity);
+            case WEEKLY -> saveWeeklySchedule(model.getWeeklySchedule(), entity);
+        }
+
+        // Step 7: Trigger cache reload
         CacheEventPublisherUtil.syncReloadThenPublish(
                 publisher,
                 cacheKeyConfig.getWorkSchedule(),
@@ -203,38 +218,39 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
 
     @Override
     @Transactional
-    public void updateWorkSchedule(WorkSchedule model, WorkScheduleDto dto, Long orgId) {
+    public void updateWorkSchedule(WorkSchedule model, String orgId) {
 
-        if ((workScheduleAdapter.findByScheduleName(dto.getScheduleId(), dto.getScheduleName(), orgId)))
+        if ((workScheduleAdapter.findByScheduleName(model.getScheduleId(), model.getScheduleName(), orgId)))
         {
             throw new DataIntegrityViolationException("WorkScheduleName already exists in this organization");
         }
         // Validate
-        WorkScheduleEntity existing = workScheduleAdapter.findByScheduleId(dto.getScheduleId());
+        WorkScheduleEntity existing = workScheduleAdapter.findByScheduleId(model.getScheduleId(), orgId);
 
             OrganizationEntity organizationEntity = userAdapter.findByOrgId(orgId)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "Organization not found"));
 
-            WorkScheduleTypeEntity typeEntity = workScheduleAdapter.findById(dto.getType())
+            WorkScheduleTypeEntity typeEntity = workScheduleAdapter.findById(model.getType())
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid type"));
-            if (dto.isDefault()){
-                workScheduleAdapter.updateDefaultWorkSchedule(orgId, dto.getScheduleId());
+
+            if (model.isDefault()){
+                workScheduleAdapter.updateDefaultWorkSchedule(orgId, model.getScheduleId());
             }
             // Delete children
-            workScheduleAdapter.deleteAllChildren(dto.getScheduleId());
+            workScheduleAdapter.deleteAllChildren(model.getScheduleId());
             entityManager.flush();
             entityManager.clear();
             // Update parent
             WorkScheduleEntity entity = workScheduleEntityMapper.toEntity(model);
             entity.setOrganizationEntity(organizationEntity);
             entity.setType(typeEntity);
-            entity.setScheduleId(dto.getScheduleId());
+            entity.setScheduleId(model.getScheduleId());
             entity.setActive(true);
             workScheduleAdapter.saveWorkSchedule(entity);
             switch (typeEntity.getType()) {
-                case FIXED -> saveFixedSchedule(dto.getFixedSchedule(), entity);
-                case FLEXIBLE -> saveFlexibleSchedule(dto.getFlexibleSchedule(), entity);
-                case WEEKLY -> saveWeeklySchedule(dto.getWeeklySchedule(), entity);
+                case FIXED -> saveFixedSchedule(model.getFixedSchedule(), entity);
+                case FLEXIBLE -> saveFlexibleSchedule(model.getFlexibleSchedule(), entity);
+                case WEEKLY -> saveWeeklySchedule(model.getWeeklySchedule(), entity);
             }
         CacheEventPublisherUtil.syncReloadThenPublish(
                 publisher,
@@ -247,8 +263,8 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
 
     @Override
     @Transactional
-    public void deleteWorkSchedule(Long orgId, String scheduleId) {
-        WorkScheduleEntity workSchedule = workScheduleAdapter.findByScheduleId(scheduleId);
+    public void deleteWorkSchedule(String orgId, String scheduleId) {
+        WorkScheduleEntity workSchedule = workScheduleAdapter.findByScheduleId(scheduleId, orgId);
 
         // 1. Validate organization ownership
         if (!workSchedule.getOrganizationEntity().getOrganizationId().equals(orgId)) {

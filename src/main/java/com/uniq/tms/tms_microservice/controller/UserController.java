@@ -48,7 +48,7 @@ public class UserController {
             String jwt = jwtUtil.extractJwt(authHeader);
             logger.info("Extracted JWT: " + jwt);
 
-            Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
+            String orgId = jwtUtil.extractOrgIdFromToken(jwt);
             if (orgId == null) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ApiResponse(401, "Unauthorized - Invalid Organization", null));
             }
@@ -63,7 +63,7 @@ public class UserController {
 
     @GetMapping("/group")
     public ResponseEntity<ApiResponse> getAllGroup(@RequestHeader(value = "Authorization", required = false) String authHeader) {
-        Long orgId;
+        String orgId;
         try {
             String jwt = jwtUtil.extractJwt(authHeader);
             orgId = jwtUtil.extractOrgIdFromToken(jwt);
@@ -88,7 +88,7 @@ public class UserController {
             String jwt = jwtUtil.extractJwt(authHeader);
             logger.info("Extracted JWT: " + jwt);
 
-            Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
+            String orgId = jwtUtil.extractOrgIdFromToken(jwt);
             if (orgId == null) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ApiResponse(401, "Unauthorized - Invalid Organization", null));
             }

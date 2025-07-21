@@ -6,7 +6,7 @@ public interface WorkScheduleData {
     String getWorkScheduleName();
     Boolean getIsDefault();
     Boolean getIsActive();
-    Long getOrganizationId();
+    String getOrganizationId();
     String getWorkScheduleType();
     String getFixedSchedule();
     String getFlexibleSchedule();

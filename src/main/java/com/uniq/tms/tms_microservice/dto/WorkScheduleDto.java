@@ -1,7 +1,6 @@
 package com.uniq.tms.tms_microservice.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-
 import java.util.List;
 
 public class WorkScheduleDto {
@@ -11,7 +10,7 @@ public class WorkScheduleDto {
     private boolean isDefault;
     private String type;
     @JsonIgnore
-    private Long orgId;
+    private String orgId;
     private Double duration;
     private String typeName;
     private List<FixedScheduleDto> fixedSchedule;
@@ -59,11 +58,11 @@ public class WorkScheduleDto {
         this.type = type;
     }
 
-    public Long getOrgId() {
+    public String getOrgId() {
         return orgId;
     }
 
-    public void setOrgId(Long orgId) {
+    public void setOrgId(String orgId) {
         this.orgId = orgId;
     }
 

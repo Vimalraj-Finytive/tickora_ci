@@ -6,7 +6,7 @@ public class Location {
     private String latitude;
     private String longitude;
     private String radius;
-    private Long orgId;
+    private String orgId;
     private String address;
     private boolean isDefault;
 
@@ -50,9 +50,9 @@ public class Location {
         this.radius = radius;
     }
 
-    public Long getOrgId() {return orgId;}
+    public String getOrgId() {return orgId;}
 
-    public void setOrgId(Long orgId) {this.orgId = orgId;}
+    public void setOrgId(String orgId) {this.orgId = orgId;}
 
     public String getAddress() {
         return address;

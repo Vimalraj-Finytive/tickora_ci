@@ -9,7 +9,7 @@ public class User {
     private String userName;
     private String email;
     private String mobileNumber;
-    private Long organizationId;
+    private String organizationId;
     private Long roleId;
     private List<Long> locationId;
     private LocalDate dateOfJoining;
@@ -66,11 +66,11 @@ public class User {
         this.mobileNumber = mobileNumber;
     }
 
-    public Long getOrganizationId() {
+    public String getOrganizationId() {
         return organizationId;
     }
 
-    public void setOrganizationId(Long organizationId) {
+    public void setOrganizationId(String organizationId) {
         this.organizationId = organizationId;
     }
 

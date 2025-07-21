@@ -26,8 +26,8 @@ public class RedisScheduler {
     public void reloadLocationCacheHourly() {
         log.info("Scheduled Location cache loading triggered : {}", LocalTime.now());
         try {
-            List<Long> orgIds = organizationRepository.findAllOrgIds();
-            for(Long orgId : orgIds){
+            List<String> orgIds = organizationRepository.findAllOrgIds();
+            for(String orgId : orgIds){
                 cacheLoaderService.loadLocationTable(orgId);
             }
             log.info("Location Cache loading completed");
@@ -40,8 +40,8 @@ public class RedisScheduler {
     public void reloadUserCacheHourly() {
         log.info("Scheduled User cache loading triggered : {}", LocalTime.now());
         try {
-            List<Long> orgIds = organizationRepository.findAllOrgIds();
-            for(Long orgId : orgIds){
+            List<String> orgIds = organizationRepository.findAllOrgIds();
+            for(String orgId : orgIds){
                 cacheLoaderService.loadAllUsers(orgId);
             }
             log.info("Cache User loading completed");
@@ -54,8 +54,8 @@ public class RedisScheduler {
     public void reloadProfileCacheHourly() {
         log.info("Scheduled User Profile cache loading triggered : {}", LocalTime.now());
         try {
-            List<Long> orgIds = organizationRepository.findAllOrgIds();
-            for(Long orgId : orgIds){
+            List<String> orgIds = organizationRepository.findAllOrgIds();
+            for(String orgId : orgIds){
                 cacheLoaderService.loadUsersProfile(orgId);
             }
             log.info("Cache User Profile loading completed");
@@ -68,8 +68,8 @@ public class RedisScheduler {
     public void reloadRolesCacheHourly() {
         log.info("Scheduled Role cache loading triggered : {}", LocalTime.now());
         try {
-            List<Long> orgIds = organizationRepository.findAllOrgIds();
-            for(Long orgId : orgIds) {
+            List<String> orgIds = organizationRepository.findAllOrgIds();
+            for(String orgId : orgIds) {
                 cacheLoaderService.loadGroupsCache(orgId);
             }
             log.info("Cache Role loading completed");
@@ -82,10 +82,7 @@ public class RedisScheduler {
     public void reloadPrivilegeCacheHourly() {
         log.info("Scheduled Privilege cache loading triggered : {}", LocalTime.now());
         try {
-            List<Long> orgIds = organizationRepository.findAllOrgIds();
-            for(Long orgId : orgIds) {
-                cacheLoaderService.loadPrivilegesFromDB(orgId);
-            }
+                cacheLoaderService.loadPrivilegesFromDB();
             log.info("Cache Privilege loading completed");
         } catch (Exception e) {
             log.error("Error during scheduled Privilege cache loading: {}", e.getMessage(), e);
@@ -96,8 +93,8 @@ public class RedisScheduler {
     public void reloadGroupsCacheHourly() {
         log.info("Scheduled Groups cache loading triggered : {}", LocalTime.now());
         try {
-            List<Long> orgIds = organizationRepository.findAllOrgIds();
-            for(Long orgId : orgIds) {
+            List<String> orgIds = organizationRepository.findAllOrgIds();
+            for(String orgId : orgIds) {
                 cacheLoaderService.loadGroupsCache(orgId);
             }
             log.info("Cache Groups loading completed");
@@ -109,8 +106,8 @@ public class RedisScheduler {
     public void reloadWorkScheduleCacheHourly() {
         log.info("Scheduled WorkSchedule cache loading triggered : {}", LocalTime.now());
         try {
-            List<Long> orgIds = organizationRepository.findAllOrgIds();
-            for(Long orgId : orgIds) {
+            List<String> orgIds = organizationRepository.findAllOrgIds();
+            for(String orgId : orgIds) {
                 cacheLoaderService.loadWorkSchedule(orgId);
             }
             log.info("Cache WorkSchedule loading completed");

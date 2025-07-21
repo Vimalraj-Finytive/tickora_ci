@@ -3,9 +3,9 @@ package com.uniq.tms.tms_microservice.event;
 public class CacheReloadEvent {
 
     private final String cacheName;
-    private final Long orgId;
+    private final String orgId;
 
-    public CacheReloadEvent(String cacheName, Long orgId){
+    public CacheReloadEvent(String cacheName, String orgId){
         this.cacheName = cacheName;
         this.orgId = orgId;
     }
@@ -14,7 +14,7 @@ public class CacheReloadEvent {
         return cacheName;
     }
 
-    public Long getOrgId(){
+    public String getOrgId(){
         return orgId;
     }
 }

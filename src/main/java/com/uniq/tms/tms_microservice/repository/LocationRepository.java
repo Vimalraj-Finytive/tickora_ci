@@ -18,12 +18,12 @@ public interface LocationRepository extends JpaRepository<LocationEntity, Long> 
     List<Object[]> findLocationNameIdMappings();
 
     @Query("SELECT l FROM LocationEntity l WHERE l.name = :name AND l.organizationEntity.organizationId = :orgId")
-    Optional<LocationEntity> findByNameAndOrganizationId(String name, Long orgId);
+    Optional<LocationEntity> findByNameAndOrganizationId(String name, String orgId);
 
     @Query("SELECT l FROM LocationEntity l WHERE l.organizationEntity.organizationId = :orgId")
-    List<LocationEntity> findByOrgId(@Param("orgId") Long orgId);
+    List<LocationEntity> findByOrgId(@Param("orgId") String orgId);
 
-    boolean existsBylocationIdInAndOrganizationEntity_OrganizationId(List<Long> locationIds, Long orgId);
+    boolean existsBylocationIdInAndOrganizationEntity_OrganizationId(List<Long> locationIds, String orgId);
 
     @Modifying(clearAutomatically = true)
     @Transactional
@@ -32,9 +32,9 @@ public interface LocationRepository extends JpaRepository<LocationEntity, Long> 
         WHERE location_id IN :locationId
         AND organization_id = :orgId
         """, nativeQuery = true)
-    void deleteAllLocationById(@Param("locationId") List<Long> locationId, @Param("orgId") Long orgId);
+    void deleteAllLocationById(@Param("locationId") List<Long> locationId, @Param("orgId") String orgId);
 
-    LocationEntity findByLocationIdAndOrganizationEntity_OrganizationId(Long locationId, Long orgId);
+    LocationEntity findByLocationIdAndOrganizationEntity_OrganizationId(Long locationId, String orgId);
 
     @Modifying
     @Transactional
@@ -42,17 +42,17 @@ public interface LocationRepository extends JpaRepository<LocationEntity, Long> 
             "WHERE l.organizationEntity.organizationId = :orgId " +
             "AND l.locationId <> :defaultLocationId " +
             "AND l.isDefault = true")
-    void resetDefaultLocation(@Param("orgId") Long orgId, @Param("defaultLocationId") Long defaultLocationId);
+    void resetDefaultLocation(@Param("orgId") String orgId, @Param("defaultLocationId") Long defaultLocationId);
 
     @Modifying
     @Transactional
     @Query("UPDATE LocationEntity l SET l.isDefault = false " +
             "WHERE l.organizationEntity.organizationId = :orgId AND l.isDefault = true")
-    void resetDefaultLocation(@Param("orgId") Long orgId);
+    void resetDefaultLocation(@Param("orgId") String orgId);
 
     @Query("SELECT l FROM LocationEntity l WHERE l.locationId IN :locationIds AND l.organizationEntity.organizationId = :orgId AND l.isDefault = true")
-    Optional<LocationEntity> findDefaultLocationByOrgId(List<Long> locationIds, Long orgId);
+    Optional<LocationEntity> findDefaultLocationByOrgId(List<Long> locationIds, String orgId);
 
     @Query("SELECT l FROM LocationEntity l WHERE l.organizationEntity.organizationId = :orgId AND l.isDefault = true")
-    LocationEntity findDefaultLocationById(@Param("orgId") Long orgId);
+    LocationEntity findDefaultLocationById(@Param("orgId") String orgId);
 }

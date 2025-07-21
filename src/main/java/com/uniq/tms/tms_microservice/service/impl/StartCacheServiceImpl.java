@@ -22,15 +22,14 @@ public class StartCacheServiceImpl implements ApplicationRunner, StartCacheServi
     //called on application startup
     @Override
     public void run(ApplicationArguments args) throws Exception {
-
-        List<Long> orgIds = organizationRepository.findAllOrgIds();
-        for(Long orgId : orgIds){
+        cacheLoaderService.loadAllRolesToCache();
+        cacheLoaderService.loadPrivilegesFromDB();
+        List<String> orgIds = organizationRepository.findAllOrgIds();
+        for(String orgId : orgIds){
             cacheLoaderService.loadLocationTable(orgId);
             cacheLoaderService.loadUsersProfile(orgId);
             cacheLoaderService.loadAllUsers(orgId);
             cacheLoaderService.loadGroupsCache(orgId);
-            cacheLoaderService.loadAllRolesToCache(orgId);
-            cacheLoaderService.loadPrivilegesFromDB(orgId);
             cacheLoaderService.loadWorkSchedule(orgId);
         }
     }

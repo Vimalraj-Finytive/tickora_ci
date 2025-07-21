@@ -44,7 +44,7 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
     private static final Logger log = LoggerFactory.getLogger(TimesheetAdapterImpl.class);
 
     @Override
-    public List<UserTimesheetResponseDto> filterTimesheetsForAllUsers(LocalDate startDate, LocalDate endDate, List<Long> userIds, Long orgId) {
+    public List<UserTimesheetResponseDto> filterTimesheetsForAllUsers(LocalDate startDate, LocalDate endDate, List<Long> userIds, String orgId) {
         Long[] userIdArray = userIds.toArray(new Long[0]);
 
         List<Object[]> resultList = timesheetRepository.fetchTimesheetsWithHistory(startDate, endDate, userIdArray, orgId);
@@ -370,7 +370,7 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
     }
 
     @Override
-    public List<TimesheetEntity> getLatestLogsByTimesheetIds(List<Long> memberIds, Long orgId, LocalDate date) {
+    public List<TimesheetEntity> getLatestLogsByTimesheetIds(List<Long> memberIds, String orgId, LocalDate date) {
         return timesheetHistoryRepository.findLatestLogByTimesheet(memberIds, date);
     }
 
@@ -385,7 +385,7 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
     }
 
     @Override
-    public List<UserTimesheetDto> fetchUserTimesheetsWithHistory(LocalDate startDate, LocalDate endDate, List<Long> userIds, Long orgId) {
+    public List<UserTimesheetDto> fetchUserTimesheetsWithHistory(LocalDate startDate, LocalDate endDate, List<Long> userIds, String orgId) {
         Long[] userIdArray = userIds.toArray(new Long[0]);
 
         List<Object[]> resultList = timesheetRepository.fetchUserTimesheetsWithHistory(startDate, endDate, userIdArray, orgId);
@@ -548,7 +548,7 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
     }
 
     @Override
-    public List<UserDashboard> getDashboard(Long orgId, List<Long> userIds, LocalDate fromDate, LocalDate toDate) {
+    public List<UserDashboard> getDashboard(String orgId, List<Long> userIds, LocalDate fromDate, LocalDate toDate) {
         return timesheetRepository.getDashboard(userIds,fromDate, toDate,orgId);
     }
 

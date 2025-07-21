@@ -2,7 +2,6 @@ package com.uniq.tms.tms_microservice.entity;
 
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
-
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -23,7 +22,7 @@ public class RoleEntity {
     private Integer hierarchyLevel;
 
     @ManyToOne
-    @JoinColumn(name = "organization_id", nullable = false)
+    @JoinColumn(name = "organization_id")
     private OrganizationEntity organizationEntity;
 
     @OneToMany(mappedBy = "role", cascade = CascadeType.ALL)

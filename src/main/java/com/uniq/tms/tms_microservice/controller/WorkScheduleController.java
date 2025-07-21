@@ -32,7 +32,7 @@ public class WorkScheduleController {
         }
         try {
             String jwt = jwtUtil.extractJwt(authHeader);
-            Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
+            String orgId = jwtUtil.extractOrgIdFromToken(jwt);
             if(orgId == null){
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ApiResponse(401,"Unauthorized - Invalid Organization",null));
             }
@@ -51,7 +51,7 @@ public class WorkScheduleController {
         }
         try {
             String jwt = jwtUtil.extractJwt(token);
-            Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
+            String orgId = jwtUtil.extractOrgIdFromToken(jwt);
             if(orgId == null){
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ApiResponse(401,"Unauthorized - Invalid Organization",null));
             }
@@ -75,7 +75,7 @@ public class WorkScheduleController {
 
         try {
             String jwt = jwtUtil.extractJwt(token);
-            Long orgId = jwtUtil.extractOrgIdFromToken(jwt);
+            String orgId = jwtUtil.extractOrgIdFromToken(jwt);
             if (orgId == null) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                         .body(new ApiResponse(401, "Unauthorized - Invalid Organization", false));

@@ -46,8 +46,9 @@ public class CacheLoaderServiceImpl implements CacheLoaderService {
     private final TextUtil textUtil;
     private final WorkScheduleDtoMapper workScheduleDtoMapper;
     private final WorkScheduleRepository workScheduleRepository;
+    private final OrganizationTypeRepository organizationTypeRepository;
 
-    public CacheLoaderServiceImpl(UserRepository userRepository, LocationRepository locationRepository, LocationDtoMapper locationDtoMapper, @Nullable RedisTemplate<String, Object> redisTemplate, RoleRepository roleRepository, PrivilegeRepository privilegeRepository, CacheKeyUtil cacheKeyUtil, OrganizationRepository organizationRepository, UserLocationRepository userLocationRepository, UserDtoMapper userDtoMapper, TeamRepository teamRepository, TextUtil textUtil, WorkScheduleDtoMapper workScheduleDtoMapper, WorkScheduleRepository workScheduleRepository) {
+    public CacheLoaderServiceImpl(UserRepository userRepository, LocationRepository locationRepository, LocationDtoMapper locationDtoMapper, @Nullable RedisTemplate<String, Object> redisTemplate, RoleRepository roleRepository, PrivilegeRepository privilegeRepository, CacheKeyUtil cacheKeyUtil, OrganizationRepository organizationRepository, UserLocationRepository userLocationRepository, UserDtoMapper userDtoMapper, TeamRepository teamRepository, TextUtil textUtil, WorkScheduleDtoMapper workScheduleDtoMapper, WorkScheduleRepository workScheduleRepository, OrganizationTypeRepository organizationTypeRepository) {
         this.userRepository = userRepository;
         this.locationRepository = locationRepository;
         this.locationDtoMapper = locationDtoMapper;
@@ -62,6 +63,7 @@ public class CacheLoaderServiceImpl implements CacheLoaderService {
         this.textUtil = textUtil;
         this.workScheduleDtoMapper = workScheduleDtoMapper;
         this.workScheduleRepository = workScheduleRepository;
+        this.organizationTypeRepository = organizationTypeRepository;
     }
 
     LocalDateTime now = LocalDateTime.now();
@@ -71,7 +73,7 @@ public class CacheLoaderServiceImpl implements CacheLoaderService {
      * @param orgId
      * @return All user list based on logged user hierarchy Level and organization and caches in redis cache key
      */
-    public CompletableFuture<Map<String, List<UserResponseDto>>> loadAllUsers(Long orgId) {
+    public CompletableFuture<Map<String, List<UserResponseDto>>> loadAllUsers(String orgId) {
         try {
             String redisKey = cacheKeyUtil.getMemberKey(orgId); // e.g., members:org:1
             Map<String, List<UserResponseDto>> roleWiseUserMap = new HashMap<>();
@@ -141,7 +143,7 @@ public class CacheLoaderServiceImpl implements CacheLoaderService {
      * @param orgId
      * @return location based on organization from db and cache it redis cache using keys
      */
-    public CompletableFuture<List<Location>> loadLocationTable(Long orgId) {
+    public CompletableFuture<List<Location>> loadLocationTable(String orgId) {
         String redisKey = cacheKeyUtil.getLocationKey(orgId);
 
         try{
@@ -174,10 +176,10 @@ public class CacheLoaderServiceImpl implements CacheLoaderService {
 
     /**
      *
-     * @param orgId
+     * @param
      * @return roles from db and cache it redis cache using keys
      */
-    public void loadAllRolesToCache(Long orgId) {
+    public void loadAllRolesToCache() {
        List<RoleEntity> roles = roleRepository.findAllWithPrivileges();
 
         Map<String, Set<String>> rolePrivileges = new HashMap<>();
@@ -204,7 +206,7 @@ public class CacheLoaderServiceImpl implements CacheLoaderService {
         return privilegeMap.get(constant);
     }
 
-    public void loadPrivilegesFromDB(Long orgId) {
+    public void loadPrivilegesFromDB() {
         List<PrivilegeEntity> privileges = privilegeRepository.findAll();
         log.info("Loading privileges from DB: {}", privileges.size());
 
@@ -229,8 +231,8 @@ public class CacheLoaderServiceImpl implements CacheLoaderService {
      * @param orgId
      * @return user profile of all the user with in the organization and cache it in redis cache key.
      */
-    public CompletableFuture<Map<String, UserProfileResponse>> loadUsersProfile(Long orgId) {
-        List<UserEntity> users = userRepository.findAllActiveUsersByorganizationId(orgId);
+    public CompletableFuture<Map<String, UserProfileResponse>> loadUsersProfile(String orgId) {
+        List<UserEntity> users = userRepository.findAllActiveUsersByOrganizationId(orgId);
         Map<String, UserProfileResponse> userProfileMap = new HashMap<>();
 
         if (users.isEmpty()) {
@@ -238,8 +240,13 @@ public class CacheLoaderServiceImpl implements CacheLoaderService {
             return CompletableFuture.completedFuture(userProfileMap);
         }
 
-        OrganizationEntity org = organizationRepository.findById(orgId).orElse(null);
+        OrganizationEntity org = organizationRepository.findByOrganizationId(orgId).orElse(null);
+        log.info("Org:{}", org);
 
+        Optional<OrganizationTypeEntity> organizationType = Optional.empty();
+        if (org != null && org.getOrgType() != null) {
+            organizationType = organizationTypeRepository.findById(org.getOrgType());
+        }
         for (UserEntity user : users) {
             Long userId = user.getUserId();
 
@@ -248,7 +255,10 @@ public class CacheLoaderServiceImpl implements CacheLoaderService {
 
             // Fetch locations
             List<UserLocationEntity> userLocations = userLocationRepository.findByUser_UserId(userId);
-            if (userLocations.isEmpty()) continue;
+            if (userLocations.isEmpty()) {
+                log.warn("Skipping userId {} due to no locations", userId);
+                continue;
+            }
 
             List<LocationDto> locationDtos = userLocations.stream()
                     .filter(ul -> ul.getLocation() != null)
@@ -269,7 +279,8 @@ public class CacheLoaderServiceImpl implements CacheLoaderService {
                     locationDtos,
                     groupDtos,
                     org != null ? org.getOrgName() : null,
-                    (user.getWorkSchedule() != null ? user.getWorkSchedule().getScheduleName() : "-")
+                    (user.getWorkSchedule() != null ? user.getWorkSchedule().getScheduleName() : "-"),
+                    organizationType.map(OrganizationTypeEntity::getOrgTypeName).orElse("-")
             );
 
             userProfileMap.put(userId.toString(), profile);
@@ -296,7 +307,7 @@ public class CacheLoaderServiceImpl implements CacheLoaderService {
      * @param orgId
      * @return group based on organization from db and cache it redis cache using keys
      */
-    public CompletableFuture<List<GroupResponseDto>> loadGroupsCache(Long orgId) {
+    public CompletableFuture<List<GroupResponseDto>> loadGroupsCache(String orgId) {
         List<GroupsData> groupRows = teamRepository.getGroupData(orgId);
 
         Map<Long, GroupResponseDto> groupMap = new HashMap<>();
@@ -365,7 +376,7 @@ public class CacheLoaderServiceImpl implements CacheLoaderService {
      * @return workSchedule based on organization from db and cache it redis cache using keys
      */
     @Transactional
-    public CompletableFuture<Map<Long, List<WorkScheduleDto>>> loadWorkSchedule(Long orgId) {
+    public CompletableFuture<Map<String, List<WorkScheduleDto>>> loadWorkSchedule(String orgId) {
         List<WorkScheduleData> rawSchedules = workScheduleRepository.findAllWithChildrenByOrgId(orgId);
         ObjectMapper mapper = new ObjectMapper();
 
@@ -417,7 +428,7 @@ public class CacheLoaderServiceImpl implements CacheLoaderService {
             workScheduleDtos.add(dto);
         }
 
-        Map<Long, List<WorkScheduleDto>> userWorkScheduleMap = new HashMap<>();
+        Map<String, List<WorkScheduleDto>> userWorkScheduleMap = new HashMap<>();
         userWorkScheduleMap.put(orgId, workScheduleDtos);
 
         // Redis Caching

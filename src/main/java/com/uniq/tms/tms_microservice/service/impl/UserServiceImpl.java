@@ -27,10 +27,7 @@ import com.uniq.tms.tms_microservice.entity.*;
 import com.uniq.tms.tms_microservice.mapper.SecondaryDetailsMapper;
 import com.uniq.tms.tms_microservice.model.Privilege;
 import com.uniq.tms.tms_microservice.model.Role;
-import com.uniq.tms.tms_microservice.repository.LocationRepository;
-import com.uniq.tms.tms_microservice.repository.OrganizationRepository;
-import com.uniq.tms.tms_microservice.repository.RoleRepository;
-import com.uniq.tms.tms_microservice.repository.TeamRepository;
+import com.uniq.tms.tms_microservice.repository.*;
 import com.uniq.tms.tms_microservice.service.CacheLoaderService;
 import com.uniq.tms.tms_microservice.service.UserService;
 import com.uniq.tms.tms_microservice.util.*;
@@ -94,8 +91,9 @@ public class UserServiceImpl implements UserService {
     private final TeamRepository teamRepository;
     private final CacheKeyConfig cacheKeyConfig;
     private final CacheReloadHandlerRegistry cacheReloadHandlerRegistry;
+    private final OrganizationTypeRepository organizationTypeRepository;
 
-    public UserServiceImpl(Validator validator, UserAdapter userAdapter, TimesheetAdapter timesheetAdapter, UserEntityMapper userEntityMapper, OrganizationRepository organizationRepository, RoleRepository roleRepository, LocationRepository locationRepository, EmailUtil emailUtil, UserDtoMapper userDtoMapper, SecondaryDetailsMapper secondaryDetailsMapper, @Nullable RedisTemplate<String, Object> redisTemplate, LocationEntityMapper locationEntityMapper, CacheLoaderService cacheLoaderService, ApplicationEventPublisher publisher, WorkScheduleAdapter workScheduleAdapter, CacheKeyUtil cacheKeyUtil, TeamRepository teamRepository, CacheKeyConfig cacheKeyConfig, CacheReloadHandlerRegistry cacheReloadHandlerRegistry) {
+    public UserServiceImpl(Validator validator, UserAdapter userAdapter, TimesheetAdapter timesheetAdapter, UserEntityMapper userEntityMapper, OrganizationRepository organizationRepository, RoleRepository roleRepository, LocationRepository locationRepository, EmailUtil emailUtil, UserDtoMapper userDtoMapper, SecondaryDetailsMapper secondaryDetailsMapper, @Nullable RedisTemplate<String, Object> redisTemplate, LocationEntityMapper locationEntityMapper, CacheLoaderService cacheLoaderService, ApplicationEventPublisher publisher, WorkScheduleAdapter workScheduleAdapter, CacheKeyUtil cacheKeyUtil, TeamRepository teamRepository, CacheKeyConfig cacheKeyConfig, CacheReloadHandlerRegistry cacheReloadHandlerRegistry, OrganizationTypeRepository organizationTypeRepository) {
         this.validator = validator;
         this.userAdapter = userAdapter;
         this.timesheetAdapter = timesheetAdapter;
@@ -115,6 +113,7 @@ public class UserServiceImpl implements UserService {
         this.teamRepository = teamRepository;
         this.cacheKeyConfig = cacheKeyConfig;
         this.cacheReloadHandlerRegistry = cacheReloadHandlerRegistry;
+        this.organizationTypeRepository = organizationTypeRepository;
     }
 
     private static final  Logger log = LoggerFactory.getLogger(UserServiceImpl.class);
@@ -123,27 +122,43 @@ public class UserServiceImpl implements UserService {
     private String uploadDir;
 
     @Override
-    public List<Role> getAllRole(Long orgId, String role) {
-
+    public List<Role> getAllRole(String orgId, String role) {
         if (role != null && role.startsWith("ROLE_")) {
             role = role.substring(5);
         }
+
         int hierarchyLevel = UserRole.getLevel(role);
-        List<Role> roles = userAdapter.getAllRole(orgId, hierarchyLevel)
-                .stream()
+
+        // Step 1: Get orgType from orgId
+        String orgTypeId = organizationRepository.findOrgTypeByOrganizationId(orgId);
+        OrganizationTypeEntity orgType = organizationTypeRepository.findById(orgTypeId).orElseThrow(() ->
+                new RuntimeException("Org Type not found for id: " + orgTypeId));
+        log.info("Org type:{}", orgType);
+        // Step 2: Get roles above current hierarchy level
+        List<RoleEntity> roleEntities = userAdapter.getAllRole(hierarchyLevel);
+
+        // Step 3: Filter STUDENT if org type is not ACADEMIC
+        if (!"ACADEMIC".equalsIgnoreCase(orgType.getOrgTypeName())) {
+            roleEntities = roleEntities.stream()
+                    .filter(r -> !RoleName.STUDENT.getRoleName().equalsIgnoreCase(r.getName()))
+                    .toList();
+        }
+
+        // Step 4: Map to middleware
+        return roleEntities.stream()
                 .map(userEntityMapper::toMiddleware)
                 .toList();
-        return roles;
     }
 
+
     @Override
-    public List<Group> getAllGroup(Long orgId) {
+    public List<Group> getAllGroup(String orgId) {
         List<Group> groups = userAdapter.getAllGroup(orgId).stream().map(userEntityMapper::toMiddleware).toList();
         return groups;
     }
 
     @Override
-    public List<Location> getAllLocation(Long orgId) {
+    public List<Location> getAllLocation(String orgId) {
         String redisKey = cacheKeyUtil.getLocationKey(orgId);
         CachedData<Location> cachedData = null;
 
@@ -180,7 +195,7 @@ public class UserServiceImpl implements UserService {
 
 
     @Override
-    public ApiResponse bulkCreateUsers(MultipartFile file, Long orgId, Long userId) {
+    public ApiResponse bulkCreateUsers(MultipartFile file, String orgId, Long userId) {
         log.info("Checking work flow for create user");
         String contentType = file.getContentType();
         String fileName = file.getOriginalFilename();
@@ -202,7 +217,7 @@ public class UserServiceImpl implements UserService {
         }
     }
 
-    public ApiResponse processCsvFileFromPath(String filePath, Long orgId, Long userId) {
+    public ApiResponse processCsvFileFromPath(String filePath, String orgId, Long userId) {
         File file = new File(filePath);
         if (!file.exists()) throw new RuntimeException("CSV file not found: " + filePath);
 
@@ -213,7 +228,7 @@ public class UserServiceImpl implements UserService {
         }
     }
 
-    public ApiResponse processCsvFile(InputStream inputStream, String originalFileName, Long orgId, Long userId) {
+    public ApiResponse processCsvFile(InputStream inputStream, String originalFileName, String orgId, Long userId) {
 
         UserEntity userFromToken = userAdapter.findUserByOrgIdAndUserId(orgId, userId);
         log.info("Starting processing for file: {}", originalFileName);
@@ -540,7 +555,7 @@ public class UserServiceImpl implements UserService {
         return destinationPath.toAbsolutePath().toString();
     }
 
-    private UserEntity createUserEntity(UserDto userDto, Long orgId,String generatedPass) {
+    private UserEntity createUserEntity(UserDto userDto, String orgId,String generatedPass) {
         UserEntity entity = userEntityMapper.toEntity(userDtoMapper.toMiddleware(userDto));
         entity.setOrganizationId(orgId);
         entity.setPassword(PasswordUtil.encryptPassword(generatedPass));
@@ -622,7 +637,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public ApiResponse createUser(UserDto userDto, SecondaryDetailsDto secondaryDetailsDto, Long organizationId) {
+    public ApiResponse createUser(UserDto userDto, SecondaryDetailsDto secondaryDetailsDto, String organizationId) {
         log.info("Checking if the user is student: {}", userDto.getRoleId());
         Optional<RoleEntity> roleName = userAdapter.findRoleById(userDto.getRoleId());
         log.info("Role from DB for creating user: {}", roleName.get().getName());
@@ -662,7 +677,7 @@ public class UserServiceImpl implements UserService {
                 throw new IllegalStateException("No default work schedule found for this organization");
             }
         } else {
-            scheduleToSet = workScheduleAdapter.findByScheduleId(userDto.getWorkSchedule());
+            scheduleToSet = workScheduleAdapter.findByScheduleId(userDto.getWorkSchedule(), organizationId);
         }
         entity.setWorkSchedule(scheduleToSet);
         entity.setActive(true);
@@ -806,7 +821,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public User updateUser(CreateUserDto updates, Long orgId, Long userId) {
+    public User updateUser(CreateUserDto updates, String orgId, Long userId) {
 
         UserEntity existingUser = userAdapter.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -851,7 +866,7 @@ public class UserServiceImpl implements UserService {
                 existingUser.setRegisterUser(userDto.isRegisterUser());
             }
             if (userDto.getWorkSchedule() != null){
-                existingUser.setWorkSchedule(workScheduleAdapter.findByScheduleId(userDto.getWorkSchedule()));
+                existingUser.setWorkSchedule(workScheduleAdapter.findByScheduleId(userDto.getWorkSchedule(), orgId));
             }
             if(location != null) {
                 Set<Long> toDelete = new HashSet<>(userLocation);
@@ -973,11 +988,11 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public List<UserResponseDto> getUsers(Long orgId, String role) {
+    public List<UserResponseDto> getUsers(String orgId, String role) {
         return fetchActiveUsers(orgId, role);
     }
 
-    private List<UserResponseDto> fetchActiveUsers(Long orgId, String role) {
+    private List<UserResponseDto> fetchActiveUsers(String orgId, String role) {
         String userCacheKey = cacheKeyUtil.getMemberKey(orgId); // e.g., "members:org:1"
         String roleField = role.toLowerCase(); // hash field for this role
         log.info("roleField:{}", roleField);
@@ -1013,7 +1028,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public User deleteUser(Long orgId, Long userId) {
+    public User deleteUser(String orgId, Long userId) {
         UserEntity user = userAdapter.findById(userId)
                 .orElseThrow(() -> new UsernameNotFoundException("User ID not found."));
 
@@ -1032,14 +1047,14 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public AddGroup createGroup(AddGroup groupMiddleware, Long orgId) {
+    public AddGroup createGroup(AddGroup groupMiddleware, String orgId) {
         if (userAdapter.findByGroup(groupMiddleware.getGroupName(), orgId)) {
             throw new DataIntegrityViolationException("Group '" + groupMiddleware.getGroupName() + "' already exists in this organization");
         }
 
         GroupEntity entity = userEntityMapper.toEntity(groupMiddleware);
 
-        OrganizationEntity orgEntity = organizationRepository.findById(orgId)
+        OrganizationEntity orgEntity = organizationRepository.findByOrganizationId(orgId)
                 .orElseThrow(() -> new EntityNotFoundException("Organization not found with ID: " + orgId));
         entity.setOrganizationEntity(orgEntity);
 
@@ -1054,7 +1069,7 @@ public class UserServiceImpl implements UserService {
             log.info("Default schedule:{}", defaultWs);
             entity.setWorkSchedule(defaultWs);
         } else {
-            WorkScheduleEntity ws = workScheduleAdapter.findByWorkscheduleId(groupMiddleware.getWorkScheduleId());
+            WorkScheduleEntity ws = workScheduleAdapter.findByScheduleId(groupMiddleware.getWorkScheduleId(), orgId);
             entity.setWorkSchedule(ws);
         }
 
@@ -1077,7 +1092,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public ApiResponse addUserToGroup(AddMember addMemberMiddleware, Long orgId) {
+    public ApiResponse addUserToGroup(AddMember addMemberMiddleware, String orgId) {
         List<Long> userIds = addMemberMiddleware.getUserId();
         List<String> addedUserNames = new ArrayList<>();
         List<String> alreadyExistsUsers = new ArrayList<>();
@@ -1127,7 +1142,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public UserGroup createUserGroup(UserGroup userGroupMiddleware, Long orgId) {
+    public UserGroup createUserGroup(UserGroup userGroupMiddleware, String orgId) {
         List<UserGroupEntity> existing = userAdapter.findByUserIdAndGroupId(
                 userGroupMiddleware.getUserId(),
                 userGroupMiddleware.getGroupId()
@@ -1145,7 +1160,7 @@ public class UserServiceImpl implements UserService {
 
     @Transactional
     @Override
-    public ApiResponse<?> updateGroupDetails(AddGroupDto addGroupDto, Long groupId, Long orgId) {
+    public ApiResponse<?> updateGroupDetails(AddGroupDto addGroupDto, Long groupId, String orgId) {
         AddGroup addGroup = userDtoMapper.toMiddleware(addGroupDto);
 
         List<String> conflictMessages = new ArrayList<>();
@@ -1176,6 +1191,14 @@ public class UserServiceImpl implements UserService {
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Location not found with ID: " + addGroup.getLocationId());
             }
             existingGroup.setLocationEntity(locationEntity);
+        }
+
+        if(addGroup.getWorkScheduleId() != null){
+            WorkScheduleEntity workScheduleEntity = workScheduleAdapter.findByScheduleId(addGroup.getWorkScheduleId(), orgId);
+            if (workScheduleEntity == null){
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "WorkSchedule Not found with ID: " + addGroup.getWorkScheduleId());
+            }
+            existingGroup.setWorkSchedule(workScheduleEntity);
         }
 
         // Save updated group details (name/location)
@@ -1257,7 +1280,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public UserProfileResponse getUserProfile(Long orgId, Long userId) {
+    public UserProfileResponse getUserProfile(String orgId, Long userId) {
         String redisKey = cacheKeyUtil.getprofileKey(orgId);
         String field = userId.toString();
 
@@ -1293,7 +1316,7 @@ public class UserServiceImpl implements UserService {
         }
     }
 
-    public List<GroupResponseDto> getAllGroups(Long orgId, Long userId) throws JsonProcessingException {
+    public List<GroupResponseDto> getAllGroups(String orgId, Long userId) throws JsonProcessingException {
 
         String cacheGroupkey = cacheKeyUtil.getAllGroupsKey(orgId);
         String cacheSupervisedGroupKey = cacheKeyUtil.getSupervisedGroupsKey(orgId);
@@ -1390,7 +1413,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public void deleteMember(Long groupId, Long memberId, Long orgId) {
+    public void deleteMember(Long groupId, Long memberId, String orgId) {
         userAdapter.deleteMember(groupId, memberId);
         CacheEventPublisherUtil.syncReloadThenPublish(
                 publisher,
@@ -1402,7 +1425,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public void deleteGroup(Long groupId, Long orgId) {
+    public void deleteGroup(Long groupId, String orgId) {
         boolean exist = teamRepository.existsByGroupIdAndOrganizationEntity_OrganizationId(groupId,orgId);
         if(!exist){
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,"Group not found or access denied");
@@ -1419,7 +1442,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public List<User> getMembers(Long orgId, Long roleId) {
+    public List<User> getMembers(String orgId, Long roleId) {
         // if roleId is present, get users by roleId
         if (roleId != null) {
             return userAdapter.getMembers(orgId, roleId).stream()
@@ -1441,7 +1464,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public List<GroupDto> getUserGroups(Long userId, String role, Long orgId) {
+    public List<GroupDto> getUserGroups(Long userId, String role, String orgId) {
         String roleName = role.replace("ROLE_", "");
         if(RoleName.SUPERADMIN.getRoleName().equalsIgnoreCase(roleName)){
             List<GroupDto> Allgroup = userAdapter.getAllgroups(orgId);
@@ -1452,7 +1475,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public List<Map<String, Object>> getGroupMembers(Long groupId, Long orgId, LocalDate date, Long userIdFromToken) {
+    public List<Map<String, Object>> getGroupMembers(Long groupId, String orgId, LocalDate date, Long userIdFromToken) {
 
         // Fetch group members, filtering out supervisors and logged-in user
         List<UserGroupEntity> groupEntity = userAdapter.getGroupMembersByGroupId(groupId, orgId);
@@ -1510,7 +1533,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public List<UserNameSuggestionDto> getGroupUsers(List<Long> groupIds, Long orgId, Long loggedInUserId, String role) {
+    public List<UserNameSuggestionDto> getGroupUsers(List<Long> groupIds, String orgId, Long loggedInUserId, String role) {
         // Case 1: groupIds is null or empty → return all active users
         if (groupIds == null || groupIds.isEmpty()) {
             int hierarchyLevel = UserRole.getLevel(role);
@@ -1558,7 +1581,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public Location addLocation(LocationDto locationDto, Long orgId) {
+    public Location addLocation(LocationDto locationDto, String orgId) {
         // Convert DTO to Entity
         Location locationModel = locationEntityMapper.toModel(locationDto);
         locationModel.setOrgId(orgId);
@@ -1572,6 +1595,20 @@ public class UserServiceImpl implements UserService {
 
         // Save to DB — triggers @PostPersist in listener
         LocationEntity savedEntity = userAdapter.addLocation(locationModel);
+        int roleId = UserRole.SUPERADMIN.getHierarchyLevel();
+        UserEntity user = userAdapter.findUserByOrgIdAndRoleId(orgId, roleId);
+        log.info("User List in role Superadmin:{}", user);
+            log.info("Adding user to newly created location");
+            List<UserLocationEntity> userLocationEntities = new ArrayList<>();
+                LocationEntity locations = locationRepository.findById(savedEntity.getLocationId())
+                        .orElseThrow(() -> new NoSuchElementException("Location not found with ID: " + savedEntity.getLocationId()));
+
+                UserLocationEntity userLocation = new UserLocationEntity();
+                userLocation.setUser(user);
+                userLocation.setLocation(locations);
+                userLocationEntities.add(userLocation);
+                log.info("USERLOCATION:{}", userLocation);
+            userAdapter.saveUserLocation(userLocationEntities);
 
         CacheEventPublisherUtil.syncReloadThenPublish(
                 publisher,
@@ -1623,7 +1660,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public Privilege addPrivileges(Privilege privilegeModel, Long orgId) {
+    public Privilege addPrivileges(Privilege privilegeModel, String orgId) {
         PrivilegeEntity privilegeEntity = userEntityMapper.toEntity(privilegeModel);
         PrivilegeEntity privilege = userAdapter.addPrivilege(privilegeEntity);
         CacheEventPublisherUtil.syncReloadThenPublish(
@@ -1637,7 +1674,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public RolePrivilege addRolwisePrivileges(RolePrivilege rolePrivilege, Long orgId) {
+    public RolePrivilege addRolwisePrivileges(RolePrivilege rolePrivilege, String orgId) {
 
         //Find Role
         RoleEntity role = userAdapter.findRoleById(rolePrivilege.getRoleId())
@@ -1664,7 +1701,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public ApiResponse updateLocation(Long orgId, LocationList location) {
+    public ApiResponse updateLocation(String orgId, LocationList location) {
         List<Long> locationIds = location.getLocationId();
         if (locationIds == null || locationIds.isEmpty()) {
             throw new RuntimeException("No location IDs provided");
@@ -1719,7 +1756,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public void deleteLocation(LocationListDto locationDto, Long orgId) {
+    public void deleteLocation(LocationListDto locationDto, String orgId) {
         List<Long> locationIdList = locationDto.getLocationId();
 
         boolean exist = locationRepository.existsBylocationIdInAndOrganizationEntity_OrganizationId(locationIdList, orgId);

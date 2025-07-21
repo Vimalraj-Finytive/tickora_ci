@@ -14,7 +14,7 @@ public class WorkSchedule {
     private boolean isDefault;
     private String type;
     @JsonIgnore
-    private Long orgId;
+    private String orgId;
     private Double duration;
     private String typeName;
     private List<FixedScheduleDto> fixedSchedule;
@@ -61,11 +61,11 @@ public class WorkSchedule {
         this.type = type;
     }
 
-    public Long getOrgId() {
+    public String getOrgId() {
         return orgId;
     }
 
-    public void setOrgId(Long orgId) {
+    public void setOrgId(String orgId) {
         this.orgId = orgId;
     }
 

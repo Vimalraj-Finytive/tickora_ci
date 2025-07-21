@@ -40,19 +40,22 @@ public class CacheKeyUtil {
     }
 
     public boolean roleHasPrivilege(String roleName, String privilegeKey) {
-        String redisKey = roleprivilege + roleName.toLowerCase();
+        if (privilegeKey == null || privilegeKey.trim().isEmpty()) {
+            log.warn("Privilege key is null or empty. Skipping privilege check.");
+            return false;
+        }
 
+        String redisKey = roleprivilege + roleName.toLowerCase();
         Set<String> privileges = null;
+
         if (redisTemplate != null) {
             privileges = (Set<String>) redisTemplate.opsForValue().get(redisKey);
         }
 
-        // Cache hit
         if (privileges != null) {
             return privileges.contains(privilegeKey);
         }
 
-        // Cache miss - fallback to DB
         log.warn("Privilege cache miss for role '{}'. Falling back to DB.", roleName);
         Optional<RoleEntity> roleOpt = roleRepository.findByNameWithPrivileges(roleName);
         if (roleOpt.isEmpty()) {
@@ -63,36 +66,36 @@ public class CacheKeyUtil {
                 .map(PrivilegeEntity::getName)
                 .collect(Collectors.toSet());
 
-        // Optional: repopulate Redis
         if (redisTemplate != null) {
             redisTemplate.opsForValue().set(redisKey, privileges);
             log.info("Repopulated Redis cache for role '{}'", roleName);
         }
 
+        log.info("Privilege for key:{}", privileges.contains(privilegeKey));
         return privileges.contains(privilegeKey);
     }
 
-    public String getLocationKey(Long orgId){
+    public String getLocationKey(String orgId){
         return location +":orgId:" + orgId;
     }
 
-    public String getprofileKey(Long orgId){
+    public String getprofileKey(String orgId){
         return userProfile +":orgId:" + orgId;
     }
 
-    public String getMemberKey(Long orgId){
+    public String getMemberKey(String orgId){
         return users +":orgId:" + orgId;
     }
 
-    public String getAllGroupsKey(Long orgId){ return groups +":orgId:" + orgId; }
+    public String getAllGroupsKey(String orgId){ return groups +":orgId:" + orgId; }
 
-    public String getSupervisedGroupsKey(Long orgId){ return groups+ "supervised:" +":orgId:" + orgId;}
+    public String getSupervisedGroupsKey(String orgId){ return groups+ "supervised:" +":orgId:" + orgId;}
 
     public String getRoleKey() {
         return roleprivilege;
     }
 
-    public String getWorkSchedule(Long orgId){
+    public String getWorkSchedule(String orgId){
         return workSchedule +":orgId:" + orgId;
     }
 }

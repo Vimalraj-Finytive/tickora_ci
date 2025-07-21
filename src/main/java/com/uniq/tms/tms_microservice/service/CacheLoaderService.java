@@ -7,12 +7,12 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 public interface CacheLoaderService {
-    CompletableFuture<Map<String, List<UserResponseDto>>> loadAllUsers(Long orgId);
-    CompletableFuture<List<Location>> loadLocationTable(Long orgId);
-    void loadAllRolesToCache(Long orgId);
-    void loadPrivilegesFromDB(Long orgId);
+    CompletableFuture<Map<String, List<UserResponseDto>>> loadAllUsers(String orgId);
+    CompletableFuture<List<Location>> loadLocationTable(String orgId);
+    void loadAllRolesToCache();
+    void loadPrivilegesFromDB();
     String getPrivilegeKey(PrivilegeConstants constant);
-    CompletableFuture<Map<String, UserProfileResponse>> loadUsersProfile(Long orgId);
-    CompletableFuture<List<GroupResponseDto>> loadGroupsCache(Long orgId);
-    CompletableFuture<Map<Long, List<WorkScheduleDto>>> loadWorkSchedule(Long orgId);
+    CompletableFuture<Map<String, UserProfileResponse>> loadUsersProfile(String orgId);
+    CompletableFuture<List<GroupResponseDto>> loadGroupsCache(String orgId);
+    CompletableFuture<Map<String, List<WorkScheduleDto>>> loadWorkSchedule(String orgId);
 }

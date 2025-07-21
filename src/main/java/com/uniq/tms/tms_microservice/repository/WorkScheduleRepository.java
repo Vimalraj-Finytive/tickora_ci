@@ -15,10 +15,10 @@ import java.util.Optional;
 public interface WorkScheduleRepository extends JpaRepository<WorkScheduleEntity, Long> {
 
     @Query("SELECT w FROM WorkScheduleEntity w WHERE w.isDefault = true AND w.isActive = true AND w.organizationEntity.organizationId = :orgId")
-    WorkScheduleEntity findDefaultActiveSchedule(@Param("orgId") Long orgId);
+    WorkScheduleEntity findDefaultActiveSchedule(@Param("orgId") String orgId);
 
 
-    WorkScheduleEntity findByScheduleId(String scheduleId);
+    WorkScheduleEntity findByScheduleIdAndOrganizationEntity_OrganizationId(String scheduleId, String orgId);
 
     @Query("SELECT MAX(w.scheduleId) FROM WorkScheduleEntity w WHERE w.scheduleId LIKE CONCAT(:prefix, '%')")
     String findMaxIdByPrefix(@Param("prefix") String prefix);
@@ -68,23 +68,24 @@ public interface WorkScheduleRepository extends JpaRepository<WorkScheduleEntity
     WHERE w.organization_id = :orgId
       AND w.is_active = true
 """, nativeQuery = true)
-    List<WorkScheduleData> findAllWithChildrenByOrgId(@Param("orgId") Long orgId);
+    List<WorkScheduleData> findAllWithChildrenByOrgId(@Param("orgId") String orgId);
 
     @Query("SELECT w FROM WorkScheduleEntity w WHERE w.scheduleName = :scheduleName AND w.organizationEntity.organizationId = :orgId")
-    Optional<WorkScheduleEntity> findBySchedule(@Param("scheduleName") String scheduleName, @Param("orgId") Long orgId);
+    Optional<WorkScheduleEntity> findBySchedule(@Param("scheduleName") String scheduleName, @Param("orgId") String orgId);
 
     @Modifying
     @Transactional
     @Query("UPDATE WorkScheduleEntity w SET w.isDefault = false " +
-            " WHERE w.organizationEntity.organizationId = :orgId AND w.isDefault = true ")
-    void resetDefaultLocation(@Param("orgId") Long orgId);
+            " WHERE w.organizationEntity.organizationId = :orgId AND w.isDefault = true")
+    void resetDefaultLocation(@Param("orgId") String orgId);
 
     @Modifying
     @Transactional
     @Query("UPDATE WorkScheduleEntity w SET w.isDefault = false " +
-            " WHERE w.organizationEntity.organizationId = :orgId AND w.isDefault = true " +
-            " AND w.scheduleId = :scheduleId")
-    void updateDefaultWorkSchedule(Long orgId, String scheduleId);
+            " WHERE w.organizationEntity.organizationId = :orgId " +
+            " AND w.scheduleId <> :scheduleId " +
+            " AND w.isDefault = true")
+    void updateDefaultWorkSchedule(@Param("orgId") String orgId, @Param("scheduleId") String scheduleId);
 
     @Query("SELECT w FROM WorkScheduleEntity w WHERE w.scheduleName = :scheduleName " +
             "AND w.organizationEntity.organizationId = :orgId " +
@@ -92,18 +93,19 @@ public interface WorkScheduleRepository extends JpaRepository<WorkScheduleEntity
     Optional<WorkScheduleEntity> findByScheduleName(
             @Param("scheduleId") String scheduleId,
             @Param("scheduleName") String scheduleName,
-            @Param("orgId") Long orgId);
+            @Param("orgId") String orgId);
 
     @Modifying
     @Transactional
     @Query("UPDATE WorkScheduleEntity w SET w.isActive = false WHERE w.scheduleId = :scheduleId AND w.organizationEntity.organizationId = :orgId")
-    void deactivateScheduleById(@Param("orgId") Long orgId, @Param("scheduleId") String scheduleId);
+    void deactivateScheduleById(@Param("orgId") String orgId, @Param("scheduleId") String scheduleId);
 
 
-    WorkScheduleEntity findByIsDefaultTrueAndOrganizationEntity_OrganizationId(Long orgId);
+    WorkScheduleEntity findByIsDefaultTrueAndOrganizationEntity_OrganizationId(String orgId);
 
     @Query("SELECT u.workSchedule FROM UserEntity u " +
             "WHERE u.userId = :userId AND u.workSchedule.isActive = true")
     WorkScheduleEntity findActiveWorkScheduleByUserId(@Param("userId") Long userId);
 
+    int countByOrganizationEntity_OrganizationId(String orgId);
 }

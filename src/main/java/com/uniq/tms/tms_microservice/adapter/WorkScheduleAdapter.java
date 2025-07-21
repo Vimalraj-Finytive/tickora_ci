@@ -5,23 +5,24 @@ import java.util.List;
 import java.util.Optional;
 
 public interface WorkScheduleAdapter {
-    WorkScheduleEntity findByWorkscheduleId(String workScheduleId);
-    WorkScheduleEntity findDefaultActiveSchedule(Long orgId);
+    WorkScheduleEntity findDefaultActiveSchedule(String orgId);
     void saveAll(List<FixedWorkScheduleEntity> entities);
     void saveAllFlexible(List<FlexibleWorkScheduleEntity> entities);
     void save(WeeklyWorkScheduleEntity entity);
-    void saveWorkSchedule(WorkScheduleEntity entity);
+    WorkScheduleEntity saveWorkSchedule(WorkScheduleEntity entity);
     Optional<WorkScheduleTypeEntity> findById(String type);
     void addType(WorkScheduleTypeEntity entity);
-    WorkScheduleEntity findByScheduleId(String scheduleId);
+    WorkScheduleEntity findByScheduleId(String scheduleId, String orgId);
     void deleteAllChildren(String scheduleId);
-    boolean findByWorkschedule(String scheduleName, Long orgId);
-    void resetDefaultWorkSchedule(Long orgId);
-    void updateDefaultWorkSchedule(Long orgId, String scheduleId);
-    boolean findByScheduleName(String scheduleId , String scheduleName, Long orgId);
-    WorkScheduleEntity findDefaultScheduleByOrgId(Long orgId);
+    boolean findByWorkschedule(String scheduleName, String orgId);
+    void resetDefaultWorkSchedule(String orgId);
+    void updateDefaultWorkSchedule(String orgId, String scheduleId);
+    boolean findByScheduleName(String scheduleId , String scheduleName, String orgId);
+    WorkScheduleEntity findDefaultScheduleByOrgId(String orgId);
     WorkScheduleEntity getScheduleForUser(Long userId);
     List<FlexibleWorkScheduleEntity> findByWorkScheduleId(String scheduleId);
     List<FixedWorkScheduleEntity> findByFixedScheduleId(String scheduleId);
     List<WorkScheduleTypeEntity> findAllType();
+    List<WorkScheduleEntity> findAllScheduleById(String orgId);
+    int countByOrgId(String orgId);
 }
