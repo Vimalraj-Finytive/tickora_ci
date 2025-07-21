@@ -4,6 +4,7 @@ public class TimesheetStatus {
 
     private String statusId;
     private String statusName;
+    private boolean statusEdit;
 
     public String getStatusId() {
         return statusId;
@@ -19,5 +20,13 @@ public class TimesheetStatus {
 
     public void setstatusName(String statusName) {
         this.statusName = statusName;
+    }
+
+    public boolean isStatusEdit() {
+        return statusEdit;
+    }
+
+    public void setStatusEdit(boolean statusEdit) {
+        this.statusEdit = statusEdit;
     }
 }

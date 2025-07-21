@@ -16,6 +16,9 @@ public class TimesheetStatusEntity {
     @Column(name = "status_name")
     private String statusName;
 
+    @Column(name = "is_editable")
+    private boolean statusEdit;
+
     public String getStatusId() {
         return statusId;
     }
@@ -30,5 +33,13 @@ public class TimesheetStatusEntity {
 
     public void setStatusName(String statusName) {
         this.statusName = statusName;
+    }
+
+    public boolean isStatusEdit() {
+        return statusEdit;
+    }
+
+    public void setStatusEdit(boolean statusEdit) {
+        this.statusEdit = statusEdit;
     }
 }

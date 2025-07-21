@@ -37,7 +37,7 @@ public interface UserGroupRepository extends JpaRepository<UserGroupEntity,Long>
     void deleteByGroupId(@Param("groupId") Long groupId);
 
     @Query("SELECT ug FROM UserGroupEntity ug WHERE ug.group.groupId = :groupId AND ug.group.organizationEntity.organizationId = :orgId AND ug.user.active = true")
-    List<UserGroupEntity> findActiveUserGroups(Long groupId, Long orgId);
+    List<UserGroupEntity> findActiveUserGroups(Long groupId, String orgId);
 
     @Query("SELECT DISTINCT ug.group.id FROM UserGroupEntity ug WHERE ug.user.userId = :supervisorId AND ug.type = 'Supervisor'")
     List<Long>  findGroupIdsBySupervisorId(Long supervisorId);
@@ -62,7 +62,7 @@ public interface UserGroupRepository extends JpaRepository<UserGroupEntity,Long>
     @Query("SELECT ug FROM UserGroupEntity ug WHERE ug.group.groupId IN :groupIds AND ug.group.organizationEntity.organizationId = :orgId")
     List<UserGroupEntity> findActiveGroupMembersExcludingSupervisors(
             @Param("groupIds") List<Long> groupIds,
-            @Param("orgId") Long orgId);
+            @Param("orgId") String orgId);
 
     List<UserGroupEntity> findGroupByUser_UserId(Long userId);
 

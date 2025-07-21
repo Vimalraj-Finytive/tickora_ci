@@ -15,7 +15,7 @@ import java.util.Optional;
 
 public interface TimesheetAdapter {
 
-    List<UserTimesheetResponseDto> filterTimesheetsForAllUsers(LocalDate startDate, LocalDate endDate, List<Long> userIds, Long orgId);
+    List<UserTimesheetResponseDto> filterTimesheetsForAllUsers(LocalDate startDate, LocalDate endDate, List<Long> userIds, String orgId);
     Optional<TimesheetEntity> findByUserIdAndDate(Long userId, LocalDate date);
     TimesheetEntity saveTimesheet(TimesheetEntity timesheet);
     TimesheetHistoryEntity saveTimesheetHistory(TimesheetHistoryEntity history);
@@ -24,12 +24,12 @@ public interface TimesheetAdapter {
     TimesheetEntity findUserIdAndDate(Long userId, LocalDate date);
     List<TimesheetEntity> findActiveTimesheetsByDate(LocalDate today);
     void saveAll(List<TimesheetEntity> openClockIns);
-    List<TimesheetEntity> getLatestLogsByTimesheetIds(List<Long> memberIds, Long orgId, LocalDate date);
+    List<TimesheetEntity> getLatestLogsByTimesheetIds(List<Long> memberIds, String orgId, LocalDate date);
     List<UserAttendanceDto> findAttendanceForUserInRange(List<Long> userId, LocalDate fromDate, LocalDate toDate);
-    List<UserTimesheetDto> fetchUserTimesheetsWithHistory(LocalDate startDate, LocalDate endDate, List<Long> userIds, Long orgId);
+    List<UserTimesheetDto> fetchUserTimesheetsWithHistory(LocalDate startDate, LocalDate endDate, List<Long> userIds, String orgId);
     void updateTimesheetHistory(Long id, LogType logType, LocalTime firstClockIn);
     void saveAllTimesheetHistories(List<TimesheetHistoryEntity> historyEntries);
-    List<UserDashboard> getDashboard(Long orgId, List<Long> userIds, LocalDate fromDate, LocalDate toDate);
+    List<UserDashboard> getDashboard(String orgId, List<Long> userIds, LocalDate fromDate, LocalDate toDate);
     List<TimesheetStatusEntity> getStatus();
     Optional<TimesheetStatusEntity> findById(String status);
     Optional<TimesheetStatusEntity> findByStatusName(String label);

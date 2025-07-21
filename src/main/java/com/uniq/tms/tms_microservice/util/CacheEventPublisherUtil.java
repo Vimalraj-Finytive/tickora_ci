@@ -12,7 +12,7 @@ public class CacheEventPublisherUtil {
 
     public static void syncReloadThenPublish(ApplicationEventPublisher publisher,
                                              String cacheName,
-                                             Long orgId,
+                                             String orgId,
                                              CacheReloadHandlerRegistry registry) {
         log.info("Reloading primary cache synchronously: {}", cacheName);
         registry.reload(cacheName, orgId);

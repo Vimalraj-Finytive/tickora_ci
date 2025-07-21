@@ -84,9 +84,9 @@ public class JwtUtil {
         RoleEntity role = roleRepository.findById(roleId)
                 .orElseThrow(() -> new RuntimeException("Role not found"));
         log.info("role: {} not found for the given roleId", role);
-        Long orgId = user.getOrganizationId();
+        String orgId = user.getOrganizationId();
 
-        OrganizationEntity organization = organizationRepository.findById(orgId)
+        OrganizationEntity organization = organizationRepository.findByOrganizationId(orgId)
                 .orElseThrow(() -> new RuntimeException("Organization not found"));
 
         long currentTime = System.currentTimeMillis();
@@ -201,14 +201,14 @@ public class JwtUtil {
                 .getBody();
     }
 
-    public Long extractOrgIdFromToken(String token) {
+    public String extractOrgIdFromToken(String token) {
         log.info("extracting orgId from token: {}", token);
         Claims claims = extractAllClaims(token);
 
         if (claims.containsKey("orgId")) {
             Object orgId = claims.get("orgId");
             log.info("orgId: {} found in JWT claims", orgId);
-            return (orgId instanceof Integer) ? ((Integer) orgId).longValue() : Long.parseLong(orgId.toString());
+            return (orgId instanceof String) ? ((String) orgId) : null;
         }
         log.info("orgId not found in JWT claims");
         throw new IllegalStateException("Organization ID not found in JWT claims!");

@@ -8,10 +8,10 @@ import com.uniq.tms.tms_microservice.model.WorkScheduleType;
 import java.util.List;
 
 public interface WorkScheduleService {
-    List<WorkScheduleDto> getAllWorkSchedules(Long orgId);
-    ApiResponse createWorkSchedule(WorkSchedule model, WorkScheduleDto dto, Long orgId);
+    List<WorkScheduleDto> getAllWorkSchedules(String orgId);
+    ApiResponse createWorkSchedule(WorkSchedule model, String orgId);
     ApiResponse addType(WorkScheduleTypeDto type);
-    void updateWorkSchedule(WorkSchedule model, WorkScheduleDto dto, Long orgId);
-    void deleteWorkSchedule(Long orgId, String scheduleId);
+    void updateWorkSchedule(WorkSchedule model, String orgId);
+    void deleteWorkSchedule(String orgId, String scheduleId);
     List<WorkScheduleType> getAllTypes();
 }

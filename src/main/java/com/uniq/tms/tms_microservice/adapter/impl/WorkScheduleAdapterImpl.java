@@ -30,13 +30,13 @@ public class WorkScheduleAdapterImpl implements WorkScheduleAdapter {
     }
 
     @Override
-    public WorkScheduleEntity findDefaultActiveSchedule(Long orgId) {
+    public WorkScheduleEntity findDefaultActiveSchedule(String orgId) {
         return workScheduleRepository.findDefaultActiveSchedule(orgId);
     }
 
     @Override
-    public void saveWorkSchedule(WorkScheduleEntity entity) {
-         workScheduleRepository.save(entity);
+    public WorkScheduleEntity saveWorkSchedule(WorkScheduleEntity entity) {
+        return workScheduleRepository.save(entity);
     }
 
     @Override
@@ -55,7 +55,7 @@ public class WorkScheduleAdapterImpl implements WorkScheduleAdapter {
     }
 
     @Override
-    public Optional<WorkScheduleTypeEntity> findById(java.lang.String type) {
+    public Optional<WorkScheduleTypeEntity> findById(String type) {
         return workScheduleTypeRepository.findById(type);
     }
 
@@ -77,27 +77,27 @@ public class WorkScheduleAdapterImpl implements WorkScheduleAdapter {
     }
 
     @Override
-    public boolean findByWorkschedule(String scheduleName, Long orgId) {
+    public boolean findByWorkschedule(String scheduleName, String orgId) {
         return workScheduleRepository.findBySchedule(scheduleName, orgId).isPresent();
     }
 
     @Override
-    public void resetDefaultWorkSchedule(Long orgId) {
+    public void resetDefaultWorkSchedule(String orgId) {
         workScheduleRepository.resetDefaultLocation(orgId);
     }
 
     @Override
-    public void updateDefaultWorkSchedule(Long orgId, String scheduleId){
+    public void updateDefaultWorkSchedule(String orgId, String scheduleId){
         workScheduleRepository.updateDefaultWorkSchedule(orgId, scheduleId);
     }
 
     @Override
-    public boolean findByScheduleName(String scheduleId, String scheduleName, Long orgId){
+    public boolean findByScheduleName(String scheduleId, String scheduleName, String orgId){
         return workScheduleRepository.findByScheduleName(scheduleId,scheduleName, orgId).isPresent();
     }
 
     @Override
-    public WorkScheduleEntity findDefaultScheduleByOrgId(Long orgId) {
+    public WorkScheduleEntity findDefaultScheduleByOrgId(String orgId) {
         return workScheduleRepository.findByIsDefaultTrueAndOrganizationEntity_OrganizationId(orgId);
     }
 
@@ -119,5 +119,15 @@ public class WorkScheduleAdapterImpl implements WorkScheduleAdapter {
     @Override
     public List<WorkScheduleTypeEntity> findAllType() {
         return workScheduleTypeRepository.findAll();
+    }
+
+    @Override
+    public List<WorkScheduleEntity> findAllScheduleById(String orgId) {
+        return workScheduleRepository.findAll();
+    }
+
+    @Override
+    public int countByOrgId(String orgId) {
+        return workScheduleRepository.countByOrganizationEntity_OrganizationId(orgId);
     }
 }

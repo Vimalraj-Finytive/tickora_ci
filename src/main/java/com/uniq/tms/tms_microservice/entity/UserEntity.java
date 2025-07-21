@@ -35,7 +35,7 @@ public class UserEntity {
     private String password;
 
     @Column(name = "organization_id")
-    private Long organizationId;
+    private String organizationId;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -69,7 +69,7 @@ public class UserEntity {
     }
 
     public UserEntity(Long userId, String userName, String email, String mobileNumber, boolean isDefaultPassword, LocalDate dateOfJoining, boolean active,
-                      RoleEntity role, LocalDateTime createdAt, Long organizationId, String password, WorkScheduleEntity workSchedule) {
+                      RoleEntity role, LocalDateTime createdAt, String organizationId, String password, WorkScheduleEntity workSchedule) {
         this.userId = userId;
         this.userName = userName;
         this.email = email;
@@ -148,11 +148,11 @@ public class UserEntity {
         this.createdAt = createdAt;
     }
 
-    public Long getOrganizationId() {
+    public String getOrganizationId() {
         return organizationId;
     }
 
-    public void setOrganizationId(Long organizationId) {
+    public void setOrganizationId(String organizationId) {
         this.organizationId = organizationId;
     }
 

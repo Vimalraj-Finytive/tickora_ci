@@ -17,10 +17,11 @@ public class UserProfileResponse {
     private List<UserGroupProfileDto> groupDtos;
     private String organizationName;
     private String workSchedule;
+    private String orgType;
 
     public UserProfileResponse(){}
 
-    public UserProfileResponse(Long userId, String userName, String email, String mobileNumber, String roleName, LocalDate dateOfJoining, List<LocationDto> location, List<UserGroupProfileDto> groupDtos, String organizationName, String workSchedule) {
+    public UserProfileResponse(Long userId, String userName, String email, String mobileNumber, String roleName, LocalDate dateOfJoining, List<LocationDto> location, List<UserGroupProfileDto> groupDtos, String organizationName, String workSchedule, String orgType) {
         this.userId = userId;
         this.userName = userName;
         this.email = email;
@@ -31,6 +32,7 @@ public class UserProfileResponse {
         this.groupDtos = groupDtos;
         this.organizationName = organizationName;
         this.workSchedule = workSchedule;
+        this.orgType = orgType;
     }
 
     public LocalDate getDateOfJoining() {
@@ -90,5 +92,13 @@ public class UserProfileResponse {
 
     public void setWorkSchedule(String workSchedule) {
         this.workSchedule = workSchedule;
+    }
+
+    public String getOrgType() {
+        return orgType;
+    }
+
+    public void setOrgType(String orgType) {
+        this.orgType = orgType;
     }
 }

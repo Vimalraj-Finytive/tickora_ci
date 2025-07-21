@@ -71,11 +71,13 @@ public class EmailService {
             String roleName = role.getName();
             log.info("Role name string : {}" ,roleName);
             String EmailLoginKey  = cacheLoaderService.getPrivilegeKey(PrivilegeConstants.LOGIN_VIA_EMAIL);
-            boolean emailLogin = cacheKeyUtil.roleHasPrivilege(String.valueOf(roleName), EmailLoginKey);
+            log.info("Email login key: {}", EmailLoginKey);
+            boolean emailLogin = cacheKeyUtil.roleHasPrivilege(roleName, EmailLoginKey);
             String MobileLoginKey = cacheLoaderService.getPrivilegeKey(PrivilegeConstants.LOGIN_VIA_MOBILE);
-            boolean mobileLogin = cacheKeyUtil.roleHasPrivilege(String.valueOf(roleName), MobileLoginKey);
+            log.info("Mobile login key: {}", EmailLoginKey);
+            boolean mobileLogin = cacheKeyUtil.roleHasPrivilege(roleName, MobileLoginKey);
 
-            log.info("Privileges of user {} are {}", String.valueOf(roleName), privilegeNames);
+            log.info("Privileges of user {} are {}", roleName, privilegeNames);
             log.info("emailLogin {} , mobileLogin {}", emailLogin, mobileLogin);
             if (emailLogin) {
                 helper.setText(htmlContent, true);

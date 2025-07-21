@@ -262,7 +262,7 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate,
             @Param("userIds") Long[] userIds,
-            @Param("orgId") Long orgId
+            @Param("orgId") String orgId
     );
 
     List<TimesheetEntity> findActiveTimesheetsByDate(LocalDate today);
@@ -516,7 +516,7 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate,
             @Param("userIds") Long[] userIds,
-            @Param("orgId") Long orgId
+            @Param("orgId") String orgId
     );
 
     @Query(value = """
@@ -535,6 +535,6 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
             @Param("userIds") List<Long> userIds,
             @Param("fromDate") LocalDate fromDate,
             @Param("toDate") LocalDate toDate,
-            @Param("orgId") Long orgId
+            @Param("orgId") String orgId
     );
 }

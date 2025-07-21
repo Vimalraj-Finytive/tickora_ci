@@ -9,7 +9,6 @@ import com.uniq.tms.tms_microservice.mapper.TimesheetDtoMapper;
 import com.uniq.tms.tms_microservice.mapper.TimesheetEntityMapper;
 import com.uniq.tms.tms_microservice.model.TimesheetHistory;
 import com.uniq.tms.tms_microservice.model.TimesheetStatus;
-import com.uniq.tms.tms_microservice.repository.TimesheetStatusRepository;
 import com.uniq.tms.tms_microservice.service.CacheLoaderService;
 import com.uniq.tms.tms_microservice.service.TimesheetService;
 import com.uniq.tms.tms_microservice.util.CacheKeyUtil;
@@ -54,7 +53,7 @@ public class TimesheetServiceImpl implements TimesheetService {
         this.cacheKeyUtil = cacheKeyUtil;
     }
 
-    public List<UserTimesheetResponseDto> getAllTimesheets(Long userIdFromToken, Long orgId, String role, TimesheetReportDto request) {
+    public List<UserTimesheetResponseDto> getAllTimesheets(Long userIdFromToken, String orgId, String role, TimesheetReportDto request) {
         LocalDate fromDate = request.getFromDate();
         LocalDate toDate = request.getToDate();
         String timePeriod = request.getTimePeriod();
@@ -103,7 +102,7 @@ public class TimesheetServiceImpl implements TimesheetService {
         return timesheetDtos;
     }
 
-    private List<UserEntity> resolveTargetUsers(Long userIdFromToken, List<Long> groupIds, List<Long> userId, Long orgId, List<Long> roleIds) {
+    private List<UserEntity> resolveTargetUsers(Long userIdFromToken, List<Long> groupIds, List<Long> userId, String orgId, List<Long> roleIds) {
 
         UserEntity currentUser = userAdapter.getUserById(userIdFromToken);
         String roleName = currentUser.getRole().getName().toUpperCase();
@@ -332,8 +331,11 @@ public class TimesheetServiceImpl implements TimesheetService {
             timesheet.setStatus(defaultStatus);
         }
 
-           TimesheetStatusEntity statusEntity = timesheetAdapter.findById(request.getStatusId())
+        TimesheetStatusEntity statusEntity = null;
+        if (request.getStatusId() != null && !request.getStatusId().isEmpty()) {
+            statusEntity = timesheetAdapter.findById(request.getStatusId())
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid status ID: " + request.getStatusId()));
+        }
 
         // Block editing if already on paid leave
         if (Objects.equals(timesheet.getStatus().getStatusName(), PAID_LEAVE.getLabel())) {
@@ -341,7 +343,7 @@ public class TimesheetServiceImpl implements TimesheetService {
         }
 
         // Handle paid leave request
-        if (PAID_LEAVE.getLabel().equalsIgnoreCase(statusEntity.getStatusName())) {
+        if (statusEntity != null && PAID_LEAVE.getLabel().equalsIgnoreCase(statusEntity.getStatusName())) {
             if (timesheet.getFirstClockIn() != null) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot apply for paid leave after clock-in.");
             }
@@ -355,6 +357,12 @@ public class TimesheetServiceImpl implements TimesheetService {
             // Allow clock in and mark as present
             if (request.getFirstClockIn() != null) {
                 timesheet.setFirstClockIn(request.getFirstClockIn());
+
+                // If no status provided, mark as PRESENT
+                if (statusEntity == null) {
+                    statusEntity = timesheetAdapter.findByStatusName(PRESENT.getLabel())
+                            .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Default 'Present' status not found"));
+                }
                 timesheet.setStatus(statusEntity);
             }
 
@@ -471,7 +479,7 @@ public class TimesheetServiceImpl implements TimesheetService {
         timesheetAdapter.saveAllTimesheetHistories(historyEntries);
     }
 
-    public List<UserDashboardDto> getAllUserInfo(Long orgId, Long userIdFromToken, LocalDate fromDate, LocalDate toDate, Long userId, List<Long> groupIds, String type) {
+    public List<UserDashboardDto> getAllUserInfo(String orgId, Long userIdFromToken, LocalDate fromDate, LocalDate toDate, Long userId, List<Long> groupIds, String type) {
         UserEntity currentUser = userAdapter.getUserById(userIdFromToken);
         String roleName = currentUser.getRole().getName();
         log.info("Role dashboard: {}", roleName);
@@ -537,7 +545,7 @@ public class TimesheetServiceImpl implements TimesheetService {
         return calculateAttendanceSummaryForUsers(userIds, fromDate, toDate, orgId);
     }
 
-    private List<UserDashboardDto> calculateAttendanceSummaryForUsers(List<Long> userIds, LocalDate fromDate, LocalDate toDate, Long orgId) {
+    private List<UserDashboardDto> calculateAttendanceSummaryForUsers(List<Long> userIds, LocalDate fromDate, LocalDate toDate, String orgId) {
         if (userIds == null || userIds.isEmpty()) {
             return Collections.singletonList(UserDashboardDto.empty());
         }
@@ -650,7 +658,7 @@ public class TimesheetServiceImpl implements TimesheetService {
     }
 
     @Override
-    public List<UserTimesheetDto> getUserTimesheets(Long userIdFromToken, Long orgId, String role, TimesheetReportDto request) {
+    public List<UserTimesheetDto> getUserTimesheets(Long userIdFromToken, String orgId, String role, TimesheetReportDto request) {
         LocalDate fromDate = request.getFromDate();
         LocalDate toDate = request.getToDate();
         String timePeriod = request.getTimePeriod();
