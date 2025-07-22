@@ -25,8 +25,6 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
-
 import static com.uniq.tms.tms_microservice.util.TextUtil.isBlank;
 
 @Service
@@ -190,16 +188,23 @@ public class OrganizationServiceImpl implements OrganizationService {
     }
 
     @Override
-    public Optional<OrganizationType> getUserOrgType(String orgId) {
+    public OrganizationType getUserOrgType(String orgId) {
+        OrganizationEntity org = userAdapter.findByOrgId(orgId)
+                .orElseThrow(() -> new RuntimeException("No organization found"));
 
-        OrganizationEntity org = userAdapter.findByOrgId(orgId).orElse(null);
-        log.info("Org:{}", org);
-
-        Optional<OrganizationTypeEntity> organizationType = Optional.empty();
-        if (org != null && org.getOrgType() != null) {
-            organizationType = userAdapter.findOrgType(org.getOrgType());
+        if (org.getOrgType() == null) {
+            throw new RuntimeException("Organization type not found");
         }
-        return organizationType.map(userEntityMapper::toModel);
+
+        OrganizationTypeEntity orgTypeEntity = userAdapter.findOrgType(org.getOrgType());
+        OrganizationType dto = userEntityMapper.toModel(orgTypeEntity);
+        if ("Academic".equalsIgnoreCase(orgTypeEntity.getOrgTypeName())) {
+            dto.setShowFilter(true);
+        } else {
+            dto.setShowFilter(false);
+        }
+
+        return dto;
     }
 
 }
