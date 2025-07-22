@@ -15,7 +15,7 @@ import java.util.List;
 public class TimesheetDto {
     private Long id;
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
-    private Long userId;
+    private String userId;
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     private LocalDate date;
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
@@ -184,11 +184,11 @@ public class TimesheetDto {
         this.id = id;
     }
 
-    public Long getUserId() {
+    public String getUserId() {
         return userId;
     }
 
-    public void setUserId(Long userId) {
+    public void setUserId(String userId) {
         this.userId = userId;
     }
 

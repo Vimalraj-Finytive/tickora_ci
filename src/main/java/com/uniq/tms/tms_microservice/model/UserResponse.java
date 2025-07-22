@@ -8,7 +8,7 @@ import java.util.List;
 
 public class UserResponse {
 
-    private Long userId;
+    private String userId;
     private String userName;
     private String email;
     private String mobileNumber;
@@ -20,7 +20,7 @@ public class UserResponse {
     private SecondaryDetailsDto secondaryDetails;
     private String scheduleName;
 
-    public UserResponse(Long userId, String userName, String email, String mobileNumber, String scheduleName, String groupName, String roleName,
+    public UserResponse(String userId, String userName, String email, String mobileNumber, String scheduleName, String groupName, String roleName,
                         String locationName, LocalDate dateOfJoining,String secName, String secMobile, String secEmail, String relation) {
         this.userId = userId;
         this.userName = userName;
@@ -43,11 +43,11 @@ public class UserResponse {
         }
     }
 
-    public Long getUserId() {
+    public String getUserId() {
         return userId;
     }
 
-    public void setUserId(Long userId) {
+    public void setUserId(String userId) {
         this.userId = userId;
     }
 

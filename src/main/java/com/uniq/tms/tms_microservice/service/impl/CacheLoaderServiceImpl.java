@@ -94,7 +94,7 @@ public class CacheLoaderServiceImpl implements CacheLoaderService {
                         .toList();
 
                 // Merge duplicates
-                Map<Long, UserResponseDto> userMap = new LinkedHashMap<>();
+                Map<String, UserResponseDto> userMap = new LinkedHashMap<>();
                 for (UserResponseDto user : usersDto) {
                     userMap.compute(user.getUserId(), (id, existing) -> {
                         if (existing == null) return user;
@@ -248,7 +248,7 @@ public class CacheLoaderServiceImpl implements CacheLoaderService {
             organizationType = organizationTypeRepository.findById(org.getOrgType());
         }
         for (UserEntity user : users) {
-            Long userId = user.getUserId();
+            String userId = user.getUserId();
 
             // Fetch groups
             List<UserGroupEntity> userGroups = userRepository.findUserByOrganizationIdAndUserId(orgId, userId);
@@ -311,9 +311,9 @@ public class CacheLoaderServiceImpl implements CacheLoaderService {
         List<GroupsData> groupRows = teamRepository.getGroupData(orgId);
 
         Map<Long, GroupResponseDto> groupMap = new HashMap<>();
-        Map<Long, Set<Long>> supervisorToGroupIds = new HashMap<>();
-        Map<Long, Set<String>> userToGroups = new HashMap<>();
-        Map<Long, Set<String>> userToLocations = new HashMap<>();
+        Map<String, Set<Long>> supervisorToGroupIds = new HashMap<>();
+        Map<String, Set<String>> userToGroups = new HashMap<>();
+        Map<String, Set<String>> userToLocations = new HashMap<>();
         Map<Long, List<UserGroupDto>> groupIdToActiveMembers = new HashMap<>();
 
         for (GroupsData row : groupRows) {
@@ -327,7 +327,7 @@ public class CacheLoaderServiceImpl implements CacheLoaderService {
             groupIdToActiveMembers.put(groupId, activeMembers);
 
             for (UserGroupDto member : activeMembers) {
-                Long memberId = member.getUserId();
+                String memberId = member.getUserId();
                 userToGroups.computeIfAbsent(memberId, k -> new HashSet<>()).add(groupName);
                 userToLocations.computeIfAbsent(memberId, k -> new HashSet<>()).add(location);
                 if ("SUPERVISOR".equalsIgnoreCase(member.getType())) {
@@ -358,7 +358,7 @@ public class CacheLoaderServiceImpl implements CacheLoaderService {
                     groupMap.entrySet().stream()
                             .collect(Collectors.toMap(e -> e.getKey().toString(), Map.Entry::getValue)));
             redisTemplate.delete(supervisedMapKey);
-            for (Map.Entry<Long, Set<Long>> entry : supervisorToGroupIds.entrySet()) {
+            for (Map.Entry<String, Set<Long>> entry : supervisorToGroupIds.entrySet()) {
                 redisTemplate.opsForHash().put(supervisedMapKey, entry.getKey().toString(), entry.getValue());
             }
         } else {

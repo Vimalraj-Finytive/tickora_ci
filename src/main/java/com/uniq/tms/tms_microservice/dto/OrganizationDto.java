@@ -1,6 +1,5 @@
 package com.uniq.tms.tms_microservice.dto;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class OrganizationDto {

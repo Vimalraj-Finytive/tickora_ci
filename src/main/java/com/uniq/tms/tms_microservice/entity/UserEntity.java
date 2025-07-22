@@ -3,8 +3,6 @@ package com.uniq.tms.tms_microservice.entity;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
@@ -18,9 +16,8 @@ import java.time.LocalDateTime;
 public class UserEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "user_id")
-    private Long userId;
+    private String userId;
 
     @Column(name = "user_name", nullable = false)
     private String userName;
@@ -61,14 +58,14 @@ public class UserEntity {
     @JoinColumn(name = "work_schedule_id")
     private WorkScheduleEntity workSchedule;
 
-    public UserEntity(Long userId){
+    public UserEntity(String userId){
         this.userId = userId;
     }
 
     public UserEntity() {
     }
 
-    public UserEntity(Long userId, String userName, String email, String mobileNumber, boolean isDefaultPassword, LocalDate dateOfJoining, boolean active,
+    public UserEntity(String userId, String userName, String email, String mobileNumber, boolean isDefaultPassword, LocalDate dateOfJoining, boolean active,
                       RoleEntity role, LocalDateTime createdAt, String organizationId, String password, WorkScheduleEntity workSchedule) {
         this.userId = userId;
         this.userName = userName;
@@ -100,11 +97,11 @@ public class UserEntity {
         isDefaultPassword = defaultPassword;
     }
 
-    public Long getUserId() {
+    public String getUserId() {
         return userId;
     }
 
-    public void setUserId(Long userId) {
+    public void setUserId(String userId) {
         this.userId = userId;
     }
 

@@ -29,6 +29,7 @@ import com.uniq.tms.tms_microservice.model.Privilege;
 import com.uniq.tms.tms_microservice.model.Role;
 import com.uniq.tms.tms_microservice.repository.*;
 import com.uniq.tms.tms_microservice.service.CacheLoaderService;
+import com.uniq.tms.tms_microservice.service.IdGenerationService;
 import com.uniq.tms.tms_microservice.service.UserService;
 import com.uniq.tms.tms_microservice.util.*;
 import jakarta.annotation.Nullable;
@@ -92,8 +93,16 @@ public class UserServiceImpl implements UserService {
     private final CacheKeyConfig cacheKeyConfig;
     private final CacheReloadHandlerRegistry cacheReloadHandlerRegistry;
     private final OrganizationTypeRepository organizationTypeRepository;
+    private final IdGenerationService idGenerationService;
 
-    public UserServiceImpl(Validator validator, UserAdapter userAdapter, TimesheetAdapter timesheetAdapter, UserEntityMapper userEntityMapper, OrganizationRepository organizationRepository, RoleRepository roleRepository, LocationRepository locationRepository, EmailUtil emailUtil, UserDtoMapper userDtoMapper, SecondaryDetailsMapper secondaryDetailsMapper, @Nullable RedisTemplate<String, Object> redisTemplate, LocationEntityMapper locationEntityMapper, CacheLoaderService cacheLoaderService, ApplicationEventPublisher publisher, WorkScheduleAdapter workScheduleAdapter, CacheKeyUtil cacheKeyUtil, TeamRepository teamRepository, CacheKeyConfig cacheKeyConfig, CacheReloadHandlerRegistry cacheReloadHandlerRegistry, OrganizationTypeRepository organizationTypeRepository) {
+    public UserServiceImpl(Validator validator, UserAdapter userAdapter, TimesheetAdapter timesheetAdapter,
+                           UserEntityMapper userEntityMapper, OrganizationRepository organizationRepository,
+                           RoleRepository roleRepository, LocationRepository locationRepository, EmailUtil emailUtil,
+                           UserDtoMapper userDtoMapper, SecondaryDetailsMapper secondaryDetailsMapper,
+                           @Nullable RedisTemplate<String, Object> redisTemplate, LocationEntityMapper locationEntityMapper,
+                           CacheLoaderService cacheLoaderService, ApplicationEventPublisher publisher, WorkScheduleAdapter workScheduleAdapter,
+                           CacheKeyUtil cacheKeyUtil, TeamRepository teamRepository, CacheKeyConfig cacheKeyConfig, CacheReloadHandlerRegistry cacheReloadHandlerRegistry,
+                           OrganizationTypeRepository organizationTypeRepository, IdGenerationService idGenerationService) {
         this.validator = validator;
         this.userAdapter = userAdapter;
         this.timesheetAdapter = timesheetAdapter;
@@ -114,6 +123,7 @@ public class UserServiceImpl implements UserService {
         this.cacheKeyConfig = cacheKeyConfig;
         this.cacheReloadHandlerRegistry = cacheReloadHandlerRegistry;
         this.organizationTypeRepository = organizationTypeRepository;
+        this.idGenerationService = idGenerationService;
     }
 
     private static final  Logger log = LoggerFactory.getLogger(UserServiceImpl.class);
@@ -195,7 +205,7 @@ public class UserServiceImpl implements UserService {
 
 
     @Override
-    public ApiResponse bulkCreateUsers(MultipartFile file, String orgId, Long userId) {
+    public ApiResponse bulkCreateUsers(MultipartFile file, String orgId, String userId) {
         log.info("Checking work flow for create user");
         String contentType = file.getContentType();
         String fileName = file.getOriginalFilename();
@@ -217,7 +227,7 @@ public class UserServiceImpl implements UserService {
         }
     }
 
-    public ApiResponse processCsvFileFromPath(String filePath, String orgId, Long userId) {
+    public ApiResponse processCsvFileFromPath(String filePath, String orgId, String userId) {
         File file = new File(filePath);
         if (!file.exists()) throw new RuntimeException("CSV file not found: " + filePath);
 
@@ -228,7 +238,7 @@ public class UserServiceImpl implements UserService {
         }
     }
 
-    public ApiResponse processCsvFile(InputStream inputStream, String originalFileName, String orgId, Long userId) {
+    public ApiResponse processCsvFile(InputStream inputStream, String originalFileName, String orgId, String userId) {
 
         UserEntity userFromToken = userAdapter.findUserByOrgIdAndUserId(orgId, userId);
         log.info("Starting processing for file: {}", originalFileName);
@@ -657,7 +667,8 @@ public class UserServiceImpl implements UserService {
         User userMiddleware = userDtoMapper.toMiddleware(userDto);
         UserEntity entity = userEntityMapper.toEntity(userMiddleware);
         entity.setOrganizationId(organizationId);
-
+        String customUserId = idGenerationService.generateNextUserId(organizationId);
+        entity.setUserId(customUserId);
         if (isBlank(userMiddleware.getRoleId())) {
             throw new CommonExceptionHandler.BadRequestException("roleId must not be null");
         }
@@ -821,7 +832,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public User updateUser(CreateUserDto updates, String orgId, Long userId) {
+    public User updateUser(CreateUserDto updates, String orgId, String userId) {
 
         UserEntity existingUser = userAdapter.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -1028,7 +1039,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public User deleteUser(String orgId, Long userId) {
+    public User deleteUser(String orgId, String userId) {
         UserEntity user = userAdapter.findById(userId)
                 .orElseThrow(() -> new UsernameNotFoundException("User ID not found."));
 
@@ -1075,7 +1086,7 @@ public class UserServiceImpl implements UserService {
 
         GroupEntity savedEntity = userAdapter.saveGroup(entity);
 
-        for (Long id : groupMiddleware.getSupervisorsId()) {
+        for (String id : groupMiddleware.getSupervisorsId()) {
             UserEntity user = userAdapter.findById(id).orElseThrow(()->new UsernameNotFoundException("User ID " + id + " not found."));
 
             createUserGroup(new UserGroup(savedEntity.getGroupId(), id, groupMiddleware.getType()),orgId);
@@ -1093,12 +1104,12 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public ApiResponse addUserToGroup(AddMember addMemberMiddleware, String orgId) {
-        List<Long> userIds = addMemberMiddleware.getUserId();
+        List<String> userIds = addMemberMiddleware.getUserId();
         List<String> addedUserNames = new ArrayList<>();
         List<String> alreadyExistsUsers = new ArrayList<>();
 
         // Validate all users first
-        for (Long id : userIds) {
+        for (String id : userIds) {
             boolean exists = userAdapter.existsById(id);
             if (!exists) {
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found with ID: " + id);
@@ -1106,7 +1117,7 @@ public class UserServiceImpl implements UserService {
         }
 
         // Proceed to add members if all exist
-        for (Long id : userIds) {
+        for (String id : userIds) {
             List<UserGroupEntity> existing = userAdapter.findByUserIdAndGroupId(id, addMemberMiddleware.getGroupId());
             UserEntity userEntity = userAdapter.findById(id).get(); // safe because already validated
 
@@ -1205,20 +1216,20 @@ public class UserServiceImpl implements UserService {
         userAdapter.saveGroup(existingGroup);
 
         // Remove supervisors not in the new list
-        List<Long> existingSupervisorIds = userAdapter.findSupervisorIdsByGroupId(groupId);
-        Set<Long> newSupervisorIds = addGroup.getSupervisorsId() != null
+        List<String> existingSupervisorIds = userAdapter.findSupervisorIdsByGroupId(groupId);
+        Set<String> newSupervisorIds = addGroup.getSupervisorsId() != null
                 ? new HashSet<>(addGroup.getSupervisorsId())
                 : new HashSet<>();
 
-        for (Long existingSupervisorId : existingSupervisorIds) {
+        for (String existingSupervisorId : existingSupervisorIds) {
             if (!newSupervisorIds.contains(existingSupervisorId)) {
                 userAdapter.deleteSupervisorsByGroupId(groupId, existingSupervisorId);
             }
         }
 
         // Insert new supervisors, checking against existing members
-        List<Long> existingMemberIds = userAdapter.findMemberIdsByGroupId(groupId);
-        for (Long supervisorId : newSupervisorIds) {
+        List<String> existingMemberIds = userAdapter.findMemberIdsByGroupId(groupId);
+        for (String supervisorId : newSupervisorIds) {
             if (existingMemberIds.contains(supervisorId)) {
                 // Fetch username for the supervisor
                 UserEntity supervisorUser = userAdapter.findById(supervisorId).orElse(null);
@@ -1280,7 +1291,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public UserProfileResponse getUserProfile(String orgId, Long userId) {
+    public UserProfileResponse getUserProfile(String orgId, String userId) {
         String redisKey = cacheKeyUtil.getprofileKey(orgId);
         String field = userId.toString();
 
@@ -1316,7 +1327,7 @@ public class UserServiceImpl implements UserService {
         }
     }
 
-    public List<GroupResponseDto> getAllGroups(String orgId, Long userId) throws JsonProcessingException {
+    public List<GroupResponseDto> getAllGroups(String orgId, String userId) throws JsonProcessingException {
 
         String cacheGroupkey = cacheKeyUtil.getAllGroupsKey(orgId);
         String cacheSupervisedGroupKey = cacheKeyUtil.getSupervisedGroupsKey(orgId);
@@ -1413,7 +1424,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public void deleteMember(Long groupId, Long memberId, String orgId) {
+    public void deleteMember(Long groupId, String memberId, String orgId) {
         userAdapter.deleteMember(groupId, memberId);
         CacheEventPublisherUtil.syncReloadThenPublish(
                 publisher,
@@ -1464,7 +1475,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public List<GroupDto> getUserGroups(Long userId, String role, String orgId) {
+    public List<GroupDto> getUserGroups(String userId, String role, String orgId) {
         String roleName = role.replace("ROLE_", "");
         if(RoleName.SUPERADMIN.getRoleName().equalsIgnoreCase(roleName)){
             List<GroupDto> Allgroup = userAdapter.getAllgroups(orgId);
@@ -1475,12 +1486,12 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public List<Map<String, Object>> getGroupMembers(Long groupId, String orgId, LocalDate date, Long userIdFromToken) {
+    public List<Map<String, Object>> getGroupMembers(Long groupId, String orgId, LocalDate date, String userIdFromToken) {
 
         // Fetch group members, filtering out supervisors and logged-in user
         List<UserGroupEntity> groupEntity = userAdapter.getGroupMembersByGroupId(groupId, orgId);
 
-        List<Long> memberIds = groupEntity.stream()
+        List<String> memberIds = groupEntity.stream()
                 .map(ug -> ug.getUser().getUserId())
                 .filter(id -> !id.equals(userIdFromToken))  // Exclude logged-in user
                 .toList();
@@ -1489,7 +1500,7 @@ public class UserServiceImpl implements UserService {
             return Collections.emptyList();  // If no members found, return empty
         }
         //Fetch user type
-        Map<Long, String> userType = groupEntity.stream()
+        Map<String, String> userType = groupEntity.stream()
                 .collect(Collectors.toMap(
                         ug -> ug.getUser().getUserId(),
                         UserGroupEntity::getType
@@ -1500,7 +1511,7 @@ public class UserServiceImpl implements UserService {
 
         // Fetch the latest timesheet logs for the members
         List<TimesheetEntity> latestLogs = timesheetAdapter.getLatestLogsByTimesheetIds(memberIds, orgId, date);
-        Map<Long, TimesheetEntity> latestLogsMap = latestLogs.stream()
+        Map<String, TimesheetEntity> latestLogsMap = latestLogs.stream()
                 .collect(Collectors.toMap(TimesheetEntity::getUserId, Function.identity()));
 
         // Map user details to return response
@@ -1533,7 +1544,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public List<UserNameSuggestionDto> getGroupUsers(List<Long> groupIds, String orgId, Long loggedInUserId, String role) {
+    public List<UserNameSuggestionDto> getGroupUsers(List<Long> groupIds, String orgId, String loggedInUserId, String role) {
         // Case 1: groupIds is null or empty → return all active users
         if (groupIds == null || groupIds.isEmpty()) {
             int hierarchyLevel = UserRole.getLevel(role);
@@ -1563,7 +1574,7 @@ public class UserServiceImpl implements UserService {
         // Case 2: groupIds provided → return only members from those groups
         List<UserGroupEntity> groupEntity = userAdapter.getGroupUsersByGroupId(groupIds, orgId);
 
-        List<Long> memberIds = groupEntity.stream()
+        List<String> memberIds = groupEntity.stream()
                 .filter(ug -> ug.getType().equalsIgnoreCase("Member"))  // Only members
                 .map(ug -> ug.getUser().getUserId())
                 .filter(id -> !id.equals(loggedInUserId))  // Exclude logged-in user
@@ -1621,7 +1632,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public List<LocationDto> getUserLocation(Long userId) {
+    public List<LocationDto> getUserLocation(String userId) {
 
         UserEntity existingUser = userAdapter.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));

@@ -19,7 +19,7 @@ public interface WorkScheduleAdapter {
     void updateDefaultWorkSchedule(String orgId, String scheduleId);
     boolean findByScheduleName(String scheduleId , String scheduleName, String orgId);
     WorkScheduleEntity findDefaultScheduleByOrgId(String orgId);
-    WorkScheduleEntity getScheduleForUser(Long userId);
+    WorkScheduleEntity getScheduleForUser(String userId);
     List<FlexibleWorkScheduleEntity> findByWorkScheduleId(String scheduleId);
     List<FixedWorkScheduleEntity> findByFixedScheduleId(String scheduleId);
     List<WorkScheduleTypeEntity> findAllType();

@@ -3,7 +3,9 @@ package com.uniq.tms.tms_microservice.service;
 import com.uniq.tms.tms_microservice.dto.OrgSetupValidationResponse;
 import com.uniq.tms.tms_microservice.entity.OrganizationTypeEntity;
 import com.uniq.tms.tms_microservice.model.Organization;
+import com.uniq.tms.tms_microservice.model.OrganizationType;
 import java.util.List;
+import java.util.Optional;
 
 public interface OrganizationService {
 
@@ -11,4 +13,5 @@ public interface OrganizationService {
     Organization validate(Organization organizationDto);
     List<OrganizationTypeEntity> getOrgType();
     OrgSetupValidationResponse getValidation(String orgId);
+    Optional<OrganizationType> getUserOrgType(String orgId);
 }

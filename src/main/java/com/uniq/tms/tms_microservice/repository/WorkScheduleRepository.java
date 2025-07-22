@@ -105,7 +105,9 @@ public interface WorkScheduleRepository extends JpaRepository<WorkScheduleEntity
 
     @Query("SELECT u.workSchedule FROM UserEntity u " +
             "WHERE u.userId = :userId AND u.workSchedule.isActive = true")
-    WorkScheduleEntity findActiveWorkScheduleByUserId(@Param("userId") Long userId);
+    WorkScheduleEntity findActiveWorkScheduleByUserId(@Param("userId") String userId);
 
     int countByOrganizationEntity_OrganizationId(String orgId);
+
+    List<WorkScheduleEntity> findScheduleByOrganizationEntity_OrganizationId(String orgId);
 }

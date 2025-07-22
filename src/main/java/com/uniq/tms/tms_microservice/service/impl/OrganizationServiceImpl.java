@@ -8,11 +8,13 @@ import com.uniq.tms.tms_microservice.dto.UserRole;
 import com.uniq.tms.tms_microservice.entity.*;
 import com.uniq.tms.tms_microservice.enums.IdGenerationType;
 import com.uniq.tms.tms_microservice.exception.CommonExceptionHandler;
+import com.uniq.tms.tms_microservice.mapper.UserDtoMapper;
 import com.uniq.tms.tms_microservice.mapper.UserEntityMapper;
 import com.uniq.tms.tms_microservice.model.Organization;
+import com.uniq.tms.tms_microservice.model.OrganizationType;
 import com.uniq.tms.tms_microservice.model.User;
-import com.uniq.tms.tms_microservice.repository.OrganizationRepository;
 import com.uniq.tms.tms_microservice.repository.RoleRepository;
+import com.uniq.tms.tms_microservice.service.IdGenerationService;
 import com.uniq.tms.tms_microservice.service.OrganizationService;
 import com.uniq.tms.tms_microservice.util.EmailUtil;
 import com.uniq.tms.tms_microservice.util.PasswordUtil;
@@ -23,6 +25,8 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
+
 import static com.uniq.tms.tms_microservice.util.TextUtil.isBlank;
 
 @Service
@@ -32,17 +36,19 @@ public class OrganizationServiceImpl implements OrganizationService {
     private final UserEntityMapper userEntityMapper;
     private final UserAdapter userAdapter;
     private final WorkScheduleAdapter workScheduleAdapter;
-    private final OrganizationRepository organizationRepository;
     private final EmailUtil emailUtil;
     private final RoleRepository roleRepository;
+    private final IdGenerationService idGenerationService;
+    private final UserDtoMapper userDtoMapper;
 
-    public OrganizationServiceImpl(UserEntityMapper userEntityMapper, UserAdapter userAdapter, WorkScheduleAdapter workScheduleAdapter, OrganizationRepository organizationRepository, EmailUtil emailUtil, RoleRepository roleRepository) {
+    public OrganizationServiceImpl(UserEntityMapper userEntityMapper, UserAdapter userAdapter, WorkScheduleAdapter workScheduleAdapter, EmailUtil emailUtil, RoleRepository roleRepository, IdGenerationService idGenerationService, UserDtoMapper userDtoMapper) {
         this.userEntityMapper = userEntityMapper;
         this.userAdapter = userAdapter;
         this.workScheduleAdapter = workScheduleAdapter;
-        this.organizationRepository = organizationRepository;
         this.emailUtil = emailUtil;
         this.roleRepository = roleRepository;
+        this.idGenerationService = idGenerationService;
+        this.userDtoMapper = userDtoMapper;
     }
 
     /**
@@ -57,7 +63,7 @@ public class OrganizationServiceImpl implements OrganizationService {
         OrganizationEntity entity = userEntityMapper.toEntity(organization);
 
         // Generate unique org prefix
-        String prefix = generateOrgPrefix(organization.getOrgName()).toUpperCase();
+        String prefix = idGenerationService.generateOrgPrefix(organization.getOrgName()).toUpperCase();
         log.info("Prefix: {}", prefix);
 
         // Generate formatted organization number
@@ -91,47 +97,18 @@ public class OrganizationServiceImpl implements OrganizationService {
         }
     }
 
-    private String generateOrgPrefix(String orgName) {
-        if (orgName == null || orgName.isEmpty()) return "XXXX";
-
-        String[] words = orgName.trim().split("\\s+");
-
-        // Case 1: Try first word (up to 4 letters)
-        String firstWord = words[0].toUpperCase();
-        String primaryPrefix = firstWord.substring(0, Math.min(4, firstWord.length()));
-
-        if (!organizationRepository.existsByOrganizationIdStartingWith("TK" + primaryPrefix)) {
-            return primaryPrefix;
-        }
-
-        // Case 2: Fallback: first letter from first + 3 letters from second word
-        if (words.length > 1) {
-            String fallbackPrefix = words[0].substring(0, 1).toUpperCase() +
-                    words[1].substring(0, Math.min(3, words[1].length())).toUpperCase();
-            if (!organizationRepository.existsByOrganizationIdStartingWith("TK" + fallbackPrefix)) {
-                return fallbackPrefix;
-            }
-        }
-
-        // Case 3: Final fallback with numeric suffix
-        int counter = 1;
-        String tempPrefix;
-        do {
-            tempPrefix = primaryPrefix + counter;
-            counter++;
-        } while (organizationRepository.existsByOrganizationIdStartingWith("TK" + tempPrefix));
-
-        return tempPrefix;
-    }
-
+    /**
+     *
+     * @param organization
+     * @param organizationId
+     * create superadmin along with organization creation
+     * @return success once SA is created
+     */
     @Transactional
     public ApiResponse createSuperAdminUser(Organization organization, String organizationId) {
-        // Step 1: Validate mandatory fields
         if (isBlank(organization.getUserName()) || isBlank(organization.getMobile()) || isBlank(organization.getEmail())) {
             throw new CommonExceptionHandler.BadRequestException("Mandatory fields must not be null");
         }
-
-        // Step 2: Validate duplicates
         userAdapter.findByMobileNumber(organization.getMobile()).ifPresent(user -> {
             if (!user.isActive()) throw new CommonExceptionHandler.DuplicateUserException("Inactive user.");
             throw new CommonExceptionHandler.DuplicateUserException("Mobile number already in use.");
@@ -142,20 +119,19 @@ public class OrganizationServiceImpl implements OrganizationService {
             throw new CommonExceptionHandler.DuplicateUserException("Email already in use.");
         });
 
-        // Step 3: Assign SuperAdmin role
         Long roleId = Long.valueOf(UserRole.SUPERADMIN.getHierarchyLevel());
         RoleEntity role = roleRepository.findById(roleId)
                 .orElseThrow(() -> new RuntimeException("Role not found with ID: " + roleId));
 
-        // Step 4: Create UserEntity
         UserEntity entity = new UserEntity();
         entity.setUserName(organization.getUserName());
         entity.setEmail(organization.getEmail());
         entity.setMobileNumber(organization.getMobile());
         entity.setOrganizationId(organizationId);
+        String customUserId = idGenerationService.generateNextUserId(organizationId);
+        entity.setUserId(customUserId);
         entity.setRole(role);
         entity.setDateOfJoining(LocalDate.now());
-        // Step 5: Set password
         String defaultPassword = PasswordUtil.generateDefaultPassword();
         String encryptedPassword = PasswordUtil.encryptPassword(defaultPassword);
         entity.setPassword(encryptedPassword);
@@ -163,10 +139,8 @@ public class OrganizationServiceImpl implements OrganizationService {
         entity.setActive(true);
         entity.setCreatedAt(LocalDateTime.now());
         entity.setWorkSchedule(null);
-        // Step 6: Save and respond
         UserEntity savedUser = userAdapter.saveUser(entity);
 
-        // Send email
         emailUtil.sendAccountCreationEmail(
                 savedUser.getEmail(), savedUser.getUserName(), defaultPassword, true
         );
@@ -175,6 +149,10 @@ public class OrganizationServiceImpl implements OrganizationService {
         return new ApiResponse(201, "SuperAdmin created successfully", finalUser);
     }
 
+    /**
+     * Validate the Organization name
+     * @param organization
+     */
     @Override
     public Organization validate(Organization organization) {
         OrganizationEntity organizationEntity = userEntityMapper.toEntity(organization);
@@ -187,11 +165,21 @@ public class OrganizationServiceImpl implements OrganizationService {
         return userEntityMapper.toModel(response);
     }
 
+    /**
+     *
+     * @return List of organization type
+     */
     @Override
     public List<OrganizationTypeEntity> getOrgType() {
         return userAdapter.getAllOrgType();
     }
 
+    /**
+     *
+     * @param orgId
+     * Validate Location and WorkSchedule of the organization
+     * @return boolean based on location & WS
+     */
     @Override
     public OrgSetupValidationResponse getValidation(String orgId) {
         List<LocationEntity> locationEntities = userAdapter.findLocation(orgId);
@@ -200,4 +188,18 @@ public class OrganizationServiceImpl implements OrganizationService {
         boolean hasSchedules = workScheduleEntities != null && !workScheduleEntities.isEmpty();
         return new OrgSetupValidationResponse(hasLocations, hasSchedules);
     }
+
+    @Override
+    public Optional<OrganizationType> getUserOrgType(String orgId) {
+
+        OrganizationEntity org = userAdapter.findByOrgId(orgId).orElse(null);
+        log.info("Org:{}", org);
+
+        Optional<OrganizationTypeEntity> organizationType = Optional.empty();
+        if (org != null && org.getOrgType() != null) {
+            organizationType = userAdapter.findOrgType(org.getOrgType());
+        }
+        return organizationType.map(userEntityMapper::toModel);
+    }
+
 }

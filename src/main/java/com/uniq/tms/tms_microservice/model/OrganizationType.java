@@ -1,22 +1,9 @@
-package com.uniq.tms.tms_microservice.entity;
+package com.uniq.tms.tms_microservice.model;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+public class OrganizationType {
 
-@Entity
-@Table(name = "org_type")
-public class OrganizationTypeEntity {
-
-    @Id
-    @Column(name = "org_type_id")
     private String orgType;
-
-    @Column(name = "org_type_name")
     private String orgTypeName;
-
-    @Column(name = "show_filter")
     private boolean showFilter;
 
     public String getOrgType() {
@@ -35,7 +22,7 @@ public class OrganizationTypeEntity {
         this.orgTypeName = orgTypeName;
     }
 
-    public boolean getShowFilter() {
+    public boolean isShowFilter() {
         return showFilter;
     }
 

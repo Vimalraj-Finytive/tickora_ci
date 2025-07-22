@@ -92,7 +92,7 @@ public interface TeamRepository extends JpaRepository<GroupEntity, Long> {
     DELETE FROM user_group
     WHERE group_id = :groupId AND user_id = :memberId
 """, nativeQuery = true)
-    void deleteMemberById(@Param("groupId") Long groupId, @Param("memberId") Long memberId);
+    void deleteMemberById(@Param("groupId") Long groupId, @Param("memberId") String memberId);
 
     @Query("""
     SELECT COUNT(g) > 0
@@ -121,7 +121,7 @@ public interface TeamRepository extends JpaRepository<GroupEntity, Long> {
             AND ug.type = 'Supervisor'
     """, nativeQuery = true)
     List<GroupDto> findByUserIdAndOrganizationId(
-            @Param("userId") Long userId,
+            @Param("userId") String userId,
             @Param("orgId") String orgId
     );
 

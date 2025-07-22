@@ -6,15 +6,15 @@ public class AddGroupDto {
 
     private String groupName;
     private Long locationId;
-    private List<Long> supervisorsId;
+    private List<String> supervisorsId;
     private String type;
     private String workScheduleId;
 
-    public List<Long> getSupervisorsId() {
+    public List<String> getSupervisorsId() {
         return supervisorsId;
     }
 
-    public void setSupervisorsId(List<Long> supervisorsId) {
+    public void setSupervisorsId(List<String> supervisorsId) {
         this.supervisorsId = supervisorsId;
     }
 

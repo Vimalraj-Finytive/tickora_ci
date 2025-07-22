@@ -3,19 +3,19 @@ package com.uniq.tms.tms_microservice.model;
 import java.util.List;
 
 public class UserLocation {
-    private Long userId;
+    private String userId;
     private List<Long> locationId;
 
-    public UserLocation(List<Long> locationId, Long userId) {
+    public UserLocation(List<Long> locationId, String userId) {
         this.locationId = locationId;
         this.userId = userId;
     }
 
-    public Long getUserId() {
+    public String getUserId() {
         return userId;
     }
 
-    public void setUserId(Long userId) {
+    public void setUserId(String userId) {
         this.userId = userId;
     }
 

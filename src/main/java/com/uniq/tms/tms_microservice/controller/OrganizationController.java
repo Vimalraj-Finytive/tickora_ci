@@ -5,6 +5,7 @@ import com.uniq.tms.tms_microservice.constant.UserConstant;
 import com.uniq.tms.tms_microservice.dto.ApiResponse;
 import com.uniq.tms.tms_microservice.dto.OrgSetupValidationResponse;
 import com.uniq.tms.tms_microservice.dto.OrganizationDto;
+import com.uniq.tms.tms_microservice.dto.OrganizationTypeDto;
 import com.uniq.tms.tms_microservice.facade.AuthFacade;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -64,5 +65,12 @@ public class OrganizationController {
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
+    @GetMapping("/user/orgType")
+    public ResponseEntity<ApiResponse<OrganizationTypeDto>> getUserOrgType(
+            @RequestHeader("Authorization") String token) {
+
+        ApiResponse<OrganizationTypeDto> response = authFacade.getUserOrgType(token);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
 }
 

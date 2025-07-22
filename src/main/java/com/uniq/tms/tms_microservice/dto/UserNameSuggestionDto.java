@@ -1,19 +1,19 @@
 package com.uniq.tms.tms_microservice.dto;
 
 public class UserNameSuggestionDto {
-    private Long userId;
+    private String userId;
     private String userName;
 
-    public UserNameSuggestionDto(Long userId, String userName) {
+    public UserNameSuggestionDto(String userId, String userName) {
         this.userId = userId;
         this.userName = userName;
     }
 
-    public Long getUserId() {
+    public String getUserId() {
         return userId;
     }
 
-    public void setUserId(Long userId) {
+    public void setUserId(String userId) {
         this.userId = userId;
     }
 

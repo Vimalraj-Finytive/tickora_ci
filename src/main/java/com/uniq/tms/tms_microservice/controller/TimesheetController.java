@@ -40,7 +40,7 @@ public class  TimesheetController {
 
     @PatchMapping("/update")
     public ResponseEntity<ApiResponse<TimesheetDto>> updateClockInOutTimes(
-            @RequestParam Long userId,
+            @RequestParam String userId,
             @RequestParam LocalDate date,
             @RequestBody TimesheetDto request) {
 
@@ -57,7 +57,7 @@ public class  TimesheetController {
     @PutMapping("/editTimesheet")
     public ResponseEntity<ApiResponse<TimesheetDto>> upsertClockInOutTimes(
             @RequestHeader("Authorization") String token,
-            @RequestParam Long userId,
+            @RequestParam String userId,
             @RequestParam LocalDate date,
             @RequestBody TimesheetDto request) {
 

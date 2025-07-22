@@ -5,7 +5,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 public class UserGroupDto {
-    private Long userId;
+    private String userId;
     private String userName;
     private String role;
     private String type;
@@ -18,7 +18,7 @@ public class UserGroupDto {
 
     public UserGroupDto() {}
 
-    public UserGroupDto(Long userId, String userName, String role, String type, String email, LocalDate dateOfJoining, boolean active, List<String> location, List<String> groupName) {
+    public UserGroupDto(String userId, String userName, String role, String type, String email, LocalDate dateOfJoining, boolean active, List<String> location, List<String> groupName) {
         this.userId = userId;
         this.userName = userName;
         this.role = role;
@@ -30,11 +30,11 @@ public class UserGroupDto {
         this.groupName = groupName;
     }
 
-    public Long getUserId() {
+    public String getUserId() {
         return userId;
     }
 
-    public void setUserId(Long userId) {
+    public void setUserId(String userId) {
         this.userId = userId;
     }
 
