@@ -14,7 +14,7 @@ import com.uniq.tms.tms_microservice.mapper.WorkScheduleEntityMapper;
 import com.uniq.tms.tms_microservice.model.WorkSchedule;
 import com.uniq.tms.tms_microservice.model.WorkScheduleType;
 import com.uniq.tms.tms_microservice.service.CacheLoaderService;
-import com.uniq.tms.tms_microservice.service.IdGeneratorService;
+import com.uniq.tms.tms_microservice.service.IdGenerationService;
 import com.uniq.tms.tms_microservice.service.WorkScheduleService;
 import com.uniq.tms.tms_microservice.util.CacheEventPublisherUtil;
 import com.uniq.tms.tms_microservice.util.CacheKeyUtil;
@@ -44,7 +44,7 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
 
     private final WorkScheduleAdapter workScheduleAdapter;
     private final WorkScheduleEntityMapper workScheduleEntityMapper;
-    private final IdGeneratorService idGeneratorService;
+    private final IdGenerationService idGenerationService;
     private final UserAdapter userAdapter;
     private final CacheKeyUtil cacheKeyUtil;
     private final RedisTemplate<String, Object> redisTemplate;
@@ -53,10 +53,11 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
     private final CacheKeyConfig cacheKeyConfig;
     private final CacheReloadHandlerRegistry cacheReloadHandlerRegistry;
 
-    public WorkScheduleServiceImpl(WorkScheduleAdapter workScheduleAdapter, WorkScheduleEntityMapper workScheduleEntityMapper, IdGeneratorService idGeneratorService, UserAdapter userAdapter, CacheKeyUtil cacheKeyUtil, @Nullable RedisTemplate<String, Object> redisTemplate, CacheLoaderService cacheLoaderService, ApplicationEventPublisher publisher, CacheKeyConfig cacheKeyConfig, CacheReloadHandlerRegistry cacheReloadHandlerRegistry) {
+    public WorkScheduleServiceImpl(WorkScheduleAdapter workScheduleAdapter, WorkScheduleEntityMapper workScheduleEntityMapper, IdGenerationService idGenerationService,
+                                   UserAdapter userAdapter, CacheKeyUtil cacheKeyUtil, @Nullable RedisTemplate<String, Object> redisTemplate, CacheLoaderService cacheLoaderService, ApplicationEventPublisher publisher, CacheKeyConfig cacheKeyConfig, CacheReloadHandlerRegistry cacheReloadHandlerRegistry) {
         this.workScheduleAdapter = workScheduleAdapter;
         this.workScheduleEntityMapper = workScheduleEntityMapper;
-        this.idGeneratorService = idGeneratorService;
+        this.idGenerationService = idGenerationService;
         this.userAdapter = userAdapter;
         this.cacheKeyUtil = cacheKeyUtil;
         this.redisTemplate = redisTemplate;
@@ -137,11 +138,11 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
 
         WorkScheduleEntity entity = workScheduleEntityMapper.toEntity(model);
         entity.setOrganizationEntity(organizationEntity);
-        entity.setScheduleId(idGeneratorService.generateNextId(IdGenerationType.WORK_SCHEDULE));
+        entity.setScheduleId(idGenerationService.generateNextId(IdGenerationType.WORK_SCHEDULE));
         entity.setType(typeEntity);
         entity.setActive(true);
 
-        boolean shouldAssignToSuperAdmin = model.isDefault() || workScheduleAdapter.countByOrgId(orgId) == 1;
+        boolean shouldAssignToSuperAdmin = model.isDefault() || workScheduleAdapter.countByOrgId(orgId) == 0;
 
         WorkScheduleEntity savedEntity = workScheduleAdapter.saveWorkSchedule(entity);
 
@@ -176,14 +177,14 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
 
     private void saveWeeklySchedule(WeeklyScheduleDto dto, WorkScheduleEntity parent) {
         WeeklyWorkScheduleEntity entity = workScheduleEntityMapper.toWeeklyEntity(dto);
-        entity.setWeeklyWorkScheduleId(idGeneratorService.generateNextId(IdGenerationType.WEEKLY_WORK));
+        entity.setWeeklyWorkScheduleId(idGenerationService.generateNextId(IdGenerationType.WEEKLY_WORK));
         entity.setWorkScheduleEntity(parent);
         workScheduleAdapter.save(entity);
     }
 
     private void saveFlexibleSchedule(List<FlexibleScheduleDto> flexibleSchedule, WorkScheduleEntity parent) {
         List<FlexibleWorkScheduleEntity> entities = workScheduleEntityMapper.toFlexibleEntity(flexibleSchedule);
-        List<java.lang.String> ids = idGeneratorService.generateNextId(IdGenerationType.FLEXIBLE_WORK, entities.size());
+        List<java.lang.String> ids = idGenerationService.generateNextId(IdGenerationType.FLEXIBLE_WORK, entities.size());
 
         for (int i = 0; i < entities.size(); i++) {
             FlexibleWorkScheduleEntity entity = entities.get(i);
@@ -196,7 +197,7 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
     private void saveFixedSchedule(List<FixedScheduleDto> dtos, WorkScheduleEntity parent) {
         List<FixedWorkScheduleEntity> entities = workScheduleEntityMapper.toEntity(dtos);
 
-        List<String> ids = idGeneratorService.generateNextId(IdGenerationType.FIXED_WORK, entities.size());
+        List<String> ids = idGenerationService.generateNextId(IdGenerationType.FIXED_WORK, entities.size());
 
         for (int i = 0; i < entities.size(); i++) {
             FixedWorkScheduleEntity entity = entities.get(i);
@@ -209,7 +210,7 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
     @Override
     public ApiResponse addType(WorkScheduleTypeDto type) {
         WorkScheduleTypeEntity entity = new WorkScheduleTypeEntity();
-        java.lang.String generatedId = idGeneratorService.generateNextId(IdGenerationType.WORK_SCHEDULE_TYPE);
+        java.lang.String generatedId = idGenerationService.generateNextId(IdGenerationType.WORK_SCHEDULE_TYPE);
         entity.setTypeId(generatedId);
         entity.setType(WorkScheduleTypeEnum.valueOf(type.getType()));
         workScheduleAdapter.addType(entity);
@@ -247,6 +248,19 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
             entity.setScheduleId(model.getScheduleId());
             entity.setActive(true);
             workScheduleAdapter.saveWorkSchedule(entity);
+            boolean shouldAssignToSuperAdmin = model.isDefault() || workScheduleAdapter.countByOrgId(orgId) == 0;
+
+            WorkScheduleEntity savedEntity = workScheduleAdapter.saveWorkSchedule(entity);
+
+            if (shouldAssignToSuperAdmin) {
+                int superAdminRoleLevel = UserRole.SUPERADMIN.getHierarchyLevel();
+                UserEntity superAdminUser = userAdapter.findUserByOrgIdAndRoleId(orgId, superAdminRoleLevel);
+
+                if (superAdminUser != null) {
+                    superAdminUser.setWorkSchedule(savedEntity);
+                    userAdapter.save(superAdminUser);
+                }
+            }
             switch (typeEntity.getType()) {
                 case FIXED -> saveFixedSchedule(model.getFixedSchedule(), entity);
                 case FLEXIBLE -> saveFlexibleSchedule(model.getFlexibleSchedule(), entity);

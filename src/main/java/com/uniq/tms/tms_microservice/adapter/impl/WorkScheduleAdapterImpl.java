@@ -97,7 +97,7 @@ public class WorkScheduleAdapterImpl implements WorkScheduleAdapter {
     }
 
     @Override
-    public WorkScheduleEntity getScheduleForUser(Long userId) {
+    public WorkScheduleEntity getScheduleForUser(String userId) {
         return workScheduleRepository.findActiveWorkScheduleByUserId(userId);
     }
 
@@ -118,7 +118,7 @@ public class WorkScheduleAdapterImpl implements WorkScheduleAdapter {
 
     @Override
     public List<WorkScheduleEntity> findAllScheduleById(String orgId) {
-        return workScheduleRepository.findAll();
+        return workScheduleRepository.findScheduleByOrganizationEntity_OrganizationId(orgId);
     }
 
     @Override

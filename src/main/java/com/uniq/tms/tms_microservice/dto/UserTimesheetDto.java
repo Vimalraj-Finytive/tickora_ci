@@ -3,7 +3,6 @@ package com.uniq.tms.tms_microservice.dto;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.uniq.tms.tms_microservice.constant.UserConstant;
-
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -13,7 +12,7 @@ import java.util.List;
 public class UserTimesheetDto {
 
     @JsonIgnore
-    private Long userId;
+    private String userId;
     private String userName;
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     private LocalDate date;
@@ -34,7 +33,7 @@ public class UserTimesheetDto {
     private String status;
     private String workScheduleName;
 
-    public UserTimesheetDto(Long userId, String userName, LocalDate date, String workStatus, LocalTime firstClockIn, LocalTime lastClockOut, Duration trackedHours, Duration regularHours, String firstClockInTime, String lastClockOutTime, String trackedHoursDuration, String regularHoursDuration, List<TimesheetHistoryDto> history, String status, String workScheduleName) {
+    public UserTimesheetDto(String userId, String userName, LocalDate date, String workStatus, LocalTime firstClockIn, LocalTime lastClockOut, Duration trackedHours, Duration regularHours, String firstClockInTime, String lastClockOutTime, String trackedHoursDuration, String regularHoursDuration, List<TimesheetHistoryDto> history, String status, String workScheduleName) {
         this.userId = userId;
         this.userName = userName;
         this.date = date;
@@ -83,11 +82,11 @@ public class UserTimesheetDto {
         return String.format("%02dh %02dm", hours, minutes); // Format as "09h 00m"
     }
 
-    public Long getUserId() {
+    public String getUserId() {
         return userId;
     }
 
-    public void setUserId(Long userId) {
+    public void setUserId(String userId) {
         this.userId = userId;
     }
 

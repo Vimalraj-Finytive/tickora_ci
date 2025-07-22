@@ -6,7 +6,7 @@ import java.util.List;
 
 public class UserDto {
 
-    private Long userId;
+    private String userId;
     private String userName;
     private String email;
     private String mobileNumber;
@@ -29,11 +29,11 @@ public class UserDto {
         this.dateOfJoining = dateOfJoining;
     }
 
-    public Long getUserId() {
+    public String getUserId() {
         return userId;
     }
 
-    public void setUserId(Long userId) {
+    public void setUserId(String userId) {
         this.userId = userId;
     }
 

@@ -71,4 +71,6 @@ public interface UserEntityMapper {
     OrganizationEntity toEntity(Organization organization);
 
     Organization toModel(OrganizationEntity organizationEntity);
+
+    OrganizationType toModel(OrganizationTypeEntity organizationType);
 }

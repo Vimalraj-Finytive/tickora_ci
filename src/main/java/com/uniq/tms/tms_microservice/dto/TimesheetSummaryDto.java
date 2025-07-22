@@ -1,7 +1,7 @@
 package com.uniq.tms.tms_microservice.dto;
 
 public class TimesheetSummaryDto {
-    private Long userId;
+    private String userId;
     private String userName;
     private String mobileNumber;
     private String role;
@@ -15,11 +15,11 @@ public class TimesheetSummaryDto {
     private int permissionCount;
     private Integer totalCount;
 
-    public Long getUserId() {
+    public String getUserId() {
         return userId;
     }
 
-    public void setUserId(Long userId) {
+    public void setUserId(String userId) {
         this.userId = userId;
     }
 

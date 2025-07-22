@@ -8,7 +8,7 @@ import java.time.LocalTime;
 public class Timesheet {
 
     private Long id;
-    private Long userId;
+    private String userId;
     private LocalDate date;
     private LocalTime firstClockIn;
     private LocalTime lastClockOut;
@@ -127,11 +127,11 @@ public class Timesheet {
         this.date = date;
     }
 
-    public Long getUserId() {
+    public String getUserId() {
         return userId;
     }
 
-    public void setUserId(Long userId) {
+    public void setUserId(String userId) {
         this.userId = userId;
     }
 

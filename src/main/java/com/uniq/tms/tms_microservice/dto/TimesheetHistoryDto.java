@@ -17,7 +17,7 @@ public class TimesheetHistoryDto {
     @JsonFormat(shape = JsonFormat.Shape.STRING)
     private LocalDateTime loggedTimestamp;
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
-    private Long userId;
+    private String userId;
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private LocalDate date;
 
@@ -29,11 +29,11 @@ public class TimesheetHistoryDto {
         this.locationId = locationId;
     }
 
-    public Long getUserId() {
+    public String getUserId() {
         return userId;
     }
 
-    public void setUserId(Long userId) {
+    public void setUserId(String userId) {
         this.userId = userId;
     }
 

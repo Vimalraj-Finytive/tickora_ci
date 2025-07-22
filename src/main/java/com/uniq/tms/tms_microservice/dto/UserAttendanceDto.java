@@ -3,11 +3,11 @@ package com.uniq.tms.tms_microservice.dto;
 import java.time.LocalDate;
 
 public class UserAttendanceDto {
-    private Long userId;
+    private String userId;
     private LocalDate date;
     private String status;
 
-    public UserAttendanceDto(Long userId,LocalDate date, String status) {
+    public UserAttendanceDto(String userId,LocalDate date, String status) {
         this.userId = userId;
         this.date = date;
         this.status = status;
@@ -32,11 +32,11 @@ public class UserAttendanceDto {
         this.status = status;
     }
 
-    public Long getUserId() {
+    public String getUserId() {
         return userId;
     }
 
-    public void setUserId(Long userId) {
+    public void setUserId(String userId) {
         this.userId = userId;
     }
 }

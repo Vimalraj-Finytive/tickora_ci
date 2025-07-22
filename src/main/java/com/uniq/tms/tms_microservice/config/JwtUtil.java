@@ -248,11 +248,11 @@ public class JwtUtil {
         }
     }
 
-    public Long extractUserIdFromToken(String token) {
+    public String extractUserIdFromToken(String token) {
         log.info("extracting userId from token: {}", token);
         Claims claims = extractAllClaims(token);
         log.info("userId: {} found in JWT claims", claims.get("userId"));
-        return claims.get("userId", Long.class);
+        return claims.get("userId", String.class);
     }
 
     public boolean validateToken(String token) {

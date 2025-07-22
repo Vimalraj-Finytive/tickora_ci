@@ -14,14 +14,14 @@ import java.util.Optional;
 @Repository
 public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long> {
 
-    Optional<TimesheetEntity> findByUserIdAndDate(Long userId, LocalDate date);
+    Optional<TimesheetEntity> findByUserIdAndDate(String userId, LocalDate date);
 
     @Query(value = """
     WITH SelectedUsers AS (
         SELECT *
         FROM users
         WHERE active = TRUE
-          AND (:userIds IS NULL OR user_id = ANY(:userIds))
+          AND (:userIds IS NULL OR user_id = ANY(CAST(:userIds AS VARCHAR[])))
     ),
     
     UserGroups AS (
@@ -261,7 +261,7 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
     List<Object[]> fetchTimesheetsWithHistory(
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate,
-            @Param("userIds") Long[] userIds,
+            @Param("userIds") String[] userIds,
             @Param("orgId") String orgId
     );
 
@@ -269,13 +269,13 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
 
     @Query("SELECT new com.uniq.tms.tms_microservice.dto.UserAttendanceDto(t.userId, t.date, t.status.statusName) " +
             "FROM TimesheetEntity t WHERE t.userId IN :userIds AND t.date BETWEEN :from AND :to")
-    List<UserAttendanceDto> findAttendanceForUsersInRange(@Param("userIds") List<Long> userIds,
+    List<UserAttendanceDto> findAttendanceForUsersInRange(@Param("userIds") List<String> userIds,
                                                           @Param("from") LocalDate from,
                                                           @Param("to") LocalDate to);
 
     @Query(value = """
         WITH SelectedUsers AS (
-        SELECT * FROM users WHERE active = TRUE AND (:userIds IS NULL OR user_id = ANY(:userIds))
+        SELECT * FROM users WHERE active = TRUE AND (:userIds IS NULL OR user_id = ANY(CAST(:userIds AS VARCHAR[])))
     ),
     
     UserGroups AS (
@@ -515,7 +515,7 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
     List<Object[]> fetchUserTimesheetsWithHistory(
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate,
-            @Param("userIds") Long[] userIds,
+            @Param("userIds") String[] userIds,
             @Param("orgId") String orgId
     );
 
@@ -532,7 +532,7 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
     WHERE u.organization_id = :orgId
     """, nativeQuery = true)
     List<UserDashboard> getDashboard(
-            @Param("userIds") List<Long> userIds,
+            @Param("userIds") List<String> userIds,
             @Param("fromDate") LocalDate fromDate,
             @Param("toDate") LocalDate toDate,
             @Param("orgId") String orgId

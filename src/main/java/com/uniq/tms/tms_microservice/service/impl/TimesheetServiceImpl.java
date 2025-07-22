@@ -53,12 +53,12 @@ public class TimesheetServiceImpl implements TimesheetService {
         this.cacheKeyUtil = cacheKeyUtil;
     }
 
-    public List<UserTimesheetResponseDto> getAllTimesheets(Long userIdFromToken, String orgId, String role, TimesheetReportDto request) {
+    public List<UserTimesheetResponseDto> getAllTimesheets(String userIdFromToken, String orgId, String role, TimesheetReportDto request) {
         LocalDate fromDate = request.getFromDate();
         LocalDate toDate = request.getToDate();
         String timePeriod = request.getTimePeriod();
         log.info("Time period: {}", timePeriod);
-        List<Long> userId = request.getUserId();
+        List<String> userId = request.getUserId();
         List<Long> groupIds = request.getGroupId();
         LocalDate startDate = null;
         LocalDate endDate = null;
@@ -93,7 +93,7 @@ public class TimesheetServiceImpl implements TimesheetService {
         // Determine target users based on privileges
         List<UserEntity> targetUsers = resolveTargetUsers(userIdFromToken, groupIds, userId, orgId, roleIds);
 
-        List<Long> userIds = targetUsers.stream()
+        List<String> userIds = targetUsers.stream()
                 .map(UserEntity::getUserId)
                 .toList();
 
@@ -102,7 +102,7 @@ public class TimesheetServiceImpl implements TimesheetService {
         return timesheetDtos;
     }
 
-    private List<UserEntity> resolveTargetUsers(Long userIdFromToken, List<Long> groupIds, List<Long> userId, String orgId, List<Long> roleIds) {
+    private List<UserEntity> resolveTargetUsers(String userIdFromToken, List<Long> groupIds, List<String> userId, String orgId, List<Long> roleIds) {
 
         UserEntity currentUser = userAdapter.getUserById(userIdFromToken);
         String roleName = currentUser.getRole().getName().toUpperCase();
@@ -185,7 +185,7 @@ public class TimesheetServiceImpl implements TimesheetService {
                             "No users found in the selected group(s)");
                 }
 
-                List<Long> groupUserIds = groupUserEntities.stream()
+                List<String> groupUserIds = groupUserEntities.stream()
                         .map(UserEntity::getUserId)
                         .toList();
 
@@ -262,7 +262,7 @@ public class TimesheetServiceImpl implements TimesheetService {
             }
 
             TimesheetEntity timesheet = history.getTimesheet();
-            Long userId = timesheet.getUserId();
+            String userId = timesheet.getUserId();
             LocalDate date = timesheet.getDate();
             if (userId == null) {
                 throw new IllegalArgumentException("User ID must not be null. Check mapping!");
@@ -311,7 +311,7 @@ public class TimesheetServiceImpl implements TimesheetService {
     }
 
     @Override
-    public TimesheetDto updateClockInOut(Long userId, LocalDate date, TimesheetDto request) {
+    public TimesheetDto updateClockInOut(String userId, LocalDate date, TimesheetDto request) {
         TimesheetEntity timesheet = timesheetAdapter.findUserIdAndDate(userId, date);
         boolean isNew = false;
 
@@ -479,7 +479,7 @@ public class TimesheetServiceImpl implements TimesheetService {
         timesheetAdapter.saveAllTimesheetHistories(historyEntries);
     }
 
-    public List<UserDashboardDto> getAllUserInfo(String orgId, Long userIdFromToken, LocalDate fromDate, LocalDate toDate, Long userId, List<Long> groupIds, String type) {
+    public List<UserDashboardDto> getAllUserInfo(String orgId, String userIdFromToken, LocalDate fromDate, LocalDate toDate, String userId, List<Long> groupIds, String type) {
         UserEntity currentUser = userAdapter.getUserById(userIdFromToken);
         String roleName = currentUser.getRole().getName();
         log.info("Role dashboard: {}", roleName);
@@ -539,13 +539,13 @@ public class TimesheetServiceImpl implements TimesheetService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
         }
         // 4. Prepare user IDs and proceed
-        List<Long> userIds = filterUsers.stream().map(UserEntity::getUserId).toList();
+        List<String> userIds = filterUsers.stream().map(UserEntity::getUserId).toList();
         log.info("User IDs: {}", userIds);
         timesheetAdapter.getDashboard(orgId, userIds, fromDate, toDate);
         return calculateAttendanceSummaryForUsers(userIds, fromDate, toDate, orgId);
     }
 
-    private List<UserDashboardDto> calculateAttendanceSummaryForUsers(List<Long> userIds, LocalDate fromDate, LocalDate toDate, String orgId) {
+    private List<UserDashboardDto> calculateAttendanceSummaryForUsers(List<String> userIds, LocalDate fromDate, LocalDate toDate, String orgId) {
         if (userIds == null || userIds.isEmpty()) {
             return Collections.singletonList(UserDashboardDto.empty());
         }
@@ -561,9 +561,12 @@ public class TimesheetServiceImpl implements TimesheetService {
         }
 
         // Build working days per user like timesheet logic
-        Map<Long, Set<DayOfWeek>> userWorkingDaysMap = new HashMap<>();
-        for (Long userId : userIds) {
+        Map<String, Set<DayOfWeek>> userWorkingDaysMap = new HashMap<>();
+        for (String userId : userIds) {
             WorkScheduleEntity ws = workScheduleAdapter.getScheduleForUser(userId);
+            if (ws == null) {
+                throw new IllegalStateException("Work Schedule not assigned or inactive for user: " + userId);
+            }
             Set<DayOfWeek> workingDays = new HashSet<>();
 
             if (ws.getType().getType().name().equalsIgnoreCase(FLEXIBLE.getScheduleType())) {
@@ -588,7 +591,7 @@ public class TimesheetServiceImpl implements TimesheetService {
             DayOfWeek currentDay = date.getDayOfWeek();
             boolean isToday = date.equals(LocalDate.now());
 
-            for (Long userId : userIds) {
+            for (String userId : userIds) {
                 total++;
                 String key = userId + "|" + date;
                 Set<DayOfWeek> workingDays = userWorkingDaysMap.getOrDefault(userId, Collections.emptySet());
@@ -658,11 +661,11 @@ public class TimesheetServiceImpl implements TimesheetService {
     }
 
     @Override
-    public List<UserTimesheetDto> getUserTimesheets(Long userIdFromToken, String orgId, String role, TimesheetReportDto request) {
+    public List<UserTimesheetDto> getUserTimesheets(String userIdFromToken, String orgId, String role, TimesheetReportDto request) {
         LocalDate fromDate = request.getFromDate();
         LocalDate toDate = request.getToDate();
         String timePeriod = request.getTimePeriod();
-        List<Long> userIds = request.getUserId();
+        List<String> userIds = request.getUserId();
 
         LocalDate startDate = null;
         LocalDate endDate = null;

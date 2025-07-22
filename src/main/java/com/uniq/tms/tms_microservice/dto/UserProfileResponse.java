@@ -6,7 +6,7 @@ import java.util.List;
 
 public class UserProfileResponse {
 
-    private Long userId;
+    private String userId;
     private String userName;
     private String email;
     private String mobileNumber;
@@ -21,7 +21,7 @@ public class UserProfileResponse {
 
     public UserProfileResponse(){}
 
-    public UserProfileResponse(Long userId, String userName, String email, String mobileNumber, String roleName, LocalDate dateOfJoining, List<LocationDto> location, List<UserGroupProfileDto> groupDtos, String organizationName, String workSchedule, String orgType) {
+    public UserProfileResponse(String userId, String userName, String email, String mobileNumber, String roleName, LocalDate dateOfJoining, List<LocationDto> location, List<UserGroupProfileDto> groupDtos, String organizationName, String workSchedule, String orgType) {
         this.userId = userId;
         this.userName = userName;
         this.email = email;
@@ -41,10 +41,10 @@ public class UserProfileResponse {
     public void setDateOfJoining(LocalDate dateOfJoining) {
         this.dateOfJoining = dateOfJoining;
     }
-    public Long getUserId() {
+    public String getUserId() {
         return userId;
     }
-    public void setUserId(Long userId) {
+    public void setUserId(String userId) {
         this.userId = userId;
     }
     public String getUserName() {

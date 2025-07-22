@@ -130,7 +130,7 @@ public class UserController {
     public ResponseEntity<ApiResponse> updateUser(
             @RequestHeader("Authorization") String token,
             @RequestBody CreateUserDto updates,
-            @RequestParam Long userId) {
+            @RequestParam String userId) {
 
         ApiResponse response = authFacade.updateUser(token, updates, userId);
         return ResponseEntity.status(response.getStatusCode()).body(response);
@@ -143,7 +143,7 @@ public class UserController {
     }
 
     @GetMapping("/profile")
-    public ResponseEntity<ApiResponse> getUser(@RequestHeader("Authorization") String token, @RequestParam(required = false) Long userId){
+    public ResponseEntity<ApiResponse> getUser(@RequestHeader("Authorization") String token, @RequestParam(required = false) String userId){
         ApiResponse response = authFacade.getUserProfile(token, userId);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
@@ -157,7 +157,7 @@ public class UserController {
     }
 
     @DeleteMapping("/deleteUser")
-    public ResponseEntity<ApiResponse> deleteUser(@RequestHeader("Authorization") String token, @RequestParam Long userId) {
+    public ResponseEntity<ApiResponse> deleteUser(@RequestHeader("Authorization") String token, @RequestParam String userId) {
         ApiResponse response = authFacade.deleteUser(token, userId);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
@@ -199,7 +199,7 @@ public class UserController {
     @DeleteMapping("/deleteMember")
     public ResponseEntity<ApiResponse> deleteMember(@RequestHeader("Authorization") String token,
                                                     @RequestParam Long groupId,
-                                                    @RequestParam Long memberId) {
+                                                    @RequestParam String memberId) {
         ApiResponse response = authFacade.deleteMember(token, groupId, memberId);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }

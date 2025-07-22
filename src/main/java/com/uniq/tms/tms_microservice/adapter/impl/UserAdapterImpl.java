@@ -2,7 +2,6 @@ package com.uniq.tms.tms_microservice.adapter.impl;
 
 import com.uniq.tms.tms_microservice.adapter.UserAdapter;
 import com.uniq.tms.tms_microservice.dto.GroupDto;
-import com.uniq.tms.tms_microservice.dto.GroupsData;
 import com.uniq.tms.tms_microservice.entity.GroupEntity;
 import com.uniq.tms.tms_microservice.entity.LocationEntity;
 import com.uniq.tms.tms_microservice.entity.RoleEntity;
@@ -82,7 +81,7 @@ public class UserAdapterImpl implements UserAdapter {
     }
 
     @Override
-    public Optional<UserEntity> findById(Long userId) {
+    public Optional<UserEntity> findById(String userId) {
         return userRepository.findByUserId(userId);
     }
 
@@ -91,7 +90,7 @@ public class UserAdapterImpl implements UserAdapter {
     }
 
     @Override
-    public void deactivateUserById(Long userId, String orgId) {
+    public void deactivateUserById(String userId, String orgId) {
         userRepository.deactivateUserById(userId, orgId);
     }
 
@@ -111,17 +110,12 @@ public class UserAdapterImpl implements UserAdapter {
     }
 
     @Override
-    public int updateUserGroupType(Long userId, Long groupId, String type) {
+    public int updateUserGroupType(String userId, Long groupId, String type) {
         return userGroupRepository.updateUserGroupType(userId,groupId,type);
     }
 
     @Override
-    public List<GroupsData> getGroupData(String orgId) {
-        return teamRepository.getGroupData(orgId);
-    }
-
-    @Override
-    public void deleteMember(Long groupId, Long memberId) {
+    public void deleteMember(Long groupId, String memberId) {
         teamRepository.deleteMemberById(groupId, memberId);
     }
 
@@ -141,7 +135,7 @@ public class UserAdapterImpl implements UserAdapter {
     }
 
     @Override
-    public List<GroupDto> getUserGroups(Long userId, String orgId) {
+    public List<GroupDto> getUserGroups(String userId, String orgId) {
         return teamRepository.findByUserIdAndOrganizationId(userId, orgId);
     }
 
@@ -151,7 +145,7 @@ public class UserAdapterImpl implements UserAdapter {
     }
 
     @Override
-    public List<UserEntity> getUsersByIds(List<Long> userIds, String orgId) {
+    public List<UserEntity> getUsersByIds(List<String> userIds, String orgId) {
         return userRepository.findByUserIdAndOrgIdAndActiveTrue(userIds, orgId);
     }
 
@@ -161,14 +155,14 @@ public class UserAdapterImpl implements UserAdapter {
     }
 
     @Override
-    public List<UserEntity> getAllUsers(String orgId, Long userIdFromToken, int hierarchyLevel) {
+    public List<UserEntity> getAllUsers(String orgId, String userIdFromToken, int hierarchyLevel) {
         return userRepository.findAllUsersList(orgId, userIdFromToken, hierarchyLevel);
     }
 
 
     @Override
-    public UserEntity getUserById(Long userId) {
-        return userRepository.findById(userId)
+    public UserEntity getUserById(String userId) {
+        return userRepository.findByUserId(userId)
                 .orElseThrow(() -> new NoSuchElementException("User not found with ID: " + userId));
     }
 
@@ -178,7 +172,7 @@ public class UserAdapterImpl implements UserAdapter {
     }
 
     @Override
-    public List<Long> findGroupIdsBySupervisorId(Long userIdFromToken) {
+    public List<Long> findGroupIdsBySupervisorId(String userIdFromToken) {
         return userGroupRepository.findGroupIdsBySupervisorId(userIdFromToken);
     }
 
@@ -194,7 +188,7 @@ public class UserAdapterImpl implements UserAdapter {
 
     @Override
     public List<UserEntity> findMembersByGroupIds(
-            List<Long> filteredGroupIds, Long userIdFromToken) {
+            List<Long> filteredGroupIds, String userIdFromToken) {
         return userGroupRepository.findMembersByGroupIds(filteredGroupIds, userIdFromToken);
 
     }
@@ -224,17 +218,17 @@ public class UserAdapterImpl implements UserAdapter {
     }
 
     @Override
-    public Optional<SecondaryDetailsEntity> findSecondaryUserById(Long userId) {
+    public Optional<SecondaryDetailsEntity> findSecondaryUserById(String userId) {
         return secondaryDetailsRepository.findByUserId(userId);
     }
 
     @Override
-    public boolean existsById(Long userId) {
-        return userRepository.existsById(userId);
+    public boolean existsById(String userId) {
+        return userRepository.existsByUserId(userId);
     }
 
     @Override
-    public List<Long> findSupervisorIdsByGroupId(Long groupId) {
+    public List<String> findSupervisorIdsByGroupId(Long groupId) {
         return userGroupRepository.findSupervisorIdsByGroupId(groupId);
     }
 
@@ -249,12 +243,12 @@ public class UserAdapterImpl implements UserAdapter {
     }
 
     @Override
-    public List<UserGroupEntity> findByUserIdAndGroupId(Long userId, Long groupId){
+    public List<UserGroupEntity> findByUserIdAndGroupId(String userId, Long groupId){
         return userGroupRepository.findByUserIdAndGroupId(userId,groupId);
     };
 
     @Override
-    public void deleteSupervisorsByGroupId( Long groupId, Long userId){
+    public void deleteSupervisorsByGroupId( Long groupId, String userId){
         userGroupRepository.deleteSupervisorsByGroupId(groupId, userId);
     }
 
@@ -264,18 +258,13 @@ public class UserAdapterImpl implements UserAdapter {
     }
 
     @Override
-    public List<Long> findMemberIdsByGroupId(Long groupId) {
+    public List<String> findMemberIdsByGroupId(Long groupId) {
         return userGroupRepository.findUserIdsByGroupIdAndType(groupId, "Member");
     }
 
     @Override
     public LocationEntity findLocationById(Long locationId, String orgId) {
         return locationRepository.findByLocationIdAndOrganizationEntity_OrganizationId(locationId, orgId);
-    }
-
-    @Override
-    public List<UserGroupEntity> findUserByOrganizationIdAndUserId(String organizationId, Long userId) {
-        return userRepository.findUserByOrganizationIdAndUserId(organizationId, userId);
     }
 
     @Override
@@ -355,11 +344,6 @@ public class UserAdapterImpl implements UserAdapter {
     }
 
     @Override
-    public RoleEntity getRoleWithPrivileges(Long roleId){
-        return roleRepository.findByIdWithPrivileges(roleId);
-    }
-
-    @Override
     public Set<String> getAllSecondaryEmail(){
         return  new HashSet<>(secondaryDetailsRepository.findAllEmail());
     }
@@ -370,7 +354,7 @@ public class UserAdapterImpl implements UserAdapter {
     }
 
     @Override
-    public UserEntity findUserByOrgIdAndUserId(String orgId, Long userId) {
+    public UserEntity findUserByOrgIdAndUserId(String orgId, String userId) {
         return userRepository.findByOrganizationIdAndUserId(orgId, userId);
     }
     public LocationEntity addLocation(Location location) {
@@ -409,7 +393,7 @@ public class UserAdapterImpl implements UserAdapter {
     }
 
     @Override
-    public List<UserLocationEntity> findUserLocationByUserId(Long userId) {
+    public List<UserLocationEntity> findUserLocationByUserId(String userId) {
         return userLocationRepository.findByUser_UserId(userId);
     }
 
@@ -420,7 +404,7 @@ public class UserAdapterImpl implements UserAdapter {
 
     @Override
     @Transactional
-    public void deleteUserLocationByUserId(Long userId, Set<Long> toDelete) {
+    public void deleteUserLocationByUserId(String userId, Set<Long> toDelete) {
         userLocationRepository.deleteByUser_UserIdAndLocation_LocationIdIn(userId, toDelete);
     }
 
@@ -431,13 +415,13 @@ public class UserAdapterImpl implements UserAdapter {
     }
 
     @Override
-    public List<UserGroupEntity> findUserGroupByUserId(Long userId){
+    public List<UserGroupEntity> findUserGroupByUserId(String userId){
         return userGroupRepository.findGroupByUser_UserId(userId);
     }
 
     @Override
     @Transactional
-    public void deleteUserGroupByUserId(Long userId, Set<Long> toDelete) {
+    public void deleteUserGroupByUserId(String userId, Set<Long> toDelete) {
         userGroupRepository.deleteByUser_UserIdAndGroup_GroupIdIn(userId, toDelete);
     }
 
@@ -537,7 +521,7 @@ public class UserAdapterImpl implements UserAdapter {
 
     @Override
     public List<LocationEntity> findLocation(String orgId) {
-        return locationRepository.findAll();
+        return locationRepository.findLocationByOrganizationEntity_OrganizationId(orgId);
     }
 
     @Override
@@ -548,5 +532,10 @@ public class UserAdapterImpl implements UserAdapter {
     @Override
     public UserEntity save(UserEntity user) {
         return userRepository.saveAndFlush(user);
+    }
+
+    @Override
+    public Optional<OrganizationTypeEntity> findOrgType(String orgType) {
+        return organizationTypeRepository.findById(orgType);
     }
 }

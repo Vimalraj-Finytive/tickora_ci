@@ -55,4 +55,6 @@ public interface LocationRepository extends JpaRepository<LocationEntity, Long> 
 
     @Query("SELECT l FROM LocationEntity l WHERE l.organizationEntity.organizationId = :orgId AND l.isDefault = true")
     LocationEntity findDefaultLocationById(@Param("orgId") String orgId);
+
+    List<LocationEntity> findLocationByOrganizationEntity_OrganizationId(String orgId);
 }

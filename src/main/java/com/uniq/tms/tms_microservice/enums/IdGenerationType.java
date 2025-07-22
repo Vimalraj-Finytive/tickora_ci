@@ -3,6 +3,7 @@ package com.uniq.tms.tms_microservice.enums;
 public enum IdGenerationType {
 
     TICKORA("TK"),
+    USER("UI"),
     WORK_SCHEDULE("WS"),
     FIXED_WORK("WSFX"),
     FLEXIBLE_WORK("WSFL"),

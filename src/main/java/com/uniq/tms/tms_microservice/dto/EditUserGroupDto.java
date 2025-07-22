@@ -2,12 +2,12 @@ package com.uniq.tms.tms_microservice.dto;
 
 public class EditUserGroupDto {
     private Long groupId;
-    private Long userId;
+    private String userId;
     private String type;
 
     public EditUserGroupDto() {
     }
-    public EditUserGroupDto(Long groupId, Long userId, String type) {
+    public EditUserGroupDto(Long groupId, String userId, String type) {
         this.groupId = groupId;
         this.userId = userId;
         this.type = type;
@@ -21,11 +21,11 @@ public class EditUserGroupDto {
         this.groupId = groupId;
     }
 
-    public Long getUserId() {
+    public String getUserId() {
         return userId;
     }
 
-    public void setUserId(Long userId) {
+    public void setUserId(String userId) {
         this.userId = userId;
     }
 

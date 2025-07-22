@@ -4,7 +4,7 @@ import java.util.List;
 
 public class AddMember {
     private Long groupId;
-    private List<Long> userId;
+    private List<String> userId;
     private String type;
 
     public Long getGroupId() {
@@ -14,7 +14,7 @@ public class AddMember {
     public AddMember() {
     }
 
-    public AddMember(Long groupId, List<Long> userId, String type) {
+    public AddMember(Long groupId, List<String> userId, String type) {
         this.groupId = groupId;
         this.userId = userId;
         this.type = type;
@@ -24,7 +24,7 @@ public class AddMember {
         this.groupId = groupId;
     }
 
-    public List<Long> getUserId() {
+    public List<String> getUserId() {
         return this.userId;
     }
 
@@ -32,7 +32,7 @@ public class AddMember {
 
     public void setType(String type) {this.type = type;}
 
-    public void setUserId(List<Long> userId) {
+    public void setUserId(List<String> userId) {
         this.userId = userId;
     }
 }

@@ -15,7 +15,7 @@ import java.util.Optional;
 import java.util.Set;
 
 @Repository
-public interface UserRepository extends JpaRepository<UserEntity, Long> {
+public interface UserRepository extends JpaRepository<UserEntity, String> {
 
     @Query("""
     SELECT ug
@@ -28,7 +28,7 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
 """)
     List<UserGroupEntity> findUserByOrganizationIdAndUserId(
             @Param("organizationId") String organizationId,
-            @Param("userId") Long userId
+            @Param("userId") String userId
     );
 
     UserEntity findByEmail(String email);
@@ -61,16 +61,16 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
     List<UserEntity> findByOrgIdAndRoleId(String orgId, List<Integer> higherRoleIds);
 
     @Query("SELECT u FROM UserEntity u WHERE u.userId IN :userIds AND u.organizationId = :orgId AND u.active = true")
-    List<UserEntity> findByUserIdAndOrgIdAndActiveTrue(@Param("userIds") List<Long> userIds, @Param("orgId") String orgId);
+    List<UserEntity> findByUserIdAndOrgIdAndActiveTrue(@Param("userIds") List<String> userIds, @Param("orgId") String orgId);
 
-    Optional<UserEntity> findByUserId(Long userId);
+    Optional<UserEntity> findByUserId(String userId);
 
     Optional<UserEntity> findOptionalByMobileNumber(String mobileNumber);
 
     @Modifying
     @Transactional
     @Query("UPDATE UserEntity u SET u.active = false WHERE u.userId = :userId AND u.organizationId = :orgId")
-    void deactivateUserById(Long userId, String orgId);
+    void deactivateUserById(String userId, String orgId);
 
     @Query("SELECT new com.uniq.tms.tms_microservice.dto.UserNameSuggestionDto(u.userId, u.userName) " +
             "FROM UserEntity u " +
@@ -90,10 +90,10 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
     @Query(value = "SELECT email FROM users", nativeQuery = true)
     List<String> findAllEmails();
 
-    UserEntity findByOrganizationIdAndUserId(String orgId, Long userId);
+    UserEntity findByOrganizationIdAndUserId(String orgId, String userId);
 
     @Query("SELECT u FROM UserEntity u WHERE u.organizationId = :orgId AND u.active = true AND u.userId <> :userId AND u.role.hierarchyLevel > :hierarchyLevel")
-    List<UserEntity> findAllUsersList(@Param("orgId") String orgId, @Param("userId") Long userIdFromToken, @Param("hierarchyLevel") int hierarchyLevel);
+    List<UserEntity> findAllUsersList(@Param("orgId") String orgId, @Param("userId") String userIdFromToken, @Param("hierarchyLevel") int hierarchyLevel);
 
     @Query("SELECT u FROM UserEntity u WHERE u.organizationId = :orgId AND u.active = true AND u.role.name IN :roles")
     List<UserEntity> findUserByRoles(Set<String> roles, String orgId);
@@ -119,4 +119,9 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
     void updateUserWorkSchedule(@Param("oldId") String oldId, @Param("newId") String newId);
 
     UserEntity findUserByOrganizationIdAndRole_RoleId(String orgId, int roleId);
+
+    @Query("SELECT u.userId FROM UserEntity u WHERE u.userId LIKE CONCAT(:orgPrefix, '%') ORDER BY u.userId DESC LIMIT 1")
+    String findLastUserIdByOrgPrefix(@Param("orgPrefix") String orgPrefix);
+
+    boolean existsByUserId(String userId);
 }

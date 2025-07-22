@@ -69,4 +69,6 @@ public interface UserDtoMapper {
     }
 
     Organization toModel(OrganizationDto organizationDto);
+
+    OrganizationTypeDto toDto(OrganizationType organizationType);
 }

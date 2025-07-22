@@ -14,7 +14,7 @@ public class TimesheetReportDto {
 
     private String timePeriod;
 
-    private List<Long> userId;
+    private List<String> userId;
 
     private List<Long> groupId;
 
@@ -46,11 +46,11 @@ public class TimesheetReportDto {
         this.timePeriod = timePeriod;
     }
 
-    public List<Long> getUserId() {
+    public List<String> getUserId() {
         return userId;
     }
 
-    public void setUserId(List<Long> userId) {
+    public void setUserId(List<String> userId) {
         this.userId = userId;
     }
 
