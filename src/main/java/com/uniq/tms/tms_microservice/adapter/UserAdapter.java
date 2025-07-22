@@ -1,14 +1,12 @@
 package com.uniq.tms.tms_microservice.adapter;
 
 import com.uniq.tms.tms_microservice.dto.GroupDto;
-import com.uniq.tms.tms_microservice.dto.GroupsData;
 import com.uniq.tms.tms_microservice.entity.GroupEntity;
 import com.uniq.tms.tms_microservice.entity.LocationEntity;
 import com.uniq.tms.tms_microservice.entity.RoleEntity;
 import com.uniq.tms.tms_microservice.entity.UserEntity;
 import com.uniq.tms.tms_microservice.entity.UserGroupEntity;
 import com.uniq.tms.tms_microservice.model.Location;
-import com.uniq.tms.tms_microservice.model.UserResponse;
 import com.uniq.tms.tms_microservice.dto.UserNameSuggestionDto;
 import com.uniq.tms.tms_microservice.entity.*;
 import java.lang.String;
@@ -110,5 +108,5 @@ public interface UserAdapter {
     List<LocationEntity> findLocation(String orgId);
     UserEntity findUserByOrgIdAndRoleId(String orgId, int roleId);
     UserEntity save(UserEntity user);
-    Optional<OrganizationTypeEntity> findOrgType(String orgType);
+    OrganizationTypeEntity findOrgType(String orgType);
 }

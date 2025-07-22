@@ -817,8 +817,8 @@ public class AuthFacade {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized - Invalid Organization");
         }
 
-        Optional<OrganizationTypeDto> dto = organizationService.getUserOrgType(orgId)
-                .map(userDtoMapper::toDto);
-        return new ApiResponse<>(200, "User Organization Type Fetched Successfully", dto);
+        OrganizationType dto = organizationService.getUserOrgType(orgId);
+        OrganizationTypeDto response = userDtoMapper.toDto(dto);
+        return new ApiResponse<>(200, "User Organization Type Fetched Successfully", response);
     }
 }

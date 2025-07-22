@@ -16,9 +16,6 @@ public class OrganizationTypeEntity {
     @Column(name = "org_type_name")
     private String orgTypeName;
 
-    @Column(name = "show_filter")
-    private boolean showFilter;
-
     public String getOrgType() {
         return orgType;
     }
@@ -35,11 +32,4 @@ public class OrganizationTypeEntity {
         this.orgTypeName = orgTypeName;
     }
 
-    public boolean getShowFilter() {
-        return showFilter;
-    }
-
-    public void setShowFilter(boolean showFilter) {
-        this.showFilter = showFilter;
-    }
 }

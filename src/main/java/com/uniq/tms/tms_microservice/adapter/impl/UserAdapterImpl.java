@@ -535,7 +535,7 @@ public class UserAdapterImpl implements UserAdapter {
     }
 
     @Override
-    public Optional<OrganizationTypeEntity> findOrgType(String orgType) {
-        return organizationTypeRepository.findById(orgType);
+    public OrganizationTypeEntity findOrgType(String orgType) {
+        return organizationTypeRepository.findByorgType(orgType);
     }
 }
