@@ -67,9 +67,6 @@ public class JwtFilter implements Filter {
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             logger.info("jwt token found in header");
             jwtToken = authHeader.substring(7);
-        }else{
-            sendErrorResponse(httpResponse, HttpServletResponse.SC_UNAUTHORIZED,"Token must start with Bearer");
-            return;
         }
 
         if (jwtToken == null && httpRequest.getCookies() != null) {
