@@ -42,7 +42,10 @@ public class JwtFilter implements Filter {
         HttpServletRequest httpRequest = (HttpServletRequest) request;
         HttpServletResponse httpResponse = (HttpServletResponse) response;
         String path = httpRequest.getRequestURI();
-        if (path.equals("/tms/loginByEmail")
+        if (path.equals("/login")
+                ||path.equals("/")
+                || path.equals("/favicon.ico")
+                || path.equals("/tms/loginByEmail")
                 || path.equals("/tms/reset-password")
                 || path.equals("/tms/validate-email")
                 || path.equals("/tms/organization/orgType")
