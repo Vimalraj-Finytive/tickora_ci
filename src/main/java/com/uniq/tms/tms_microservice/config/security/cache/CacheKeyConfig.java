@@ -1,4 +1,4 @@
-package com.uniq.tms.tms_microservice.config;
+package com.uniq.tms.tms_microservice.config.security.cache;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;

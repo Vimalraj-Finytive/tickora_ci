@@ -28,13 +28,13 @@ public class  TimesheetController {
     @PostMapping
     public ResponseEntity<?> getAllTimesheets(@RequestHeader("Authorization") String token,
                                                         @RequestBody TimesheetReportDto request) {
-        List<UserTimesheetResponseDto> timesheets = authFacade.getAllTimesheets(token,request);
+        List<UserTimesheetResponseDto> timesheets = authFacade.getAllTimesheets(request);
         return ResponseEntity.ok(new ApiResponse(200, "Success", timesheets));
     }
 
     @PostMapping("/clockin")
     public ResponseEntity<ApiResponse> logTimesheet(@RequestHeader("Authorization") String token,@RequestBody List<TimesheetHistoryDto> timesheetLogs) {
-        List<TimesheetHistoryDto> savedLogs = authFacade.processTimesheetLogs(token,timesheetLogs);
+        List<TimesheetHistoryDto> savedLogs = authFacade.processTimesheetLogs(timesheetLogs);
         return ResponseEntity.ok(new ApiResponse(201, "Timesheet logged successfully", savedLogs));
     }
 
@@ -61,7 +61,7 @@ public class  TimesheetController {
             @RequestParam LocalDate date,
             @RequestBody TimesheetDto request) {
 
-        TimesheetDto timesheetDto = authFacade.upsertClockInOut(token,userId, date, request);
+        TimesheetDto timesheetDto = authFacade.upsertClockInOut(userId, date, request);
 
         return ResponseEntity.ok(new ApiResponse<>(200, "Timesheet upserted successfully", timesheetDto));
     }
@@ -69,19 +69,19 @@ public class  TimesheetController {
     @PostMapping("/dashboard")
     public ResponseEntity<?> getDashboard(@RequestHeader("Authorization") String token,
                                           @RequestBody(required = false) DashboardDto request) {
-        List<UserDashboardDto> dashboards = authFacade.getAllUserInfo(token, request);
+        List<UserDashboardDto> dashboards = authFacade.getAllUserInfo( request);
         return ResponseEntity.ok(new ApiResponse(200, "Dashboard Loaded Successfully", dashboards));
     }
 
     @PostMapping("/userTimesheets")
     public ResponseEntity<?> getUserTimesheets(@RequestHeader("Authorization") String token,
                                                @RequestBody TimesheetReportDto request) {
-        List<UserTimesheetDto> timesheets = authFacade.getUserTimesheets(token,request);
+        List<UserTimesheetDto> timesheets = authFacade.getUserTimesheets(request);
         return ResponseEntity.ok(new ApiResponse(200, "Success", timesheets));
     }
     
     @GetMapping("/status")
     public ResponseEntity<ApiResponse> addStatus(@RequestHeader("Authorization") String token){
-        return ResponseEntity.ok(authFacade.getStatus(token));
+        return ResponseEntity.ok(authFacade.getStatus());
     }
 }

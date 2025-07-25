@@ -1,4 +1,4 @@
-package com.uniq.tms.tms_microservice.config;
+package com.uniq.tms.tms_microservice.config.security.jwt;
 
 import com.uniq.tms.tms_microservice.adapter.AuthAdapter;
 import com.uniq.tms.tms_microservice.entity.BlacklistedTokenEntity;
@@ -110,7 +110,7 @@ public class JwtUtil {
     public String getClientIp(HttpServletRequest request) {
         String xfHeader = request.getHeader("X-Forwarded-For");
         if (xfHeader != null && !xfHeader.isEmpty()) {
-            return xfHeader.split(",")[0].trim(); // First IP = real client
+            return xfHeader.split(",")[0].trim();
         }
         return request.getRemoteAddr(); // Fallback
     }

@@ -35,7 +35,7 @@ public class ReportController {
             @RequestBody(required = false) TimesheetReportDto request) {
 
         try {
-            FileExportResponseDto export = authFacade.generateTimesheetFile(token, request);
+            FileExportResponseDto export = authFacade.generateTimesheetFile(request);
 
             InputStreamResource resource = new InputStreamResource(Files.newInputStream(export.getFilePath()));
             MediaType mediaType = export.getFormat().equalsIgnoreCase("csv") ?

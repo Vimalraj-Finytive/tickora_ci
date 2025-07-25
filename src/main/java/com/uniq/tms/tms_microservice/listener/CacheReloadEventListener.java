@@ -1,7 +1,7 @@
 package com.uniq.tms.tms_microservice.listener;
 
-import com.uniq.tms.tms_microservice.config.CacheDependencyConfig;
-import com.uniq.tms.tms_microservice.config.CacheReloadHandlerRegistry;
+import com.uniq.tms.tms_microservice.config.security.cache.CacheDependencyConfig;
+import com.uniq.tms.tms_microservice.config.security.cache.CacheReloadHandlerRegistry;
 import com.uniq.tms.tms_microservice.event.*;
 import com.uniq.tms.tms_microservice.service.CacheLoaderService;
 import org.slf4j.Logger;

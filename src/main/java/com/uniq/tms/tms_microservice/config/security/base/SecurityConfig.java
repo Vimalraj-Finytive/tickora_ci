@@ -1,5 +1,6 @@
-package com.uniq.tms.tms_microservice.config;
+package com.uniq.tms.tms_microservice.config.security.base;
 
+import com.uniq.tms.tms_microservice.config.security.jwt.JwtFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
@@ -44,7 +45,8 @@ public class SecurityConfig {
                                 "/**/*.svg",
                                 "/**/*.woff2",
                                 "/**/*.ttf",
-                                "/**/*.map"
+                                "/**/*.map",
+                                "/tms/loginByEmail"
                         ).permitAll()
                         .requestMatchers("/**").permitAll()
                         .anyRequest().authenticated()
@@ -75,7 +77,6 @@ public class SecurityConfig {
         source.registerCorsConfiguration("/**", config);
         return source;
     }
-
 
     @Bean
     public PasswordEncoder passwordEncoder() {

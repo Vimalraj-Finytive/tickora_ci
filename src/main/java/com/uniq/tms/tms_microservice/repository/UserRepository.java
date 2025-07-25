@@ -84,11 +84,11 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
     List<UserNameSuggestionDto> findAllGroupUsersByOrganizationId(@Param("groupIds") List<Long> groupIds,
                                                                   @Param("orgId") String orgId);
 
-    @Query(value = "SELECT mobile_number FROM users", nativeQuery = true)
-    List<String> findAllMobileNumbers();
+    @Query(value = "SELECT mobile_number FROM users WHERE organization_id = :orgId", nativeQuery = true)
+    List<String> findAllMobileNumbers(@Param("orgId") String orgId);
 
-    @Query(value = "SELECT email FROM users", nativeQuery = true)
-    List<String> findAllEmails();
+    @Query(value = "SELECT email FROM users WHERE organization_id = :orgId", nativeQuery = true)
+    List<String> findAllEmails(@Param("orgId") String orgId);
 
     UserEntity findByOrganizationIdAndUserId(String orgId, String userId);
 

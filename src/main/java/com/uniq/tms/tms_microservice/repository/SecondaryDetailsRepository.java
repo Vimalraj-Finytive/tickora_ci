@@ -26,14 +26,13 @@ public interface SecondaryDetailsRepository extends JpaRepository<SecondaryDetai
             "WHERE sd.email = :email", nativeQuery = true)
     UserEntity findUserByEmail(@Param("email") String email);
 
-    // this method using for update user method
     @Query(value = "SELECT * FROM secondary_details WHERE user_id = :userId", nativeQuery = true)
     Optional<SecondaryDetailsEntity> findByUserId(@Param("userId") String userId);
 
     @Query(value = "SELECT mobile FROM secondary_details", nativeQuery = true)
-    List<String > findAllMobile();
+    List<String > findAllMobile(@Param("orgId") String orgId);
 
     @Query(value = "SELECT email FROM secondary_details", nativeQuery = true)
-    List<String > findAllEmail();
+    List<String > findAllEmail(@Param("orgId") String orgId);
 
 }

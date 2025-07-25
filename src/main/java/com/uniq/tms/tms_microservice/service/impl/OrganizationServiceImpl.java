@@ -37,16 +37,14 @@ public class OrganizationServiceImpl implements OrganizationService {
     private final EmailUtil emailUtil;
     private final RoleRepository roleRepository;
     private final IdGenerationService idGenerationService;
-    private final UserDtoMapper userDtoMapper;
 
-    public OrganizationServiceImpl(UserEntityMapper userEntityMapper, UserAdapter userAdapter, WorkScheduleAdapter workScheduleAdapter, EmailUtil emailUtil, RoleRepository roleRepository, IdGenerationService idGenerationService, UserDtoMapper userDtoMapper) {
+    public OrganizationServiceImpl(UserEntityMapper userEntityMapper, UserAdapter userAdapter, WorkScheduleAdapter workScheduleAdapter, EmailUtil emailUtil, RoleRepository roleRepository, IdGenerationService idGenerationService) {
         this.userEntityMapper = userEntityMapper;
         this.userAdapter = userAdapter;
         this.workScheduleAdapter = workScheduleAdapter;
         this.emailUtil = emailUtil;
         this.roleRepository = roleRepository;
         this.idGenerationService = idGenerationService;
-        this.userDtoMapper = userDtoMapper;
     }
 
     /**
@@ -69,7 +67,7 @@ public class OrganizationServiceImpl implements OrganizationService {
         String formattedNumber = String.format("%04d", count + 1);
 
         // Final orgId
-        String orgId = IdGenerationType.TICKORA.getPrefix() + prefix + formattedNumber;
+        String orgId = prefix + formattedNumber;
         log.info("Organization Id : {}", orgId);
 
         entity.setOrganizationId(orgId);
@@ -127,6 +125,7 @@ public class OrganizationServiceImpl implements OrganizationService {
         entity.setMobileNumber(organization.getMobile());
         entity.setOrganizationId(organizationId);
         String customUserId = idGenerationService.generateNextUserId(organizationId);
+        log.info("SuperAdmin User Id:{}",customUserId);
         entity.setUserId(customUserId);
         entity.setRole(role);
         entity.setDateOfJoining(LocalDate.now());

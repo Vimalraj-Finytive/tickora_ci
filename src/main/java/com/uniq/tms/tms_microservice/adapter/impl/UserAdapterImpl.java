@@ -288,14 +288,14 @@ public class UserAdapterImpl implements UserAdapter {
     }
 
     @Override
-    public Set<String> getAllMobileNumbers() {
-        List<String> mobiles = userRepository.findAllMobileNumbers();
+    public Set<String> getAllMobileNumbers(String orgId) {
+        List<String> mobiles = userRepository.findAllMobileNumbers(orgId);
         return new HashSet<>(mobiles);
     }
 
     @Override
-    public Set<String> getAllEmails() {
-        List<String> emails = userRepository.findAllEmails();
+    public Set<String> getAllEmails(String orgId) {
+        List<String> emails = userRepository.findAllEmails(orgId);
         return new HashSet<>(emails);
     }
 
@@ -310,8 +310,8 @@ public class UserAdapterImpl implements UserAdapter {
     }
 
     @Override
-    public Map<String, Long> getLocationNameToIdMap() {
-        List<Object[]> locations = locationRepository.findLocationNameIdMappings();
+    public Map<String, Long> getLocationNameToIdMap(String orgId) {
+        List<Object[]> locations = locationRepository.findLocationNameIdMappings(orgId);
         Map<String, Long> locationNameToIdMap = new HashMap<>();
         for (Object[] location : locations) {
             locationNameToIdMap.put(((String) location[0]).toLowerCase(), (Long) location[1]);
@@ -320,6 +320,7 @@ public class UserAdapterImpl implements UserAdapter {
     }
 
     @Override
+    @Transactional
     public List<UserEntity> saveAllUsers(List<UserEntity> users) {
         return userRepository.saveAll(users);
     }
@@ -329,8 +330,8 @@ public class UserAdapterImpl implements UserAdapter {
         return secondaryDetailsRepository.saveAll(details);
     }
     @Override
-    public Map<String, Long> getGroupNameIdMap() {
-        List<Object[]> groups = teamRepository.findGroupNameIdMappings();
+    public Map<String, Long> getGroupNameIdMap(String orgId) {
+        List<Object[]> groups = teamRepository.findGroupNameIdMappings(orgId);
         Map<String, Long> groupNameToIdMap = new HashMap<>();
         for (Object[] group : groups) {
             groupNameToIdMap.put(((String) group[0]).toLowerCase(), (Long) group[1]);
@@ -344,13 +345,13 @@ public class UserAdapterImpl implements UserAdapter {
     }
 
     @Override
-    public Set<String> getAllSecondaryEmail(){
-        return  new HashSet<>(secondaryDetailsRepository.findAllEmail());
+    public Set<String> getAllSecondaryEmail(String orgId){
+        return  new HashSet<>(secondaryDetailsRepository.findAllEmail(orgId));
     }
 
     @Override
-    public Set<String> getAllSecondaryMobile(){
-        return  new HashSet<>(secondaryDetailsRepository.findAllMobile());
+    public Set<String> getAllSecondaryMobile(String orgId){
+        return  new HashSet<>(secondaryDetailsRepository.findAllMobile(orgId));
     }
 
     @Override

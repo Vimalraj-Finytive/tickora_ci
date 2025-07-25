@@ -13,9 +13,8 @@ import java.util.Optional;
 @Repository
 public interface LocationRepository extends JpaRepository<LocationEntity, Long> {
 
-    // Custom query to fetch location name and ID mapping
-    @Query(value = "SELECT name, location_id FROM location", nativeQuery = true)
-    List<Object[]> findLocationNameIdMappings();
+    @Query(value = "SELECT name, location_id FROM location WHERE organization_id = :orgId", nativeQuery = true)
+    List<Object[]> findLocationNameIdMappings(@Param("orgId") String orgId);
 
     @Query("SELECT l FROM LocationEntity l WHERE l.name = :name AND l.organizationEntity.organizationId = :orgId")
     Optional<LocationEntity> findByNameAndOrganizationId(String name, String orgId);

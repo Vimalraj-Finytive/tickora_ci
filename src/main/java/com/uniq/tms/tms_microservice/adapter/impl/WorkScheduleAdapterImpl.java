@@ -4,7 +4,9 @@ import com.uniq.tms.tms_microservice.adapter.WorkScheduleAdapter;
 import com.uniq.tms.tms_microservice.entity.*;
 import com.uniq.tms.tms_microservice.repository.*;
 import org.springframework.stereotype.Component;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Component
@@ -124,5 +126,15 @@ public class WorkScheduleAdapterImpl implements WorkScheduleAdapter {
     @Override
     public int countByOrgId(String orgId) {
         return workScheduleRepository.countByOrganizationEntity_OrganizationId(orgId);
+    }
+
+    @Override
+    public Map<String, String> getAllSchedules(String orgId) {
+        List<Object[]> workSchedules = workScheduleRepository.findSchedule(orgId);
+        Map<String, String> workScheduleMap = new HashMap<>();
+        for(Object[] workSchedule : workSchedules){
+            workScheduleMap.put(((String) workSchedule[1]).toLowerCase(), (String) workSchedule[0]);
+        }
+        return workScheduleMap;
     }
 }

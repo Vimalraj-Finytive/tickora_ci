@@ -4,8 +4,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.uniq.tms.tms_microservice.adapter.TimesheetAdapter;
 import com.uniq.tms.tms_microservice.adapter.UserAdapter;
 import com.uniq.tms.tms_microservice.adapter.WorkScheduleAdapter;
-import com.uniq.tms.tms_microservice.config.CacheKeyConfig;
-import com.uniq.tms.tms_microservice.config.CacheReloadHandlerRegistry;
+import com.uniq.tms.tms_microservice.config.security.cache.CacheKeyConfig;
+import com.uniq.tms.tms_microservice.config.security.cache.CacheReloadHandlerRegistry;
 import com.uniq.tms.tms_microservice.dto.AddGroupDto;
 import com.uniq.tms.tms_microservice.dto.GroupDto;
 import com.uniq.tms.tms_microservice.dto.GroupResponseDto;
@@ -258,18 +258,43 @@ public class UserServiceImpl implements UserService {
 
         try {
                 // Preload data
-                Set<String> existingMobiles = userAdapter.getAllMobileNumbers();
-                Set<String> existingEmails = userAdapter.getAllEmails();
-                Set<String> existingSecMobiles = userAdapter.getAllSecondaryMobile();
-                Set<String> existingSecEmails = userAdapter.getAllSecondaryEmail();
-                Map<String, Long> roleMap = userAdapter.getRoleNameIdMap();
-                Map<String, Long> locationMap = userAdapter.getLocationNameToIdMap();
-                Map<String, Long> groupMap = userAdapter.getGroupNameIdMap();
-                UserEntity userEntity = new UserEntity();
+            log.info("Fetching existing mobile numbers for orgId: {}", orgId);
+            Set<String> existingMobiles = userAdapter.getAllMobileNumbers(orgId);
+            log.info("Fetched {} existing mobile numbers: {}", existingMobiles.size(), existingMobiles);
+
+            log.info("Fetching existing email addresses for orgId: {}", orgId);
+            Set<String> existingEmails = userAdapter.getAllEmails(orgId);
+            log.info("Fetched {} existing emails: {}", existingEmails.size(), existingEmails);
+
+            log.info("Fetching existing secondary mobile numbers for orgId: {}", orgId);
+            Set<String> existingSecMobiles = userAdapter.getAllSecondaryMobile(orgId);
+            log.info("Fetched {} secondary mobile numbers: {}", existingSecMobiles.size(), existingSecMobiles);
+
+            log.info("Fetching existing secondary emails for orgId: {}", orgId);
+            Set<String> existingSecEmails = userAdapter.getAllSecondaryEmail(orgId);
+            log.info("Fetched {} secondary emails: {}", existingSecEmails.size(), existingSecEmails);
+
+            log.info("Fetching role name to ID map for orgId: {}", orgId);
+            Map<String, Long> roleMap = userAdapter.getRoleNameIdMap();
+            log.info("Fetched {} role entries: {}", roleMap.size(), roleMap);
+
+            log.info("Fetching location name to ID map for orgId: {}", orgId);
+            Map<String, Long> locationMap = userAdapter.getLocationNameToIdMap(orgId);
+            log.info("Fetched {} location entries: {}", locationMap.size(), locationMap);
+
+            log.info("Fetching group name to ID map for orgId: {}", orgId);
+            Map<String, Long> groupMap = userAdapter.getGroupNameIdMap(orgId);
+            log.info("Fetched {} group entries: {}", groupMap.size(), groupMap);
+
+            log.info("Fetching work schedule map for orgId: {}", orgId);
+            Map<String, String> workScheduleMap = workScheduleAdapter.getAllSchedules(orgId);
+            log.info("Fetched {} work schedules: {}", workScheduleMap.size(), workScheduleMap);
+
+            UserEntity userEntity = new UserEntity();
                 // Expected headers
                 List<String> expectedHeaders = List.of(
                         "username", "email", "mobilenumber", "rolename", "locationname", "dateofjoining",
-                        "secondaryusername", "secondarymobile", "secondaryemail", "relation", "groupname"
+                        "secondaryusername", "secondarymobile", "secondaryemail", "relation", "groupname", "workschedule"
                 );
 
                 try (CSVReader reader = new CSVReader(new InputStreamReader(inputStream))) {
@@ -301,8 +326,12 @@ public class UserServiceImpl implements UserService {
                         String secEmail = row[8].trim();
                         String relation = row[9].trim();
                         String groupName = row[10].trim();
+                        String workSchedule = row[11].trim();
 
                         Long roleId = roleMap.get(roleName.toLowerCase());
+                        log.info("RL ID:{}", roleId);
+                        String scheduleId = workScheduleMap.get(workSchedule.toLowerCase());
+                        log.info("ES ID:{}", scheduleId);
                         Long locationId = null;
                         List<Long> locationIds = new ArrayList<>();
                         if(!isBlank(locationName))
@@ -430,14 +459,17 @@ public class UserServiceImpl implements UserService {
                             }
                         }
 
+                        WorkScheduleEntity workScheduleEntity = workScheduleAdapter.findByScheduleId(scheduleId, orgId);
                         // Create and validate user DTO
                         UserDto userDto = new UserDto();
                         userDto.setUserName(username);
                         userDto.setEmail(email);
                         userDto.setMobileNumber(mobile);
                         userDto.setRoleId(roleId);
+                        userDto.setWorkSchedule(workScheduleEntity.getScheduleId());
                         userDto.setIsRegisterUser(false);
                         userDto.setDateOfJoining(parseDate(doj));
+                        userDto.setUserId(idGenerationService.generateNextUserId(orgId));
 
                         if (!validator.validate(userDto).isEmpty()) {
                             skippedRows.add(Map.of(

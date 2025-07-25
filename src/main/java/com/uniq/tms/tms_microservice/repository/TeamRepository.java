@@ -147,8 +147,8 @@ public interface TeamRepository extends JpaRepository<GroupEntity, Long> {
 
     Optional<GroupEntity> findByGroupId(Long groupId);
 
-    @Query(value = "SELECT group_name, group_id FROM group_table", nativeQuery = true)
-    List<Object[]> findGroupNameIdMappings();
+    @Query(value = "SELECT group_name, group_id FROM group_table WHERE organization_id = :orgId", nativeQuery = true)
+    List<Object[]> findGroupNameIdMappings(@Param("orgId") String orgId);
 
     List<GroupEntity> findAllByOrganizationEntity_OrganizationId(String orgId);
 

@@ -1,5 +1,6 @@
-package com.uniq.tms.tms_microservice.config;
+package com.uniq.tms.tms_microservice.config.security.jwt;
 
+import com.uniq.tms.tms_microservice.config.security.user.CustomUserDetails;
 import com.uniq.tms.tms_microservice.entity.RoleEntity;
 import com.uniq.tms.tms_microservice.entity.UserEntity;
 import com.uniq.tms.tms_microservice.repository.UserRepository;
@@ -40,6 +41,16 @@ public class JwtFilter implements Filter {
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
         HttpServletRequest httpRequest = (HttpServletRequest) request;
         HttpServletResponse httpResponse = (HttpServletResponse) response;
+        String path = httpRequest.getRequestURI();
+        if (path.equals("/tms/loginByEmail")
+                || path.equals("/tms/reset-password")
+                || path.equals("/tms/validate-email")
+                || path.equals("/tms/organization/orgType")
+                || path.equals("/tms/organization/validate")
+                || path.equals("/tms/organization/create")) {
+            chain.doFilter(request, response);
+            return;
+        }
 
         String jwtToken = null;
         logger.info("fetch user agent from header");
@@ -53,6 +64,9 @@ public class JwtFilter implements Filter {
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             logger.info("jwt token found in header");
             jwtToken = authHeader.substring(7);
+        }else{
+            sendErrorResponse(httpResponse, HttpServletResponse.SC_UNAUTHORIZED,"Token must start with Bearer");
+            return;
         }
 
         if (jwtToken == null && httpRequest.getCookies() != null) {
@@ -76,7 +90,7 @@ public class JwtFilter implements Filter {
                     UserEntity user = userRepository.findByEmail(email);
                     if (user == null) {
                         logger.info("user does not exist");
-                        httpResponse.sendError(HttpServletResponse.SC_UNAUTHORIZED, "User does not exist");
+                        sendErrorResponse(httpResponse,HttpServletResponse.SC_NOT_FOUND, "User does not exist");
                         return;
                     }
                     logger.info("fetching user role");
@@ -87,9 +101,16 @@ public class JwtFilter implements Filter {
                         userRole = userRole.substring(5);
                     }
                     logger.info("setting authentication token");
+                    CustomUserDetails userDetails = new CustomUserDetails(
+                            user.getUserId(),
+                            user.getOrganizationId(),
+                            user.getRole().getName(),
+                            userRole,
+                            user.getPassword(),
+                            Collections.singletonList(new SimpleGrantedAuthority(userRole))
+                    );
                     UsernamePasswordAuthenticationToken authentication =
-                            new UsernamePasswordAuthenticationToken(email, null,
-                                    Collections.singletonList(new SimpleGrantedAuthority(userRole)));
+                            new UsernamePasswordAuthenticationToken(userDetails, null,userDetails.getAuthorities());
 
                     SecurityContextHolder.getContext().setAuthentication(authentication);
                     logger.info("authentication token set");
@@ -97,10 +118,18 @@ public class JwtFilter implements Filter {
             } catch (Exception e) {
                 e.printStackTrace();
                 logger.info("Invalid token",e.getMessage());
-                httpResponse.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid Token");
+                sendErrorResponse(httpResponse, HttpServletResponse.SC_UNAUTHORIZED, "Invalid Token");
                 return;
             }
         }
         chain.doFilter(request, response);
     }
+
+    private void sendErrorResponse(HttpServletResponse response, int status, String message) throws IOException {
+        response.setStatus(status);
+        response.setContentType("application/json");
+        String json = String.format("{\"status\":%d,\"message\":\"%s\"}", status, message.replace("\"","\\\""));
+        response.getWriter().write(json);
+    }
+
 }
