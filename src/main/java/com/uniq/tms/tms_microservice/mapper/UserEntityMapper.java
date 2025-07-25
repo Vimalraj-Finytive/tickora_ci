@@ -28,6 +28,7 @@ public interface UserEntityMapper {
 
     @Mapping(target = "workSchedule.scheduleName", source = "workSchedule")
     @Mapping(target = "workSchedule.type", ignore = true)
+    @Mapping(target = "workSchedule.scheduleId", source = "workSchedule")
     UserEntity toEntity(User user);
 
     @Mapping(target = "workSchedule", ignore = true)

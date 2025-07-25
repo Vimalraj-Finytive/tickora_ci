@@ -2,7 +2,7 @@ package com.uniq.tms.tms_microservice.service.impl;
 
 import com.uniq.tms.tms_microservice.adapter.AuthAdapter;
 import com.uniq.tms.tms_microservice.adapter.UserAdapter;
-import com.uniq.tms.tms_microservice.config.JwtUtil;
+import com.uniq.tms.tms_microservice.config.security.jwt.JwtUtil;
 import com.uniq.tms.tms_microservice.dto.ApiResponse;
 import com.uniq.tms.tms_microservice.dto.ChangePasswordDto;
 import com.uniq.tms.tms_microservice.dto.PrivilegeConstants;

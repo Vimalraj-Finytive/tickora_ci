@@ -1,6 +1,6 @@
 package com.uniq.tms.tms_microservice.util;
 
-import com.uniq.tms.tms_microservice.config.CacheReloadHandlerRegistry;
+import com.uniq.tms.tms_microservice.config.security.cache.CacheReloadHandlerRegistry;
 import com.uniq.tms.tms_microservice.event.CacheReloadEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;

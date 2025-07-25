@@ -1,4 +1,4 @@
-package com.uniq.tms.tms_microservice.config;
+package com.uniq.tms.tms_microservice.config.security.cache;
 
 import jakarta.annotation.PostConstruct;
 import org.apache.logging.log4j.LogManager;

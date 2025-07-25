@@ -1,4 +1,4 @@
-package com.uniq.tms.tms_microservice.config;
+package com.uniq.tms.tms_microservice.config.security.cache;
 
 import com.uniq.tms.tms_microservice.service.CacheLoaderService;
 import org.springframework.stereotype.Component;

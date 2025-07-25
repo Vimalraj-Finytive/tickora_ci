@@ -1,11 +1,11 @@
 package com.uniq.tms.tms_microservice.controller;
 
-import com.uniq.tms.tms_microservice.config.JwtUtil;
 import com.uniq.tms.tms_microservice.constant.UserConstant;
 import com.uniq.tms.tms_microservice.dto.ApiResponse;
 import com.uniq.tms.tms_microservice.dto.WorkScheduleDto;
 import com.uniq.tms.tms_microservice.dto.WorkScheduleTypeDto;
 import com.uniq.tms.tms_microservice.facade.AuthFacade;
+import com.uniq.tms.tms_microservice.util.AuthUtil;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.http.HttpStatus;
@@ -18,21 +18,17 @@ public class WorkScheduleController {
 
     private static final Logger log = LogManager.getLogger(WorkScheduleController.class);
     private final AuthFacade authFacade;
-    private final JwtUtil jwtUtil;
+    private final AuthUtil authUtil;
 
-    public WorkScheduleController(AuthFacade authFacade, JwtUtil jwtUtil){
+    public WorkScheduleController(AuthFacade authFacade, AuthUtil authUtil){
         this.authFacade = authFacade;
-        this.jwtUtil = jwtUtil;
+        this.authUtil = authUtil;
     }
 
     @GetMapping
     public ResponseEntity<ApiResponse> getWorkSchedule(@RequestHeader ("Authorization") String authHeader) {
-        if(authHeader == null || authHeader.isBlank()){
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new ApiResponse(403,"Authorization Header Missing",false));
-        }
         try {
-            String jwt = jwtUtil.extractJwt(authHeader);
-            String orgId = jwtUtil.extractOrgIdFromToken(jwt);
+            String orgId = authUtil.getOrgId();
             if(orgId == null){
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ApiResponse(401,"Unauthorized - Invalid Organization",null));
             }
@@ -46,12 +42,8 @@ public class WorkScheduleController {
 
     @PostMapping("/create")
     public ResponseEntity<ApiResponse> createWorkschedule(@RequestHeader("Authorization") String token, @RequestBody WorkScheduleDto workScheduleDto){
-        if(token == null || token.isBlank()){
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new ApiResponse(403,"Authorization Header Missing",false));
-        }
         try {
-            String jwt = jwtUtil.extractJwt(token);
-            String orgId = jwtUtil.extractOrgIdFromToken(jwt);
+            String orgId = authUtil.getOrgId();
             if(orgId == null){
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ApiResponse(401,"Unauthorized - Invalid Organization",null));
             }
@@ -68,21 +60,13 @@ public class WorkScheduleController {
 
     @PatchMapping("/update")
     public ResponseEntity<ApiResponse> updateWorkSchedule(@RequestHeader("Authorization") String token, @RequestBody WorkScheduleDto dto) {
-        if (token == null || token.isBlank()) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(new ApiResponse(403, "Authorization Header Missing", false));
-        }
-
         try {
-            String jwt = jwtUtil.extractJwt(token);
-            String orgId = jwtUtil.extractOrgIdFromToken(jwt);
+            String orgId = authUtil.getOrgId();
             if (orgId == null) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                         .body(new ApiResponse(401, "Unauthorized - Invalid Organization", false));
             }
-
             return ResponseEntity.ok(authFacade.updateWorkSchedule(orgId, dto));
-
         } catch (RuntimeException e) {
             log.error("Error occurred while updating work schedule: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -93,13 +77,13 @@ public class WorkScheduleController {
     @DeleteMapping("/delete")
     public ResponseEntity<Void> deleteWorkSchedule(@RequestHeader("Authorization") String token,
                                                           @RequestParam("scheduleId") String scheduleId) {
-        authFacade.deleteSchedule(token, scheduleId);
+        authFacade.deleteSchedule(scheduleId);
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/getType")
     public ResponseEntity<ApiResponse> getType(@RequestHeader("Authorization") String token){
-        return ResponseEntity.ok(authFacade.getType(token));
+        return ResponseEntity.ok(authFacade.getType());
     }
 
 }

@@ -1,15 +1,14 @@
 package com.uniq.tms.tms_microservice.facade;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.uniq.tms.tms_microservice.config.JwtUtil;
 import com.uniq.tms.tms_microservice.dto.*;
-import com.uniq.tms.tms_microservice.exception.CommonExceptionHandler;
 import com.uniq.tms.tms_microservice.mapper.TimesheetDtoMapper;
 import com.uniq.tms.tms_microservice.mapper.UserDtoMapper;
 import com.uniq.tms.tms_microservice.mapper.WorkScheduleDtoMapper;
 import com.uniq.tms.tms_microservice.model.*;
 import com.uniq.tms.tms_microservice.model.Privilege;
 import com.uniq.tms.tms_microservice.service.*;
+import com.uniq.tms.tms_microservice.util.AuthUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
@@ -39,24 +38,24 @@ public class AuthFacade {
     private final UserDtoMapper userDtoMapper;
     private final TimesheetService timesheetService;
     private final TimesheetDtoMapper timesheetDtoMapper;
-    private final JwtUtil jwtUtil;
     private final WorkScheduleService workScheduleService;
     private final WorkScheduleDtoMapper workScheduleDtoMapper;
     private final ReportService reportService;
     private final OrganizationService organizationService;
+    private final AuthUtil authUtil;
 
-    public AuthFacade(AuthService authService, UserService userService, UserDtoMapper userDtoMapper, TimesheetService timesheetService, TimesheetDtoMapper timesheetDtoMapper, JwtUtil jwtUtil, WorkScheduleService workScheduleService, WorkScheduleDtoMapper workScheduleDtoMapper, ReportService reportService, OrganizationService organizationService) {
+    public AuthFacade(AuthService authService, UserService userService, UserDtoMapper userDtoMapper, TimesheetService timesheetService, TimesheetDtoMapper timesheetDtoMapper, WorkScheduleService workScheduleService, WorkScheduleDtoMapper workScheduleDtoMapper, ReportService reportService, OrganizationService organizationService, AuthUtil authUtil) {
 
         this.authService = authService;
         this.userService = userService;
         this.userDtoMapper = userDtoMapper;
         this.timesheetService = timesheetService;
         this.timesheetDtoMapper = timesheetDtoMapper;
-        this.jwtUtil = jwtUtil;
         this.workScheduleService = workScheduleService;
         this.workScheduleDtoMapper = workScheduleDtoMapper;
         this.reportService = reportService;
         this.organizationService = organizationService;
+        this.authUtil = authUtil;
     }
 
     @Value("${csv.download.dir}")
@@ -75,7 +74,6 @@ public class AuthFacade {
 
     public ApiResponse getAllRole(String orgId, String role) {
         List<RoleDto> roles = userService.getAllRole(orgId, role).stream().map(userDtoMapper::toDto).toList();
-
         return new ApiResponse(
                 200,
                 "Roles fetched successfully",
@@ -85,7 +83,6 @@ public class AuthFacade {
 
     public ApiResponse getAllGroup(String orgId) {
         List<GroupDto> groups = userService.getAllGroup(orgId).stream().map(userDtoMapper::toGroupDto).toList();
-
         return new ApiResponse(
                 200, "Groups fetched successfully", groups
         );
@@ -93,42 +90,27 @@ public class AuthFacade {
 
     public ApiResponse getAllLocation(String orgId) {
         try {
-            if (orgId == null) {
-                return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
-            }
-
             List<LocationDto> locations = userService.getAllLocation(orgId)
                     .stream()
                     .map(userDtoMapper::toDto)
                     .toList();
-
             return new ApiResponse(200, "Locations fetched successfully", locations);
         } catch (Exception e) {
             return new ApiResponse(500, "Internal Server Error: " + e.getMessage(), null);
         }
     }
 
-    public ApiResponse createBulkUser(MultipartFile file, String token) {
-
-        if (!token.startsWith("Bearer ")) {
-            return new ApiResponse(400, "Invalid token format", null);
-        }
-        String jwt = token.substring(7);
-        String orgId = jwtUtil.extractOrgIdFromToken(jwt);
-        String userId = jwtUtil.extractUserIdFromToken(jwt);
+    public ApiResponse createBulkUser(MultipartFile file) {
+        String orgId = authUtil.getOrgId();
+        String userId = authUtil.getUserId();
         if (orgId == null) {
             return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
         }
         return userService.bulkCreateUsers(file, orgId, userId);
     }
 
-    public ApiResponse createUser(UserDto userDto, SecondaryDetailsDto secondaryDetailsDto, String token) {
-
-        if (!token.startsWith("Bearer ")) {
-            return new ApiResponse(400, "Invalid token format", null);
-        }
-        String jwt = token.substring(7);
-        String orgId = jwtUtil.extractOrgIdFromToken(jwt);
+    public ApiResponse createUser(UserDto userDto, SecondaryDetailsDto secondaryDetailsDto) {
+        String orgId = authUtil.getOrgId();
         if (orgId == null) {
             return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
         }
@@ -136,18 +118,13 @@ public class AuthFacade {
         return new ApiResponse(HttpStatus.CREATED.value(), "User Created successfully and Reset password link sent to email.", user);
     }
 
-    public ApiResponse getUserProfile(String token, String userId) {
-        if (!token.startsWith("Bearer ")) {
-            return new ApiResponse(400, "Invalid token format", null);
-        }
-        String jwt = token.substring(7);
-        String orgId = jwtUtil.extractOrgIdFromToken(jwt);
-        String role = jwtUtil.extractRoleFromToken(jwt);
+    public ApiResponse getUserProfile(String userId) {
+        String orgId = authUtil.getOrgId();
         if (orgId == null) {
             return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
         }
         if (userId == null) {
-            userId = jwtUtil.extractUserIdFromToken(jwt);
+            userId = authUtil.getUserId();
         }
         UserProfileResponse response = userService.getUserProfile(orgId, userId);
         return new ApiResponse(HttpStatus.OK.value(), "User Profile fetched successfully", response);
@@ -162,28 +139,19 @@ public class AuthFacade {
         return authService.resetPassword(email, request);
     }
 
-    public ApiResponse updateUser(String token, CreateUserDto updates, String userId) {
-        if (!token.startsWith("Bearer ")) {
-            return new ApiResponse(400, "Invalid token format", null);
-        }
-        String jwt = token.substring(7);
-        String orgId = jwtUtil.extractOrgIdFromToken(jwt);
-
+    public ApiResponse updateUser( CreateUserDto updates, String userId) {
+        String orgId = authUtil.getOrgId();
         if (orgId == null) {
             return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
         }
-
         User user = userService.updateUser(updates, orgId, userId);
         return new ApiResponse(200, "User Updated successfully", user);
     }
 
-    public ApiResponse getUsers(String token) {
-        if (!token.startsWith("Bearer ")) {
-            return new ApiResponse(400, "Invalid token format", null);
-        }
-        String jwt = token.substring(7);
-        String orgId = jwtUtil.extractOrgIdFromToken(jwt);
-        String role = jwtUtil.extractRoleFromToken(jwt);
+    public ApiResponse getUsers() {
+        
+        String orgId = authUtil.getOrgId();
+        String role = authUtil.getRole();
         role = role.replace("ROLE_", "").toUpperCase();
         if (orgId == null) {
             return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
@@ -192,13 +160,8 @@ public class AuthFacade {
         return new ApiResponse(200, "Users fetched successfully", users);
     }
 
-    public ApiResponse deleteUser(String token, String userId) {
-        if (!token.startsWith("Bearer ")) {
-            return new ApiResponse(400, "Invalid token format", null);
-        }
-        String jwt = token.substring(7);
-        String orgId = jwtUtil.extractOrgIdFromToken(jwt);
-
+    public ApiResponse deleteUser( String userId) {
+        String orgId = authUtil.getOrgId();
         if (orgId == null) {
             return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
         }
@@ -206,19 +169,12 @@ public class AuthFacade {
         return new ApiResponse(204, "User Deleted successfully", "No Content");
     }
 
-    public ApiResponse createGroup(String token, AddGroupDto addGroupDto) {
-        if (!token.startsWith("Bearer ")) {
-            return new ApiResponse(400, "Invalid token format", null);
-        }
-        String jwt = token.substring(7);
-        String orgId = jwtUtil.extractOrgIdFromToken(jwt);
-
+    public ApiResponse createGroup( AddGroupDto addGroupDto) {
+        String orgId = authUtil.getOrgId();
         if (orgId == null) {
             return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
         }
-
         AddGroup groupMiddleware = userDtoMapper.toMiddleware(addGroupDto);
-
         try {
             AddGroup createdGroup = userService.createGroup(groupMiddleware, orgId);
             return new ApiResponse(201, "Group created successfully", true);
@@ -229,19 +185,12 @@ public class AuthFacade {
         }
     }
 
-    public ApiResponse addUserToGroup(String token, AddMemberDto addMemberDto) {
-        if (!token.startsWith("Bearer ")) {
-            return new ApiResponse(400, "Invalid token format", null);
-        }
-        String jwt = token.substring(7);
-        String orgId = jwtUtil.extractOrgIdFromToken(jwt);
-
+    public ApiResponse addUserToGroup( AddMemberDto addMemberDto) {
+        String orgId = authUtil.getOrgId();
         if (orgId == null) {
             return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
         }
-
         AddMember addMemberMiddleware = userDtoMapper.toMiddleware(addMemberDto);
-
         try {
             return userService.addUserToGroup(addMemberMiddleware, orgId);
 
@@ -254,13 +203,8 @@ public class AuthFacade {
         }
     }
 
-    public ApiResponse updateGroupDetails(String token, AddGroupDto addGroupDto, Long groupId) {
-        if (!token.startsWith("Bearer ")) {
-            return new ApiResponse(400, "Invalid token format", null);
-        }
-        String jwt = token.substring(7);
-        String orgId = jwtUtil.extractOrgIdFromToken(jwt);
-
+    public ApiResponse updateGroupDetails( AddGroupDto addGroupDto, Long groupId) {
+        String orgId = authUtil.getOrgId();
         if (orgId == null) {
             return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
         }
@@ -271,28 +215,18 @@ public class AuthFacade {
 
     }
 
-    public ApiResponse getAllGroups(String token) throws JsonProcessingException {
-        if (!token.startsWith("Bearer ")) {
-            return new ApiResponse(400, "Invalid token format", null);
-        }
-        String jwt = token.substring(7);
-        String orgId = jwtUtil.extractOrgIdFromToken(jwt);
-        String userId = jwtUtil.extractUserIdFromToken(jwt);
+    public ApiResponse getAllGroups() throws JsonProcessingException {
+        String orgId = authUtil.getOrgId();
+        String userId = authUtil.getUserId();
         if (orgId == null) {
             return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
         }
         List<GroupResponseDto> groups = userService.getAllGroups(orgId, userId);
-
         return new ApiResponse(200, "All Groups Details fetched successfully", groups);
     }
 
-    public ApiResponse deleteMember(String token, Long groupId, String memberId) {
-        if (!token.startsWith("Bearer ")) {
-            return new ApiResponse(400, "Invalid token format", null);
-        }
-        String jwt = token.substring(7);
-        String orgId = jwtUtil.extractOrgIdFromToken(jwt);
-
+    public ApiResponse deleteMember( Long groupId, String memberId) {
+        String orgId = authUtil.getOrgId();
         if (orgId == null) {
             return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
         }
@@ -300,12 +234,8 @@ public class AuthFacade {
         return new ApiResponse(204, "Member Deleted successfully", "No Content");
     }
 
-    public ApiResponse deleteGroup(String token, Long groupId) {
-        if (!token.startsWith("Bearer ")) {
-            return new ApiResponse(400, "Invalid token format", null);
-        }
-        String jwt = token.substring(7);
-        String orgId = jwtUtil.extractOrgIdFromToken(jwt);
+    public ApiResponse deleteGroup( Long groupId) {
+        String orgId = authUtil.getOrgId();
         if (orgId == null) {
             return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
         }
@@ -314,14 +244,9 @@ public class AuthFacade {
         return new ApiResponse(204, "Group Deleted successfully", "No Content");
     }
 
-    public ApiResponse getMembers(String token, Long roleId) {
-        if (!token.startsWith("Bearer ")) {
-            return new ApiResponse(400, "Invalid token format", null);
-        }
-
-        String jwt = token.substring(7);
-        String orgId = jwtUtil.extractOrgIdFromToken(jwt);
-
+    public ApiResponse getMembers( Long roleId) {
+        
+        String orgId = authUtil.getOrgId();
         if (orgId == null) {
             return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
         }
@@ -340,17 +265,12 @@ public class AuthFacade {
         return new ApiResponse(200, "Members fetched successfully", result);
     }
 
-    public ApiResponse updateUserGroupType(String token, EditUserGroupDto editUserGroupDto) {
-        if (!token.startsWith("Bearer ")) {
-            return new ApiResponse(400, "Invalid token format", null);
-        }
-        String jwt = token.substring(7);
-        String orgId = jwtUtil.extractOrgIdFromToken(jwt);
-
+    public ApiResponse updateUserGroupType( EditUserGroupDto editUserGroupDto) {
+        
+        String orgId = authUtil.getOrgId();
         if (orgId == null) {
             return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
         }
-
         UserGroup userGroup = userDtoMapper.toMiddleware(editUserGroupDto);
         boolean isUpdated = userService.updateUserGroupType(userGroup);
         if (!isUpdated) {
@@ -359,41 +279,25 @@ public class AuthFacade {
         return new ApiResponse(200, "User group type updated successfully.", true);
     }
 
-    public List<UserTimesheetResponseDto> getAllTimesheets(String token, TimesheetReportDto request) {
-
-        if (!token.startsWith("Bearer ")) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid token format");
-        }
-
-        String jwt = token.substring(7);
-        String orgId = jwtUtil.extractOrgIdFromToken(jwt);
-
-        String userIdFromToken = jwtUtil.extractUserIdFromToken(jwt);
+    public List<UserTimesheetResponseDto> getAllTimesheets( TimesheetReportDto request) {
+        String orgId = authUtil.getOrgId();
+        String userIdFromToken = authUtil.getUserId();
         if (orgId == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized - Invalid Organization");
         }
-        String role = jwtUtil.extractRoleFromToken(jwt);
+        String role = authUtil.getRole();
         return timesheetService.getAllTimesheets(userIdFromToken, orgId, role, request);
     }
 
-    public List<TimesheetHistoryDto> processTimesheetLogs(String token, List<TimesheetHistoryDto> timesheetLogs) {
-        if (!token.startsWith("Bearer ")) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid token format");
-        }
-
-        String jwt = token.substring(7);
-        String orgId = jwtUtil.extractOrgIdFromToken(jwt);
-
+    public List<TimesheetHistoryDto> processTimesheetLogs( List<TimesheetHistoryDto> timesheetLogs) {
+        String orgId = authUtil.getOrgId();
         if (orgId == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized - Invalid Organization");
         }
-
         List<TimesheetHistory> middlewareLogs = timesheetLogs.stream()
                 .map(timesheetDtoMapper::toMiddleware)
                 .toList();
-
         List<TimesheetHistory> savedLogs = timesheetService.processTimesheetLogs(middlewareLogs);
-
         return savedLogs.stream()
                 .map(timesheetDtoMapper::toDto)
                 .toList();
@@ -403,36 +307,25 @@ public class AuthFacade {
         return timesheetService.updateClockInOut(userId, date, request);
     }
 
-    public ApiResponse getUserGroups(String token) {
-        if (!token.startsWith("Bearer ")) {
-            return new ApiResponse(400, "Invalid token format", null);
-        }
-        String jwt = token.substring(7);
-        String orgId = jwtUtil.extractOrgIdFromToken(jwt);
-        String role = jwtUtil.extractRoleFromToken(jwt);
-        String userId = jwtUtil.extractUserIdFromToken(jwt);
+    public ApiResponse getUserGroups() {
+        String orgId = authUtil.getOrgId();
+        String role = authUtil.getRole();
+        String userId = authUtil.getUserId();
         if (orgId == null) {
             return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
         }
-
         List<GroupDto> groups = userService.getUserGroups(userId, role, orgId).stream()
                 .toList();
-
         return new ApiResponse(200, "User Groups fetched successfully", groups);
     }
 
-    public ApiResponse getUserGroupMembers(String token, Long groupId, LocalDate date) {
-        if (!token.startsWith("Bearer ")) {
-            return new ApiResponse(400, "Invalid token format", null);
-        }
-
-        String jwt = token.substring(7);
-        String orgId = jwtUtil.extractOrgIdFromToken(jwt);
-
+    public ApiResponse getUserGroupMembers( Long groupId, LocalDate date) {
+        
+        String orgId = authUtil.getOrgId();
         if (orgId == null) {
             return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
         }
-        String userIdFromToken = jwtUtil.extractUserIdFromToken(jwt);
+        String userIdFromToken = authUtil.getUserId();
         List<Map<String, Object>> groupMembers = userService.getGroupMembers(groupId, orgId, date, userIdFromToken);
         Map<String, Object> response = new HashMap<>();
         response.put("groupmember", groupMembers);
@@ -440,14 +333,9 @@ public class AuthFacade {
         return new ApiResponse(200, "Student members fetched successfully", response);
     }
 
-    public TimesheetDto upsertClockInOut(String token, String userId, LocalDate date, TimesheetDto request) {
-        if (!token.startsWith("Bearer ")) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid token format");
-        }
-
-        String jwt = token.substring(7);
-        String orgId = jwtUtil.extractOrgIdFromToken(jwt);
-
+    public TimesheetDto upsertClockInOut( String userId, LocalDate date, TimesheetDto request) {
+        
+        String orgId = authUtil.getOrgId();
         if (orgId == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized - Invalid Organization");
         }
@@ -463,14 +351,8 @@ public class AuthFacade {
         return authService.sendOtp(mobile, session);
     }
 
-    public ApiResponse searchUsernames(String token, String keyword) {
-        if (!token.startsWith("Bearer ")) {
-            return new ApiResponse(400, "Invalid token format", null);
-        }
-
-        String jwt = token.substring(7);
-        String orgId = jwtUtil.extractOrgIdFromToken(jwt);
-
+    public ApiResponse searchUsernames( String keyword) {
+        String orgId = authUtil.getOrgId();
         if (orgId == null) {
             return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
         }
@@ -478,15 +360,10 @@ public class AuthFacade {
         return new ApiResponse(200, "Usernames fetched successfully", usernames);
     }
 
-    public ApiResponse getGroupUsers(String token, List<Long> groupIds) {
-        if (!token.startsWith("Bearer ")) {
-            return new ApiResponse(400, "Invalid token format", null);
-        }
-
-        String jwt = token.substring(7);
-        String orgId = jwtUtil.extractOrgIdFromToken(jwt);
-        String loggedInUserId = jwtUtil.extractUserIdFromToken(jwt);
-        String role = jwtUtil.extractRoleFromToken(jwt);
+    public ApiResponse getGroupUsers( List<Long> groupIds) {
+        String orgId = authUtil.getOrgId();
+        String loggedInUserId = authUtil.getUserId();
+        String role = authUtil.getRole();
         String userRole = role.replace("ROLE_", "");
         if (orgId == null || loggedInUserId == null) {
             return new ApiResponse(401, "Unauthorized - Invalid Organization or User", null);
@@ -501,12 +378,8 @@ public class AuthFacade {
         return new ApiResponse(200, "Work Schedule fetched successfully", workScheduleDtos);
     }
 
-    public ApiResponse addLocation(String token, LocationDto locationDto) {
-        if (!token.startsWith("Bearer ")) {
-            return new ApiResponse(400, "Invalid token format", null);
-        }
-        String jwt = token.substring(7);
-        String orgId = jwtUtil.extractOrgIdFromToken(jwt);
+    public ApiResponse addLocation( LocationDto locationDto) {
+        String orgId = authUtil.getOrgId();
         if (orgId == null) {
             return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
         }
@@ -514,24 +387,21 @@ public class AuthFacade {
         return new ApiResponse(200, "Location added successfully", location);
     }
 
-    public List<UserDashboardDto> getAllUserInfo(String token, DashboardDto request) {
+    public List<UserDashboardDto> getAllUserInfo( DashboardDto request) {
         LocalDate fromDate = request.getFromDate();
         LocalDate toDate = request.getToDate();
         if (toDate.isAfter(LocalDate.now())) {
             toDate = LocalDate.now();
         }
         String userId = request.getUserId();
-        if (!token.startsWith("Bearer ")) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid token format");
-        }
-        String jwt = token.substring(7);
-        String orgId = jwtUtil.extractOrgIdFromToken(jwt);
-        String userIdFromToken = jwtUtil.extractUserIdFromToken(jwt);
+
+        
+            String orgId = authUtil.getOrgId();
+        String userIdFromToken = authUtil.getUserId();
 
         if (orgId == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized - Invalid Organization");
         }
-
         return timesheetService.getAllUserInfo(orgId, userIdFromToken, fromDate, toDate, userId, request.getGroupIds(), request.getType());
     }
 
@@ -551,8 +421,8 @@ public class AuthFacade {
         return reportService.exportTimesheetWeekCsv(timesheets);
     }
 
-    public FileExportResponseDto generateTimesheetFile(String token, TimesheetReportDto request) throws IOException {
-        List<UserTimesheetResponseDto> timesheets = getAllTimesheets(token, request);
+    public FileExportResponseDto generateTimesheetFile( TimesheetReportDto request) throws IOException {
+        List<UserTimesheetResponseDto> timesheets = getAllTimesheets( request);
         log.info("Requested Timesheet Date Range: {} to {}", request.getFromDate(), request.getToDate());
         log.info("Total timesheets fetched: {}", timesheets.size());
 
@@ -622,12 +492,8 @@ public class AuthFacade {
         return new FileExportResponseDto(filePath, fileName, format);
     }
 
-    public ApiResponse getUserLocation(String token) {
-        if (!token.startsWith("Bearer ")) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid token format");
-        }
-        String jwt = token.substring(7);
-        String userId = jwtUtil.extractUserIdFromToken(jwt);
+    public ApiResponse getUserLocation() {
+        String userId = authUtil.getUserId();
         List<LocationDto> locations = userService.getUserLocation(userId);
         return new ApiResponse(200, "User Location fetched successfully", locations);
     }
@@ -635,29 +501,19 @@ public class AuthFacade {
     public ResponseEntity<Resource> downloadSampleFile() {
         return userService.downloadSampleFile();}
 
-    public List<UserTimesheetDto> getUserTimesheets(String token, TimesheetReportDto request) {
-        if (!token.startsWith("Bearer ")) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid token format");
-        }
-
-        String jwt = token.substring(7);
-        String orgId = jwtUtil.extractOrgIdFromToken(jwt);
-
-        String userIdFromToken = jwtUtil.extractUserIdFromToken(jwt);
+    public List<UserTimesheetDto> getUserTimesheets( TimesheetReportDto request) {
+        
+        String orgId = authUtil.getOrgId();
+        String userIdFromToken = authUtil.getUserId();
         if (orgId == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized - Invalid Organization");
         }
-        String role = jwtUtil.extractRoleFromToken(jwt);
+        String role = authUtil.getRole();
         return timesheetService.getUserTimesheets(userIdFromToken, orgId, role, request);
-
     }
 
-    public ApiResponse addPrivileges(String token, PrivilegeDto privilegeDto) {
-        if (!token.startsWith("Bearer ")) {
-            return new ApiResponse(400, "Invalid token format", null);
-        }
-        String jwt = token.substring(7);
-        String orgId = jwtUtil.extractOrgIdFromToken(jwt);
+    public ApiResponse addPrivileges( PrivilegeDto privilegeDto) {
+        String orgId = authUtil.getOrgId();
         if (orgId == null) {
             return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
         }
@@ -667,12 +523,8 @@ public class AuthFacade {
         return new ApiResponse(200, "Privilege added successfully", dto);
     }
 
-    public ApiResponse addRolwisePrivileges(String token, RolePrivilegeDto rolePrivilegeDto) {
-        if (!token.startsWith("Bearer ")) {
-            return new ApiResponse(400, "Invalid token format", null);
-        }
-        String jwt = token.substring(7);
-        String orgId = jwtUtil.extractOrgIdFromToken(jwt);
+    public ApiResponse addRolwisePrivileges( RolePrivilegeDto rolePrivilegeDto) {
+        String orgId = authUtil.getOrgId();
         if (orgId == null) {
             return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
         }
@@ -682,13 +534,9 @@ public class AuthFacade {
         return new ApiResponse(200, "Privilege added successfully", dto);
     }
 
-    public ApiResponse updateLocation(String token, LocationListDto locationDto) {
-        if (!token.startsWith("Bearer ")) {
-            return new ApiResponse(400, "Invalid token format", null);
-        }
-        String jwt = token.substring(7);
-        String orgId = jwtUtil.extractOrgIdFromToken(jwt);
-        String role = jwtUtil.extractRoleFromToken(jwt);
+    public ApiResponse updateLocation( LocationListDto locationDto) {
+        String orgId = authUtil.getOrgId();
+        String role = authUtil.getRole();
         String roleName = role.replace("ROLE_" , "");
         if (orgId == null) {
             return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
@@ -699,12 +547,8 @@ public class AuthFacade {
         return response;
     }
 
-    public void deleteLocation(String token, LocationListDto locationIds) {
-        if (!token.startsWith("Bearer ")) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid token format");
-        }
-        String jwt = token.substring(7);
-        String orgId = jwtUtil.extractOrgIdFromToken(jwt);
+    public void deleteLocation( LocationListDto locationIds) {
+        String orgId = authUtil.getOrgId();
         if (orgId == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized - Invalid Organization");
         }
@@ -728,14 +572,10 @@ public class AuthFacade {
         return new ApiResponse(200, "WorkSchedule Updated Successfully", true);
     }
 
-    public void deleteSchedule(String token, String scheduleId) {
-        if (token == null || token.isBlank()) {
-           throw new CommonExceptionHandler.BadRequestException("Invalid token");
-        }
+    public void deleteSchedule( String scheduleId) {
 
         try {
-            String jwt = jwtUtil.extractJwt(token);
-            String orgId = jwtUtil.extractOrgIdFromToken(jwt);
+            String orgId = authUtil.getOrgId();
             if (orgId == null) {
                 throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,"Unauthorized - Invalid Organization");
             }
@@ -746,15 +586,9 @@ public class AuthFacade {
         }
     }
 
-    public ApiResponse getStatus(String token) {
-        if (token == null || token.isBlank()) {
-            throw new CommonExceptionHandler.BadRequestException("Invalid token");
-        }
-        if (!token.startsWith("Bearer ")) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid token format");
-        }
-        String jwt = token.substring(7);
-        String orgId = jwtUtil.extractOrgIdFromToken(jwt);
+    public ApiResponse getStatus() {
+        
+        String orgId = authUtil.getOrgId();
         if (orgId == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized - Invalid Organization");
         }
@@ -764,15 +598,8 @@ public class AuthFacade {
         return new ApiResponse<>(200,"Timesheet Status fetched successfully",status);
     }
 
-    public ApiResponse getType(String token) {
-        if (token == null || token.isBlank()) {
-            throw new CommonExceptionHandler.BadRequestException("Invalid token");
-        }
-        if (!token.startsWith("Bearer ")) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid token format");
-        }
-        String jwt = token.substring(7);
-        String orgId = jwtUtil.extractOrgIdFromToken(jwt);
+    public ApiResponse getType() {
+        String orgId = authUtil.getOrgId();
         if (orgId == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized - Invalid Organization");
         }
@@ -803,20 +630,12 @@ public class AuthFacade {
         return new ApiResponse<>(200, "Validation Successful", validationResponse);
     }
 
-    public ApiResponse<OrganizationTypeDto> getUserOrgType(String token) {
-        if (token == null || token.isBlank()) {
-            throw new CommonExceptionHandler.BadRequestException("Invalid token");
-        }
-        if (!token.startsWith("Bearer ")) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid token format");
-        }
-
-        String jwt = token.substring(7);
-        String orgId = jwtUtil.extractOrgIdFromToken(jwt);
+    public ApiResponse<OrganizationTypeDto> getUserOrgType() {
+        
+        String orgId = authUtil.getOrgId();
         if (orgId == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized - Invalid Organization");
         }
-
         OrganizationType dto = organizationService.getUserOrgType(orgId);
         OrganizationTypeDto response = userDtoMapper.toDto(dto);
         return new ApiResponse<>(200, "User Organization Type Fetched Successfully", response);

@@ -110,4 +110,7 @@ public interface WorkScheduleRepository extends JpaRepository<WorkScheduleEntity
     int countByOrganizationEntity_OrganizationId(String orgId);
 
     List<WorkScheduleEntity> findScheduleByOrganizationEntity_OrganizationId(String orgId);
+
+    @Query(value = "SELECT work_schedule_id, work_schedule_name FROM work_schedule WHERE organization_id = :orgId", nativeQuery = true)
+    List<Object[]> findSchedule(@Param("orgId") String orgId);
 }

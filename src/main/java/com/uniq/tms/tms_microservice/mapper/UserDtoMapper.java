@@ -17,6 +17,7 @@ public interface UserDtoMapper {
     RoleDto toDto(Role role);
     LocationDto toDto(Location location);
     @Mapping(target = "roleId" , source = "roleId")
+    @Mapping(target = "workSchedule", source = "workSchedule")
     @Mapping(target = "organizationId", ignore = true)
     @Mapping(target = "active", ignore = true)
     User toMiddleware(UserDto dto);

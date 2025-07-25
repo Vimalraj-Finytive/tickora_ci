@@ -1,27 +1,29 @@
 package com.uniq.tms.tms_microservice.controller;
 
-import com.uniq.tms.tms_microservice.config.JwtUtil;
 import com.uniq.tms.tms_microservice.constant.UserConstant;
 import com.uniq.tms.tms_microservice.dto.ApiResponse;
 import com.uniq.tms.tms_microservice.dto.OrgSetupValidationResponse;
 import com.uniq.tms.tms_microservice.dto.OrganizationDto;
 import com.uniq.tms.tms_microservice.dto.OrganizationTypeDto;
 import com.uniq.tms.tms_microservice.facade.AuthFacade;
+import com.uniq.tms.tms_microservice.util.AuthUtil;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+@Slf4j
 @RestController
 @RequestMapping(UserConstant.ORGANIZATION_URL)
 public class OrganizationController {
 
     private final AuthFacade authFacade;
-    private final JwtUtil jwtUtil;
+    private final AuthUtil authUtil;
 
-    public OrganizationController(AuthFacade authFacade, AuthFacade authFacade1, JwtUtil jwtUtil) {
+    public OrganizationController(AuthFacade authFacade, AuthFacade authFacade1, AuthUtil authUtil) {
         this.authFacade = authFacade1;
-        this.jwtUtil = jwtUtil;
+        this.authUtil = authUtil;
     }
 
     @PostMapping("/create")
@@ -45,22 +47,10 @@ public class OrganizationController {
     @GetMapping("/onBoard/validate")
     public ResponseEntity<ApiResponse<OrgSetupValidationResponse>> getOnBoardValidation(
             @RequestHeader("Authorization") String token) {
-
-        if (token == null || token.isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Missing Authorization header");
-        }
-
-        if (!token.startsWith("Bearer ")) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid token format");
-        }
-
-        String jwt = token.substring(7);
-        String orgId = jwtUtil.extractOrgIdFromToken(jwt);
-
+        String orgId = authUtil.getOrgId();
         if (orgId == null || orgId.isBlank()) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized - Invalid Organization");
         }
-
         ApiResponse<OrgSetupValidationResponse> response = authFacade.getValidation(orgId);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
@@ -69,7 +59,7 @@ public class OrganizationController {
     public ResponseEntity<ApiResponse<OrganizationTypeDto>> getUserOrgType(
             @RequestHeader("Authorization") String token) {
 
-        ApiResponse<OrganizationTypeDto> response = authFacade.getUserOrgType(token);
+        ApiResponse<OrganizationTypeDto> response = authFacade.getUserOrgType();
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 }

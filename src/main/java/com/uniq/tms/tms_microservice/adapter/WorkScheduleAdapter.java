@@ -2,6 +2,7 @@ package com.uniq.tms.tms_microservice.adapter;
 
 import com.uniq.tms.tms_microservice.entity.*;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 public interface WorkScheduleAdapter {
@@ -25,4 +26,5 @@ public interface WorkScheduleAdapter {
     List<WorkScheduleTypeEntity> findAllType();
     List<WorkScheduleEntity> findAllScheduleById(String orgId);
     int countByOrgId(String orgId);
+    Map<String, String> getAllSchedules(String orgId);
 }
