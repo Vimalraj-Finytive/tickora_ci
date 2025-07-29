@@ -34,7 +34,7 @@ import org.apache.logging.log4j.Logger;
 @Component
 public class JwtUtil {
 
-    @Value("${jwt.secret}")
+    @Value("${app.api.key}")
     private String secretKeyBase64;
 
     private static final Logger log  = LogManager.getLogger(JwtUtil.class);
