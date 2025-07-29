@@ -169,7 +169,7 @@ public class UserController {
 
     @GetMapping("/getAllGroups")
     public ResponseEntity<ApiResponse> getAllGroups(@RequestHeader("Authorization") String token) throws JsonProcessingException {
-        ApiResponse response = authFacade.getAllGroup(token);
+        ApiResponse response = authFacade.getAllGroups();
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 

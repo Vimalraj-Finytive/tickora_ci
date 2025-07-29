@@ -25,7 +25,7 @@ import java.net.URISyntaxException;
 @ConditionalOnProperty(name = "cache.redis.enabled", havingValue = "true")
 public class RedisConfig {
 
-    @Value("${REDISCLOUD_URL}")
+    @Value("${app.redis.url}")
     private String redisUrl;
 
     @Bean

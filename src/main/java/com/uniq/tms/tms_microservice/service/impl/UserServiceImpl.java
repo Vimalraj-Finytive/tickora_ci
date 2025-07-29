@@ -382,7 +382,18 @@ public class UserServiceImpl implements UserService {
                             }
                         }
 
-                        if (isBlank(email) || isBlank(mobile) || isBlank(roleId)  || isBlank(doj)) {
+                        if (!isBlank(workSchedule)){
+                            String workScheduleId = workScheduleMap.get(workSchedule.trim());
+                                if(isBlank(workScheduleId)){
+                                    skippedRows.add(Map.of(
+                                            "rowNumber", rowNumber,
+                                            "data", Arrays.asList(row),
+                                            "reason", "WorkSchedule not found" + workScheduleId
+                                    ));
+                                }
+                        }
+
+                        if (isBlank(email) || isBlank(mobile) || isBlank(roleId)  || isBlank(doj) || isBlank(workSchedule)) {
                             skippedRows.add(Map.of(
                                     "rowNumber", rowNumber,
                                     "data", Arrays.asList(row),
@@ -458,7 +469,6 @@ public class UserServiceImpl implements UserService {
                                 continue;
                             }
                         }
-
                         WorkScheduleEntity workScheduleEntity = workScheduleAdapter.findByScheduleId(scheduleId, orgId);
                         // Create and validate user DTO
                         UserDto userDto = new UserDto();
@@ -1624,43 +1634,42 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public Location addLocation(LocationDto locationDto, String orgId) {
-        // Convert DTO to Entity
         Location locationModel = locationEntityMapper.toModel(locationDto);
-        locationModel.setOrgId(orgId);
-
-        if (userAdapter.findByLocation(locationModel.getName(), orgId)) {
-            throw new DataIntegrityViolationException("Location '" + locationModel.getName() + "' already exists in this organization");
-        }
-        if(locationModel.isDefault()) {
-            locationRepository.resetDefaultLocation(orgId);
-        }
-
-        // Save to DB — triggers @PostPersist in listener
-        LocationEntity savedEntity = userAdapter.addLocation(locationModel);
-        int roleId = UserRole.SUPERADMIN.getHierarchyLevel();
-        UserEntity user = userAdapter.findUserByOrgIdAndRoleId(orgId, roleId);
-        log.info("User List in role Superadmin:{}", user);
+        try {
+            locationModel.setOrgId(orgId);
+            if (locationModel.isDefault()) {
+                locationRepository.resetDefaultLocation(orgId);
+            }
+            // Save to DB — triggers @PostPersist in listener
+            LocationEntity savedEntity = userAdapter.addLocation(locationModel);
+            int roleId = UserRole.SUPERADMIN.getHierarchyLevel();
+            UserEntity user = userAdapter.findUserByOrgIdAndRoleId(orgId, roleId);
+            log.info("User List in role Superadmin:{}", user);
             log.info("Adding user to newly created location");
             List<UserLocationEntity> userLocationEntities = new ArrayList<>();
-                LocationEntity locations = locationRepository.findById(savedEntity.getLocationId())
-                        .orElseThrow(() -> new NoSuchElementException("Location not found with ID: " + savedEntity.getLocationId()));
+            LocationEntity locations = locationRepository.findById(savedEntity.getLocationId())
+                    .orElseThrow(() -> new NoSuchElementException("Location not found with ID: " + savedEntity.getLocationId()));
 
-                UserLocationEntity userLocation = new UserLocationEntity();
-                userLocation.setUser(user);
-                userLocation.setLocation(locations);
-                userLocationEntities.add(userLocation);
-                log.info("USERLOCATION:{}", userLocation);
+            UserLocationEntity userLocation = new UserLocationEntity();
+            userLocation.setUser(user);
+            userLocation.setLocation(locations);
+            userLocationEntities.add(userLocation);
+            log.info("USERLOCATION:{}", userLocation);
             userAdapter.saveUserLocation(userLocationEntities);
 
-        CacheEventPublisherUtil.syncReloadThenPublish(
-                publisher,
-                cacheKeyConfig.getLocation(),
-                orgId,
-                cacheReloadHandlerRegistry
-        );
-        log.info("LocationCacheReloadEvent published after location Added");
-        return locationEntityMapper.toDto(savedEntity);
+            CacheEventPublisherUtil.syncReloadThenPublish(
+                    publisher,
+                    cacheKeyConfig.getLocation(),
+                    orgId,
+                    cacheReloadHandlerRegistry
+            );
+            log.info("LocationCacheReloadEvent published after location Added");
+            return locationEntityMapper.toDto(savedEntity);
+        }catch (DataIntegrityViolationException e){
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Location '" + locationModel.getName() + "' already exists in this organization");
+            }
     }
 
     @Override
@@ -1670,6 +1679,10 @@ public class UserServiceImpl implements UserService {
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         List<UserLocationEntity> userLocation = userAdapter.findUserLocationByUserId(userId);
+
+        if(userLocation.isEmpty()){
+            throw new CommonExceptionHandler.NoUserLocationAssignedException(existingUser.getUserName());
+        }
 
         List<Long> locationIds = userLocation.stream()
                 .map(userLocationEntity -> userLocationEntity.getLocation().getLocationId())
