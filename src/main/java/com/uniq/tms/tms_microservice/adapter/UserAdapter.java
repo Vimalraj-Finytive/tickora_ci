@@ -96,7 +96,6 @@ public interface UserAdapter {
     List<GroupEntity> findByLocation_LocationIdIn(List<Long> defaultLocationId);
     void saveAllGroups(List<GroupEntity> groupsToUpdate);
     List<UserLocationEntity> findUserLocationByLocationId(List<Long> defaultLocationId);
-    void saveAllLocations(List<UserLocationEntity> userLocationToUpdate);
     Optional<OrganizationEntity> findByOrgId(String orgId);
     void updateUserWorkSchedule(String scheduleId, String scheduleId1);
     void updateGroupWorkSchedule(String scheduleId, String scheduleId1);
@@ -109,4 +108,6 @@ public interface UserAdapter {
     UserEntity findUserByOrgIdAndRoleId(String orgId, int roleId);
     UserEntity save(UserEntity user);
     OrganizationTypeEntity findOrgType(String orgType);
+    void saveAllUserLocation(List<UserLocationEntity> newUserLocationsToInsert);
+    void deleteAllUserLocations(List<UserLocationEntity> userLocationsToDelete);
 }
