@@ -126,7 +126,7 @@ public class UserServiceImpl implements UserService {
         this.idGenerationService = idGenerationService;
     }
 
-    private static final  Logger log = LoggerFactory.getLogger(UserServiceImpl.class);
+    private static final Logger log = LoggerFactory.getLogger(UserServiceImpl.class);
 
     @Value("${csv.upload.dir}")
     private String uploadDir;
@@ -221,8 +221,7 @@ public class UserServiceImpl implements UserService {
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
-        }
-        else {
+        } else {
             throw new RuntimeException("Unsupported file type. Only CSV files are supported.");
         }
     }
@@ -242,22 +241,22 @@ public class UserServiceImpl implements UserService {
 
         UserEntity userFromToken = userAdapter.findUserByOrgIdAndUserId(orgId, userId);
         log.info("Starting processing for file: {}", originalFileName);
-            long startTime = System.currentTimeMillis();
+        long startTime = System.currentTimeMillis();
 
-            List<UserEntity> userEntities = new ArrayList<>();
-            List<SecondaryDetailsEntity> secondaryDetailsEntities = new ArrayList<>();
-            List<EmailData> emailRequests = new ArrayList<>();
-            List<String> successList = new ArrayList<>();
-            Map<UserEntity, List<Long>> userGroupMappings = new HashMap<>();
-            Map<UserEntity, List<Long>> userLocationMappings = new HashMap<>();
+        List<UserEntity> userEntities = new ArrayList<>();
+        List<SecondaryDetailsEntity> secondaryDetailsEntities = new ArrayList<>();
+        List<EmailData> emailRequests = new ArrayList<>();
+        List<String> successList = new ArrayList<>();
+        Map<UserEntity, List<Long>> userGroupMappings = new HashMap<>();
+        Map<UserEntity, List<Long>> userLocationMappings = new HashMap<>();
 
-            int uploadedCount = 0, skippedCount = 0;
+        int uploadedCount = 0, skippedCount = 0;
 
-            List<Map<String, Object>> skippedRows = new ArrayList<>();
-            int rowNumber = 1;
+        List<Map<String, Object>> skippedRows = new ArrayList<>();
+        int rowNumber = 1;
 
         try {
-                // Preload data
+            // Preload data
             log.info("Fetching existing mobile numbers for orgId: {}", orgId);
             Set<String> existingMobiles = userAdapter.getAllMobileNumbers(orgId);
             log.info("Fetched {} existing mobile numbers: {}", existingMobiles.size(), existingMobiles);
@@ -291,274 +290,273 @@ public class UserServiceImpl implements UserService {
             log.info("Fetched {} work schedules: {}", workScheduleMap.size(), workScheduleMap);
 
             UserEntity userEntity = new UserEntity();
-                // Expected headers
-                List<String> expectedHeaders = List.of(
-                        "username", "email", "mobilenumber", "rolename", "locationname", "dateofjoining",
-                        "secondaryusername", "secondarymobile", "secondaryemail", "relation", "groupname", "workschedule"
-                );
+            // Expected headers
+            List<String> expectedHeaders = List.of(
+                    "username", "email", "mobilenumber", "rolename", "locationname", "dateofjoining",
+                    "secondaryusername", "secondarymobile", "secondaryemail", "relation", "groupname", "workschedule"
+            );
 
-                try (CSVReader reader = new CSVReader(new InputStreamReader(inputStream))) {
-                    String[] headerRow = reader.readNext();
-                    if (headerRow == null) throw new RuntimeException("Missing header row");
-                    validateFixedHeaders(headerRow, expectedHeaders);
+            try (CSVReader reader = new CSVReader(new InputStreamReader(inputStream))) {
+                String[] headerRow = reader.readNext();
+                if (headerRow == null) throw new RuntimeException("Missing header row");
+                validateFixedHeaders(headerRow, expectedHeaders);
 
-                    String[] row;
-                    while ((row = reader.readNext()) != null) {
-                        if (row.length < expectedHeaders.size()) {
+                String[] row;
+                while ((row = reader.readNext()) != null) {
+                    if (row.length < expectedHeaders.size()) {
+                        skippedRows.add(Map.of(
+                                "rowNumber", rowNumber,
+                                "data", Arrays.asList(row),
+                                "reason", "Incomplete row"
+                        ));
+                        skippedCount++;
+                        rowNumber++;
+                        continue;
+                    }
+
+                    String username = row[0].trim();
+                    String email = row[1].trim();
+                    String mobile = row[2].trim();
+                    String roleName = row[3].trim();
+                    String locationName = row[4].trim();
+                    String doj = row[5].trim();
+                    String secName = row[6].trim();
+                    String secMobile = row[7].trim();
+                    String secEmail = row[8].trim();
+                    String relation = row[9].trim();
+                    String groupName = row[10].trim();
+                    String workSchedule = row[11].trim();
+
+                    Long roleId = roleMap.get(roleName.toLowerCase());
+                    log.info("RL ID:{}", roleId);
+                    String scheduleId = workScheduleMap.get(workSchedule.toLowerCase());
+                    log.info("ES ID:{}", scheduleId);
+                    Long locationId = null;
+                    List<Long> locationIds = new ArrayList<>();
+                    if (!isBlank(locationName)) {
+                        String[] locationList = locationName.split(",");
+                        log.info("locationList" + ":" + locationList);
+                        boolean invalidLocationFound = false;
+                        for (String location : locationList) {
+                            String trimmedLocation = location.trim().toLowerCase();
+                            locationId = locationMap.get(trimmedLocation);
+                            if (isBlank(locationId)) {
+                                invalidLocationFound = true;
+                                break;
+                            }
+                            locationIds.add(locationId);
+                        }
+
+                        if (invalidLocationFound || locationIds.isEmpty()) {
                             skippedRows.add(Map.of(
                                     "rowNumber", rowNumber,
                                     "data", Arrays.asList(row),
-                                    "reason", "Incomplete row"
+                                    "reason", "Location not found or invalid: " + locationName
                             ));
                             skippedCount++;
                             rowNumber++;
                             continue;
-                        }
-
-                        String username = row[0].trim();
-                        String email = row[1].trim();
-                        String mobile = row[2].trim();
-                        String roleName = row[3].trim();
-                        String locationName = row[4].trim();
-                        String doj = row[5].trim();
-                        String secName = row[6].trim();
-                        String secMobile = row[7].trim();
-                        String secEmail = row[8].trim();
-                        String relation = row[9].trim();
-                        String groupName = row[10].trim();
-                        String workSchedule = row[11].trim();
-
-                        Long roleId = roleMap.get(roleName.toLowerCase());
-                        log.info("RL ID:{}", roleId);
-                        String scheduleId = workScheduleMap.get(workSchedule.toLowerCase());
-                        log.info("ES ID:{}", scheduleId);
-                        Long locationId = null;
-                        List<Long> locationIds = new ArrayList<>();
-                        if(!isBlank(locationName))
-                        {
-                            String[] locationList = locationName.split(",");
-                            log.info("locationList" + ":" + locationList);
-                            boolean invalidLocationFound = false;
-                            for (String location : locationList) {
-                                String trimmedLocation = location.trim().toLowerCase();
-                                locationId = locationMap.get(trimmedLocation);
-                                if (isBlank(locationId)) {
-                                    invalidLocationFound = true;
-                                    break;
-                                }
-                                locationIds.add(locationId);
-                            }
-
-                            if (invalidLocationFound || locationIds.isEmpty()) {
-                                skippedRows.add(Map.of(
-                                        "rowNumber", rowNumber,
-                                        "data", Arrays.asList(row),
-                                        "reason", "Location not found or invalid: " + locationName
-                                ));
-                                skippedCount++;
-                                rowNumber++;
-                                continue;
-                            }
-                        }
-
-
-                        Long groupId = null;
-                        List<Long> groupIds = new ArrayList<>();
-                        if(!isBlank(groupName)){
-                            String[] groupList = groupName.split(",");
-                            log.info("groupList" + ":" + groupList);
-                            for(String group : groupList){
-                                String trimmedGroup = group.trim().toLowerCase();
-                                groupId = groupMap.get(trimmedGroup);
-                                if (isBlank(groupId)) {
-                                    skippedRows.add(Map.of(
-                                            "rowNumber", rowNumber,
-                                            "data", Arrays.asList(row),
-                                            "reason", "Group not found" + trimmedGroup
-                                    ));
-                                    continue;
-                                }
-                                groupIds.add(groupId);
-                            }
-                        }
-
-                        if (!isBlank(workSchedule)){
-                            String workScheduleId = workScheduleMap.get(workSchedule.trim());
-                                if(isBlank(workScheduleId)){
-                                    skippedRows.add(Map.of(
-                                            "rowNumber", rowNumber,
-                                            "data", Arrays.asList(row),
-                                            "reason", "WorkSchedule not found" + workScheduleId
-                                    ));
-                                }
-                        }
-
-                        if (isBlank(email) || isBlank(mobile) || isBlank(roleId)  || isBlank(doj) || isBlank(workSchedule)) {
-                            skippedRows.add(Map.of(
-                                    "rowNumber", rowNumber,
-                                    "data", Arrays.asList(row),
-                                    "reason", "Mandatory fields  are missing"
-                            ));
-                            skippedCount++;
-                            rowNumber++;
-                            continue;
-                        }
-
-                        log.info("Rolename in csv", roleName);
-                        String key = cacheLoaderService.getPrivilegeKey(PrivilegeConstants.HAVE_SECONDARY_DETAILS);
-                        boolean hasSecondaryDetailsPrivilege = cacheKeyUtil.roleHasPrivilege(roleName, key);
-
-                        // Validate primary email/mobile
-                        if (existingEmails.contains(email) || existingMobiles.contains(mobile)) {
-                            skippedRows.add(Map.of(
-                                    "rowNumber", rowNumber,
-                                    "data", Arrays.asList(row),
-                                    "reason", "Email or mobile number already exists"
-                            ));
-                            skippedCount++;
-                            continue;
-                        }
-
-                        if (hasSecondaryDetailsPrivilege) {
-                            // Skip if any of the required secondary fields are missing
-                            if (isBlank(secMobile) || isBlank(relation)){
-                                skippedRows.add(Map.of(
-                                        "rowNumber", rowNumber,
-                                        "data", Arrays.asList(row),
-                                        "reason", "Secondary fields are missing"
-                                ));
-                                skippedCount++;
-                                rowNumber++;
-                                continue;
-                            }
-
-                            // Skip if all secondary fields are empty
-                            if (isBlank(secMobile) && isBlank(relation)) {
-                                skippedRows.add(Map.of(
-                                        "rowNumber", rowNumber,
-                                        "data", Arrays.asList(row),
-                                        "reason", "All Secondary fields are missing"
-                                ));
-                                skippedCount++;
-                                rowNumber++;
-                                continue;
-                            }
-
-                            // Check secondary mobile/email duplication
-                            if (existingMobiles.contains(secMobile) || existingSecMobiles.contains(secMobile)
-                                    || existingEmails.contains(secEmail) || existingSecEmails.contains(secEmail)) {
-                                skippedRows.add(Map.of(
-                                        "rowNumber", rowNumber,
-                                        "data", Arrays.asList(row),
-                                        "reason", "Secondary email or mobile number already exists"
-                                ));
-                                skippedCount++;
-                                rowNumber++;
-                                continue;
-                            }
-
-                            // Check if student and secondary mobile are same
-                            if (mobile.equals(secMobile)) {
-                                skippedRows.add(Map.of(
-                                        "rowNumber", rowNumber,
-                                        "data", Arrays.asList(row),
-                                        "reason", "Same primary and secondary mobile number"
-                                ));
-                                skippedCount++;
-                                rowNumber++;
-                                continue;
-                            }
-                        }
-                        WorkScheduleEntity workScheduleEntity = workScheduleAdapter.findByScheduleId(scheduleId, orgId);
-                        // Create and validate user DTO
-                        UserDto userDto = new UserDto();
-                        userDto.setUserName(username);
-                        userDto.setEmail(email);
-                        userDto.setMobileNumber(mobile);
-                        userDto.setRoleId(roleId);
-                        userDto.setWorkSchedule(workScheduleEntity.getScheduleId());
-                        userDto.setIsRegisterUser(false);
-                        userDto.setDateOfJoining(parseDate(doj));
-                        userDto.setUserId(idGenerationService.generateNextUserId(orgId));
-
-                        if (!validator.validate(userDto).isEmpty()) {
-                            skippedRows.add(Map.of(
-                                    "rowNumber", rowNumber,
-                                    "data", Arrays.asList(row),
-                                    "reason", "Invalid data"
-                            ));
-                            skippedCount++;
-                            rowNumber++;
-                            continue;
-                        }
-
-                        // Create and store user
-                        String defaultPass = PasswordUtil.generateDefaultPassword();
-                        userEntity = createUserEntity(userDto, orgId, defaultPass);
-                        userEntities.add(userEntity);
-                        successList.add(username);
-                        emailRequests.add(new EmailData(email, userDto.getUserName(), defaultPass, userDto.isRegisterUser()));
-
-                        uploadedCount++;
-
-                        existingEmails.add(email);
-                        existingMobiles.add(mobile);
-
-                        // Group mapping
-                        userGroupMappings.computeIfAbsent(userEntity, k -> new ArrayList<>())
-                                .addAll(groupIds);
-
-                        //Location Mapping
-                        userLocationMappings.computeIfAbsent(userEntity, k -> new ArrayList<>())
-                                .addAll(locationIds);
-                        // Save secondary details if student
-                        if (hasSecondaryDetailsPrivilege) {
-                            String secondaryEmail = TextUtil.trim(secEmail);
-                            SecondaryDetailsEntity secDetails = createSecondaryDetails(userEntity, secMobile, secondaryEmail, secName, relation);
-                            secondaryDetailsEntities.add(secDetails);
-                            existingSecMobiles.add(secMobile);
-                            existingSecEmails.add(secondaryEmail);
                         }
                     }
+
+
+                    Long groupId = null;
+                    List<Long> groupIds = new ArrayList<>();
+                    if (!isBlank(groupName)) {
+                        String[] groupList = groupName.split(",");
+                        log.info("groupList" + ":" + groupList);
+                        for (String group : groupList) {
+                            String trimmedGroup = group.trim().toLowerCase();
+                            groupId = groupMap.get(trimmedGroup);
+                            if (isBlank(groupId)) {
+                                skippedRows.add(Map.of(
+                                        "rowNumber", rowNumber,
+                                        "data", Arrays.asList(row),
+                                        "reason", "Group not found" + trimmedGroup
+                                ));
+                                continue;
+                            }
+                            groupIds.add(groupId);
+                        }
+                    }
+
+                    if (!isBlank(workSchedule)) {
+                        String workScheduleId = workScheduleMap.get(workSchedule.trim());
+                        if (isBlank(workScheduleId)) {
+                            skippedRows.add(Map.of(
+                                    "rowNumber", rowNumber,
+                                    "data", Arrays.asList(row),
+                                    "reason", "WorkSchedule not found" + workScheduleId
+                            ));
+                        }
+                    }
+
+                    if (isBlank(email) || isBlank(mobile) || isBlank(roleId) || isBlank(doj) || isBlank(workSchedule)) {
+                        skippedRows.add(Map.of(
+                                "rowNumber", rowNumber,
+                                "data", Arrays.asList(row),
+                                "reason", "Mandatory fields  are missing"
+                        ));
+                        skippedCount++;
+                        rowNumber++;
+                        continue;
+                    }
+
+                    log.info("Rolename in csv", roleName);
+                    String key = cacheLoaderService.getPrivilegeKey(PrivilegeConstants.HAVE_SECONDARY_DETAILS);
+                    boolean hasSecondaryDetailsPrivilege = cacheKeyUtil.roleHasPrivilege(roleName, key);
+
+                    // Validate primary email/mobile
+                    if (existingEmails.contains(email) || existingMobiles.contains(mobile)) {
+                        skippedRows.add(Map.of(
+                                "rowNumber", rowNumber,
+                                "data", Arrays.asList(row),
+                                "reason", "Email or mobile number already exists"
+                        ));
+                        skippedCount++;
+                        continue;
+                    }
+
+                    if (hasSecondaryDetailsPrivilege) {
+                        // Skip if any of the required secondary fields are missing
+                        if (isBlank(secMobile) || isBlank(relation)) {
+                            skippedRows.add(Map.of(
+                                    "rowNumber", rowNumber,
+                                    "data", Arrays.asList(row),
+                                    "reason", "Secondary fields are missing"
+                            ));
+                            skippedCount++;
+                            rowNumber++;
+                            continue;
+                        }
+
+                        // Skip if all secondary fields are empty
+                        if (isBlank(secMobile) && isBlank(relation)) {
+                            skippedRows.add(Map.of(
+                                    "rowNumber", rowNumber,
+                                    "data", Arrays.asList(row),
+                                    "reason", "All Secondary fields are missing"
+                            ));
+                            skippedCount++;
+                            rowNumber++;
+                            continue;
+                        }
+
+                        // Check secondary mobile/email duplication
+                        if (existingMobiles.contains(secMobile) || existingSecMobiles.contains(secMobile)
+                                || existingEmails.contains(secEmail) || existingSecEmails.contains(secEmail)) {
+                            skippedRows.add(Map.of(
+                                    "rowNumber", rowNumber,
+                                    "data", Arrays.asList(row),
+                                    "reason", "Secondary email or mobile number already exists"
+                            ));
+                            skippedCount++;
+                            rowNumber++;
+                            continue;
+                        }
+
+                        // Check if student and secondary mobile are same
+                        if (mobile.equals(secMobile)) {
+                            skippedRows.add(Map.of(
+                                    "rowNumber", rowNumber,
+                                    "data", Arrays.asList(row),
+                                    "reason", "Same primary and secondary mobile number"
+                            ));
+                            skippedCount++;
+                            rowNumber++;
+                            continue;
+                        }
+                    }
+                    WorkScheduleEntity workScheduleEntity = workScheduleAdapter.findByScheduleId(scheduleId, orgId);
+                    // Create and validate user DTO
+                    UserDto userDto = new UserDto();
+                    userDto.setUserName(username);
+                    userDto.setEmail(email);
+                    userDto.setMobileNumber(mobile);
+                    userDto.setRoleId(roleId);
+                    userDto.setWorkSchedule(workScheduleEntity.getScheduleId());
+                    userDto.setIsRegisterUser(false);
+                    userDto.setDateOfJoining(parseDate(doj));
+                    userDto.setUserId(idGenerationService.generateNextUserId(orgId));
+
+                    if (!validator.validate(userDto).isEmpty()) {
+                        skippedRows.add(Map.of(
+                                "rowNumber", rowNumber,
+                                "data", Arrays.asList(row),
+                                "reason", "Invalid data"
+                        ));
+                        skippedCount++;
+                        rowNumber++;
+                        continue;
+                    }
+
+                    // Create and store user
+                    String defaultPass = PasswordUtil.generateDefaultPassword();
+                    userEntity = createUserEntity(userDto, orgId, defaultPass);
+                    userEntities.add(userEntity);
+                    successList.add(username);
+                    emailRequests.add(new EmailData(email, userDto.getUserName(), defaultPass, userDto.isRegisterUser()));
+
+                    uploadedCount++;
+
+                    existingEmails.add(email);
+                    existingMobiles.add(mobile);
+
+                    // Group mapping
+                    userGroupMappings.computeIfAbsent(userEntity, k -> new ArrayList<>())
+                            .addAll(groupIds);
+
+                    //Location Mapping
+                    userLocationMappings.computeIfAbsent(userEntity, k -> new ArrayList<>())
+                            .addAll(locationIds);
+                    // Save secondary details if student
+                    if (hasSecondaryDetailsPrivilege) {
+                        String secondaryEmail = TextUtil.trim(secEmail);
+                        SecondaryDetailsEntity secDetails = createSecondaryDetails(userEntity, secMobile, secondaryEmail, secName, relation);
+                        secondaryDetailsEntities.add(secDetails);
+                        existingSecMobiles.add(secMobile);
+                        existingSecEmails.add(secondaryEmail);
+                    }
                 }
-
-                // Persist users and secondary details
-                List<UserEntity> savedUsers = userAdapter.saveAllUsers(userEntities);
-                userAdapter.saveAllSecondaryDetails(secondaryDetailsEntities);
-
-                // Persist user-group mappings
-                List<UserGroupEntity> groupEntities = userGroupMappings.entrySet().stream()
-                        .flatMap(entry -> entry.getValue().stream()
-                                .map(groupIds -> {
-                                    UserGroupEntity ug = new UserGroupEntity();
-                                    ug.setUser(entry.getKey());
-                                    ug.setGroup(new GroupEntity(groupIds));
-                                    return ug;
-                                }))
-                        .toList();
-
-                //user-location mapping
-                List<UserLocationEntity> userLocationEntities = userLocationMappings.entrySet().stream()
-                                .flatMap(entry -> entry.getValue().stream()
-                                        .map(locationIds ->{
-                                            UserLocationEntity ul = new UserLocationEntity();
-                                            ul.setUser(entry.getKey());
-                                            ul.setLocation(new LocationEntity(locationIds));
-                                            return ul;
-                                        }))
-                                        .toList();
-                log.info("Saving all user groups");
-                userAdapter.saveAllUserGroups(groupEntities);
-                log.info("Saved all user groups");
-                log.info("Save all user locations");
-                userAdapter.saveUserLocation(userLocationEntities);
-                log.info("Sending emails to all users");
-                sendEmailsAsync(emailRequests);
-                log.info("Emails sent to all users");
-
-            } catch (Exception e) {
-                throw new RuntimeException("Error processing CSV: " + e.getMessage(), e);
             }
+
+            // Persist users and secondary details
+            List<UserEntity> savedUsers = userAdapter.saveAllUsers(userEntities);
+            userAdapter.saveAllSecondaryDetails(secondaryDetailsEntities);
+
+            // Persist user-group mappings
+            List<UserGroupEntity> groupEntities = userGroupMappings.entrySet().stream()
+                    .flatMap(entry -> entry.getValue().stream()
+                            .map(groupIds -> {
+                                UserGroupEntity ug = new UserGroupEntity();
+                                ug.setUser(entry.getKey());
+                                ug.setGroup(new GroupEntity(groupIds));
+                                return ug;
+                            }))
+                    .toList();
+
+            //user-location mapping
+            List<UserLocationEntity> userLocationEntities = userLocationMappings.entrySet().stream()
+                    .flatMap(entry -> entry.getValue().stream()
+                            .map(locationIds -> {
+                                UserLocationEntity ul = new UserLocationEntity();
+                                ul.setUser(entry.getKey());
+                                ul.setLocation(new LocationEntity(locationIds));
+                                return ul;
+                            }))
+                    .toList();
+            log.info("Saving all user groups");
+            userAdapter.saveAllUserGroups(groupEntities);
+            log.info("Saved all user groups");
+            log.info("Save all user locations");
+            userAdapter.saveUserLocation(userLocationEntities);
+            log.info("Sending emails to all users");
+            sendEmailsAsync(emailRequests);
+            log.info("Emails sent to all users");
+
+        } catch (Exception e) {
+            throw new RuntimeException("Error processing CSV: " + e.getMessage(), e);
+        }
 
         log.info("Uploaded: {}, Skipped: {}, Time: {} ms", uploadedCount, skippedCount, (System.currentTimeMillis() - startTime));
 
@@ -569,8 +567,8 @@ public class UserServiceImpl implements UserService {
         log.info("skippedRows: {}", skippedRows);
 
         String message = String.format(" %d Users created. Duplicate/invalid users were skipped.", uploadedCount);
-        log.info("useremail: {} , username: {}", userFromToken.getEmail(),userFromToken.getUserName());
-        emailUtil.sendSuccessEmail(userFromToken.getEmail(),userFromToken.getUserName(),uploadedCount,skippedCount);
+        log.info("useremail: {} , username: {}", userFromToken.getEmail(), userFromToken.getUserName());
+        emailUtil.sendSuccessEmail(userFromToken.getEmail(), userFromToken.getUserName(), uploadedCount, skippedCount);
         CacheEventPublisherUtil.syncReloadThenPublish(
                 publisher,
                 cacheKeyConfig.getUsers(),
@@ -607,7 +605,7 @@ public class UserServiceImpl implements UserService {
         return destinationPath.toAbsolutePath().toString();
     }
 
-    private UserEntity createUserEntity(UserDto userDto, String orgId,String generatedPass) {
+    private UserEntity createUserEntity(UserDto userDto, String orgId, String generatedPass) {
         UserEntity entity = userEntityMapper.toEntity(userDtoMapper.toMiddleware(userDto));
         entity.setOrganizationId(orgId);
         entity.setPassword(PasswordUtil.encryptPassword(generatedPass));
@@ -650,7 +648,7 @@ public class UserServiceImpl implements UserService {
     private String normalizeHeader(String header) {
         return header.trim().toLowerCase().replaceAll("[ _]", "");
     }
-    
+
     private LocalDate parseDate(String dateStr) {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
         return LocalDate.parse(dateStr, formatter);
@@ -667,8 +665,7 @@ public class UserServiceImpl implements UserService {
             try {
                 emailUtil.sendAccountCreationEmail(emailData.getEmail(), emailData.getUserName(), emailData.getGeneratedPass(), emailData.isNewUser());
                 successCount++;
-            }
-            catch (Exception e) {
+            } catch (Exception e) {
                 log.error("Failed to send email to {}", emailData.getEmail(), e);
                 failureCount++;
                 failedEmails.add(Map.of(
@@ -679,12 +676,12 @@ public class UserServiceImpl implements UserService {
                 log.error("Email failed for user {} : {}", emailData.getEmail(), e.getMessage());
             }
         }
-            log.info("Email success: {} ", successCount);
-            log.info("Email failure: {} ", failureCount);
+        log.info("Email success: {} ", successCount);
+        log.info("Email failure: {} ", failureCount);
 
-            if (!failedEmails.isEmpty()) {
-                log.info("Failed emails Details: {}", failedEmails);
-            }
+        if (!failedEmails.isEmpty()) {
+            log.info("Failed emails Details: {}", failedEmails);
+        }
     }
 
     @Override
@@ -698,7 +695,7 @@ public class UserServiceImpl implements UserService {
         log.info("hasSecondaryDetailsPrivilege: {}", hasSecondaryDetailsPrivilege);
         // Step 1: Privilege-based secondary validation
         if (hasSecondaryDetailsPrivilege) {
-         validateSecondaryUser(secondaryDetailsDto);
+            validateSecondaryUser(secondaryDetailsDto);
         }
 
         // Step 2: Validate primary user (always checked)
@@ -754,7 +751,7 @@ public class UserServiceImpl implements UserService {
         if (!isBlank(userDto.getLocationId())) {
             log.info("Adding user to location: {}", userDto.getLocationId());
             List<UserLocationEntity> userLocationEntities = new ArrayList<>();
-            for (Long locId : userDto.getLocationId()){
+            for (Long locId : userDto.getLocationId()) {
                 LocationEntity locations = locationRepository.findById(locId)
                         .orElseThrow(() -> new NoSuchElementException("Location not found with ID: " + locId));
 
@@ -804,7 +801,8 @@ public class UserServiceImpl implements UserService {
                 cacheKeyConfig.getUsers(),
                 organizationId,
                 cacheReloadHandlerRegistry
-        );        log.info("UserCacheReloadEvent published after User creation");
+        );
+        log.info("UserCacheReloadEvent published after User creation");
         return new ApiResponse(201, "Successfully saved user", finalUser);
     }
 
@@ -814,9 +812,9 @@ public class UserServiceImpl implements UserService {
             throw new CommonExceptionHandler.BadRequestException("Mandatory secondary user fields must not be null");
         }
         Optional<SecondaryDetailsEntity> mobileExists = userAdapter.findByMobileByMobile(dto.getMobile());
-        if(mobileExists.isPresent()){
+        if (mobileExists.isPresent()) {
             boolean isPrimaryActive = mobileExists.get().getUser().isActive();
-            if (!isPrimaryActive){
+            if (!isPrimaryActive) {
                 throw new CommonExceptionHandler.DuplicateUserException(
                         "Inactive User."
                 );
@@ -826,9 +824,9 @@ public class UserServiceImpl implements UserService {
             );
         }
         Optional<SecondaryDetailsEntity> emailExists = userAdapter.findByEmailByEmail(dto.getEmail());
-        if(emailExists.isPresent()){
+        if (emailExists.isPresent()) {
             boolean isPrimaryActive = emailExists.get().getUser().isActive();
-            if (!isPrimaryActive){
+            if (!isPrimaryActive) {
                 throw new CommonExceptionHandler.DuplicateUserException(
                         "Inactive User."
                 );
@@ -841,14 +839,13 @@ public class UserServiceImpl implements UserService {
     }
 
     private boolean validatePrimaryUser(UserDto userDto) {
-        if (isBlank(String.valueOf(userDto))|| isBlank(userDto.getUserName()) || isBlank(userDto.getMobileNumber()) || isBlank(userDto.getEmail())) {
+        if (isBlank(String.valueOf(userDto)) || isBlank(userDto.getUserName()) || isBlank(userDto.getMobileNumber()) || isBlank(userDto.getEmail())) {
             log.error("Mandatory primary user fields must not be null");
             throw new CommonExceptionHandler.BadRequestException("Mandatory Primary user fields must not be null");
         }
         Optional<UserEntity> mobilExists = userAdapter.findByMobileNumber(userDto.getMobileNumber());
-        if(mobilExists.isPresent())
-        {
-            if(!mobilExists.get().isActive()){
+        if (mobilExists.isPresent()) {
+            if (!mobilExists.get().isActive()) {
                 throw new CommonExceptionHandler.DuplicateUserException(
                         "Inactive Users."
                 );
@@ -858,9 +855,8 @@ public class UserServiceImpl implements UserService {
             );
         }
         Optional<UserEntity> emailExists = userAdapter.findByEmail(userDto.getEmail());
-        if (emailExists.isPresent())
-        {
-            if (!emailExists.get().isActive()){
+        if (emailExists.isPresent()) {
+            if (!emailExists.get().isActive()) {
                 throw new CommonExceptionHandler.DuplicateUserException(
                         "Inactive User."
                 );
@@ -909,19 +905,19 @@ public class UserServiceImpl implements UserService {
             if (userDto.getEmail() != null) {
                 existingUser.setEmail(userDto.getEmail());
             }
-            if (userDto.getUserName()!= null) {
+            if (userDto.getUserName() != null) {
                 existingUser.setUserName(userDto.getUserName());
             }
             if (userDto.getMobileNumber() != null) {
                 existingUser.setMobileNumber(userDto.getMobileNumber());
             }
-            if (userDto.isRegisterUser() ) {
+            if (userDto.isRegisterUser()) {
                 existingUser.setRegisterUser(userDto.isRegisterUser());
             }
-            if (userDto.getWorkSchedule() != null){
+            if (userDto.getWorkSchedule() != null) {
                 existingUser.setWorkSchedule(workScheduleAdapter.findByScheduleId(userDto.getWorkSchedule(), orgId));
             }
-            if(location != null) {
+            if (location != null) {
                 Set<Long> toDelete = new HashSet<>(userLocation);
                 toDelete.removeAll(location);
                 Set<Long> toInsert = new HashSet<>(location);
@@ -932,15 +928,15 @@ public class UserServiceImpl implements UserService {
                 }
                 if (toInsert.size() > 0) {
                     List<UserLocationEntity> newEntities = toInsert.stream()
-                                    .map(locations ->
-                                    {
-                                        UserLocationEntity userLocationEntity = new UserLocationEntity();
-                                        userLocationEntity.setUser(existingUser);
-                                        userLocationEntity.setLocation(locationRepository.findById(locations)
-                                                .orElseThrow(() -> new RuntimeException("Location not found")));
-                                        return userLocationEntity;
-                                    })
-                                            .toList();
+                            .map(locations ->
+                            {
+                                UserLocationEntity userLocationEntity = new UserLocationEntity();
+                                userLocationEntity.setUser(existingUser);
+                                userLocationEntity.setLocation(locationRepository.findById(locations)
+                                        .orElseThrow(() -> new RuntimeException("Location not found")));
+                                return userLocationEntity;
+                            })
+                            .toList();
                     userAdapter.updateUserLocationByUserId(newEntities);
                     log.info("Added user location: {}", toInsert);
                 }
@@ -968,14 +964,14 @@ public class UserServiceImpl implements UserService {
                     userAdapter.updateUserGroupByUserId(newEntities);
                 }
             }
-            if(userDto.getDateOfJoining() != null){
+            if (userDto.getDateOfJoining() != null) {
                 existingUser.setDateOfJoining(userDto.getDateOfJoining());
             }
 
             String key = cacheLoaderService.getPrivilegeKey(PrivilegeConstants.HAVE_SECONDARY_DETAILS);
             boolean hasSecondaryDetailsPrivilege = cacheKeyUtil.roleHasPrivilege(existingUser.getRole().getName(), key);
             //If user is edit the table also edit the secondary table...
-            if(hasSecondaryDetailsPrivilege){
+            if (hasSecondaryDetailsPrivilege) {
                 SecondaryDetailsDto secondaryDetails = updates.getSecondaryDetails();
                 SecondaryDetailsEntity existingSecondaryUser = userAdapter.findSecondaryUserById(userId)
                         .orElseThrow(() -> new RuntimeException("Secondary User not found"));
@@ -983,7 +979,7 @@ public class UserServiceImpl implements UserService {
                 System.out.println("Fetched Secondary User's User Id: " + existingSecondaryUser.getUser().getUserId());
 
                 if (secondaryDetails != null) {
-                    if (secondaryDetails.getUserName() !=null){
+                    if (secondaryDetails.getUserName() != null) {
                         existingSecondaryUser.setUserName(secondaryDetails.getUserName());
                     }
                     if (secondaryDetails.getMobile() != null) {
@@ -998,7 +994,9 @@ public class UserServiceImpl implements UserService {
 
                 }
                 userAdapter.saveSecondaryDetails(existingSecondaryUser);
-            }else{System.out.println("User Role Id: "+existingUser.getRole().getRoleId());}
+            } else {
+                System.out.println("User Role Id: " + existingUser.getRole().getRoleId());
+            }
         }
         userAdapter.updateUser(existingUser);
         CacheEventPublisherUtil.syncReloadThenPublish(
@@ -1064,7 +1062,7 @@ public class UserServiceImpl implements UserService {
             // 2. Cache miss or Redis unavailable - load all into Redis (and also get fresh data)
             log.info("Cache miss for orgId={}, role={}. Loading from DB...", orgId, role);
             Map<String, List<UserResponseDto>> roleMap = cacheLoaderService.loadAllUsers(orgId).get();
-            log.info("rolemap:{}",roleMap);
+            log.info("rolemap:{}", roleMap);
             String loggedRole = roleField.toUpperCase();
             List<UserResponseDto> fallbackList = roleMap.get(loggedRole);
             if (fallbackList != null && !fallbackList.isEmpty()) {
@@ -1088,7 +1086,7 @@ public class UserServiceImpl implements UserService {
         if (!user.getOrganizationId().equals(orgId)) {
             throw new RuntimeException("Unauthorized");
         }
-        userAdapter.deactivateUserById(userId,orgId);
+        userAdapter.deactivateUserById(userId, orgId);
         CacheEventPublisherUtil.syncReloadThenPublish(
                 publisher,
                 cacheKeyConfig.getUsers(),
@@ -1129,9 +1127,9 @@ public class UserServiceImpl implements UserService {
         GroupEntity savedEntity = userAdapter.saveGroup(entity);
 
         for (String id : groupMiddleware.getSupervisorsId()) {
-            UserEntity user = userAdapter.findById(id).orElseThrow(()->new UsernameNotFoundException("User ID " + id + " not found."));
+            UserEntity user = userAdapter.findById(id).orElseThrow(() -> new UsernameNotFoundException("User ID " + id + " not found."));
 
-            createUserGroup(new UserGroup(savedEntity.getGroupId(), id, groupMiddleware.getType()),orgId);
+            createUserGroup(new UserGroup(savedEntity.getGroupId(), id, groupMiddleware.getType()), orgId);
 
         }
         CacheEventPublisherUtil.syncReloadThenPublish(
@@ -1174,7 +1172,7 @@ public class UserServiceImpl implements UserService {
 
         // Prepare message
         String addedMessage = addedUserNames.isEmpty()
-                ?""
+                ? ""
                 : "Successfully added users: " + String.join(", ", addedUserNames) + ".";
 
         String existsMessage = alreadyExistsUsers.isEmpty()
@@ -1205,7 +1203,7 @@ public class UserServiceImpl implements UserService {
         }
 
         UserGroupEntity entity = userEntityMapper.toEntity(userGroupMiddleware);
-        UserGroupEntity savedEntity=null;
+        UserGroupEntity savedEntity = null;
         savedEntity = userAdapter.saveUserGroup(entity);
 
         return userEntityMapper.toMiddleware(savedEntity);
@@ -1246,9 +1244,9 @@ public class UserServiceImpl implements UserService {
             existingGroup.setLocationEntity(locationEntity);
         }
 
-        if(addGroup.getWorkScheduleId() != null){
+        if (addGroup.getWorkScheduleId() != null) {
             WorkScheduleEntity workScheduleEntity = workScheduleAdapter.findByScheduleId(addGroup.getWorkScheduleId(), orgId);
-            if (workScheduleEntity == null){
+            if (workScheduleEntity == null) {
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND, "WorkSchedule Not found with ID: " + addGroup.getWorkScheduleId());
             }
             existingGroup.setWorkSchedule(workScheduleEntity);
@@ -1304,7 +1302,7 @@ public class UserServiceImpl implements UserService {
         // Build final message
         String conflictMessage = conflictMessages.isEmpty()
                 ? ""
-                :  String.join(", ", conflictMessages) + ".";
+                : String.join(", ", conflictMessages) + ".";
 
         String finalMessage = conflictMessage.trim();
 
@@ -1461,7 +1459,7 @@ public class UserServiceImpl implements UserService {
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Invalid type. Must start with 'm' or 's'."));
 
-        int updatedCount = userAdapter.updateUserGroupType(userGroup.getUserId(),userGroup.getGroupId(),type);
+        int updatedCount = userAdapter.updateUserGroupType(userGroup.getUserId(), userGroup.getGroupId(), type);
         return updatedCount > 0;
     }
 
@@ -1479,9 +1477,9 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public void deleteGroup(Long groupId, String orgId) {
-        boolean exist = teamRepository.existsByGroupIdAndOrganizationEntity_OrganizationId(groupId,orgId);
-        if(!exist){
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN,"Group not found or access denied");
+        boolean exist = teamRepository.existsByGroupIdAndOrganizationEntity_OrganizationId(groupId, orgId);
+        if (!exist) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Group not found or access denied");
         }
         userAdapter.deleteByGroupId(groupId);
         userAdapter.deleteGroup(groupId, orgId);
@@ -1509,17 +1507,17 @@ public class UserServiceImpl implements UserService {
                     .filter(r -> r.getHierarchyLevel() < studentHierarchyLevel && r.getHierarchyLevel() > superadminHierarchyLevel)
                     .toList();
             List<Integer> higherRoleIds = higherRoles.stream()
-                    .map(roles-> roles.getHierarchyLevel())
+                    .map(roles -> roles.getHierarchyLevel())
                     .toList();
-           return userAdapter.getMembersByRole(orgId, higherRoleIds).stream()
-                   .map(userEntityMapper::toMiddleware).toList();
+            return userAdapter.getMembersByRole(orgId, higherRoleIds).stream()
+                    .map(userEntityMapper::toMiddleware).toList();
         }
     }
 
     @Override
     public List<GroupDto> getUserGroups(String userId, String role, String orgId) {
         String roleName = role.replace("ROLE_", "");
-        if(RoleName.SUPERADMIN.getRoleName().equalsIgnoreCase(roleName)){
+        if (RoleName.SUPERADMIN.getRoleName().equalsIgnoreCase(roleName)) {
             List<GroupDto> Allgroup = userAdapter.getAllgroups(orgId);
             return Allgroup;
         }
@@ -1590,7 +1588,7 @@ public class UserServiceImpl implements UserService {
         // Case 1: groupIds is null or empty → return all active users
         if (groupIds == null || groupIds.isEmpty()) {
             int hierarchyLevel = UserRole.getLevel(role);
-            List<UserNameSuggestionDto> allUsers = userAdapter.getAllActiveUsers(orgId,hierarchyLevel);
+            List<UserNameSuggestionDto> allUsers = userAdapter.getAllActiveUsers(orgId, hierarchyLevel);
 
             return allUsers.stream()
                     .filter(user -> !user.getUserId().equals(loggedInUserId))  // Exclude logged-in user
@@ -1600,7 +1598,7 @@ public class UserServiceImpl implements UserService {
         log.info("Role: {}", role);
         if (RoleName.SUPERADMIN.getRoleName().equalsIgnoreCase(role)) {
             log.info("SuperAdmin role");
-            List<UserNameSuggestionDto> allUsers = userAdapter.getAllGroupUsers(groupIds,orgId);
+            List<UserNameSuggestionDto> allUsers = userAdapter.getAllGroupUsers(groupIds, orgId);
             List<UserNameSuggestionDto> groupMembers = allUsers.stream()
                     .collect(Collectors.toMap(
                             UserNameSuggestionDto::getUserId,
@@ -1642,10 +1640,12 @@ public class UserServiceImpl implements UserService {
             if (locationModel.isDefault()) {
                 locationRepository.resetDefaultLocation(orgId);
             }
-            // Save to DB — triggers @PostPersist in listener
             LocationEntity savedEntity = userAdapter.addLocation(locationModel);
             int roleId = UserRole.SUPERADMIN.getHierarchyLevel();
             UserEntity user = userAdapter.findUserByOrgIdAndRoleId(orgId, roleId);
+            if (user == null) {
+                throw new RuntimeException("No User found under the role Superadmin");
+            }
             log.info("User List in role Superadmin:{}", user);
             log.info("Adding user to newly created location");
             List<UserLocationEntity> userLocationEntities = new ArrayList<>();
@@ -1667,9 +1667,9 @@ public class UserServiceImpl implements UserService {
             );
             log.info("LocationCacheReloadEvent published after location Added");
             return locationEntityMapper.toDto(savedEntity);
-        }catch (DataIntegrityViolationException e){
+        } catch (DataIntegrityViolationException e) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Location '" + locationModel.getName() + "' already exists in this organization");
-            }
+        }
     }
 
     @Override
@@ -1680,7 +1680,7 @@ public class UserServiceImpl implements UserService {
 
         List<UserLocationEntity> userLocation = userAdapter.findUserLocationByUserId(userId);
 
-        if(userLocation.isEmpty()){
+        if (userLocation.isEmpty()) {
             throw new CommonExceptionHandler.NoUserLocationAssignedException(existingUser.getUserName());
         }
 
@@ -1699,9 +1699,9 @@ public class UserServiceImpl implements UserService {
     @Override
     public ResponseEntity<Resource> downloadSampleFile() {
         try {
-            Resource resource =new ClassPathResource("templates/Sample_Template.csv");
+            Resource resource = new ClassPathResource("templates/Sample_Template.csv");
 
-            if (! resource.exists()) {
+            if (!resource.exists()) {
                 return ResponseEntity.notFound().build();
             }
 
@@ -1709,7 +1709,7 @@ public class UserServiceImpl implements UserService {
             headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=Sample_Template.csv");
             return ResponseEntity.ok().headers(headers).contentLength(resource.contentLength())
                     .contentType(MediaType.APPLICATION_OCTET_STREAM).body(resource);
-    }catch (IOException e){
+        } catch (IOException e) {
             e.printStackTrace();
             return ResponseEntity.status(500).build();
         }
@@ -1739,9 +1739,9 @@ public class UserServiceImpl implements UserService {
         PrivilegeEntity privilegeEntity = userAdapter.findPrivilegeById(rolePrivilege.getPrivilegeId())
                 .orElseThrow(() -> new RuntimeException("Privilege not found"));
 
-        if(rolePrivilege.isType() == true) {
+        if (rolePrivilege.isType() == true) {
             role.getPrivilegeEntities().add(privilegeEntity);
-        }else{
+        } else {
             role.getPrivilegeEntities().remove(privilegeEntity);
         }
         userAdapter.saveRole(role);
@@ -1762,7 +1762,7 @@ public class UserServiceImpl implements UserService {
         if (locationIds == null || locationIds.isEmpty()) {
             throw new RuntimeException("No location IDs provided");
         }
-        if(location.isDefault() && location.getLocationId().size()> 1){
+        if (location.isDefault() && location.getLocationId().size() > 1) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Only one Location can be marked as Default"
             );
@@ -1775,7 +1775,7 @@ public class UserServiceImpl implements UserService {
         int count = 0;
         for (Long id : locationIds) {
             LocationEntity entity = userAdapter.findLocationById(id, orgId);
-            if(entity == null){
+            if (entity == null) {
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "No Location Found for the provided Location Id");
             }
@@ -1832,7 +1832,6 @@ public class UserServiceImpl implements UserService {
 
         Long defaultLocationId = defaultLocation.getLocationId();
 
-        // Update groups
         List<GroupEntity> groupsToUpdate = userAdapter.findByLocation_LocationIdIn(locationIdList);
         for (GroupEntity group : groupsToUpdate) {
             if (!group.getLocationEntity().getLocationId().equals(defaultLocationId)) {
@@ -1841,19 +1840,49 @@ public class UserServiceImpl implements UserService {
         }
         userAdapter.saveAllGroups(groupsToUpdate);
 
-        // Update users
         List<UserLocationEntity> userLocationsToUpdate = userAdapter.findUserLocationByLocationId(locationIdList);
-        for (UserLocationEntity userLoc : userLocationsToUpdate) {
-            if (!userLoc.getLocation().getLocationId().equals(defaultLocationId)) {
-                userLoc.setLocation(defaultLocation);
-            }
-        }
-        userAdapter.saveAllLocations(userLocationsToUpdate);
 
-        // Delete
+        log.info("User-Location entries to process: {}", userLocationsToUpdate.size());
+        if (userLocationsToUpdate.isEmpty()) return;
+
+        List<UserLocationEntity> userLocationsToDelete = new ArrayList<>();
+        List<UserLocationEntity> newUserLocationsToInsert = new ArrayList<>();
+
+        for (UserLocationEntity userLoc : userLocationsToUpdate) {
+            String userId = userLoc.getUser().getUserId();
+            Long currentLocationId = userLoc.getLocation().getLocationId();
+            log.info("User Current Location: {}", currentLocationId);
+            if (currentLocationId.equals(defaultLocationId)) {
+                userLocationsToDelete.add(userLoc);
+                continue;
+            }
+
+            boolean hasDefaultLocation = userAdapter
+                    .findUserLocationByUserId(userId)
+                    .stream()
+                    .map(loc -> loc.getLocation().getLocationId())
+                    .anyMatch(id -> id.equals(defaultLocationId));
+
+            if (!hasDefaultLocation) {
+                UserLocationEntity newUserLoc = new UserLocationEntity();
+                newUserLoc.setUser(userLoc.getUser());
+                newUserLoc.setLocation(defaultLocation);
+                newUserLocationsToInsert.add(newUserLoc);
+            }
+            userLocationsToDelete.add(userLoc);
+        }
+
+        if (!newUserLocationsToInsert.isEmpty()) {
+            userAdapter.saveAllUserLocation(newUserLocationsToInsert);
+        }
+
+        userAdapter.deleteAllUserLocations(userLocationsToDelete);
+
+        log.info("Successfully reassigned {} users to default location and deleted {} old mappings.",
+                newUserLocationsToInsert.size(), userLocationsToDelete.size());
+
         userAdapter.deleteLocation(locationIdList, orgId);
 
-        // Cache reload
         CacheEventPublisherUtil.syncReloadThenPublish(
                 publisher,
                 cacheKeyConfig.getLocation(),
@@ -1863,5 +1892,4 @@ public class UserServiceImpl implements UserService {
 
         log.info("Location deleted and references updated. Cache reloaded.");
     }
-
 }

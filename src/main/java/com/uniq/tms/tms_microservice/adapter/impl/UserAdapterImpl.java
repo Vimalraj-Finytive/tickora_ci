@@ -477,11 +477,6 @@ public class UserAdapterImpl implements UserAdapter {
     }
 
     @Override
-    public void saveAllLocations(List<UserLocationEntity> userLocationToUpdate) {
-        userLocationRepository.saveAll(userLocationToUpdate);
-    }
-
-    @Override
     public Optional<OrganizationEntity> findByOrgId(String orgId) {
         return organizationRepository.findByOrganizationId(orgId);
     }
@@ -538,5 +533,15 @@ public class UserAdapterImpl implements UserAdapter {
     @Override
     public OrganizationTypeEntity findOrgType(String orgType) {
         return organizationTypeRepository.findByorgType(orgType);
+    }
+
+    @Override
+    public void saveAllUserLocation(List<UserLocationEntity> newUserLocationsToInsert) {
+        userLocationRepository.saveAll(newUserLocationsToInsert);
+    }
+
+    @Override
+    public void deleteAllUserLocations(List<UserLocationEntity> userLocationsToDelete) {
+        userLocationRepository.deleteAll(userLocationsToDelete);
     }
 }
