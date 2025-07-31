@@ -1,14 +1,14 @@
 package com.uniq.tms.tms_microservice.listener;
 
-import com.uniq.tms.tms_microservice.event.LocationCacheReloadEvent;
-import com.uniq.tms.tms_microservice.event.PrivilegeCacheReloadEvent;
-import com.uniq.tms.tms_microservice.event.RolePrivilegesCacheReloadEvent;
-import com.uniq.tms.tms_microservice.event.UserCacheReloadEvent;
+import com.uniq.tms.tms_microservice.config.security.cache.CacheDependencyConfig;
+import com.uniq.tms.tms_microservice.config.security.cache.CacheReloadHandlerRegistry;
+import com.uniq.tms.tms_microservice.event.*;
 import com.uniq.tms.tms_microservice.service.CacheLoaderService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
+import java.util.List;
 
 @Component
 public class CacheReloadEventListener {
@@ -16,34 +16,25 @@ public class CacheReloadEventListener {
     private static final Logger log = LoggerFactory.getLogger(CacheReloadEventListener.class);
 
     private final CacheLoaderService cacheLoaderService;
+    private final CacheDependencyConfig cacheDependencyConfig;
+    private final CacheReloadHandlerRegistry cacheReloadHandlerRegistry;
 
-    public CacheReloadEventListener(CacheLoaderService cacheLoaderService) {
+    public CacheReloadEventListener(CacheLoaderService cacheLoaderService, CacheDependencyConfig cacheDependencyConfig, CacheReloadHandlerRegistry cacheReloadHandlerRegistry) {
         this.cacheLoaderService = cacheLoaderService;
+        this.cacheDependencyConfig = cacheDependencyConfig;
+        this.cacheReloadHandlerRegistry = cacheReloadHandlerRegistry;
     }
 
     @EventListener
-    public void userCacheReload(UserCacheReloadEvent event) {
-        log.info("Received UserCacheReloadEvent. Reloading user cache...");
-        cacheLoaderService.loadUserTable();
-    }
+    public void CacheReload(CacheReloadEvent event) {
+        log.info("Received CacheReloadEvent. Reloading cache...");
+        String cacheName = event.getCacheName();
+        String orgId = event.getOrgId();
 
-    @EventListener
-    public void locationCacheReload(LocationCacheReloadEvent event) {
-        log.info("Received LocationCacheReloadEvent. Reloading location cache...");
-        cacheLoaderService.loadLocationTable();
-    }
-
-    @EventListener
-    public void PrivilegeCacheReload(PrivilegeCacheReloadEvent event){
-        log.info("Received PrivilegeCacheReloadEvent. Reloading privilege cache...");
-        cacheLoaderService.loadPrivilegesFromDB();
-        cacheLoaderService.loadAllRolesToCache();
-    }
-
-    @EventListener
-    public void RolePrivilegeCacheReload(RolePrivilegesCacheReloadEvent event){
-        log.info("Received RolePrivilegesCacheReloadEvent. Reloading privilege cache...");
-        cacheLoaderService.loadPrivilegesFromDB();
-        cacheLoaderService.loadAllRolesToCache();
-    }
+        List<String> dependents = cacheDependencyConfig.getDependent(cacheName);
+        log.info("Dependents of cachename: {} are : {}", cacheName, dependents);
+        for (String dependent : dependents) {
+            log.info("Reloading dependent cache: {}", dependent);
+            cacheReloadHandlerRegistry.reload(dependent, orgId);
+        }    }
 }

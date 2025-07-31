@@ -7,7 +7,7 @@ public class DashboardDto {
 
     private LocalDate fromDate;
     private LocalDate toDate;
-    private Long userId;
+    private String userId;
     private List<Long> groupIds;
     private String Type;
 
@@ -27,11 +27,11 @@ public class DashboardDto {
         this.toDate = toDate;
     }
 
-    public Long getUserId() {
+    public String getUserId() {
         return userId;
     }
 
-    public void setUserId(Long userId) {
+    public void setUserId(String userId) {
         this.userId = userId;
     }
 

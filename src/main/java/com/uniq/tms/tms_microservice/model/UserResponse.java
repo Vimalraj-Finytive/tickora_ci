@@ -8,7 +8,7 @@ import java.util.List;
 
 public class UserResponse {
 
-    private Long userId;
+    private String userId;
     private String userName;
     private String email;
     private String mobileNumber;
@@ -18,25 +18,36 @@ public class UserResponse {
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate dateOfJoining;
     private SecondaryDetailsDto secondaryDetails;
+    private String scheduleName;
 
-    public UserResponse(Long userId, String userName, String email, String mobileNumber, String groupName, String roleName, String locationName, LocalDate dateOfJoining) {
+    public UserResponse(String userId, String userName, String email, String mobileNumber, String scheduleName, String groupName, String roleName,
+                        String locationName, LocalDate dateOfJoining,String secName, String secMobile, String secEmail, String relation) {
         this.userId = userId;
         this.userName = userName;
         this.email = email;
         this.mobileNumber = mobileNumber;
+        this.scheduleName = scheduleName;
         this.groupName = new ArrayList<>();
         this.groupName.add(groupName);
         this.roleName = roleName;
         this.locationName = new ArrayList<>();
         this.locationName.add(locationName);
         this.dateOfJoining = dateOfJoining;
+
+        if (secName != null && secMobile != null){
+            this.secondaryDetails = new SecondaryDetailsDto();
+            this.secondaryDetails.setUserName(secName);
+            this.secondaryDetails.setMobile(secMobile);
+            this.secondaryDetails.setEmail(secEmail);
+            this.secondaryDetails.setRelation(relation);
+        }
     }
 
-    public Long getUserId() {
+    public String getUserId() {
         return userId;
     }
 
-    public void setUserId(Long userId) {
+    public void setUserId(String userId) {
         this.userId = userId;
     }
 
@@ -102,5 +113,13 @@ public class UserResponse {
 
     public void setSecondaryDetails(SecondaryDetailsDto secondaryDetails) {
         this.secondaryDetails = secondaryDetails;
+    }
+
+    public String getScheduleName() {
+        return scheduleName;
+    }
+
+    public void setScheduleName(String scheduleName) {
+        this.scheduleName = scheduleName;
     }
 }

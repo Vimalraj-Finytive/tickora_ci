@@ -1,18 +1,21 @@
 package com.uniq.tms.tms_microservice.dto;
+
 import java.util.List;
 
 public class GroupResponseDto {
     private Long groupId;
     private String groupName;
     private String location;
+    private String workSchedule;
     private List<UserGroupDto> membersDetails;
 
     public GroupResponseDto() {}
 
-    public GroupResponseDto(Long groupId, String groupName, String location,  List<UserGroupDto> membersDetails) {
+    public GroupResponseDto(Long groupId, String groupName, String location, String workSchedule, List<UserGroupDto> membersDetails) {
         this.groupId = groupId;
         this.groupName = groupName;
         this.location = location;
+        this.workSchedule = workSchedule;
         this.membersDetails = membersDetails;
     }
 
@@ -42,5 +45,13 @@ public class GroupResponseDto {
 
     public void setGroupName(String groupName) {
         this.groupName = groupName;
+    }
+
+    public String getWorkSchedule() {
+        return workSchedule;
+    }
+
+    public void setWorkSchedule(String workSchedule) {
+        this.workSchedule = workSchedule;
     }
 }

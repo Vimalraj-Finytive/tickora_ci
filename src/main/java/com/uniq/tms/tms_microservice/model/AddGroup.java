@@ -6,19 +6,19 @@ public class AddGroup {
 
     private String groupName;
     private Long locationId;
-    private List<Long> supervisorsId;
+    private List<String> supervisorsId;
     private String type;
-    private Long workScheduleId;
+    private String workScheduleId;
 
     public String getType() {return type; }
 
     public void setType(String type) {this.type = type; }
 
-    public List<Long> getSupervisorsId() {
+    public List<String> getSupervisorsId() {
         return supervisorsId;
     }
 
-    public void setSupervisorsId(List<Long> supervisorsId) {
+    public void setSupervisorsId(List<String> supervisorsId) {
         this.supervisorsId = supervisorsId;
     }
 
@@ -38,11 +38,11 @@ public class AddGroup {
         this.locationId = locationId;
     }
 
-    public Long getWorkScheduleId() {
+    public String getWorkScheduleId() {
         return workScheduleId;
     }
 
-    public void setWorkScheduleId(Long workScheduleId) {
+    public void setWorkScheduleId(String workScheduleId) {
         this.workScheduleId = workScheduleId;
     }
 }

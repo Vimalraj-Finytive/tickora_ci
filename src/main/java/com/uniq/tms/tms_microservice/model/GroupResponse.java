@@ -8,6 +8,7 @@ public class GroupResponse {
     private Long groupId;
     private String groupName;
     private String location;
+    private String workSchedule;
     private List<Map<String, Object>> groupMember;
 
     public List<Map<String, Object>> getGroupMember() {
@@ -40,5 +41,13 @@ public class GroupResponse {
 
     public void setLocation(String location) {
         this.location = location;
+    }
+
+    public String getWorkSchedule() {
+        return workSchedule;
+    }
+
+    public void setWorkSchedule(String workSchedule) {
+        this.workSchedule = workSchedule;
     }
 }

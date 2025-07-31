@@ -1,22 +1,20 @@
 package com.uniq.tms.tms_microservice.dto;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-
 import java.util.List;
 
 public class AddGroupDto {
 
     private String groupName;
     private Long locationId;
-    private List<Long> supervisorsId;
+    private List<String> supervisorsId;
     private String type;
-    private Long workScheduleId;
+    private String workScheduleId;
 
-    public List<Long> getSupervisorsId() {
+    public List<String> getSupervisorsId() {
         return supervisorsId;
     }
 
-    public void setSupervisorsId(List<Long> supervisorsId) {
+    public void setSupervisorsId(List<String> supervisorsId) {
         this.supervisorsId = supervisorsId;
     }
 
@@ -42,11 +40,11 @@ public class AddGroupDto {
         this.locationId = locationId;
     }
 
-    public Long getWorkScheduleId() {
+    public String getWorkScheduleId() {
         return workScheduleId;
     }
 
-    public void setWorkScheduleId(Long workScheduleId) {
+    public void setWorkScheduleId(String workScheduleId) {
         this.workScheduleId = workScheduleId;
     }
 }

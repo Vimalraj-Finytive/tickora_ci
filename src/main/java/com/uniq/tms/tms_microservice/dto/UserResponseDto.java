@@ -7,7 +7,7 @@ import java.util.List;
 
 public class UserResponseDto {
 
-    private Long userId;
+    private String userId;
     private String userName;
     private String email;
     private String mobileNumber;
@@ -17,21 +17,32 @@ public class UserResponseDto {
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate dateOfJoining;
     private SecondaryDetailsDto secondaryDetails;
+    private String scheduleName;
 
     public UserResponseDto() {
     }
 
-    public UserResponseDto(Long userId, String userName, String email, String mobileNumber,List<String> groupName, String roleName, LocalDate dateOfJoining, List<String> locationName) {
+    public UserResponseDto(String userId, String userName, String email, String mobileNumber, String scheduleName,List<String> groupName,
+                           String roleName, LocalDate dateOfJoining, List<String> locationName, String secName, String secMobile, String secEmail, String relation) {
         this.userId = userId;
         this.userName = userName;
         this.email = email;
         this.mobileNumber = mobileNumber;
+        this.scheduleName = scheduleName;
         this.groupName = new ArrayList<>();
         this.groupName.addAll(groupName);
         this.roleName = roleName;
         this.dateOfJoining = dateOfJoining;
         this.locationName = new ArrayList<>();
         this.locationName.addAll(locationName);
+
+        if(secName!= null && secMobile != null){
+            this.secondaryDetails = new SecondaryDetailsDto();
+            this.secondaryDetails.setUserName(secName);
+            this.secondaryDetails.setMobile(secMobile);
+            this.secondaryDetails.setEmail(secEmail);
+            this.secondaryDetails.setRelation(relation);
+        }
     }
 
     public LocalDate getDateOfJoining() {
@@ -40,10 +51,10 @@ public class UserResponseDto {
     public void setDateOfJoining(LocalDate dateOfJoining) {
         this.dateOfJoining = dateOfJoining;
     }
-    public Long getUserId() {
+    public String getUserId() {
         return userId;
     }
-    public void setUserId(Long userId) {
+    public void setUserId(String userId) {
         this.userId = userId;
     }
     public String getUserName() {
@@ -87,5 +98,13 @@ public class UserResponseDto {
     }
     public void setSecondaryDetails(SecondaryDetailsDto secondaryDetails) {
         this.secondaryDetails = secondaryDetails;
+    }
+
+    public String getScheduleName() {
+        return scheduleName;
+    }
+
+    public void setScheduleName(String scheduleName) {
+        this.scheduleName = scheduleName;
     }
 }
