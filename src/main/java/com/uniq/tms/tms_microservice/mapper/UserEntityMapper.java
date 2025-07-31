@@ -18,6 +18,7 @@ public interface UserEntityMapper {
     Location toMiddleware(LocationEntity entity);
 
     @Mapping(target = "roleId", source = "role.roleId")
+    @Mapping(target = "workSchedule", source = "workSchedule.scheduleName")
     User toMiddleware(UserEntity entity);
 
     @Mapping(target = "password", ignore = true)
@@ -25,6 +26,9 @@ public interface UserEntityMapper {
     @Mapping(target = "defaultPassword", ignore = true)
     @Mapping(target = "role", expression = "java(user.getRoleId() != null ? new RoleEntity(user.getRoleId()) : null)")
 
+    @Mapping(target = "workSchedule.scheduleName", source = "workSchedule")
+    @Mapping(target = "workSchedule.type", ignore = true)
+    @Mapping(target = "workSchedule.scheduleId", source = "workSchedule")
     UserEntity toEntity(User user);
 
     @Mapping(target = "workSchedule", ignore = true)
@@ -36,15 +40,6 @@ public interface UserEntityMapper {
     @Mapping(target = "locationId", source = "locationEntity.locationId")
     @Mapping(target = "workScheduleId", source = "workSchedule.scheduleId")
     Group toMiddleware(GroupEntity entity);
-
-    @Mapping(target = "scheduleId", source = "scheduleId")
-    @Mapping(target = "scheduleName", source = "scheduleName")
-    @Mapping(target = "startTime", source = "startTime")
-    @Mapping(target = "endTime", source = "endTime")
-    @Mapping(target = "restDay", source = "restDay")
-    @Mapping(target = "type", source = "type")
-    @Mapping(target = "organizationId", source = "organizationEntity.organizationId")
-    WorkSchedule toMiddleware(WorkScheduleEntity workScheduleEntity);
 
     @Mapping(target = "type", ignore = true)
     @Mapping(target = "locationId", source = "locationEntity.locationId")
@@ -62,6 +57,8 @@ public interface UserEntityMapper {
     @Mapping(target = "group", expression = "java(new GroupEntity(userGroup.getGroupId()))")
     UserGroupEntity toEntity(UserGroup userGroup);
 
+    @Mapping(target = "workSchedule.scheduleName", source = "workSchedule")
+    @Mapping(target = "workSchedule.type", ignore = true)
     UserEntity toMiddleware(User user);
 
     Location toMiddleware(LocationDto locationDto);
@@ -69,4 +66,12 @@ public interface UserEntityMapper {
     PrivilegeEntity toEntity(Privilege privilegeModel);
 
     Privilege toModel(PrivilegeEntity privilege);
+
+    LocationEntity toEntity(Location location);
+
+    OrganizationEntity toEntity(Organization organization);
+
+    Organization toModel(OrganizationEntity organizationEntity);
+
+    OrganizationType toModel(OrganizationTypeEntity organizationType);
 }

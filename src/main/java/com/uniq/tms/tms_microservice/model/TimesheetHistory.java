@@ -13,7 +13,7 @@ public class TimesheetHistory {
     private LogType logType;
     private LogFrom logFrom;
     private LocalDateTime loggedTimestamp;
-    private Long userId;
+    private String userId;
     private LocalDate date;
 
     public Long getLocationId() {
@@ -56,11 +56,11 @@ public class TimesheetHistory {
         this.loggedTimestamp = loggedTimestamp;
     }
 
-    public Long getUserId() {
+    public String getUserId() {
         return userId;
     }
 
-    public void setUserId(Long userId) {
+    public void setUserId(String userId) {
         this.userId = userId;
     }
 

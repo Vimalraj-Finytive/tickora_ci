@@ -1,28 +1,19 @@
 package com.uniq.tms.tms_microservice.entity;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
-import java.time.LocalTime;
+import java.util.List;
 
 @Entity
 @Table(name = "work_schedule")
-public class WorkScheduleEntity  {
+public class WorkScheduleEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "schedule_id")
-    private Long scheduleId;
+    @Column(name = "work_schedule_id")
+    private String scheduleId;
 
-    @Column(name = "schedule_name", nullable = false, length = 100)
+    @Column(name = "work_schedule_name", nullable = false, length = 100)
     private String scheduleName;
-
-    @Column(name = "start_time", nullable = false)
-    private LocalTime startTime;
-
-    @Column(name = "end_time", nullable = false)
-    private LocalTime endTime;
-
-    @Column(name = "rest_day", length = 50)
-    private String restDay;
 
     @Column(name = "is_default", nullable = false)
     private Boolean isDefault = false;
@@ -30,33 +21,32 @@ public class WorkScheduleEntity  {
     @Column(name = "is_active", nullable = false)
     private Boolean isActive;
 
-    @Column(name = "type", nullable = false)
-    private  String type;
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "work_schedule_type", referencedColumnName = "type_id")
+    private WorkScheduleTypeEntity type;
 
     @ManyToOne(optional = false)
     @JoinColumn(name = "organization_id", nullable = false)
     private OrganizationEntity organizationEntity;
 
-    public WorkScheduleEntity() {
-    }
+    @OneToMany(mappedBy = "workScheduleEntity", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private List<FixedWorkScheduleEntity> fixedWorkSchedules;
 
-    public WorkScheduleEntity(Long scheduleId, String scheduleName, LocalTime startTime, LocalTime endTime, String restDay, Boolean isDefault, Boolean isActive, String type, OrganizationEntity organizationEntity) {
-        this.scheduleId = scheduleId;
-        this.scheduleName = scheduleName;
-        this.startTime = startTime;
-        this.endTime = endTime;
-        this.restDay = restDay;
-        this.isDefault = isDefault;
-        this.isActive = isActive;
-        this.type = type;
-        this.organizationEntity = organizationEntity;
-    }
+    @OneToMany(mappedBy = "workScheduleEntity", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private List<FlexibleWorkScheduleEntity> flexibleWorkSchedules;
 
-    public Long getScheduleId() {
+    @OneToOne(mappedBy = "workScheduleEntity", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private WeeklyWorkScheduleEntity weeklyWorkSchedule;
+
+    @OneToMany(mappedBy = "workSchedule", cascade = CascadeType.ALL)
+    @JsonManagedReference
+    private List<UserEntity> users;
+
+    public String getScheduleId() {
         return scheduleId;
     }
 
-    public void setScheduleId(Long scheduleId) {
+    public void setScheduleId(String scheduleId) {
         this.scheduleId = scheduleId;
     }
 
@@ -66,30 +56,6 @@ public class WorkScheduleEntity  {
 
     public void setScheduleName(String scheduleName) {
         this.scheduleName = scheduleName;
-    }
-
-    public LocalTime getStartTime() {
-        return startTime;
-    }
-
-    public void setStartTime(LocalTime startTime) {
-        this.startTime = startTime;
-    }
-
-    public LocalTime getEndTime() {
-        return endTime;
-    }
-
-    public void setEndTime(LocalTime endTime) {
-        this.endTime = endTime;
-    }
-
-    public String getRestDay() {
-        return restDay;
-    }
-
-    public void setRestDay(String restDay) {
-        this.restDay = restDay;
     }
 
     public Boolean getDefault() {
@@ -108,11 +74,11 @@ public class WorkScheduleEntity  {
         isActive = active;
     }
 
-    public String getType() {
+    public WorkScheduleTypeEntity getType() {
         return type;
     }
 
-    public void setType(String type) {
+    public void setType(WorkScheduleTypeEntity type) {
         this.type = type;
     }
 
@@ -122,5 +88,37 @@ public class WorkScheduleEntity  {
 
     public void setOrganizationEntity(OrganizationEntity organizationEntity) {
         this.organizationEntity = organizationEntity;
+    }
+
+    public List<FixedWorkScheduleEntity> getFixedWorkSchedules() {
+        return fixedWorkSchedules;
+    }
+
+    public void setFixedWorkSchedules(List<FixedWorkScheduleEntity> fixedWorkSchedules) {
+        this.fixedWorkSchedules = fixedWorkSchedules;
+    }
+
+    public List<FlexibleWorkScheduleEntity> getFlexibleWorkSchedules() {
+        return flexibleWorkSchedules;
+    }
+
+    public void setFlexibleWorkSchedules(List<FlexibleWorkScheduleEntity> flexibleWorkSchedules) {
+        this.flexibleWorkSchedules = flexibleWorkSchedules;
+    }
+
+    public WeeklyWorkScheduleEntity getWeeklyWorkSchedule() {
+        return weeklyWorkSchedule;
+    }
+
+    public void setWeeklyWorkSchedule(WeeklyWorkScheduleEntity weeklyWorkSchedule) {
+        this.weeklyWorkSchedule = weeklyWorkSchedule;
+    }
+
+    public List<UserEntity> getUsers() {
+        return users;
+    }
+
+    public void setUsers(List<UserEntity> users) {
+        this.users = users;
     }
 }

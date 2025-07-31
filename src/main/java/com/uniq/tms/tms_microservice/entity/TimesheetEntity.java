@@ -1,12 +1,7 @@
 package com.uniq.tms.tms_microservice.entity;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -19,7 +14,7 @@ public class TimesheetEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    private Long userId;
+    private String userId;
     private LocalDate date;
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "HH:mm")
     private LocalTime firstClockIn;
@@ -42,7 +37,9 @@ public class TimesheetEntity {
     @OneToMany(mappedBy = "timesheet")
     public List<TimesheetHistoryEntity> timesheetHistoryEntities;
 
-    private Long statusId;
+    @ManyToOne
+    @JoinColumn(name = "status_id")
+    private TimesheetStatusEntity status;
 
     public List<TimesheetHistoryEntity> getTimesheetHistoryEntities() {
         return timesheetHistoryEntities;
@@ -60,11 +57,11 @@ public class TimesheetEntity {
         this.id = id;
     }
 
-    public Long getUserId() {
+    public String getUserId() {
         return userId;
     }
 
-    public void setUserId(Long userId) {
+    public void setUserId(String userId) {
         this.userId = userId;
     }
 
@@ -132,11 +129,11 @@ public class TimesheetEntity {
         this.totalBreakHours = totalBreakHours;
     }
 
-    public Long getStatusId() {
-        return statusId;
+    public TimesheetStatusEntity getStatus() {
+        return status;
     }
 
-    public void setStatusId(Long statusId) {
-        this.statusId = statusId;
+    public void setStatus(TimesheetStatusEntity status) {
+        this.status = status;
     }
 }

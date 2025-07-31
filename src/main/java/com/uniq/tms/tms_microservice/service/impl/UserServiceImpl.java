@@ -1,15 +1,14 @@
 package com.uniq.tms.tms_microservice.service.impl;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.uniq.tms.tms_microservice.adapter.TimesheetAdapter;
 import com.uniq.tms.tms_microservice.adapter.UserAdapter;
-import com.uniq.tms.tms_microservice.adapter.WorkScheduleAapter;
+import com.uniq.tms.tms_microservice.adapter.WorkScheduleAdapter;
+import com.uniq.tms.tms_microservice.config.security.cache.CacheKeyConfig;
+import com.uniq.tms.tms_microservice.config.security.cache.CacheReloadHandlerRegistry;
 import com.uniq.tms.tms_microservice.dto.AddGroupDto;
 import com.uniq.tms.tms_microservice.dto.GroupDto;
 import com.uniq.tms.tms_microservice.dto.GroupResponseDto;
-import com.uniq.tms.tms_microservice.dto.UserGroupDto;
 import com.uniq.tms.tms_microservice.dto.UserRole;
 import com.uniq.tms.tms_microservice.entity.GroupEntity;
 import com.uniq.tms.tms_microservice.entity.LocationEntity;
@@ -18,9 +17,6 @@ import com.uniq.tms.tms_microservice.entity.TimesheetEntity;
 import com.uniq.tms.tms_microservice.entity.UserEntity;
 import com.uniq.tms.tms_microservice.entity.UserGroupEntity;
 import com.uniq.tms.tms_microservice.entity.WorkScheduleEntity;
-import com.uniq.tms.tms_microservice.event.LocationCacheReloadEvent;
-import com.uniq.tms.tms_microservice.event.PrivilegeCacheReloadEvent;
-import com.uniq.tms.tms_microservice.event.RolePrivilegesCacheReloadEvent;
 import com.uniq.tms.tms_microservice.exception.CommonExceptionHandler;
 import com.uniq.tms.tms_microservice.mapper.LocationEntityMapper;
 import com.uniq.tms.tms_microservice.mapper.UserDtoMapper;
@@ -31,16 +27,12 @@ import com.uniq.tms.tms_microservice.entity.*;
 import com.uniq.tms.tms_microservice.mapper.SecondaryDetailsMapper;
 import com.uniq.tms.tms_microservice.model.Privilege;
 import com.uniq.tms.tms_microservice.model.Role;
-import com.uniq.tms.tms_microservice.repository.LocationRepository;
-import com.uniq.tms.tms_microservice.repository.OrganizationRepository;
-import com.uniq.tms.tms_microservice.repository.RoleRepository;
-import com.uniq.tms.tms_microservice.repository.TeamRepository;
+import com.uniq.tms.tms_microservice.repository.*;
 import com.uniq.tms.tms_microservice.service.CacheLoaderService;
+import com.uniq.tms.tms_microservice.service.IdGenerationService;
 import com.uniq.tms.tms_microservice.service.UserService;
-import com.uniq.tms.tms_microservice.util.CacheKeyUtil;
-import com.uniq.tms.tms_microservice.util.EmailUtil;
-import com.uniq.tms.tms_microservice.util.PasswordUtil;
-import com.uniq.tms.tms_microservice.util.TextUtil;
+import com.uniq.tms.tms_microservice.util.*;
+import jakarta.annotation.Nullable;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Validator;
@@ -72,6 +64,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import com.opencsv.CSVReader;
@@ -89,17 +82,27 @@ public class UserServiceImpl implements UserService {
     private final LocationRepository locationRepository;
     private final EmailUtil emailUtil;
     private final UserDtoMapper userDtoMapper;
-    private final ObjectMapper objectMapper;
     private final SecondaryDetailsMapper secondaryDetailsMapper;
-    private final WorkScheduleAapter workScheduleAdapter;
+    private final WorkScheduleAdapter workScheduleAdapter;
     private final RedisTemplate<String, Object> redisTemplate;
     private final LocationEntityMapper locationEntityMapper;
     private final CacheLoaderService cacheLoaderService;
     private final ApplicationEventPublisher publisher;
     private final CacheKeyUtil cacheKeyUtil;
     private final TeamRepository teamRepository;
+    private final CacheKeyConfig cacheKeyConfig;
+    private final CacheReloadHandlerRegistry cacheReloadHandlerRegistry;
+    private final OrganizationTypeRepository organizationTypeRepository;
+    private final IdGenerationService idGenerationService;
 
-    public UserServiceImpl(Validator validator, UserAdapter userAdapter, TimesheetAdapter timesheetAdapter, UserEntityMapper userEntityMapper, OrganizationRepository organizationRepository, RoleRepository roleRepository, LocationRepository locationRepository, EmailUtil emailUtil, UserDtoMapper userDtoMapper, ObjectMapper objectMapper, SecondaryDetailsMapper secondaryDetailsMapper, RedisTemplate<String, Object> redisTemplate, LocationEntityMapper locationEntityMapper, CacheLoaderService cacheLoaderService, ApplicationEventPublisher publisher, WorkScheduleAapter workScheduleAdapter, CacheKeyUtil cacheKeyUtil, TeamRepository teamRepository) {
+    public UserServiceImpl(Validator validator, UserAdapter userAdapter, TimesheetAdapter timesheetAdapter,
+                           UserEntityMapper userEntityMapper, OrganizationRepository organizationRepository,
+                           RoleRepository roleRepository, LocationRepository locationRepository, EmailUtil emailUtil,
+                           UserDtoMapper userDtoMapper, SecondaryDetailsMapper secondaryDetailsMapper,
+                           @Nullable RedisTemplate<String, Object> redisTemplate, LocationEntityMapper locationEntityMapper,
+                           CacheLoaderService cacheLoaderService, ApplicationEventPublisher publisher, WorkScheduleAdapter workScheduleAdapter,
+                           CacheKeyUtil cacheKeyUtil, TeamRepository teamRepository, CacheKeyConfig cacheKeyConfig, CacheReloadHandlerRegistry cacheReloadHandlerRegistry,
+                           OrganizationTypeRepository organizationTypeRepository, IdGenerationService idGenerationService) {
         this.validator = validator;
         this.userAdapter = userAdapter;
         this.timesheetAdapter = timesheetAdapter;
@@ -109,7 +112,6 @@ public class UserServiceImpl implements UserService {
         this.locationRepository = locationRepository;
         this.emailUtil = emailUtil;
         this.userDtoMapper = userDtoMapper;
-        this.objectMapper = objectMapper;
         this.secondaryDetailsMapper = secondaryDetailsMapper;
         this.workScheduleAdapter = workScheduleAdapter;
         this.redisTemplate = redisTemplate;
@@ -118,62 +120,82 @@ public class UserServiceImpl implements UserService {
         this.publisher = publisher;
         this.cacheKeyUtil = cacheKeyUtil;
         this.teamRepository = teamRepository;
+        this.cacheKeyConfig = cacheKeyConfig;
+        this.cacheReloadHandlerRegistry = cacheReloadHandlerRegistry;
+        this.organizationTypeRepository = organizationTypeRepository;
+        this.idGenerationService = idGenerationService;
     }
 
-    private static final  Logger log = LoggerFactory.getLogger(UserServiceImpl.class);
+    private static final Logger log = LoggerFactory.getLogger(UserServiceImpl.class);
 
     @Value("${csv.upload.dir}")
     private String uploadDir;
-    @Value("${CACHE_LOCATION}")
-    private String location;
 
     @Override
-    public List<Role> getAllRole(Long orgId, String role) {
-
+    public List<Role> getAllRole(String orgId, String role) {
         if (role != null && role.startsWith("ROLE_")) {
             role = role.substring(5);
         }
+
         int hierarchyLevel = UserRole.getLevel(role);
-        List<Role> roles = userAdapter.getAllRole(orgId, hierarchyLevel)
-                .stream()
+
+        // Step 1: Get orgType from orgId
+        String orgTypeId = organizationRepository.findOrgTypeByOrganizationId(orgId);
+        OrganizationTypeEntity orgType = organizationTypeRepository.findById(orgTypeId).orElseThrow(() ->
+                new RuntimeException("Org Type not found for id: " + orgTypeId));
+        log.info("Org type:{}", orgType);
+        // Step 2: Get roles above current hierarchy level
+        List<RoleEntity> roleEntities = userAdapter.getAllRole(hierarchyLevel);
+
+        // Step 3: Filter STUDENT if org type is not ACADEMIC
+        if (!"ACADEMIC".equalsIgnoreCase(orgType.getOrgTypeName())) {
+            roleEntities = roleEntities.stream()
+                    .filter(r -> !RoleName.STUDENT.getRoleName().equalsIgnoreCase(r.getName()))
+                    .toList();
+        }
+
+        // Step 4: Map to middleware
+        return roleEntities.stream()
                 .map(userEntityMapper::toMiddleware)
                 .toList();
-        return roles;
     }
 
+
     @Override
-    public List<Group> getAllGroup(Long orgId) {
+    public List<Group> getAllGroup(String orgId) {
         List<Group> groups = userAdapter.getAllGroup(orgId).stream().map(userEntityMapper::toMiddleware).toList();
         return groups;
     }
 
     @Override
-    public List<Location> getAllLocation(Long orgId) {
+    public List<Location> getAllLocation(String orgId) {
+        String redisKey = cacheKeyUtil.getLocationKey(orgId);
         CachedData<Location> cachedData = null;
 
-        try {
-            cachedData = (CachedData<Location>) redisTemplate.opsForValue().get(location);
-        } catch (Exception redisException) {
-            log.warn("Redis not available or cache fetch failed: {}", redisException.getMessage());
+        // Only try Redis if redisTemplate is not null
+        if (redisTemplate != null) {
+            try {
+                cachedData = (CachedData<Location>) redisTemplate.opsForValue().get(redisKey);
+            } catch (Exception redisException) {
+                log.warn("Redis not available or cache fetch failed: {}", redisException.getMessage());
+            }
+        } else {
+            log.warn("RedisTemplate is null, skipping cache fetch for key: {}", redisKey);
         }
 
         try {
             if (cachedData != null && cachedData.getData() != null) {
-                log.info("Cache hit for key: locations Cache called");
-                return cachedData.getData().stream()
-                        .filter(location -> location.getOrgId() != null && location.getOrgId().equals(orgId))
-                        .toList();
+                log.info("Cache hit for key orgId: {} locations Cache called", orgId);
+                return cachedData.getData();
             }
 
             log.info("Cache missing for key: locations, DB Called");
 
             // Load and cache if missing
-            List<Location> locations = cacheLoaderService.loadLocationTable().get();
+            List<Location> locations = cacheLoaderService.loadLocationTable(orgId).get();
             log.info("Total locations fetched from DB: {}", locations.size());
             locations.forEach(loc -> log.info("Location ID: {}, Org ID: {}", loc.getLocationId(), loc.getOrgId()));
-            return locations.stream()
-                    .filter(location -> location.getOrgId() != null && location.getOrgId().equals(orgId))
-                    .toList();
+            return locations;
 
         } catch (Exception e) {
             log.error("Error loading data from DB/cache: {}", e.getMessage(), e);
@@ -181,8 +203,9 @@ public class UserServiceImpl implements UserService {
         }
     }
 
+
     @Override
-    public ApiResponse bulkCreateUsers(MultipartFile file, Long orgId, Long userId) {
+    public ApiResponse bulkCreateUsers(MultipartFile file, String orgId, String userId) {
         log.info("Checking work flow for create user");
         String contentType = file.getContentType();
         String fileName = file.getOriginalFilename();
@@ -198,13 +221,12 @@ public class UserServiceImpl implements UserService {
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
-        }
-        else {
+        } else {
             throw new RuntimeException("Unsupported file type. Only CSV files are supported.");
         }
     }
 
-    public ApiResponse processCsvFileFromPath(String filePath, Long orgId, Long userId) {
+    public ApiResponse processCsvFileFromPath(String filePath, String orgId, String userId) {
         File file = new File(filePath);
         if (!file.exists()) throw new RuntimeException("CSV file not found: " + filePath);
 
@@ -215,285 +237,326 @@ public class UserServiceImpl implements UserService {
         }
     }
 
-    public ApiResponse processCsvFile(InputStream inputStream, String originalFileName, Long orgId, Long userId) {
+    public ApiResponse processCsvFile(InputStream inputStream, String originalFileName, String orgId, String userId) {
 
         UserEntity userFromToken = userAdapter.findUserByOrgIdAndUserId(orgId, userId);
         log.info("Starting processing for file: {}", originalFileName);
-            long startTime = System.currentTimeMillis();
+        long startTime = System.currentTimeMillis();
 
-            List<UserEntity> userEntities = new ArrayList<>();
-            List<SecondaryDetailsEntity> secondaryDetailsEntities = new ArrayList<>();
-            List<EmailData> emailRequests = new ArrayList<>();
-            List<String> successList = new ArrayList<>();
-            Map<UserEntity, List<Long>> userGroupMappings = new HashMap<>();
-            Map<UserEntity, List<Long>> userLocationMappings = new HashMap<>();
+        List<UserEntity> userEntities = new ArrayList<>();
+        List<SecondaryDetailsEntity> secondaryDetailsEntities = new ArrayList<>();
+        List<EmailData> emailRequests = new ArrayList<>();
+        List<String> successList = new ArrayList<>();
+        Map<UserEntity, List<Long>> userGroupMappings = new HashMap<>();
+        Map<UserEntity, List<Long>> userLocationMappings = new HashMap<>();
 
-            int uploadedCount = 0, skippedCount = 0;
+        int uploadedCount = 0, skippedCount = 0;
 
-            List<Map<String, Object>> skippedRows = new ArrayList<>();
-            int rowNumber = 1;
+        List<Map<String, Object>> skippedRows = new ArrayList<>();
+        int rowNumber = 1;
 
         try {
-                // Preload data
-                Set<String> existingMobiles = userAdapter.getAllMobileNumbers();
-                Set<String> existingEmails = userAdapter.getAllEmails();
-                Set<String> existingSecMobiles = userAdapter.getAllSecondaryMobile();
-                Set<String> existingSecEmails = userAdapter.getAllSecondaryEmail();
-                Map<String, Long> roleMap = userAdapter.getRoleNameIdMap();
-                Map<String, Long> locationMap = userAdapter.getLocationNameToIdMap();
-                Map<String, Long> groupMap = userAdapter.getGroupNameIdMap();
-                UserEntity userEntity = new UserEntity();
-                // Expected headers
-                List<String> expectedHeaders = List.of(
-                        "username", "email", "mobilenumber", "rolename", "locationname", "dateofjoining",
-                        "secondaryusername", "secondarymobile", "secondaryemail", "relation", "groupname"
-                );
+            // Preload data
+            log.info("Fetching existing mobile numbers for orgId: {}", orgId);
+            Set<String> existingMobiles = userAdapter.getAllMobileNumbers(orgId);
+            log.info("Fetched {} existing mobile numbers: {}", existingMobiles.size(), existingMobiles);
 
-                try (CSVReader reader = new CSVReader(new InputStreamReader(inputStream))) {
-                    String[] headerRow = reader.readNext();
-                    if (headerRow == null) throw new RuntimeException("Missing header row");
-                    validateFixedHeaders(headerRow, expectedHeaders);
+            log.info("Fetching existing email addresses for orgId: {}", orgId);
+            Set<String> existingEmails = userAdapter.getAllEmails(orgId);
+            log.info("Fetched {} existing emails: {}", existingEmails.size(), existingEmails);
 
-                    String[] row;
-                    while ((row = reader.readNext()) != null) {
-                        if (row.length < expectedHeaders.size()) {
+            log.info("Fetching existing secondary mobile numbers for orgId: {}", orgId);
+            Set<String> existingSecMobiles = userAdapter.getAllSecondaryMobile(orgId);
+            log.info("Fetched {} secondary mobile numbers: {}", existingSecMobiles.size(), existingSecMobiles);
+
+            log.info("Fetching existing secondary emails for orgId: {}", orgId);
+            Set<String> existingSecEmails = userAdapter.getAllSecondaryEmail(orgId);
+            log.info("Fetched {} secondary emails: {}", existingSecEmails.size(), existingSecEmails);
+
+            log.info("Fetching role name to ID map for orgId: {}", orgId);
+            Map<String, Long> roleMap = userAdapter.getRoleNameIdMap();
+            log.info("Fetched {} role entries: {}", roleMap.size(), roleMap);
+
+            log.info("Fetching location name to ID map for orgId: {}", orgId);
+            Map<String, Long> locationMap = userAdapter.getLocationNameToIdMap(orgId);
+            log.info("Fetched {} location entries: {}", locationMap.size(), locationMap);
+
+            log.info("Fetching group name to ID map for orgId: {}", orgId);
+            Map<String, Long> groupMap = userAdapter.getGroupNameIdMap(orgId);
+            log.info("Fetched {} group entries: {}", groupMap.size(), groupMap);
+
+            log.info("Fetching work schedule map for orgId: {}", orgId);
+            Map<String, String> workScheduleMap = workScheduleAdapter.getAllSchedules(orgId);
+            log.info("Fetched {} work schedules: {}", workScheduleMap.size(), workScheduleMap);
+
+            UserEntity userEntity = new UserEntity();
+            // Expected headers
+            List<String> expectedHeaders = List.of(
+                    "username", "email", "mobilenumber", "rolename", "locationname", "dateofjoining",
+                    "secondaryusername", "secondarymobile", "secondaryemail", "relation", "groupname", "workschedule"
+            );
+
+            try (CSVReader reader = new CSVReader(new InputStreamReader(inputStream))) {
+                String[] headerRow = reader.readNext();
+                if (headerRow == null) throw new RuntimeException("Missing header row");
+                validateFixedHeaders(headerRow, expectedHeaders);
+
+                String[] row;
+                while ((row = reader.readNext()) != null) {
+                    if (row.length < expectedHeaders.size()) {
+                        skippedRows.add(Map.of(
+                                "rowNumber", rowNumber,
+                                "data", Arrays.asList(row),
+                                "reason", "Incomplete row"
+                        ));
+                        skippedCount++;
+                        rowNumber++;
+                        continue;
+                    }
+
+                    String username = row[0].trim();
+                    String email = row[1].trim();
+                    String mobile = row[2].trim();
+                    String roleName = row[3].trim();
+                    String locationName = row[4].trim();
+                    String doj = row[5].trim();
+                    String secName = row[6].trim();
+                    String secMobile = row[7].trim();
+                    String secEmail = row[8].trim();
+                    String relation = row[9].trim();
+                    String groupName = row[10].trim();
+                    String workSchedule = row[11].trim();
+
+                    Long roleId = roleMap.get(roleName.toLowerCase());
+                    log.info("RL ID:{}", roleId);
+                    String scheduleId = workScheduleMap.get(workSchedule.toLowerCase());
+                    log.info("ES ID:{}", scheduleId);
+                    Long locationId = null;
+                    List<Long> locationIds = new ArrayList<>();
+                    if (!isBlank(locationName)) {
+                        String[] locationList = locationName.split(",");
+                        log.info("locationList" + ":" + locationList);
+                        boolean invalidLocationFound = false;
+                        for (String location : locationList) {
+                            String trimmedLocation = location.trim().toLowerCase();
+                            locationId = locationMap.get(trimmedLocation);
+                            if (isBlank(locationId)) {
+                                invalidLocationFound = true;
+                                break;
+                            }
+                            locationIds.add(locationId);
+                        }
+
+                        if (invalidLocationFound || locationIds.isEmpty()) {
                             skippedRows.add(Map.of(
                                     "rowNumber", rowNumber,
                                     "data", Arrays.asList(row),
-                                    "reason", "Incomplete row"
+                                    "reason", "Location not found or invalid: " + locationName
                             ));
                             skippedCount++;
                             rowNumber++;
                             continue;
-                        }
-
-                        String username = row[0].trim();
-                        String email = row[1].trim();
-                        String mobile = row[2].trim();
-                        String roleName = row[3].trim();
-                        String locationName = row[4].trim();
-                        String doj = row[5].trim();
-                        String secName = row[6].trim();
-                        String secMobile = row[7].trim();
-                        String secEmail = row[8].trim();
-                        String relation = row[9].trim();
-                        String groupName = row[10].trim();
-
-                        Long roleId = roleMap.get(roleName.toLowerCase());
-                        Long locationId = null;
-                        List<Long> locationIds = new ArrayList<>();
-                        if(!isBlank(locationName))
-                        {
-                            String[] locationList = locationName.split(",");
-                            log.info("locationList" + ":" + locationList);
-                            boolean invalidLocationFound = false;
-                            for (String location : locationList) {
-                                String trimmedLocation = location.trim().toLowerCase();
-                                locationId = locationMap.get(trimmedLocation);
-                                if (isBlank(locationId)) {
-                                    invalidLocationFound = true;
-                                    break;
-                                }
-                                locationIds.add(locationId);
-                            }
-
-                            if (invalidLocationFound || locationIds.isEmpty()) {
-                                skippedRows.add(Map.of(
-                                        "rowNumber", rowNumber,
-                                        "data", Arrays.asList(row),
-                                        "reason", "Location not found or invalid: " + locationName
-                                ));
-                                skippedCount++;
-                                rowNumber++;
-                                continue;
-                            }
-                        }
-
-
-                        Long groupId = null;
-                        List<Long> groupIds = new ArrayList<>();
-                        if(!isBlank(groupName)){
-                            String[] groupList = groupName.split(",");
-                            log.info("groupList" + ":" + groupList);
-                            for(String group : groupList){
-                                String trimmedGroup = group.trim().toLowerCase();
-                                groupId = groupMap.get(trimmedGroup);
-                                if (isBlank(groupId)) {
-                                    skippedRows.add(Map.of(
-                                            "rowNumber", rowNumber,
-                                            "data", Arrays.asList(row),
-                                            "reason", "Group not found" + trimmedGroup
-                                    ));
-                                    continue;
-                                }
-                                groupIds.add(groupId);
-                            }
-                        }
-
-                        if (isBlank(email) || isBlank(mobile) || isBlank(roleId)  || isBlank(doj)) {
-                            skippedRows.add(Map.of(
-                                    "rowNumber", rowNumber,
-                                    "data", Arrays.asList(row),
-                                    "reason", "Mandatory fields  are missing"
-                            ));
-                            skippedCount++;
-                            rowNumber++;
-                            continue;
-                        }
-
-                        log.info("Rolename in csv", roleName);
-                        String key = cacheLoaderService.getPrivilegeKey(PrivilegeConstants.HAVE_SECONDARY_DETAILS);
-                        boolean hasSecondaryDetailsPrivilege = cacheKeyUtil.roleHasPrivilege(roleName, key);
-
-                        // Validate primary email/mobile
-                        if (existingEmails.contains(email) || existingMobiles.contains(mobile)) {
-                            skippedRows.add(Map.of(
-                                    "rowNumber", rowNumber,
-                                    "data", Arrays.asList(row),
-                                    "reason", "Email or mobile number already exists"
-                            ));
-                            skippedCount++;
-                            continue;
-                        }
-
-                        if (hasSecondaryDetailsPrivilege) {
-                            // Skip if any of the required secondary fields are missing
-                            if (isBlank(secMobile) || isBlank(relation)){
-                                skippedRows.add(Map.of(
-                                        "rowNumber", rowNumber,
-                                        "data", Arrays.asList(row),
-                                        "reason", "Secondary fields are missing"
-                                ));
-                                skippedCount++;
-                                rowNumber++;
-                                continue;
-                            }
-
-                            // Skip if all secondary fields are empty
-                            if (isBlank(secMobile) && isBlank(relation)) {
-                                skippedRows.add(Map.of(
-                                        "rowNumber", rowNumber,
-                                        "data", Arrays.asList(row),
-                                        "reason", "All Secondary fields are missing"
-                                ));
-                                skippedCount++;
-                                rowNumber++;
-                                continue;
-                            }
-
-                            // Check secondary mobile/email duplication
-                            if (existingMobiles.contains(secMobile) || existingSecMobiles.contains(secMobile)
-                                    || existingEmails.contains(secEmail) || existingSecEmails.contains(secEmail)) {
-                                skippedRows.add(Map.of(
-                                        "rowNumber", rowNumber,
-                                        "data", Arrays.asList(row),
-                                        "reason", "Secondary email or mobile number already exists"
-                                ));
-                                skippedCount++;
-                                rowNumber++;
-                                continue;
-                            }
-
-                            // Check if student and secondary mobile are same
-                            if (mobile.equals(secMobile)) {
-                                skippedRows.add(Map.of(
-                                        "rowNumber", rowNumber,
-                                        "data", Arrays.asList(row),
-                                        "reason", "Same primary and secondary mobile number"
-                                ));
-                                skippedCount++;
-                                rowNumber++;
-                                continue;
-                            }
-                        }
-
-                        // Create and validate user DTO
-                        UserDto userDto = new UserDto();
-                        userDto.setUserName(username);
-                        userDto.setEmail(email);
-                        userDto.setMobileNumber(mobile);
-                        userDto.setRoleId(roleId);
-                        userDto.setIsRegisterUser(false);
-                        userDto.setDateOfJoining(parseDate(doj));
-
-                        if (!validator.validate(userDto).isEmpty()) {
-                            skippedRows.add(Map.of(
-                                    "rowNumber", rowNumber,
-                                    "data", Arrays.asList(row),
-                                    "reason", "Invalid data"
-                            ));
-                            skippedCount++;
-                            rowNumber++;
-                            continue;
-                        }
-
-                        // Create and store user
-                        String defaultPass = PasswordUtil.generateDefaultPassword();
-                        userEntity = createUserEntity(userDto, orgId, defaultPass);
-                        userEntities.add(userEntity);
-                        successList.add(username);
-                        emailRequests.add(new EmailData(email, userDto.getUserName(), defaultPass, userDto.isRegisterUser()));
-
-                        uploadedCount++;
-
-                        existingEmails.add(email);
-                        existingMobiles.add(mobile);
-
-                        // Group mapping
-                        userGroupMappings.computeIfAbsent(userEntity, k -> new ArrayList<>())
-                                .addAll(groupIds);
-
-                        //Location Mapping
-                        userLocationMappings.computeIfAbsent(userEntity, k -> new ArrayList<>())
-                                .addAll(locationIds);
-                        // Save secondary details if student
-                        if (hasSecondaryDetailsPrivilege) {
-                            String secondaryEmail = TextUtil.trim(secEmail);
-                            SecondaryDetailsEntity secDetails = createSecondaryDetails(userEntity, secMobile, secondaryEmail, secName, relation);
-                            secondaryDetailsEntities.add(secDetails);
-                            existingSecMobiles.add(secMobile);
-                            existingSecEmails.add(secondaryEmail);
                         }
                     }
+
+
+                    Long groupId = null;
+                    List<Long> groupIds = new ArrayList<>();
+                    if (!isBlank(groupName)) {
+                        String[] groupList = groupName.split(",");
+                        log.info("groupList" + ":" + groupList);
+                        for (String group : groupList) {
+                            String trimmedGroup = group.trim().toLowerCase();
+                            groupId = groupMap.get(trimmedGroup);
+                            if (isBlank(groupId)) {
+                                skippedRows.add(Map.of(
+                                        "rowNumber", rowNumber,
+                                        "data", Arrays.asList(row),
+                                        "reason", "Group not found" + trimmedGroup
+                                ));
+                                continue;
+                            }
+                            groupIds.add(groupId);
+                        }
+                    }
+
+                    if (!isBlank(workSchedule)) {
+                        String workScheduleId = workScheduleMap.get(workSchedule.trim());
+                        if (isBlank(workScheduleId)) {
+                            skippedRows.add(Map.of(
+                                    "rowNumber", rowNumber,
+                                    "data", Arrays.asList(row),
+                                    "reason", "WorkSchedule not found" + workScheduleId
+                            ));
+                        }
+                    }
+
+                    if (isBlank(email) || isBlank(mobile) || isBlank(roleId) || isBlank(doj) || isBlank(workSchedule)) {
+                        skippedRows.add(Map.of(
+                                "rowNumber", rowNumber,
+                                "data", Arrays.asList(row),
+                                "reason", "Mandatory fields  are missing"
+                        ));
+                        skippedCount++;
+                        rowNumber++;
+                        continue;
+                    }
+
+                    log.info("Rolename in csv", roleName);
+                    String key = cacheLoaderService.getPrivilegeKey(PrivilegeConstants.HAVE_SECONDARY_DETAILS);
+                    boolean hasSecondaryDetailsPrivilege = cacheKeyUtil.roleHasPrivilege(roleName, key);
+
+                    // Validate primary email/mobile
+                    if (existingEmails.contains(email) || existingMobiles.contains(mobile)) {
+                        skippedRows.add(Map.of(
+                                "rowNumber", rowNumber,
+                                "data", Arrays.asList(row),
+                                "reason", "Email or mobile number already exists"
+                        ));
+                        skippedCount++;
+                        continue;
+                    }
+
+                    if (hasSecondaryDetailsPrivilege) {
+                        // Skip if any of the required secondary fields are missing
+                        if (isBlank(secMobile) || isBlank(relation)) {
+                            skippedRows.add(Map.of(
+                                    "rowNumber", rowNumber,
+                                    "data", Arrays.asList(row),
+                                    "reason", "Secondary fields are missing"
+                            ));
+                            skippedCount++;
+                            rowNumber++;
+                            continue;
+                        }
+
+                        // Skip if all secondary fields are empty
+                        if (isBlank(secMobile) && isBlank(relation)) {
+                            skippedRows.add(Map.of(
+                                    "rowNumber", rowNumber,
+                                    "data", Arrays.asList(row),
+                                    "reason", "All Secondary fields are missing"
+                            ));
+                            skippedCount++;
+                            rowNumber++;
+                            continue;
+                        }
+
+                        // Check secondary mobile/email duplication
+                        if (existingMobiles.contains(secMobile) || existingSecMobiles.contains(secMobile)
+                                || existingEmails.contains(secEmail) || existingSecEmails.contains(secEmail)) {
+                            skippedRows.add(Map.of(
+                                    "rowNumber", rowNumber,
+                                    "data", Arrays.asList(row),
+                                    "reason", "Secondary email or mobile number already exists"
+                            ));
+                            skippedCount++;
+                            rowNumber++;
+                            continue;
+                        }
+
+                        // Check if student and secondary mobile are same
+                        if (mobile.equals(secMobile)) {
+                            skippedRows.add(Map.of(
+                                    "rowNumber", rowNumber,
+                                    "data", Arrays.asList(row),
+                                    "reason", "Same primary and secondary mobile number"
+                            ));
+                            skippedCount++;
+                            rowNumber++;
+                            continue;
+                        }
+                    }
+                    WorkScheduleEntity workScheduleEntity = workScheduleAdapter.findByScheduleId(scheduleId, orgId);
+                    // Create and validate user DTO
+                    UserDto userDto = new UserDto();
+                    userDto.setUserName(username);
+                    userDto.setEmail(email);
+                    userDto.setMobileNumber(mobile);
+                    userDto.setRoleId(roleId);
+                    userDto.setWorkSchedule(workScheduleEntity.getScheduleId());
+                    userDto.setIsRegisterUser(false);
+                    userDto.setDateOfJoining(parseDate(doj));
+                    userDto.setUserId(idGenerationService.generateNextUserId(orgId));
+
+                    if (!validator.validate(userDto).isEmpty()) {
+                        skippedRows.add(Map.of(
+                                "rowNumber", rowNumber,
+                                "data", Arrays.asList(row),
+                                "reason", "Invalid data"
+                        ));
+                        skippedCount++;
+                        rowNumber++;
+                        continue;
+                    }
+
+                    // Create and store user
+                    String defaultPass = PasswordUtil.generateDefaultPassword();
+                    userEntity = createUserEntity(userDto, orgId, defaultPass);
+                    userEntities.add(userEntity);
+                    successList.add(username);
+                    emailRequests.add(new EmailData(email, userDto.getUserName(), defaultPass, userDto.isRegisterUser()));
+
+                    uploadedCount++;
+
+                    existingEmails.add(email);
+                    existingMobiles.add(mobile);
+
+                    // Group mapping
+                    userGroupMappings.computeIfAbsent(userEntity, k -> new ArrayList<>())
+                            .addAll(groupIds);
+
+                    //Location Mapping
+                    userLocationMappings.computeIfAbsent(userEntity, k -> new ArrayList<>())
+                            .addAll(locationIds);
+                    // Save secondary details if student
+                    if (hasSecondaryDetailsPrivilege) {
+                        String secondaryEmail = TextUtil.trim(secEmail);
+                        SecondaryDetailsEntity secDetails = createSecondaryDetails(userEntity, secMobile, secondaryEmail, secName, relation);
+                        secondaryDetailsEntities.add(secDetails);
+                        existingSecMobiles.add(secMobile);
+                        existingSecEmails.add(secondaryEmail);
+                    }
                 }
-
-                // Persist users and secondary details
-                List<UserEntity> savedUsers = userAdapter.saveAllUsers(userEntities);
-                userAdapter.saveAllSecondaryDetails(secondaryDetailsEntities);
-
-                // Persist user-group mappings
-                List<UserGroupEntity> groupEntities = userGroupMappings.entrySet().stream()
-                        .flatMap(entry -> entry.getValue().stream()
-                                .map(groupIds -> {
-                                    UserGroupEntity ug = new UserGroupEntity();
-                                    ug.setUser(entry.getKey());
-                                    ug.setGroup(new GroupEntity(groupIds));
-                                    return ug;
-                                }))
-                        .toList();
-
-                //user-location mapping
-                List<UserLocationEntity> userLocationEntities = userLocationMappings.entrySet().stream()
-                                .flatMap(entry -> entry.getValue().stream()
-                                        .map(locationIds ->{
-                                            UserLocationEntity ul = new UserLocationEntity();
-                                            ul.setUser(entry.getKey());
-                                            ul.setLocation(new LocationEntity(locationIds));
-                                            return ul;
-                                        }))
-                                        .toList();
-                log.info("Saving all user groups");
-                userAdapter.saveAllUserGroups(groupEntities);
-                log.info("Saved all user groups");
-                log.info("Save all user locations");
-                userAdapter.saveUserLocation(userLocationEntities);
-                log.info("Sending emails to all users");
-                sendEmailsAsync(emailRequests);
-                log.info("Emails sent to all users");
-
-            } catch (Exception e) {
-                throw new RuntimeException("Error processing CSV: " + e.getMessage(), e);
             }
+
+            // Persist users and secondary details
+            List<UserEntity> savedUsers = userAdapter.saveAllUsers(userEntities);
+            userAdapter.saveAllSecondaryDetails(secondaryDetailsEntities);
+
+            // Persist user-group mappings
+            List<UserGroupEntity> groupEntities = userGroupMappings.entrySet().stream()
+                    .flatMap(entry -> entry.getValue().stream()
+                            .map(groupIds -> {
+                                UserGroupEntity ug = new UserGroupEntity();
+                                ug.setUser(entry.getKey());
+                                ug.setGroup(new GroupEntity(groupIds));
+                                return ug;
+                            }))
+                    .toList();
+
+            //user-location mapping
+            List<UserLocationEntity> userLocationEntities = userLocationMappings.entrySet().stream()
+                    .flatMap(entry -> entry.getValue().stream()
+                            .map(locationIds -> {
+                                UserLocationEntity ul = new UserLocationEntity();
+                                ul.setUser(entry.getKey());
+                                ul.setLocation(new LocationEntity(locationIds));
+                                return ul;
+                            }))
+                    .toList();
+            log.info("Saving all user groups");
+            userAdapter.saveAllUserGroups(groupEntities);
+            log.info("Saved all user groups");
+            log.info("Save all user locations");
+            userAdapter.saveUserLocation(userLocationEntities);
+            log.info("Sending emails to all users");
+            sendEmailsAsync(emailRequests);
+            log.info("Emails sent to all users");
+
+        } catch (Exception e) {
+            throw new RuntimeException("Error processing CSV: " + e.getMessage(), e);
+        }
 
         log.info("Uploaded: {}, Skipped: {}, Time: {} ms", uploadedCount, skippedCount, (System.currentTimeMillis() - startTime));
 
@@ -504,8 +567,15 @@ public class UserServiceImpl implements UserService {
         log.info("skippedRows: {}", skippedRows);
 
         String message = String.format(" %d Users created. Duplicate/invalid users were skipped.", uploadedCount);
-        log.info("useremail: {} , username: {}", userFromToken.getEmail(),userFromToken.getUserName());
-        emailUtil.sendSuccessEmail(userFromToken.getEmail(),userFromToken.getUserName(),uploadedCount,skippedCount);
+        log.info("useremail: {} , username: {}", userFromToken.getEmail(), userFromToken.getUserName());
+        emailUtil.sendSuccessEmail(userFromToken.getEmail(), userFromToken.getUserName(), uploadedCount, skippedCount);
+        CacheEventPublisherUtil.syncReloadThenPublish(
+                publisher,
+                cacheKeyConfig.getUsers(),
+                orgId,
+                cacheReloadHandlerRegistry
+        );
+        log.info("UserCacheReloadEvent published after User bulk creation");
         return new ApiResponse(200, message, response);
 
     }
@@ -535,7 +605,7 @@ public class UserServiceImpl implements UserService {
         return destinationPath.toAbsolutePath().toString();
     }
 
-    private UserEntity createUserEntity(UserDto userDto, Long orgId,String generatedPass) {
+    private UserEntity createUserEntity(UserDto userDto, String orgId, String generatedPass) {
         UserEntity entity = userEntityMapper.toEntity(userDtoMapper.toMiddleware(userDto));
         entity.setOrganizationId(orgId);
         entity.setPassword(PasswordUtil.encryptPassword(generatedPass));
@@ -578,7 +648,7 @@ public class UserServiceImpl implements UserService {
     private String normalizeHeader(String header) {
         return header.trim().toLowerCase().replaceAll("[ _]", "");
     }
-    
+
     private LocalDate parseDate(String dateStr) {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
         return LocalDate.parse(dateStr, formatter);
@@ -595,8 +665,7 @@ public class UserServiceImpl implements UserService {
             try {
                 emailUtil.sendAccountCreationEmail(emailData.getEmail(), emailData.getUserName(), emailData.getGeneratedPass(), emailData.isNewUser());
                 successCount++;
-            }
-            catch (Exception e) {
+            } catch (Exception e) {
                 log.error("Failed to send email to {}", emailData.getEmail(), e);
                 failureCount++;
                 failedEmails.add(Map.of(
@@ -607,17 +676,17 @@ public class UserServiceImpl implements UserService {
                 log.error("Email failed for user {} : {}", emailData.getEmail(), e.getMessage());
             }
         }
-            log.info("Email success: {} ", successCount);
-            log.info("Email failure: {} ", failureCount);
+        log.info("Email success: {} ", successCount);
+        log.info("Email failure: {} ", failureCount);
 
-            if (!failedEmails.isEmpty()) {
-                log.info("Failed emails Details: {}", failedEmails);
-            }
+        if (!failedEmails.isEmpty()) {
+            log.info("Failed emails Details: {}", failedEmails);
+        }
     }
 
     @Override
     @Transactional
-    public ApiResponse createUser(UserDto userDto, SecondaryDetailsDto secondaryDetailsDto, Long organizationId) {
+    public ApiResponse createUser(UserDto userDto, SecondaryDetailsDto secondaryDetailsDto, String organizationId) {
         log.info("Checking if the user is student: {}", userDto.getRoleId());
         Optional<RoleEntity> roleName = userAdapter.findRoleById(userDto.getRoleId());
         log.info("Role from DB for creating user: {}", roleName.get().getName());
@@ -626,7 +695,7 @@ public class UserServiceImpl implements UserService {
         log.info("hasSecondaryDetailsPrivilege: {}", hasSecondaryDetailsPrivilege);
         // Step 1: Privilege-based secondary validation
         if (hasSecondaryDetailsPrivilege) {
-         validateSecondaryUser(secondaryDetailsDto);
+            validateSecondaryUser(secondaryDetailsDto);
         }
 
         // Step 2: Validate primary user (always checked)
@@ -637,7 +706,8 @@ public class UserServiceImpl implements UserService {
         User userMiddleware = userDtoMapper.toMiddleware(userDto);
         UserEntity entity = userEntityMapper.toEntity(userMiddleware);
         entity.setOrganizationId(organizationId);
-
+        String customUserId = idGenerationService.generateNextUserId(organizationId);
+        entity.setUserId(customUserId);
         if (isBlank(userMiddleware.getRoleId())) {
             throw new CommonExceptionHandler.BadRequestException("roleId must not be null");
         }
@@ -650,9 +720,18 @@ public class UserServiceImpl implements UserService {
         String encryptedPassword = PasswordUtil.encryptPassword(defaultPassword);
         entity.setPassword(encryptedPassword);
         entity.setDefaultPassword(true);
+        WorkScheduleEntity scheduleToSet = null;
+        if (userMiddleware.getWorkSchedule() == null || userMiddleware.getWorkSchedule().isEmpty()) {
+            scheduleToSet = workScheduleAdapter.findDefaultActiveSchedule(organizationId);
+            if (scheduleToSet == null) {
+                throw new IllegalStateException("No default work schedule found for this organization");
+            }
+        } else {
+            scheduleToSet = workScheduleAdapter.findByScheduleId(userDto.getWorkSchedule(), organizationId);
+        }
+        entity.setWorkSchedule(scheduleToSet);
         entity.setActive(true);
         entity.setCreatedAt(LocalDateTime.now());
-
         log.info("Saving user: {}", userMiddleware.getUserName());
         UserEntity savedUserEntity = userAdapter.saveUser(entity);
         List<Long> locationIds = null;
@@ -672,7 +751,7 @@ public class UserServiceImpl implements UserService {
         if (!isBlank(userDto.getLocationId())) {
             log.info("Adding user to location: {}", userDto.getLocationId());
             List<UserLocationEntity> userLocationEntities = new ArrayList<>();
-            for (Long locId : userDto.getLocationId()){
+            for (Long locId : userDto.getLocationId()) {
                 LocationEntity locations = locationRepository.findById(locId)
                         .orElseThrow(() -> new NoSuchElementException("Location not found with ID: " + locId));
 
@@ -717,7 +796,13 @@ public class UserServiceImpl implements UserService {
         emailUtil.sendAccountCreationEmail(
                 userMiddleware.getEmail(), userMiddleware.getUserName(), defaultPassword, isNewUser
         );
-
+        CacheEventPublisherUtil.syncReloadThenPublish(
+                publisher,
+                cacheKeyConfig.getUsers(),
+                organizationId,
+                cacheReloadHandlerRegistry
+        );
+        log.info("UserCacheReloadEvent published after User creation");
         return new ApiResponse(201, "Successfully saved user", finalUser);
     }
 
@@ -727,9 +812,9 @@ public class UserServiceImpl implements UserService {
             throw new CommonExceptionHandler.BadRequestException("Mandatory secondary user fields must not be null");
         }
         Optional<SecondaryDetailsEntity> mobileExists = userAdapter.findByMobileByMobile(dto.getMobile());
-        if(mobileExists.isPresent()){
+        if (mobileExists.isPresent()) {
             boolean isPrimaryActive = mobileExists.get().getUser().isActive();
-            if (!isPrimaryActive){
+            if (!isPrimaryActive) {
                 throw new CommonExceptionHandler.DuplicateUserException(
                         "Inactive User."
                 );
@@ -739,9 +824,9 @@ public class UserServiceImpl implements UserService {
             );
         }
         Optional<SecondaryDetailsEntity> emailExists = userAdapter.findByEmailByEmail(dto.getEmail());
-        if(emailExists.isPresent()){
+        if (emailExists.isPresent()) {
             boolean isPrimaryActive = emailExists.get().getUser().isActive();
-            if (!isPrimaryActive){
+            if (!isPrimaryActive) {
                 throw new CommonExceptionHandler.DuplicateUserException(
                         "Inactive User."
                 );
@@ -754,14 +839,13 @@ public class UserServiceImpl implements UserService {
     }
 
     private boolean validatePrimaryUser(UserDto userDto) {
-        if (isBlank(String.valueOf(userDto))|| isBlank(userDto.getUserName()) || isBlank(userDto.getMobileNumber()) || isBlank(userDto.getEmail())) {
+        if (isBlank(String.valueOf(userDto)) || isBlank(userDto.getUserName()) || isBlank(userDto.getMobileNumber()) || isBlank(userDto.getEmail())) {
             log.error("Mandatory primary user fields must not be null");
             throw new CommonExceptionHandler.BadRequestException("Mandatory Primary user fields must not be null");
         }
         Optional<UserEntity> mobilExists = userAdapter.findByMobileNumber(userDto.getMobileNumber());
-        if(mobilExists.isPresent())
-        {
-            if(!mobilExists.get().isActive()){
+        if (mobilExists.isPresent()) {
+            if (!mobilExists.get().isActive()) {
                 throw new CommonExceptionHandler.DuplicateUserException(
                         "Inactive Users."
                 );
@@ -771,9 +855,8 @@ public class UserServiceImpl implements UserService {
             );
         }
         Optional<UserEntity> emailExists = userAdapter.findByEmail(userDto.getEmail());
-        if (emailExists.isPresent())
-        {
-            if (!emailExists.get().isActive()){
+        if (emailExists.isPresent()) {
+            if (!emailExists.get().isActive()) {
                 throw new CommonExceptionHandler.DuplicateUserException(
                         "Inactive User."
                 );
@@ -787,7 +870,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public User updateUser(CreateUserDto updates, Long orgId, Long userId) {
+    public User updateUser(CreateUserDto updates, String orgId, String userId) {
 
         UserEntity existingUser = userAdapter.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -822,16 +905,19 @@ public class UserServiceImpl implements UserService {
             if (userDto.getEmail() != null) {
                 existingUser.setEmail(userDto.getEmail());
             }
-            if (userDto.getUserName()!= null) {
+            if (userDto.getUserName() != null) {
                 existingUser.setUserName(userDto.getUserName());
             }
             if (userDto.getMobileNumber() != null) {
                 existingUser.setMobileNumber(userDto.getMobileNumber());
             }
-            if (userDto.isRegisterUser() ) {
+            if (userDto.isRegisterUser()) {
                 existingUser.setRegisterUser(userDto.isRegisterUser());
             }
-            if(location != null) {
+            if (userDto.getWorkSchedule() != null) {
+                existingUser.setWorkSchedule(workScheduleAdapter.findByScheduleId(userDto.getWorkSchedule(), orgId));
+            }
+            if (location != null) {
                 Set<Long> toDelete = new HashSet<>(userLocation);
                 toDelete.removeAll(location);
                 Set<Long> toInsert = new HashSet<>(location);
@@ -842,15 +928,15 @@ public class UserServiceImpl implements UserService {
                 }
                 if (toInsert.size() > 0) {
                     List<UserLocationEntity> newEntities = toInsert.stream()
-                                    .map(locations ->
-                                    {
-                                        UserLocationEntity userLocationEntity = new UserLocationEntity();
-                                        userLocationEntity.setUser(existingUser);
-                                        userLocationEntity.setLocation(locationRepository.findById(locations)
-                                                .orElseThrow(() -> new RuntimeException("Location not found")));
-                                        return userLocationEntity;
-                                    })
-                                            .toList();
+                            .map(locations ->
+                            {
+                                UserLocationEntity userLocationEntity = new UserLocationEntity();
+                                userLocationEntity.setUser(existingUser);
+                                userLocationEntity.setLocation(locationRepository.findById(locations)
+                                        .orElseThrow(() -> new RuntimeException("Location not found")));
+                                return userLocationEntity;
+                            })
+                            .toList();
                     userAdapter.updateUserLocationByUserId(newEntities);
                     log.info("Added user location: {}", toInsert);
                 }
@@ -878,14 +964,14 @@ public class UserServiceImpl implements UserService {
                     userAdapter.updateUserGroupByUserId(newEntities);
                 }
             }
-            if(userDto.getDateOfJoining() != null){
+            if (userDto.getDateOfJoining() != null) {
                 existingUser.setDateOfJoining(userDto.getDateOfJoining());
             }
 
             String key = cacheLoaderService.getPrivilegeKey(PrivilegeConstants.HAVE_SECONDARY_DETAILS);
             boolean hasSecondaryDetailsPrivilege = cacheKeyUtil.roleHasPrivilege(existingUser.getRole().getName(), key);
             //If user is edit the table also edit the secondary table...
-            if(hasSecondaryDetailsPrivilege){
+            if (hasSecondaryDetailsPrivilege) {
                 SecondaryDetailsDto secondaryDetails = updates.getSecondaryDetails();
                 SecondaryDetailsEntity existingSecondaryUser = userAdapter.findSecondaryUserById(userId)
                         .orElseThrow(() -> new RuntimeException("Secondary User not found"));
@@ -893,7 +979,7 @@ public class UserServiceImpl implements UserService {
                 System.out.println("Fetched Secondary User's User Id: " + existingSecondaryUser.getUser().getUserId());
 
                 if (secondaryDetails != null) {
-                    if (secondaryDetails.getUserName() !=null){
+                    if (secondaryDetails.getUserName() != null) {
                         existingSecondaryUser.setUserName(secondaryDetails.getUserName());
                     }
                     if (secondaryDetails.getMobile() != null) {
@@ -908,10 +994,19 @@ public class UserServiceImpl implements UserService {
 
                 }
                 userAdapter.saveSecondaryDetails(existingSecondaryUser);
-            }else{System.out.println("User Role Id: "+existingUser.getRole().getRoleId());}
+            } else {
+                System.out.println("User Role Id: " + existingUser.getRole().getRoleId());
+            }
         }
-
-        return userEntityMapper.toMiddleware(userAdapter.updateUser(existingUser));
+        userAdapter.updateUser(existingUser);
+        CacheEventPublisherUtil.syncReloadThenPublish(
+                publisher,
+                cacheKeyConfig.getUsers(),
+                orgId,
+                cacheReloadHandlerRegistry
+        );
+        log.info("UserCacheReloadEvent published after User update");
+        return userEntityMapper.toMiddleware(existingUser);
     }
 
     private void setField(UserEntity user, String key, Object value) {
@@ -944,69 +1039,73 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public List<UserResponseDto> getUsers(Long orgId, String role) {
+    public List<UserResponseDto> getUsers(String orgId, String role) {
         return fetchActiveUsers(orgId, role);
     }
 
-    private List<UserResponseDto> fetchActiveUsers(Long orgId, String role) {
-        int hierarchyLevel = UserRole.getLevel(role);
-
-        List<UserResponse> users = userAdapter.findByOrganizationId(orgId, hierarchyLevel);
-        if (users.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, ("No Users found"));
-        }
-
-        List<UserResponseDto> usersDto = users.stream()
-                .map(userDtoMapper::toDto)
-                .toList();
-
-        Map<Long, UserResponseDto> userMap = new LinkedHashMap<>();
-        for (UserResponseDto user : usersDto) {
-            userMap.compute(user.getUserId(), (id, existing) -> {
-                if (existing == null) {
-                    SecondaryDetailsEntity secondaryDetails = userAdapter.findSecondaryUserById(user.getUserId()).orElse(null);
-                    SecondaryDetailsDto secDto = secondaryDetailsMapper.toMiddleware(secondaryDetails);
-                    user.setSecondaryDetails(secDto);
-                    return user;
-                } else {
-                    List<String> existingGroups = existing.getGroupName();
-                    if (!existingGroups.contains(user.getGroupName().get(0))) {
-                        existingGroups.add(user.getGroupName().get(0));
-                    }
-                    List<String> existingLocations = existing.getLocationName();
-                    if (!existingLocations.contains(user.getLocationName().get(0))) {
-                        existingLocations.add(user.getLocationName().get(0));
-                    }
-                    return existing;
+    private List<UserResponseDto> fetchActiveUsers(String orgId, String role) {
+        String userCacheKey = cacheKeyUtil.getMemberKey(orgId); // e.g., "members:org:1"
+        String roleField = role.toLowerCase(); // hash field for this role
+        log.info("roleField:{}", roleField);
+        try {
+            // 1. Try from Redis only if redisTemplate is not null
+            if (redisTemplate != null) {
+                Object cachedObj = redisTemplate.opsForHash().get(userCacheKey, roleField);
+                if (cachedObj != null) {
+                    log.info("Cache hit for orgId={}, role={}", orgId, role);
+                    return (List<UserResponseDto>) cachedObj;
                 }
-            });
+            } else {
+                log.warn("RedisTemplate is null, skipping cache fetch for key: {}, field: {}", userCacheKey, roleField);
+            }
+
+            // 2. Cache miss or Redis unavailable - load all into Redis (and also get fresh data)
+            log.info("Cache miss for orgId={}, role={}. Loading from DB...", orgId, role);
+            Map<String, List<UserResponseDto>> roleMap = cacheLoaderService.loadAllUsers(orgId).get();
+            log.info("rolemap:{}", roleMap);
+            String loggedRole = roleField.toUpperCase();
+            List<UserResponseDto> fallbackList = roleMap.get(loggedRole);
+            if (fallbackList != null && !fallbackList.isEmpty()) {
+                log.info("Returning response from DB for All Users");
+                return fallbackList;
+            }
+
+        } catch (Exception e) {
+            log.error("Failed to fetch users for orgId={}, role={}. Error: {}", orgId, role, e.getMessage(), e);
         }
 
-        return new ArrayList<>(userMap.values());
+        // 3. Final fallback
+        throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No Users found for this organization");
     }
 
-
     @Override
-    public User deleteUser(Long orgId, Long userId) {
+    public User deleteUser(String orgId, String userId) {
         UserEntity user = userAdapter.findById(userId)
                 .orElseThrow(() -> new UsernameNotFoundException("User ID not found."));
 
         if (!user.getOrganizationId().equals(orgId)) {
             throw new RuntimeException("Unauthorized");
         }
-        userAdapter.deactivateUserById(userId,orgId);
+        userAdapter.deactivateUserById(userId, orgId);
+        CacheEventPublisherUtil.syncReloadThenPublish(
+                publisher,
+                cacheKeyConfig.getUsers(),
+                orgId,
+                cacheReloadHandlerRegistry
+        );
+        log.info("UserCacheReloadEvent published after User Delete");
         return userEntityMapper.toMiddleware(user);
     }
 
     @Override
-    public AddGroup createGroup(AddGroup groupMiddleware, Long orgId) {
+    public AddGroup createGroup(AddGroup groupMiddleware, String orgId) {
         if (userAdapter.findByGroup(groupMiddleware.getGroupName(), orgId)) {
             throw new DataIntegrityViolationException("Group '" + groupMiddleware.getGroupName() + "' already exists in this organization");
         }
 
         GroupEntity entity = userEntityMapper.toEntity(groupMiddleware);
 
-        OrganizationEntity orgEntity = organizationRepository.findById(orgId)
+        OrganizationEntity orgEntity = organizationRepository.findByOrganizationId(orgId)
                 .orElseThrow(() -> new EntityNotFoundException("Organization not found with ID: " + orgId));
         entity.setOrganizationEntity(orgEntity);
 
@@ -1016,33 +1115,41 @@ public class UserServiceImpl implements UserService {
             entity.setLocationEntity(locationEntity);
         }
 
-        if (groupMiddleware.getWorkScheduleId() != null) {
-            WorkScheduleEntity ws = workScheduleAdapter.findByWorkscheduleId(groupMiddleware.getWorkScheduleId());
-            entity.setWorkSchedule(ws);
-        } else {
+        if (groupMiddleware.getWorkScheduleId() == null || groupMiddleware.getWorkScheduleId().isEmpty()) {
             WorkScheduleEntity defaultWs = workScheduleAdapter.findDefaultActiveSchedule(orgId);
+            log.info("Default schedule:{}", defaultWs);
             entity.setWorkSchedule(defaultWs);
+        } else {
+            WorkScheduleEntity ws = workScheduleAdapter.findByScheduleId(groupMiddleware.getWorkScheduleId(), orgId);
+            entity.setWorkSchedule(ws);
         }
 
         GroupEntity savedEntity = userAdapter.saveGroup(entity);
 
-        for (Long id : groupMiddleware.getSupervisorsId()) {
-            UserEntity user = userAdapter.findById(id).orElseThrow(()->new UsernameNotFoundException("User ID " + id + " not found."));
+        for (String id : groupMiddleware.getSupervisorsId()) {
+            UserEntity user = userAdapter.findById(id).orElseThrow(() -> new UsernameNotFoundException("User ID " + id + " not found."));
 
-            createUserGroup(new UserGroup(savedEntity.getGroupId(), id, groupMiddleware.getType()),orgId);
+            createUserGroup(new UserGroup(savedEntity.getGroupId(), id, groupMiddleware.getType()), orgId);
 
         }
+        CacheEventPublisherUtil.syncReloadThenPublish(
+                publisher,
+                cacheKeyConfig.getGroups(),
+                orgId,
+                cacheReloadHandlerRegistry
+        );
+        log.info("GroupCacheReloadEvent published after Group Creation");
         return userEntityMapper.toGroupMiddleware(savedEntity);
     }
 
     @Override
-    public ApiResponse addUserToGroup(AddMember addMemberMiddleware, Long orgId) {
-        List<Long> userIds = addMemberMiddleware.getUserId();
+    public ApiResponse addUserToGroup(AddMember addMemberMiddleware, String orgId) {
+        List<String> userIds = addMemberMiddleware.getUserId();
         List<String> addedUserNames = new ArrayList<>();
         List<String> alreadyExistsUsers = new ArrayList<>();
 
         // Validate all users first
-        for (Long id : userIds) {
+        for (String id : userIds) {
             boolean exists = userAdapter.existsById(id);
             if (!exists) {
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found with ID: " + id);
@@ -1050,7 +1157,7 @@ public class UserServiceImpl implements UserService {
         }
 
         // Proceed to add members if all exist
-        for (Long id : userIds) {
+        for (String id : userIds) {
             List<UserGroupEntity> existing = userAdapter.findByUserIdAndGroupId(id, addMemberMiddleware.getGroupId());
             UserEntity userEntity = userAdapter.findById(id).get(); // safe because already validated
 
@@ -1065,7 +1172,7 @@ public class UserServiceImpl implements UserService {
 
         // Prepare message
         String addedMessage = addedUserNames.isEmpty()
-                ?""
+                ? ""
                 : "Successfully added users: " + String.join(", ", addedUserNames) + ".";
 
         String existsMessage = alreadyExistsUsers.isEmpty()
@@ -1074,12 +1181,19 @@ public class UserServiceImpl implements UserService {
 
         String finalMessage = addedMessage + existsMessage;
 
+        CacheEventPublisherUtil.syncReloadThenPublish(
+                publisher,
+                cacheKeyConfig.getGroups(),
+                orgId,
+                cacheReloadHandlerRegistry
+        );
+        log.info("GroupCacheReloadEvent published after Adding user to the Group");
         // Return ApiResponse — no need to return data list of users
         return new ApiResponse<>(200, finalMessage, null);
     }
 
     @Override
-    public UserGroup createUserGroup(UserGroup userGroupMiddleware, Long orgId) {
+    public UserGroup createUserGroup(UserGroup userGroupMiddleware, String orgId) {
         List<UserGroupEntity> existing = userAdapter.findByUserIdAndGroupId(
                 userGroupMiddleware.getUserId(),
                 userGroupMiddleware.getGroupId()
@@ -1089,7 +1203,7 @@ public class UserServiceImpl implements UserService {
         }
 
         UserGroupEntity entity = userEntityMapper.toEntity(userGroupMiddleware);
-        UserGroupEntity savedEntity=null;
+        UserGroupEntity savedEntity = null;
         savedEntity = userAdapter.saveUserGroup(entity);
 
         return userEntityMapper.toMiddleware(savedEntity);
@@ -1097,7 +1211,7 @@ public class UserServiceImpl implements UserService {
 
     @Transactional
     @Override
-    public ApiResponse<?> updateGroupDetails(AddGroupDto addGroupDto, Long groupId, Long orgId) {
+    public ApiResponse<?> updateGroupDetails(AddGroupDto addGroupDto, Long groupId, String orgId) {
         AddGroup addGroup = userDtoMapper.toMiddleware(addGroupDto);
 
         List<String> conflictMessages = new ArrayList<>();
@@ -1123,31 +1237,39 @@ public class UserServiceImpl implements UserService {
 
         // Update location if provided
         if (addGroup.getLocationId() != null) {
-            LocationEntity locationEntity = userAdapter.findLocationById(addGroup.getLocationId());
+            LocationEntity locationEntity = userAdapter.findLocationById(addGroup.getLocationId(), orgId);
             if (locationEntity == null) {
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Location not found with ID: " + addGroup.getLocationId());
             }
             existingGroup.setLocationEntity(locationEntity);
         }
 
+        if (addGroup.getWorkScheduleId() != null) {
+            WorkScheduleEntity workScheduleEntity = workScheduleAdapter.findByScheduleId(addGroup.getWorkScheduleId(), orgId);
+            if (workScheduleEntity == null) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "WorkSchedule Not found with ID: " + addGroup.getWorkScheduleId());
+            }
+            existingGroup.setWorkSchedule(workScheduleEntity);
+        }
+
         // Save updated group details (name/location)
         userAdapter.saveGroup(existingGroup);
 
         // Remove supervisors not in the new list
-        List<Long> existingSupervisorIds = userAdapter.findSupervisorIdsByGroupId(groupId);
-        Set<Long> newSupervisorIds = addGroup.getSupervisorsId() != null
+        List<String> existingSupervisorIds = userAdapter.findSupervisorIdsByGroupId(groupId);
+        Set<String> newSupervisorIds = addGroup.getSupervisorsId() != null
                 ? new HashSet<>(addGroup.getSupervisorsId())
                 : new HashSet<>();
 
-        for (Long existingSupervisorId : existingSupervisorIds) {
+        for (String existingSupervisorId : existingSupervisorIds) {
             if (!newSupervisorIds.contains(existingSupervisorId)) {
                 userAdapter.deleteSupervisorsByGroupId(groupId, existingSupervisorId);
             }
         }
 
         // Insert new supervisors, checking against existing members
-        List<Long> existingMemberIds = userAdapter.findMemberIdsByGroupId(groupId);
-        for (Long supervisorId : newSupervisorIds) {
+        List<String> existingMemberIds = userAdapter.findMemberIdsByGroupId(groupId);
+        for (String supervisorId : newSupervisorIds) {
             if (existingMemberIds.contains(supervisorId)) {
                 // Fetch username for the supervisor
                 UserEntity supervisorUser = userAdapter.findById(supervisorId).orElse(null);
@@ -1180,7 +1302,7 @@ public class UserServiceImpl implements UserService {
         // Build final message
         String conflictMessage = conflictMessages.isEmpty()
                 ? ""
-                :  String.join(", ", conflictMessages) + ".";
+                : String.join(", ", conflictMessages) + ".";
 
         String finalMessage = conflictMessage.trim();
 
@@ -1188,6 +1310,13 @@ public class UserServiceImpl implements UserService {
         if (!conflictMessages.isEmpty()) {
             return new ApiResponse<>(HttpStatus.CONFLICT.value(), finalMessage, Collections.emptyList());
         }
+        CacheEventPublisherUtil.syncReloadThenPublish(
+                publisher,
+                cacheKeyConfig.getGroups(),
+                orgId,
+                cacheReloadHandlerRegistry
+        );
+        log.info("GroupCacheReloadEvent published after Group Update");
         // If no conflicts and no supervisors added, indicate that no changes were made
         return new ApiResponse<>(HttpStatus.OK.value(), "Group updated Successfully.", Collections.emptyList());
     }
@@ -1202,55 +1331,46 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public UserProfileResponse getUserProfile(Long orgId, Long userId) {
-        // Fetch the user groups (may be empty if user has no group)
-        List<UserGroupEntity> userGroups = userAdapter.findUserByOrganizationIdAndUserId(orgId, userId);
-        UserEntity user;
-        if (userGroups.isEmpty()) {
-            // If no group, fetch user manually
-            user = userAdapter.findUserByOrgIdAndUserId(orgId, userId);
-            if (user == null || !user.isActive()) {
-                throw new UsernameNotFoundException("User not found");
+    public UserProfileResponse getUserProfile(String orgId, String userId) {
+        String redisKey = cacheKeyUtil.getprofileKey(orgId);
+        String field = userId.toString();
+
+        try {
+            // Try from cache only if redisTemplate is not null
+            if (redisTemplate != null) {
+                UserProfileResponse cachedData = (UserProfileResponse) redisTemplate.opsForHash().get(redisKey, field);
+                if (cachedData != null) {
+                    log.info("Cache hit for userId {} in orgId {}", userId, orgId);
+                    return cachedData;
+                }
+            } else {
+                log.warn("RedisTemplate is null, skipping cache fetch for userId {} in orgId {}", userId, orgId);
             }
-        } else {
-            // If in groups, get user from the first entry
-            user = userGroups.get(0).getUser();
-        }
 
-        // Fetch and map user location
-        List<UserLocationEntity> userLocation = userAdapter.findUserLocationByUserId(userId);
-        List<LocationDto> locationDtos = new ArrayList<>();
-        if (userLocation.isEmpty()) {
-            throw new NullPointerException("No Location found to a user.");
-        }
-        for (UserLocationEntity ul : userLocation) {
-            if (ul.getLocation() == null) continue;
-            locationDtos.add(userDtoMapper.toDto(ul.getLocation()));
-        }
+            // Cache miss → load entire org user profiles from DB and cache
+            log.info("Cache miss for userId {}, loading from DB...", userId);
+            Map<String, UserProfileResponse> loadedProfiles = cacheLoaderService.loadUsersProfile(orgId).get();
 
-        // Map groups if present
-        List<UserGroupProfileDto> groupDtos = userGroups.isEmpty()
-                ? Collections.emptyList()
-                : userGroups.stream()
-                .map(userDtoMapper::toGroupsDto)
-                .collect(Collectors.toList());
+            // Return directly from DB-loaded map (even if Redis write fails)
+            UserProfileResponse response = loadedProfiles.get(field);
+            if (response != null) {
+                log.info("Fallback DB profile returned for userId {}", userId);
+                return response;
+            } else {
+                log.warn("User profile not found even in DB for userId {}", userId);
+                return null;
+            }
 
-        OrganizationEntity org = userAdapter.findByOrgId(orgId);
-        // Construct response
-        return new UserProfileResponse(
-                user.getUserId(),
-                user.getUserName(),
-                user.getEmail(),
-                user.getMobileNumber(),
-                user.getRole().getName(),
-                user.getDateOfJoining(),
-                locationDtos,
-                groupDtos,
-                org != null ? org.getOrgName() : null
-        );
+        } catch (Exception e) {
+            log.error("Error in user profile fetch logic for userId {}: {}", userId, e.getMessage(), e);
+            return null;
+        }
     }
 
-    public List<GroupResponseDto> getAllGroups(Long orgId, Long userId) throws JsonProcessingException {
+    public List<GroupResponseDto> getAllGroups(String orgId, String userId) throws JsonProcessingException {
+
+        String cacheGroupkey = cacheKeyUtil.getAllGroupsKey(orgId);
+        String cacheSupervisedGroupKey = cacheKeyUtil.getSupervisedGroupsKey(orgId);
 
         UserEntity currentUser = userAdapter.getUserById(userId);
         String roleName = currentUser.getRole().getName().toUpperCase();
@@ -1261,76 +1381,68 @@ public class UserServiceImpl implements UserService {
         boolean canSeeSupervisingGroups = cacheKeyUtil.roleHasPrivilege(roleName, canSeeSupervisingGroupsKey);
 
         log.info("canSeeAllGroups={}, canSeeSupervisingGroups={}", canSeeAllGroups, canSeeSupervisingGroups);
-        List<Object[]> results = userAdapter.getGroupData(orgId);
+        try {
+            // CASE 1: SuperAdmin → Fetch all from groups:org:{orgId}
+            if (canSeeAllGroups && redisTemplate != null) {
+                Map<Object, Object> allGroups = redisTemplate.opsForHash().entries(cacheGroupkey);
+                if (!allGroups.isEmpty()) {
+                    log.info("Cache hit for All groups key");
+                    return allGroups.values().stream()
+                            .map(obj -> (GroupResponseDto) obj)
+                            .toList();
+                }
+                log.warn("Cache miss for all groups. Loading from DB...");
+            } else if (canSeeAllGroups) {
+                log.warn("RedisTemplate is null, skipping cache fetch for all groups.");
+            }
 
-        // Maps for collecting union data
-        Map<Long, Set<String>> userToGroups = new HashMap<>();
-        Map<Long, Set<String>> userToLocations = new HashMap<>();
-        Map<Long, List<UserGroupDto>> groupIdToActiveMembers = new HashMap<>();
-
-        for (Object[] row : results) {
-            Long groupId = ((Number) row[0]).longValue();
-            String groupName = (String) row[1];
-            String location = (String) row[2];
-
-            if (row[3] != null) {
-                String json = row[3].toString();
-                List<UserGroupDto> allMembers = objectMapper.readValue(json, new TypeReference<>() {});
-
-                for (UserGroupDto member : allMembers) {
-                    if (Boolean.TRUE.equals(member.getActive())) {
-                        Long memberUserId = member.getUserId();
-
-                        // Collect unions
-                        userToGroups.computeIfAbsent(memberUserId, k -> new HashSet<>()).add(groupName);
-                        userToLocations.computeIfAbsent(memberUserId, k -> new HashSet<>()).add(location);
-
-                        // Assign member to group
-                        groupIdToActiveMembers.computeIfAbsent(groupId, k -> new ArrayList<>()).add(member);
+            // CASE 2: Supervisor → Fetch supervised groupIds, then group objects
+            else if (canSeeSupervisingGroups && redisTemplate != null) {
+                Object groupIdSetObj = redisTemplate.opsForHash().get(cacheSupervisedGroupKey, String.valueOf(userId));
+                if (groupIdSetObj instanceof Set<?> groupIdSet && !groupIdSet.isEmpty()) {
+                    List<GroupResponseDto> result = new ArrayList<>();
+                    for (Object gid : groupIdSet) {
+                        GroupResponseDto group = (GroupResponseDto) redisTemplate.opsForHash().get(cacheGroupkey, String.valueOf(gid));
+                        if (group != null) result.add(group);
                     }
-                }
-            }
-        }
-
-        List<GroupResponseDto> finalList = new ArrayList<>();
-
-        for (Object[] row : results) {
-            Long groupId = ((Number) row[0]).longValue();
-            String groupName = (String) row[1];
-            String location = (String) row[2];
-
-            List<UserGroupDto> members = groupIdToActiveMembers.get(groupId);
-            if (members == null) {
-                members = new ArrayList<>();
-            }
-
-            // If user has CAN_SEE_ALL_GROUPS, allow all groups
-            if (canSeeAllGroups) {
-                for (UserGroupDto member : members) {
-                    member.setGroupName(new ArrayList<>(userToGroups.getOrDefault(member.getUserId(), Set.of())));
-                    member.setLocation(new ArrayList<>(userToLocations.getOrDefault(member.getUserId(), Set.of())));
-                }
-                finalList.add(new GroupResponseDto(groupId, groupName, location, members));
-            }
-            // If user has CAN_SEE_SUPERVISING_GROUPS, only show groups where user is supervisor
-            else if (canSeeSupervisingGroups) {
-                boolean isSupervisor = members.stream()
-                        .anyMatch(member -> member.getUserId().equals(userId) && MemberType.SUPERVISOR.getValue().equals(member.getType()));
-                if (isSupervisor) {
-                    for (UserGroupDto member : members) {
-                        member.setGroupName(new ArrayList<>(userToGroups.getOrDefault(member.getUserId(), Set.of())));
-                        member.setLocation(new ArrayList<>(userToLocations.getOrDefault(member.getUserId(), Set.of())));
+                    if (!result.isEmpty()) {
+                        log.info("Fetched {} groups from supervisor cache for userId={}", result.size(), userId);
+                        return result;
                     }
-                    finalList.add(new GroupResponseDto(groupId, groupName, location, members));
+                    log.warn("Supervisor group cache empty or group details not found. Loading from DB...");
                 }
+            } else if (canSeeSupervisingGroups) {
+                log.warn("RedisTemplate is null, skipping supervisor cache fetch.");
             }
-        }
 
-        if (finalList.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND,"No Groups Found");
-        }
+            // DB fallback
+            log.info("Loading from DB as cache is missing for orgId={}, userId={}", orgId, userId);
+            try {
+                List<GroupResponseDto> groupsFromDb = cacheLoaderService
+                        .loadGroupsCache(orgId)
+                        .get(); // Now returns ALL groups
 
-        return finalList;
+                if (canSeeAllGroups) {
+                    return groupsFromDb;
+                } else if (canSeeSupervisingGroups) {
+                    // Manually filter groups where this user is a supervisor
+                    return groupsFromDb.stream()
+                            .filter(group -> group.getMembersDetails().stream()
+                                    .anyMatch(m -> m.getUserId().equals(userId) && "SUPERVISOR".equalsIgnoreCase(m.getType())))
+                            .toList();
+                } else {
+                    throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not allowed to view any groups");
+                }
+
+            } catch (InterruptedException | ExecutionException e) {
+                log.error("Failed to load group cache: {}", e.getMessage(), e);
+                throw new RuntimeException("Cache loading failed", e);
+            }
+
+        } catch (Exception e) {
+            log.error("Failed to get groups from cache or DB: {}", e.getMessage(), e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to load groups");
+        }
     }
 
     @Override
@@ -1347,27 +1459,41 @@ public class UserServiceImpl implements UserService {
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Invalid type. Must start with 'm' or 's'."));
 
-        int updatedCount = userAdapter.updateUserGroupType(userGroup.getUserId(),userGroup.getGroupId(),type);
+        int updatedCount = userAdapter.updateUserGroupType(userGroup.getUserId(), userGroup.getGroupId(), type);
         return updatedCount > 0;
     }
 
     @Override
-    public void deleteMember(Long groupId, Long memberId) {
+    public void deleteMember(Long groupId, String memberId, String orgId) {
         userAdapter.deleteMember(groupId, memberId);
+        CacheEventPublisherUtil.syncReloadThenPublish(
+                publisher,
+                cacheKeyConfig.getGroups(),
+                orgId,
+                cacheReloadHandlerRegistry
+        );
+        log.info("GroupCacheReloadEvent published after Group Member Deletion");
     }
 
     @Override
-    public void deleteGroup(Long groupId, Long orgId) {
-        boolean exist = teamRepository.existsByGroupIdAndOrganizationEntity_OrganizationId(groupId,orgId);
-        if(!exist){
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN,"Group not found or access denied");
+    public void deleteGroup(Long groupId, String orgId) {
+        boolean exist = teamRepository.existsByGroupIdAndOrganizationEntity_OrganizationId(groupId, orgId);
+        if (!exist) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Group not found or access denied");
         }
         userAdapter.deleteByGroupId(groupId);
         userAdapter.deleteGroup(groupId, orgId);
+        CacheEventPublisherUtil.syncReloadThenPublish(
+                publisher,
+                cacheKeyConfig.getGroups(),
+                orgId,
+                cacheReloadHandlerRegistry
+        );
+        log.info("GroupCacheReloadEvent published after Group Deletion");
     }
 
     @Override
-    public List<User> getMembers(Long orgId, Long roleId) {
+    public List<User> getMembers(String orgId, Long roleId) {
         // if roleId is present, get users by roleId
         if (roleId != null) {
             return userAdapter.getMembers(orgId, roleId).stream()
@@ -1381,17 +1507,17 @@ public class UserServiceImpl implements UserService {
                     .filter(r -> r.getHierarchyLevel() < studentHierarchyLevel && r.getHierarchyLevel() > superadminHierarchyLevel)
                     .toList();
             List<Integer> higherRoleIds = higherRoles.stream()
-                    .map(roles-> roles.getHierarchyLevel())
+                    .map(roles -> roles.getHierarchyLevel())
                     .toList();
-           return userAdapter.getMembersByRole(orgId, higherRoleIds).stream()
-                   .map(userEntityMapper::toMiddleware).toList();
+            return userAdapter.getMembersByRole(orgId, higherRoleIds).stream()
+                    .map(userEntityMapper::toMiddleware).toList();
         }
     }
 
     @Override
-    public List<GroupDto> getUserGroups(Long userId, String role, Long orgId) {
+    public List<GroupDto> getUserGroups(String userId, String role, String orgId) {
         String roleName = role.replace("ROLE_", "");
-        if(RoleName.SUPERADMIN.getRoleName().equalsIgnoreCase(roleName)){
+        if (RoleName.SUPERADMIN.getRoleName().equalsIgnoreCase(roleName)) {
             List<GroupDto> Allgroup = userAdapter.getAllgroups(orgId);
             return Allgroup;
         }
@@ -1400,12 +1526,12 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public List<Map<String, Object>> getGroupMembers(Long groupId, Long orgId, LocalDate date, Long userIdFromToken) {
+    public List<Map<String, Object>> getGroupMembers(Long groupId, String orgId, LocalDate date, String userIdFromToken) {
 
         // Fetch group members, filtering out supervisors and logged-in user
         List<UserGroupEntity> groupEntity = userAdapter.getGroupMembersByGroupId(groupId, orgId);
 
-        List<Long> memberIds = groupEntity.stream()
+        List<String> memberIds = groupEntity.stream()
                 .map(ug -> ug.getUser().getUserId())
                 .filter(id -> !id.equals(userIdFromToken))  // Exclude logged-in user
                 .toList();
@@ -1414,7 +1540,7 @@ public class UserServiceImpl implements UserService {
             return Collections.emptyList();  // If no members found, return empty
         }
         //Fetch user type
-        Map<Long, String> userType = groupEntity.stream()
+        Map<String, String> userType = groupEntity.stream()
                 .collect(Collectors.toMap(
                         ug -> ug.getUser().getUserId(),
                         UserGroupEntity::getType
@@ -1425,7 +1551,7 @@ public class UserServiceImpl implements UserService {
 
         // Fetch the latest timesheet logs for the members
         List<TimesheetEntity> latestLogs = timesheetAdapter.getLatestLogsByTimesheetIds(memberIds, orgId, date);
-        Map<Long, TimesheetEntity> latestLogsMap = latestLogs.stream()
+        Map<String, TimesheetEntity> latestLogsMap = latestLogs.stream()
                 .collect(Collectors.toMap(TimesheetEntity::getUserId, Function.identity()));
 
         // Map user details to return response
@@ -1458,11 +1584,11 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public List<UserNameSuggestionDto> getGroupUsers(List<Long> groupIds, Long orgId, Long loggedInUserId, String role) {
+    public List<UserNameSuggestionDto> getGroupUsers(List<Long> groupIds, String orgId, String loggedInUserId, String role) {
         // Case 1: groupIds is null or empty → return all active users
         if (groupIds == null || groupIds.isEmpty()) {
             int hierarchyLevel = UserRole.getLevel(role);
-            List<UserNameSuggestionDto> allUsers = userAdapter.getAllActiveUsers(orgId,hierarchyLevel);
+            List<UserNameSuggestionDto> allUsers = userAdapter.getAllActiveUsers(orgId, hierarchyLevel);
 
             return allUsers.stream()
                     .filter(user -> !user.getUserId().equals(loggedInUserId))  // Exclude logged-in user
@@ -1472,7 +1598,7 @@ public class UserServiceImpl implements UserService {
         log.info("Role: {}", role);
         if (RoleName.SUPERADMIN.getRoleName().equalsIgnoreCase(role)) {
             log.info("SuperAdmin role");
-            List<UserNameSuggestionDto> allUsers = userAdapter.getAllGroupUsers(groupIds,orgId);
+            List<UserNameSuggestionDto> allUsers = userAdapter.getAllGroupUsers(groupIds, orgId);
             List<UserNameSuggestionDto> groupMembers = allUsers.stream()
                     .collect(Collectors.toMap(
                             UserNameSuggestionDto::getUserId,
@@ -1488,7 +1614,7 @@ public class UserServiceImpl implements UserService {
         // Case 2: groupIds provided → return only members from those groups
         List<UserGroupEntity> groupEntity = userAdapter.getGroupUsersByGroupId(groupIds, orgId);
 
-        List<Long> memberIds = groupEntity.stream()
+        List<String> memberIds = groupEntity.stream()
                 .filter(ug -> ug.getType().equalsIgnoreCase("Member"))  // Only members
                 .map(ug -> ug.getUser().getUserId())
                 .filter(id -> !id.equals(loggedInUserId))  // Exclude logged-in user
@@ -1506,31 +1632,57 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public Location addLocation(LocationDto locationDto, Long orgId) {
-        // Convert DTO to Entity
+    @Transactional
+    public Location addLocation(LocationDto locationDto, String orgId) {
         Location locationModel = locationEntityMapper.toModel(locationDto);
-        locationModel.setOrgId(orgId);
+        try {
+            locationModel.setOrgId(orgId);
+            if (locationModel.isDefault()) {
+                locationRepository.resetDefaultLocation(orgId);
+            }
+            LocationEntity savedEntity = userAdapter.addLocation(locationModel);
+            int roleId = UserRole.SUPERADMIN.getHierarchyLevel();
+            UserEntity user = userAdapter.findUserByOrgIdAndRoleId(orgId, roleId);
+            if (user == null) {
+                throw new RuntimeException("No User found under the role Superadmin");
+            }
+            log.info("User List in role Superadmin:{}", user);
+            log.info("Adding user to newly created location");
+            List<UserLocationEntity> userLocationEntities = new ArrayList<>();
+            LocationEntity locations = locationRepository.findById(savedEntity.getLocationId())
+                    .orElseThrow(() -> new NoSuchElementException("Location not found with ID: " + savedEntity.getLocationId()));
 
-        if (userAdapter.findByLocation(locationModel.getName(), orgId)) {
-            throw new DataIntegrityViolationException("Location '" + locationModel.getName() + "' already exists in this organization");
+            UserLocationEntity userLocation = new UserLocationEntity();
+            userLocation.setUser(user);
+            userLocation.setLocation(locations);
+            userLocationEntities.add(userLocation);
+            log.info("USERLOCATION:{}", userLocation);
+            userAdapter.saveUserLocation(userLocationEntities);
+
+            CacheEventPublisherUtil.syncReloadThenPublish(
+                    publisher,
+                    cacheKeyConfig.getLocation(),
+                    orgId,
+                    cacheReloadHandlerRegistry
+            );
+            log.info("LocationCacheReloadEvent published after location Added");
+            return locationEntityMapper.toDto(savedEntity);
+        } catch (DataIntegrityViolationException e) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Location '" + locationModel.getName() + "' already exists in this organization");
         }
-
-        // Save to DB — triggers @PostPersist in listener
-        LocationEntity savedEntity = userAdapter.addLocation(locationModel);
-
-        log.info("Publishing LocationCacheReloadEvent");
-        publisher.publishEvent(new LocationCacheReloadEvent());
-        log.info("LocationCacheReloadEvent published");
-        return locationEntityMapper.toDto(savedEntity);
     }
 
     @Override
-    public List<LocationDto> getUserLocation(Long userId) {
+    public List<LocationDto> getUserLocation(String userId) {
 
         UserEntity existingUser = userAdapter.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         List<UserLocationEntity> userLocation = userAdapter.findUserLocationByUserId(userId);
+
+        if (userLocation.isEmpty()) {
+            throw new CommonExceptionHandler.NoUserLocationAssignedException(existingUser.getUserName());
+        }
 
         List<Long> locationIds = userLocation.stream()
                 .map(userLocationEntity -> userLocationEntity.getLocation().getLocationId())
@@ -1547,9 +1699,9 @@ public class UserServiceImpl implements UserService {
     @Override
     public ResponseEntity<Resource> downloadSampleFile() {
         try {
-            Resource resource =new ClassPathResource("templates/Sample_Template.csv");
+            Resource resource = new ClassPathResource("templates/Sample_Template.csv");
 
-            if (! resource.exists()) {
+            if (!resource.exists()) {
                 return ResponseEntity.notFound().build();
             }
 
@@ -1557,24 +1709,28 @@ public class UserServiceImpl implements UserService {
             headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=Sample_Template.csv");
             return ResponseEntity.ok().headers(headers).contentLength(resource.contentLength())
                     .contentType(MediaType.APPLICATION_OCTET_STREAM).body(resource);
-    }catch (IOException e){
+        } catch (IOException e) {
             e.printStackTrace();
             return ResponseEntity.status(500).build();
         }
     }
 
     @Override
-    public Privilege addPrivileges(Privilege privilegeModel) {
+    public Privilege addPrivileges(Privilege privilegeModel, String orgId) {
         PrivilegeEntity privilegeEntity = userEntityMapper.toEntity(privilegeModel);
         PrivilegeEntity privilege = userAdapter.addPrivilege(privilegeEntity);
-        log.info("Publishing PrivilegeCacheReloadEvent");
-        publisher.publishEvent(new PrivilegeCacheReloadEvent());
-        log.info("PrivilegeCacheReloadEvent published");
+        CacheEventPublisherUtil.syncReloadThenPublish(
+                publisher,
+                cacheKeyConfig.getRoleprivilege(),
+                orgId,
+                cacheReloadHandlerRegistry
+        );
+        log.info("Privilege CacheReloadEvent published after Privilege Creation");
         return userEntityMapper.toModel(privilege);
     }
 
     @Override
-    public RolePrivilege addRolwisePrivileges(RolePrivilege rolePrivilege) {
+    public RolePrivilege addRolwisePrivileges(RolePrivilege rolePrivilege, String orgId) {
 
         //Find Role
         RoleEntity role = userAdapter.findRoleById(rolePrivilege.getRoleId())
@@ -1583,17 +1739,157 @@ public class UserServiceImpl implements UserService {
         PrivilegeEntity privilegeEntity = userAdapter.findPrivilegeById(rolePrivilege.getPrivilegeId())
                 .orElseThrow(() -> new RuntimeException("Privilege not found"));
 
-        if(rolePrivilege.isType() == true) {
+        if (rolePrivilege.isType() == true) {
             role.getPrivilegeEntities().add(privilegeEntity);
-        }else{
+        } else {
             role.getPrivilegeEntities().remove(privilegeEntity);
         }
         userAdapter.saveRole(role);
 
-        log.info("Publishing RolePrivilegesCacheReloadEvent");
-        publisher.publishEvent(new RolePrivilegesCacheReloadEvent());
-        log.info("RolePrivilegesCacheReloadEvent published");
-
+        CacheEventPublisherUtil.syncReloadThenPublish(
+                publisher,
+                cacheKeyConfig.getRoleprivilege(),
+                orgId,
+                cacheReloadHandlerRegistry
+        );
+        log.info("RolewisePrivilege CacheReloadEvent published after Role wise privilege creation");
         return rolePrivilege;
+    }
+
+    @Override
+    public ApiResponse updateLocation(String orgId, LocationList location) {
+        List<Long> locationIds = location.getLocationId();
+        if (locationIds == null || locationIds.isEmpty()) {
+            throw new RuntimeException("No location IDs provided");
+        }
+        if (location.isDefault() && location.getLocationId().size() > 1) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Only one Location can be marked as Default"
+            );
+        }
+        Long defaultLocationId = location.isDefault() ? locationIds.get(0) : null;
+        if (location.isDefault()) {
+            locationRepository.resetDefaultLocation(orgId, defaultLocationId);
+        }
+        List<LocationEntity> updatedEntities = new ArrayList<>();
+        int count = 0;
+        for (Long id : locationIds) {
+            LocationEntity entity = userAdapter.findLocationById(id, orgId);
+            if (entity == null) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "No Location Found for the provided Location Id");
+            }
+            if (location.getName() != null) entity.setName(location.getName());
+            if (location.getAddress() != null) entity.setAddress(location.getAddress());
+            if (location.getLatitude() != null) entity.setLatitude(location.getLatitude());
+            if (location.getLongitude() != null) entity.setLongitude(location.getLongitude());
+            if (location.getRadius() != null) entity.setRadius(location.getRadius());
+            entity.setDefault(location.isDefault() && id.equals(defaultLocationId));
+
+            // Set orgId
+            OrganizationEntity organization = new OrganizationEntity();
+            organization.setOrganizationId(orgId);
+            entity.setOrganizationEntity(organization);
+
+            updatedEntities.add(entity);
+            count++;
+        }
+
+        List<LocationEntity> savedEntities = userAdapter.updateMultipleLocations(updatedEntities);
+
+        // Cache reload after bulk update
+        CacheEventPublisherUtil.syncReloadThenPublish(
+                publisher,
+                cacheKeyConfig.getLocation(),
+                orgId,
+                cacheReloadHandlerRegistry
+        );
+        log.info("LocationCacheReloadEvent published after bulk update");
+
+        // Return just one (or the list, depending on API response design)
+        String message = String.format("%d locations updated successfully", count);
+        return new ApiResponse(200, message, null);
+    }
+
+    @Override
+    public void deleteLocation(LocationListDto locationDto, String orgId) {
+        List<Long> locationIdList = locationDto.getLocationId();
+
+        boolean exist = locationRepository.existsBylocationIdInAndOrganizationEntity_OrganizationId(locationIdList, orgId);
+        if (!exist) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Location not found or access denied");
+        }
+
+        Optional<LocationEntity> defaultLocationExist = userAdapter.findAllDefaultLocationById(locationIdList, orgId);
+        if (defaultLocationExist.isPresent()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot delete default location");
+        }
+
+        LocationEntity defaultLocation = userAdapter.findDefaultLocationByOrgId(orgId);
+        if (defaultLocation == null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "No default location exists for this organization");
+        }
+
+        Long defaultLocationId = defaultLocation.getLocationId();
+
+        List<GroupEntity> groupsToUpdate = userAdapter.findByLocation_LocationIdIn(locationIdList);
+        for (GroupEntity group : groupsToUpdate) {
+            if (!group.getLocationEntity().getLocationId().equals(defaultLocationId)) {
+                group.setLocationEntity(defaultLocation);
+            }
+        }
+        userAdapter.saveAllGroups(groupsToUpdate);
+
+        List<UserLocationEntity> userLocationsToUpdate = userAdapter.findUserLocationByLocationId(locationIdList);
+
+        log.info("User-Location entries to process: {}", userLocationsToUpdate.size());
+        if (userLocationsToUpdate.isEmpty()) return;
+
+        List<UserLocationEntity> userLocationsToDelete = new ArrayList<>();
+        List<UserLocationEntity> newUserLocationsToInsert = new ArrayList<>();
+
+        for (UserLocationEntity userLoc : userLocationsToUpdate) {
+            String userId = userLoc.getUser().getUserId();
+            Long currentLocationId = userLoc.getLocation().getLocationId();
+            log.info("User Current Location: {}", currentLocationId);
+            if (currentLocationId.equals(defaultLocationId)) {
+                userLocationsToDelete.add(userLoc);
+                continue;
+            }
+
+            boolean hasDefaultLocation = userAdapter
+                    .findUserLocationByUserId(userId)
+                    .stream()
+                    .map(loc -> loc.getLocation().getLocationId())
+                    .anyMatch(id -> id.equals(defaultLocationId));
+
+            if (!hasDefaultLocation) {
+                UserLocationEntity newUserLoc = new UserLocationEntity();
+                newUserLoc.setUser(userLoc.getUser());
+                newUserLoc.setLocation(defaultLocation);
+                newUserLocationsToInsert.add(newUserLoc);
+            }
+            userLocationsToDelete.add(userLoc);
+        }
+
+        if (!newUserLocationsToInsert.isEmpty()) {
+            userAdapter.saveAllUserLocation(newUserLocationsToInsert);
+        }
+
+        userAdapter.deleteAllUserLocations(userLocationsToDelete);
+
+        log.info("Successfully reassigned {} users to default location and deleted {} old mappings.",
+                newUserLocationsToInsert.size(), userLocationsToDelete.size());
+
+        userAdapter.deleteLocation(locationIdList, orgId);
+
+        CacheEventPublisherUtil.syncReloadThenPublish(
+                publisher,
+                cacheKeyConfig.getLocation(),
+                orgId,
+                cacheReloadHandlerRegistry
+        );
+
+        log.info("Location deleted and references updated. Cache reloaded.");
     }
 }

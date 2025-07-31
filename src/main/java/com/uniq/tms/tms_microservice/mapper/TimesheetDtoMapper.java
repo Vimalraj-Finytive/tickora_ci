@@ -1,11 +1,10 @@
 package com.uniq.tms.tms_microservice.mapper;
 
-import com.uniq.tms.tms_microservice.dto.TimesheetDto;
-import com.uniq.tms.tms_microservice.dto.TimesheetHistoryDto;
-import com.uniq.tms.tms_microservice.dto.UserDashboard;
-import com.uniq.tms.tms_microservice.dto.UserDashboardDto;
+import com.uniq.tms.tms_microservice.dto.*;
 import com.uniq.tms.tms_microservice.entity.TimesheetEntity;
+import com.uniq.tms.tms_microservice.entity.TimesheetStatusEntity;
 import com.uniq.tms.tms_microservice.model.TimesheetHistory;
+import com.uniq.tms.tms_microservice.model.TimesheetStatus;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
@@ -18,6 +17,7 @@ public interface TimesheetDtoMapper {
 
     @Mapping(source = "trackedHours", target = "trackedHours", qualifiedByName = "localTimeToDuration")
     @Mapping(source = "regularHours", target = "regularHours", qualifiedByName = "localTimeToDuration")
+    @Mapping(source = "status.statusName", target = "status")
     TimesheetDto toDto(TimesheetEntity entity);
 
     // Custom conversion from LocalTime to Duration
@@ -37,4 +37,7 @@ public interface TimesheetDtoMapper {
 
     UserDashboardDto toDto(UserDashboard userDashboard);
 
+    TimesheetStatus toStatusModel(TimesheetStatusEntity entity);
+
+    TimesheetStatusDto toStatusDto(TimesheetStatus timesheetStatus);
 }

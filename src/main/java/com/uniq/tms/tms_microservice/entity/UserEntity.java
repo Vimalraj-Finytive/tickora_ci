@@ -3,8 +3,6 @@ package com.uniq.tms.tms_microservice.entity;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
@@ -18,9 +16,8 @@ import java.time.LocalDateTime;
 public class UserEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "user_id")
-    private Long userId;
+    private String userId;
 
     @Column(name = "user_name", nullable = false)
     private String userName;
@@ -35,7 +32,7 @@ public class UserEntity {
     private String password;
 
     @Column(name = "organization_id")
-    private Long organizationId;
+    private String organizationId;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -57,14 +54,19 @@ public class UserEntity {
     @Column(name = "active", nullable = false)
     private boolean active;
 
-    public UserEntity(Long userId){
+    @ManyToOne
+    @JoinColumn(name = "work_schedule_id")
+    private WorkScheduleEntity workSchedule;
+
+    public UserEntity(String userId){
         this.userId = userId;
     }
 
     public UserEntity() {
     }
 
-    public UserEntity(Long userId, String userName, String email, String mobileNumber, boolean isDefaultPassword, LocalDate dateOfJoining, boolean active, RoleEntity role, LocalDateTime createdAt, Long organizationId, String password) {
+    public UserEntity(String userId, String userName, String email, String mobileNumber, boolean isDefaultPassword, LocalDate dateOfJoining, boolean active,
+                      RoleEntity role, LocalDateTime createdAt, String organizationId, String password, WorkScheduleEntity workSchedule) {
         this.userId = userId;
         this.userName = userName;
         this.email = email;
@@ -76,6 +78,7 @@ public class UserEntity {
         this.createdAt = createdAt;
         this.organizationId = organizationId;
         this.password = password;
+        this.workSchedule = workSchedule;
     }
 
     public LocalDate getDateOfJoining() {
@@ -94,11 +97,11 @@ public class UserEntity {
         isDefaultPassword = defaultPassword;
     }
 
-    public Long getUserId() {
+    public String getUserId() {
         return userId;
     }
 
-    public void setUserId(Long userId) {
+    public void setUserId(String userId) {
         this.userId = userId;
     }
 
@@ -142,11 +145,11 @@ public class UserEntity {
         this.createdAt = createdAt;
     }
 
-    public Long getOrganizationId() {
+    public String getOrganizationId() {
         return organizationId;
     }
 
-    public void setOrganizationId(Long organizationId) {
+    public void setOrganizationId(String organizationId) {
         this.organizationId = organizationId;
     }
 
@@ -177,5 +180,13 @@ public class UserEntity {
 
     public void setRegisterUser(boolean registerUser) {
         isRegisterUser = registerUser;
+    }
+
+    public WorkScheduleEntity getWorkSchedule() {
+        return workSchedule;
+    }
+
+    public void setWorkSchedule(WorkScheduleEntity workSchedule) {
+        this.workSchedule = workSchedule;
     }
 }

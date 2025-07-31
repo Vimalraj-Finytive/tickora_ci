@@ -3,19 +3,19 @@ package com.uniq.tms.tms_microservice.model;
 public class UserGroup {
 
     private Long groupId;
-    private Long userId;
+    private String userId;
     private String type;
 
     public UserGroup() {
     }
 
-    public UserGroup(Long groupId, Long userId, String type) {
+    public UserGroup(Long groupId, String userId, String type) {
         this.groupId = groupId;
         this.userId = userId;
         this.type = type;
     }
 
-    public void setUserId(Long userId) {
+    public void setUserId(String userId) {
         this.userId = userId;
     }
 
@@ -35,7 +35,7 @@ public class UserGroup {
         this.groupId = groupId;
     }
 
-    public Long getUserId() {
+    public String getUserId() {
         return userId;
     }
 }

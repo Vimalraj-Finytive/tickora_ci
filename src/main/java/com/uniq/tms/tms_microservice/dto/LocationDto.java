@@ -7,6 +7,7 @@ public class LocationDto {
     private String longitude;
     private String radius;
     private String address;
+    private boolean isDefault;
 
     public Long getLocationId() {
         return locationId;
@@ -54,5 +55,13 @@ public class LocationDto {
 
     public void setAddress(String address){
         this.address = address;
+    }
+
+    public boolean isDefault() {
+        return isDefault;
+    }
+
+    public void setDefault(boolean aDefault) {
+        isDefault = aDefault;
     }
 }

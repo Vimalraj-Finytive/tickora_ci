@@ -2,7 +2,7 @@ package com.uniq.tms.tms_microservice.service.impl;
 
 import com.uniq.tms.tms_microservice.adapter.AuthAdapter;
 import com.uniq.tms.tms_microservice.adapter.UserAdapter;
-import com.uniq.tms.tms_microservice.config.JwtUtil;
+import com.uniq.tms.tms_microservice.config.security.jwt.JwtUtil;
 import com.uniq.tms.tms_microservice.dto.ApiResponse;
 import com.uniq.tms.tms_microservice.dto.ChangePasswordDto;
 import com.uniq.tms.tms_microservice.dto.PrivilegeConstants;
@@ -165,7 +165,7 @@ public class AuthServiceImpl implements AuthService {
 
         String key = cacheLoaderService.getPrivilegeKey(PrivilegeConstants.LOGIN_VIA_MOBILE);
         boolean hasMobileLoginPrivilege = cacheKeyUtil.roleHasPrivilege(users.get(0).getRole().getName(), key);
-        log.info("has email login privilege: {}", hasMobileLoginPrivilege);
+        log.info("has mobile login privilege: {}", hasMobileLoginPrivilege);
 
         // Step 2: Find the first user with mobile login privilege
         Optional<UserEntity> userWithEmailPrivilege = users.stream()
@@ -184,7 +184,7 @@ public class AuthServiceImpl implements AuthService {
         String generatedOtp;
         String result;
 //		if ("9952996769".equals(phoneNumber)) {
-        if ("7010274041".equals(mobile)) {
+        if ("9089798767".equals(mobile)) {
             generatedOtp = "112233";
             result = "success";
         } else {

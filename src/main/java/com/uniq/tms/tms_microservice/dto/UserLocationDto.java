@@ -4,14 +4,14 @@ import java.util.List;
 
 public class UserLocationDto {
 
-    private  Long userId;
+    private  String userId;
     private List<Long> locationId;
 
-    public Long getUserId() {
+    public String getUserId() {
         return userId;
     }
 
-    public void setUserId(Long userId) {
+    public void setUserId(String userId) {
         this.userId = userId;
     }
 

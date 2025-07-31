@@ -1,21 +1,14 @@
 package com.uniq.tms.tms_microservice.entity;
 
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.Table;
-import org.springframework.boot.autoconfigure.domain.EntityScan;
+import jakarta.persistence.*;
 import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "location")
+@Table(name = "location",
+uniqueConstraints = {
+        @UniqueConstraint(columnNames = {"organization_id", "name"})
+})
 public class LocationEntity {
 
     @Id
@@ -27,7 +20,7 @@ public class LocationEntity {
     @JoinColumn(name = "organization_id", nullable = false)
     private OrganizationEntity organizationEntity;
 
-    @Column(name = "name", nullable = false, length = 255)
+    @Column(name = "name", nullable = false, length = 255, unique = true)
     private String name;
 
     @Column(name = "latitude", nullable = false, length = 255)
@@ -44,6 +37,9 @@ public class LocationEntity {
 
     @Column(name = "address", nullable = false, length = 255)
     private String address;
+
+    @Column(name = "is_default", nullable = false)
+    private boolean isDefault = false;
 
     public LocationEntity() {}
 
@@ -121,5 +117,13 @@ public class LocationEntity {
 
     public void setAddress(String address) {
         this.address = address;
+    }
+
+    public boolean isDefault() {
+        return isDefault;
+    }
+
+    public void setDefault(boolean aDefault) {
+        isDefault = aDefault;
     }
 }

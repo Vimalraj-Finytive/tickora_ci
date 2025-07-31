@@ -3,8 +3,6 @@ package com.uniq.tms.tms_microservice.entity;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
@@ -16,9 +14,8 @@ import java.util.List;
 public class OrganizationEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "organization_id")
-    private Long organizationId;
+    private String organizationId;
 
     @Column(name = "org_name", nullable = false, length = 255)
     private String orgName;
@@ -37,6 +34,9 @@ public class OrganizationEntity {
 
     @OneToMany(mappedBy = "organizationEntity", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<GroupEntity> groups = new ArrayList<>();
+
+    @OneToMany(mappedBy = "organizationEntity", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<WorkScheduleEntity> workSchedule = new ArrayList<>();
 
     public List<GroupEntity> getGroups() {
         return groups;
@@ -70,11 +70,11 @@ public class OrganizationEntity {
         this.teams = teams;
     }
 
-    public Long getOrganizationId() {
+    public String getOrganizationId() {
         return organizationId;
     }
 
-    public void setOrganizationId(Long organizationId) {
+    public void setOrganizationId(String organizationId) {
         this.organizationId = organizationId;
     }
 
@@ -92,5 +92,13 @@ public class OrganizationEntity {
 
     public void setOrgName(String orgName) {
         this.orgName = orgName;
+    }
+
+    public List<WorkScheduleEntity > getWorkSchedule() {
+        return workSchedule;
+    }
+
+    public void setWorkSchedule(List<WorkScheduleEntity > workSchedule) {
+        this.workSchedule = workSchedule;
     }
 }

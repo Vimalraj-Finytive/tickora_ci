@@ -21,7 +21,7 @@ public interface TimesheetHistoryRepository extends JpaRepository<TimesheetHisto
     WHERE t.userId IN :userIds
       AND t.date = :logDate
 """)
-    List<TimesheetEntity> findLatestLogByTimesheet(@Param("userIds") List<Long> userIds, @Param("logDate") LocalDate date);
+    List<TimesheetEntity> findLatestLogByTimesheet(@Param("userIds") List<String> userIds, @Param("logDate") LocalDate date);
 
     @Modifying
     @Transactional

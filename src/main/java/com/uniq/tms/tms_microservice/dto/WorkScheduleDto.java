@@ -1,28 +1,29 @@
 package com.uniq.tms.tms_microservice.dto;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
-import java.time.LocalTime;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import java.util.List;
 
 public class WorkScheduleDto {
+    private String scheduleId;
     private String scheduleName;
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "HH:mm")
-    private LocalTime startTime;
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "HH:mm")
-    private LocalTime endTime;
-    private String restDay;
+    private boolean isActive;
     private boolean isDefault;
     private String type;
+    @JsonIgnore
+    private String orgId;
+    private Double duration;
+    private String typeName;
+    private List<FixedScheduleDto> fixedSchedule;
+    private List<FlexibleScheduleDto> flexibleSchedule;
+    private WeeklyScheduleDto weeklySchedule;
 
-    public WorkScheduleDto() {
+
+    public String getScheduleId() {
+        return scheduleId;
     }
 
-    public WorkScheduleDto(String scheduleName, LocalTime startTime, String restDay, boolean isDefault, String type, LocalTime endTime) {
-        this.scheduleName = scheduleName;
-        this.startTime = startTime;
-        this.restDay = restDay;
-        this.isDefault = isDefault;
-        this.type = type;
-        this.endTime = endTime;
+    public void setScheduleId(String scheduleId) {
+        this.scheduleId = scheduleId;
     }
 
     public String getScheduleName() {
@@ -33,20 +34,12 @@ public class WorkScheduleDto {
         this.scheduleName = scheduleName;
     }
 
-    public LocalTime getEndTime() {
-        return endTime;
+    public boolean isActive() {
+        return isActive;
     }
 
-    public void setEndTime(LocalTime endTime) {
-        this.endTime = endTime;
-    }
-
-    public String getRestDay() {
-        return restDay;
-    }
-
-    public void setRestDay(String restDay) {
-        this.restDay = restDay;
+    public void setActive(boolean active) {
+        isActive = active;
     }
 
     public boolean isDefault() {
@@ -65,11 +58,51 @@ public class WorkScheduleDto {
         this.type = type;
     }
 
-    public LocalTime getStartTime() {
-        return startTime;
+    public String getOrgId() {
+        return orgId;
     }
 
-    public void setStartTime(LocalTime startTime) {
-        this.startTime = startTime;
+    public void setOrgId(String orgId) {
+        this.orgId = orgId;
+    }
+
+    public Double getDuration() {
+        return duration;
+    }
+
+    public void setDuration(Double duration) {
+        this.duration = duration;
+    }
+
+    public List<FixedScheduleDto> getFixedSchedule() {
+        return fixedSchedule;
+    }
+
+    public void setFixedSchedule(List<FixedScheduleDto> fixedSchedule) {
+        this.fixedSchedule = fixedSchedule;
+    }
+
+    public List<FlexibleScheduleDto> getFlexibleSchedule() {
+        return flexibleSchedule;
+    }
+
+    public void setFlexibleSchedule(List<FlexibleScheduleDto> flexibleSchedule) {
+        this.flexibleSchedule = flexibleSchedule;
+    }
+
+    public WeeklyScheduleDto getWeeklySchedule() {
+        return weeklySchedule;
+    }
+
+    public void setWeeklySchedule(WeeklyScheduleDto weeklySchedule) {
+        this.weeklySchedule = weeklySchedule;
+    }
+
+    public String getTypeName() {
+        return typeName;
+    }
+
+    public void setTypeName(String typeName) {
+        this.typeName = typeName;
     }
 }

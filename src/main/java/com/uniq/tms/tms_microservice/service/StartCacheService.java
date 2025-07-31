@@ -4,5 +4,5 @@ import org.springframework.boot.ApplicationArguments;
 
 public interface StartCacheService {
 
-//    void run(ApplicationArguments args) throws Exception;
+    void run(ApplicationArguments args) throws Exception;
 }

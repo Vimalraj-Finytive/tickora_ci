@@ -15,7 +15,7 @@ import java.util.List;
 public class TimesheetDto {
     private Long id;
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
-    private Long userId;
+    private String userId;
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     private LocalDate date;
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
@@ -47,7 +47,7 @@ public class TimesheetDto {
     private String regularHoursDuration;
     private List<TimesheetHistoryDto> history;
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
-    private Long statusId;
+    private String statusId;
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String groupname;
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
@@ -55,8 +55,9 @@ public class TimesheetDto {
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String mobileNumber;
     private String status;
+    private String workScheduleName;
 
-    public TimesheetDto(TimesheetEntity timesheetEntity, List<TimesheetHistoryDto> historyDtos) {
+    public TimesheetDto(TimesheetEntity timesheetEntity, List<TimesheetHistoryDto> historyDtos, String workScheduleName) {
         this.id = timesheetEntity.getId();
         this.userId = timesheetEntity.getUserId();
         this.date = timesheetEntity.getDate();
@@ -64,6 +65,7 @@ public class TimesheetDto {
         this.lastClockOut = timesheetEntity.getLastClockOut();
         this.regularHours = convertToDuration(timesheetEntity.getRegularHours());
         this.trackedHours = convertToDuration(timesheetEntity.getTrackedHours());
+        this.workScheduleName = workScheduleName;
         this.firstClockInTime = formatTime(this.firstClockIn);
         this.lastClockOutTime = formatTime(this.lastClockOut);
         this.trackedHoursDuration = formatDuration(this.trackedHours);
@@ -72,7 +74,6 @@ public class TimesheetDto {
     }
 
     public TimesheetDto() {
-
     }
 
     private Duration convertToDuration(LocalTime localTime) {
@@ -183,11 +184,11 @@ public class TimesheetDto {
         this.id = id;
     }
 
-    public Long getUserId() {
+    public String getUserId() {
         return userId;
     }
 
-    public void setUserId(Long userId) {
+    public void setUserId(String userId) {
         this.userId = userId;
     }
 
@@ -255,11 +256,11 @@ public class TimesheetDto {
         this.history = history;
     }
 
-    public Long getStatusId() {
+    public String getStatusId() {
         return statusId;
     }
 
-    public void setStatusId(Long statusId) {
+    public void setStatusId(String statusId) {
         this.statusId = statusId;
     }
 
@@ -293,5 +294,13 @@ public class TimesheetDto {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public String getWorkScheduleName() {
+        return workScheduleName;
+    }
+
+    public void setWorkScheduleName(String workScheduleName) {
+        this.workScheduleName = workScheduleName;
     }
 }

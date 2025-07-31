@@ -5,17 +5,18 @@ import java.util.List;
 
 public class User {
 
-    private Long userId;
+    private String userId;
     private String userName;
     private String email;
     private String mobileNumber;
-    private Long organizationId;
+    private String organizationId;
     private Long roleId;
     private List<Long> locationId;
     private LocalDate dateOfJoining;
     private boolean isRegisterUser;
     private List<Long> groupId;
     private boolean active;
+    private String workSchedule;
 
     public boolean isActive() {
         return active;
@@ -33,11 +34,11 @@ public class User {
         this.dateOfJoining = dateOfJoining;
     }
 
-    public Long getUserId() {
+    public String getUserId() {
         return userId;
     }
 
-    public void setUserId(Long userId) {
+    public void setUserId(String userId) {
         this.userId = userId;
     }
 
@@ -65,11 +66,11 @@ public class User {
         this.mobileNumber = mobileNumber;
     }
 
-    public Long getOrganizationId() {
+    public String getOrganizationId() {
         return organizationId;
     }
 
-    public void setOrganizationId(Long organizationId) {
+    public void setOrganizationId(String organizationId) {
         this.organizationId = organizationId;
     }
 
@@ -103,5 +104,13 @@ public class User {
 
     public void setGroupId(List<Long> groupId) {
         this.groupId = groupId;
+    }
+
+    public String getWorkSchedule() {
+        return workSchedule;
+    }
+
+    public void setWorkSchedule(String workSchedule) {
+        this.workSchedule = workSchedule;
     }
 }

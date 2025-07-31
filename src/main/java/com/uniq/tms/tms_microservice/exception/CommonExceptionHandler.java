@@ -13,4 +13,10 @@ public class CommonExceptionHandler {
             super(message);
         }
     }
+
+    public static class NoUserLocationAssignedException extends RuntimeException {
+        public NoUserLocationAssignedException(String message){
+            super("No locations assigned to logged user");
+        }
+    }
 }
