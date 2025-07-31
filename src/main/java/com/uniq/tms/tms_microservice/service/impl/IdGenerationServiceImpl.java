@@ -74,27 +74,39 @@ public class IdGenerationServiceImpl implements IdGenerationService {
 
     @Override
     public String generateOrgPrefix(String orgName) {
-        if (orgName == null || orgName.isEmpty()) return "XXXX";
+        if (orgName == null || orgName.trim().isEmpty()) return "XXXX";
         String[] words = orgName.trim().split("\\s+");
         String firstWord = words[0].toUpperCase();
-        String primaryPrefix = firstWord.substring(0, Math.min(4, firstWord.length()));
-        if (!organizationRepository.existsByOrganizationIdStartingWith("TK" + primaryPrefix)) {
-            return primaryPrefix;
+        if (!organizationRepository.existsByOrganizationIdStartingWith(firstWord)) {
+            return firstWord;
         }
         if (words.length > 1) {
-            String fallbackPrefix = words[0].substring(0, 1).toUpperCase() +
-                    words[1].substring(0, Math.min(3, words[1].length())).toUpperCase();
-            if (!organizationRepository.existsByOrganizationIdStartingWith("TK" + fallbackPrefix)) {
-                return fallbackPrefix;
+            String secondWord = words[1].toUpperCase();
+            for (int i = 1; i <= secondWord.length(); i++) {
+                String combinedPrefix = firstWord + secondWord.substring(0, i);
+                if (!organizationRepository.existsByOrganizationIdStartingWith(combinedPrefix)) {
+                    return combinedPrefix;
+                }
             }
         }
-        int counter = 1;
+        int suffixIndex = 0;
         String tempPrefix;
         do {
-            tempPrefix = primaryPrefix + counter;
-            counter++;
-        } while (organizationRepository.existsByOrganizationIdStartingWith("TK" + tempPrefix));
+            String alphaSuffix = toAlphabeticSuffix(suffixIndex);
+            tempPrefix = firstWord + alphaSuffix;
+            suffixIndex++;
+        } while (organizationRepository.existsByOrganizationIdStartingWith(tempPrefix));
 
         return tempPrefix;
     }
+    private String toAlphabeticSuffix(int index) {
+        index += 23;
+        StringBuilder suffix = new StringBuilder();
+        while (index >= 0) {
+            suffix.insert(0, (char) ('A' + (index % 26)));
+            index = index / 26 - 1;
+        }
+        return suffix.toString();
+    }
+
 }
