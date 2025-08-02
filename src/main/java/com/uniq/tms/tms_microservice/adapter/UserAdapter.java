@@ -105,9 +105,11 @@ public interface UserAdapter {
     Long countOrganizations();
     boolean existsByOrganizationId(String orgId);
     List<LocationEntity> findLocation(String orgId);
-    UserEntity findUserByOrgIdAndRoleId(String orgId, int roleId);
-    UserEntity save(UserEntity user);
+    List<UserEntity> findUserByOrgIdAndRoleId(String orgId, int roleId);
+    List<UserEntity> save(List<UserEntity> user);
     OrganizationTypeEntity findOrgType(String orgType);
     void saveAllUserLocation(List<UserLocationEntity> newUserLocationsToInsert);
     void deleteAllUserLocations(List<UserLocationEntity> userLocationsToDelete);
+    List<UserGroupEntity> findUserByOrganizationIdAndUserId(String orgId, String userId);
+    List<UserLocationEntity> findByUser_UserId(String userId);
 }
