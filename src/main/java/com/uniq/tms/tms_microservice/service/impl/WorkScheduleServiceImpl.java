@@ -24,6 +24,7 @@ import jakarta.persistence.PersistenceContext;
 import jakarta.transaction.Transactional;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -41,6 +42,9 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
     private static final Logger log = LogManager.getLogger(WorkScheduleServiceImpl.class);
     @PersistenceContext
     private EntityManager entityManager;
+
+    @Value("${cache.redis.enabled:false}")
+    private boolean isRedisEnabled;
 
     private final WorkScheduleAdapter workScheduleAdapter;
     private final WorkScheduleEntityMapper workScheduleEntityMapper;
@@ -148,29 +152,34 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
 
         if (shouldAssignToSuperAdmin) {
             int superAdminRoleLevel = UserRole.SUPERADMIN.getHierarchyLevel();
-            UserEntity superAdminUser = userAdapter.findUserByOrgIdAndRoleId(orgId, superAdminRoleLevel);
-
+            List<UserEntity> superAdminUser = userAdapter.findUserByOrgIdAndRoleId(orgId, superAdminRoleLevel);
+            List<UserEntity> userEntities = new ArrayList<>();
             if (superAdminUser != null) {
-                superAdminUser.setWorkSchedule(savedEntity);
-                userAdapter.save(superAdminUser);
+                for (UserEntity user : superAdminUser) {
+                    UserEntity userEntity = new UserEntity();
+                    userEntity.setWorkSchedule(savedEntity);
+                    userEntities.add(userEntity);
+                }
+                userAdapter.save(userEntities);
             }
         }
-
-        // Step 6: Save specific schedule type
         switch (typeEntity.getType()) {
             case FIXED -> saveFixedSchedule(model.getFixedSchedule(), entity);
             case FLEXIBLE -> saveFlexibleSchedule(model.getFlexibleSchedule(), entity);
             case WEEKLY -> saveWeeklySchedule(model.getWeeklySchedule(), entity);
         }
 
-        // Step 7: Trigger cache reload
-        CacheEventPublisherUtil.syncReloadThenPublish(
-                publisher,
-                cacheKeyConfig.getWorkSchedule(),
-                orgId,
-                cacheReloadHandlerRegistry
-        );
-        log.info("WorkScheduleCacheReloadEvent published after WorkSchedule Added");
+        if (!isRedisEnabled) {
+            CacheEventPublisherUtil.syncReloadThenPublish(
+                    publisher,
+                    cacheKeyConfig.getWorkSchedule(),
+                    orgId,
+                    cacheReloadHandlerRegistry
+            );
+            log.info("WorkScheduleCacheReloadEvent published after WorkSchedule Added");
+        } else {
+            log.info("Redis is not enabled or RedisTemplate is null. Skipping cache WS create reload.");
+        }
 
         return new ApiResponse(201, "WorkSchedule Created Successfully", null);
     }
@@ -225,7 +234,6 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
         {
             throw new DataIntegrityViolationException("WorkScheduleName already exists in this organization");
         }
-        // Validate
         WorkScheduleEntity existing = workScheduleAdapter.findByScheduleId(model.getScheduleId(), orgId);
 
             OrganizationEntity organizationEntity = userAdapter.findByOrgId(orgId)
@@ -237,28 +245,27 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
             if (model.isDefault()){
                 workScheduleAdapter.updateDefaultWorkSchedule(orgId, model.getScheduleId());
             }
-            // Delete children
             workScheduleAdapter.deleteAllChildren(model.getScheduleId());
             entityManager.flush();
             entityManager.clear();
-            // Update parent
             WorkScheduleEntity entity = workScheduleEntityMapper.toEntity(model);
             entity.setOrganizationEntity(organizationEntity);
             entity.setType(typeEntity);
             entity.setScheduleId(model.getScheduleId());
             entity.setActive(true);
-            workScheduleAdapter.saveWorkSchedule(entity);
             boolean shouldAssignToSuperAdmin = model.isDefault() || workScheduleAdapter.countByOrgId(orgId) == 0;
-
             WorkScheduleEntity savedEntity = workScheduleAdapter.saveWorkSchedule(entity);
-
             if (shouldAssignToSuperAdmin) {
                 int superAdminRoleLevel = UserRole.SUPERADMIN.getHierarchyLevel();
-                UserEntity superAdminUser = userAdapter.findUserByOrgIdAndRoleId(orgId, superAdminRoleLevel);
-
+                List<UserEntity> superAdminUser = userAdapter.findUserByOrgIdAndRoleId(orgId, superAdminRoleLevel);
+                List<UserEntity> userEntities = new ArrayList<>();
                 if (superAdminUser != null) {
-                    superAdminUser.setWorkSchedule(savedEntity);
-                    userAdapter.save(superAdminUser);
+                    for (UserEntity user : superAdminUser) {
+                        UserEntity userEntity = new UserEntity();
+                        userEntity.setWorkSchedule(savedEntity);
+                        userEntities.add(userEntity);
+                    }
+                    userAdapter.save(userEntities);
                 }
             }
             switch (typeEntity.getType()) {
@@ -266,14 +273,18 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
                 case FLEXIBLE -> saveFlexibleSchedule(model.getFlexibleSchedule(), entity);
                 case WEEKLY -> saveWeeklySchedule(model.getWeeklySchedule(), entity);
             }
-        CacheEventPublisherUtil.syncReloadThenPublish(
-                publisher,
-                cacheKeyConfig.getWorkSchedule(),
-                orgId,
-                cacheReloadHandlerRegistry
-        );
-        log.info("WorkScheduleCacheReloadEvent published after WorkSchedule Updated");
+        if (!isRedisEnabled) {
+            CacheEventPublisherUtil.syncReloadThenPublish(
+                    publisher,
+                    cacheKeyConfig.getWorkSchedule(),
+                    orgId,
+                    cacheReloadHandlerRegistry
+            );
+            log.info("WorkScheduleCacheReloadEvent published after WorkSchedule Updated");
+        } else {
+            log.info("Redis is not enabled or RedisTemplate is null. Skipping cache WS update reload .");
         }
+    }
 
     @Override
     @Transactional
@@ -303,15 +314,18 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
         workSchedule.setActive(false);
         workScheduleAdapter.saveWorkSchedule(workSchedule);
 
-        // Cache reload
-        CacheEventPublisherUtil.syncReloadThenPublish(
-                publisher,
-                cacheKeyConfig.getWorkSchedule(),
-                orgId,
-                cacheReloadHandlerRegistry
-        );
-
-        log.info("WorkSchedule deleted and references updated. Cache reloaded.");
+        if (!isRedisEnabled) {
+            CacheEventPublisherUtil.syncReloadThenPublish(
+                    publisher,
+                    cacheKeyConfig.getWorkSchedule(),
+                    orgId,
+                    cacheReloadHandlerRegistry
+            );
+            log.info("WorkSchedule deleted and references updated. Cache reloaded.");
+        }
+        else {
+                log.info("Redis is not enabled or RedisTemplate is null. Skipping cache WS delete reload.");
+            }
     }
 
     @Override

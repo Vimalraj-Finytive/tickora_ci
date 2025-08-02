@@ -3,6 +3,7 @@ package com.uniq.tms.tms_microservice.service.impl;
 import com.uniq.tms.tms_microservice.repository.OrganizationRepository;
 import com.uniq.tms.tms_microservice.service.CacheLoaderService;
 import com.uniq.tms.tms_microservice.service.StartCacheService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
@@ -19,9 +20,18 @@ public class StartCacheServiceImpl implements ApplicationRunner, StartCacheServi
         this.organizationRepository = organizationRepository;
     }
 
+    @Value("${cache.redis.enabled:false}")
+    private boolean isRedisEnabled;
+
     //called on application startup
     @Override
     public void run(ApplicationArguments args) throws Exception {
+
+        if (!isRedisEnabled) {
+            System.out.println("Redis cache disabled, skipping cache initialization.");
+            return;
+        }
+
         cacheLoaderService.loadAllRolesToCache();
         cacheLoaderService.loadPrivilegesFromDB();
         List<String> orgIds = organizationRepository.findAllOrgIds();

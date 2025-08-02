@@ -521,13 +521,13 @@ public class UserAdapterImpl implements UserAdapter {
     }
 
     @Override
-    public UserEntity findUserByOrgIdAndRoleId(String orgId, int roleId) {
+    public List<UserEntity> findUserByOrgIdAndRoleId(String orgId, int roleId) {
         return userRepository.findUserByOrganizationIdAndRole_RoleId(orgId, roleId);
     }
 
     @Override
-    public UserEntity save(UserEntity user) {
-        return userRepository.saveAndFlush(user);
+    public List<UserEntity> save(List<UserEntity> user) {
+        return userRepository.saveAllAndFlush(user);
     }
 
     @Override
@@ -543,5 +543,15 @@ public class UserAdapterImpl implements UserAdapter {
     @Override
     public void deleteAllUserLocations(List<UserLocationEntity> userLocationsToDelete) {
         userLocationRepository.deleteAll(userLocationsToDelete);
+    }
+
+    @Override
+    public List<UserGroupEntity> findUserByOrganizationIdAndUserId(String orgId, String userId) {
+        return userRepository.findUserByOrganizationIdAndUserId(orgId, userId);
+    }
+
+    @Override
+    public List<UserLocationEntity> findByUser_UserId(String userId) {
+        return userLocationRepository.findByUser_UserId(userId);
     }
 }
