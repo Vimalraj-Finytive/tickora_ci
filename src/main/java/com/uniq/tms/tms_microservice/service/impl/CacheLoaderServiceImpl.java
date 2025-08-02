@@ -203,6 +203,9 @@ public class CacheLoaderServiceImpl implements CacheLoaderService {
     }
 
     public String getPrivilegeKey(PrivilegeConstants constant) {
+        if (privilegeMap.isEmpty()){
+            loadPrivilegesFromDB();
+        }
         return privilegeMap.get(constant);
     }
 
@@ -283,7 +286,7 @@ public class CacheLoaderServiceImpl implements CacheLoaderService {
                     organizationType.map(OrganizationTypeEntity::getOrgTypeName).orElse("-")
             );
 
-            userProfileMap.put(userId.toString(), profile);
+            userProfileMap.put(userId, profile);
         }
 
         // Cache all profiles

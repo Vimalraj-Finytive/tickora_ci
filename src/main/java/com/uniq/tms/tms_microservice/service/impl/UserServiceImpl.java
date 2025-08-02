@@ -131,6 +131,9 @@ public class UserServiceImpl implements UserService {
     @Value("${csv.upload.dir}")
     private String uploadDir;
 
+    @Value("${cache.redis.enabled:false}")
+    private boolean isRedisEnabled;
+
     @Override
     public List<Role> getAllRole(String orgId, String role) {
         if (role != null && role.startsWith("ROLE_")) {
@@ -569,13 +572,17 @@ public class UserServiceImpl implements UserService {
         String message = String.format(" %d Users created. Duplicate/invalid users were skipped.", uploadedCount);
         log.info("useremail: {} , username: {}", userFromToken.getEmail(), userFromToken.getUserName());
         emailUtil.sendSuccessEmail(userFromToken.getEmail(), userFromToken.getUserName(), uploadedCount, skippedCount);
-        CacheEventPublisherUtil.syncReloadThenPublish(
-                publisher,
-                cacheKeyConfig.getUsers(),
-                orgId,
-                cacheReloadHandlerRegistry
-        );
-        log.info("UserCacheReloadEvent published after User bulk creation");
+        if (!isRedisEnabled) {
+            CacheEventPublisherUtil.syncReloadThenPublish(
+                    publisher,
+                    cacheKeyConfig.getUsers(),
+                    orgId,
+                    cacheReloadHandlerRegistry
+            );
+            log.info("UserCacheReloadEvent published after User bulk creation");
+        }else {
+            log.info("Redis is not enabled or RedisTemplate is null. Skipping cache Bulk reload.");
+        }
         return new ApiResponse(200, message, response);
 
     }
@@ -796,13 +803,17 @@ public class UserServiceImpl implements UserService {
         emailUtil.sendAccountCreationEmail(
                 userMiddleware.getEmail(), userMiddleware.getUserName(), defaultPassword, isNewUser
         );
-        CacheEventPublisherUtil.syncReloadThenPublish(
-                publisher,
-                cacheKeyConfig.getUsers(),
-                organizationId,
-                cacheReloadHandlerRegistry
-        );
-        log.info("UserCacheReloadEvent published after User creation");
+        if (!isRedisEnabled) {
+            CacheEventPublisherUtil.syncReloadThenPublish(
+                    publisher,
+                    cacheKeyConfig.getUsers(),
+                    organizationId,
+                    cacheReloadHandlerRegistry
+            );
+            log.info("UserCacheReloadEvent published after User creation");
+        }else {
+            log.info("Redis is not enabled or RedisTemplate is null. Skipping cache Create user reload.");
+        }
         return new ApiResponse(201, "Successfully saved user", finalUser);
     }
 
@@ -999,13 +1010,17 @@ public class UserServiceImpl implements UserService {
             }
         }
         userAdapter.updateUser(existingUser);
-        CacheEventPublisherUtil.syncReloadThenPublish(
-                publisher,
-                cacheKeyConfig.getUsers(),
-                orgId,
-                cacheReloadHandlerRegistry
-        );
-        log.info("UserCacheReloadEvent published after User update");
+        if (!isRedisEnabled) {
+            CacheEventPublisherUtil.syncReloadThenPublish(
+                    publisher,
+                    cacheKeyConfig.getUsers(),
+                    orgId,
+                    cacheReloadHandlerRegistry
+            );
+            log.info("UserCacheReloadEvent published after User update");
+        } else {
+                log.info("Redis is not enabled or RedisTemplate is null. Skipping cache Update User reload.");
+            }
         return userEntityMapper.toMiddleware(existingUser);
     }
 
@@ -1087,13 +1102,17 @@ public class UserServiceImpl implements UserService {
             throw new RuntimeException("Unauthorized");
         }
         userAdapter.deactivateUserById(userId, orgId);
-        CacheEventPublisherUtil.syncReloadThenPublish(
-                publisher,
-                cacheKeyConfig.getUsers(),
-                orgId,
-                cacheReloadHandlerRegistry
-        );
-        log.info("UserCacheReloadEvent published after User Delete");
+        if (!isRedisEnabled) {
+            CacheEventPublisherUtil.syncReloadThenPublish(
+                    publisher,
+                    cacheKeyConfig.getUsers(),
+                    orgId,
+                    cacheReloadHandlerRegistry
+            );
+            log.info("UserCacheReloadEvent published after User Delete");
+        }else {
+            log.info("Redis is not enabled or RedisTemplate is null. Skipping cache delete user reload.");
+        }
         return userEntityMapper.toMiddleware(user);
     }
 
@@ -1132,13 +1151,17 @@ public class UserServiceImpl implements UserService {
             createUserGroup(new UserGroup(savedEntity.getGroupId(), id, groupMiddleware.getType()), orgId);
 
         }
-        CacheEventPublisherUtil.syncReloadThenPublish(
-                publisher,
-                cacheKeyConfig.getGroups(),
-                orgId,
-                cacheReloadHandlerRegistry
-        );
-        log.info("GroupCacheReloadEvent published after Group Creation");
+        if (!isRedisEnabled) {
+            CacheEventPublisherUtil.syncReloadThenPublish(
+                    publisher,
+                    cacheKeyConfig.getGroups(),
+                    orgId,
+                    cacheReloadHandlerRegistry
+            );
+            log.info("GroupCacheReloadEvent published after Group Creation");
+        }else {
+            log.info("Redis is not enabled or RedisTemplate is null. Skipping cache create group reload.");
+        }
         return userEntityMapper.toGroupMiddleware(savedEntity);
     }
 
@@ -1180,14 +1203,17 @@ public class UserServiceImpl implements UserService {
                 : "These users were already in the group: " + String.join(", ", alreadyExistsUsers) + ".";
 
         String finalMessage = addedMessage + existsMessage;
-
-        CacheEventPublisherUtil.syncReloadThenPublish(
-                publisher,
-                cacheKeyConfig.getGroups(),
-                orgId,
-                cacheReloadHandlerRegistry
-        );
-        log.info("GroupCacheReloadEvent published after Adding user to the Group");
+        if (!isRedisEnabled) {
+            CacheEventPublisherUtil.syncReloadThenPublish(
+                    publisher,
+                    cacheKeyConfig.getGroups(),
+                    orgId,
+                    cacheReloadHandlerRegistry
+            );
+            log.info("GroupCacheReloadEvent published after Adding user to the Group");
+        }else {
+            log.info("Redis is not enabled or RedisTemplate is null. Skipping cache add User to group reload.");
+        }
         // Return ApiResponse — no need to return data list of users
         return new ApiResponse<>(200, finalMessage, null);
     }
@@ -1310,13 +1336,17 @@ public class UserServiceImpl implements UserService {
         if (!conflictMessages.isEmpty()) {
             return new ApiResponse<>(HttpStatus.CONFLICT.value(), finalMessage, Collections.emptyList());
         }
-        CacheEventPublisherUtil.syncReloadThenPublish(
-                publisher,
-                cacheKeyConfig.getGroups(),
-                orgId,
-                cacheReloadHandlerRegistry
-        );
-        log.info("GroupCacheReloadEvent published after Group Update");
+        if (!isRedisEnabled) {
+            CacheEventPublisherUtil.syncReloadThenPublish(
+                    publisher,
+                    cacheKeyConfig.getGroups(),
+                    orgId,
+                    cacheReloadHandlerRegistry
+            );
+            log.info("GroupCacheReloadEvent published after Group Update");
+        }else {
+            log.info("Redis is not enabled or RedisTemplate is null. Skipping cache update group reload.");
+        }
         // If no conflicts and no supervisors added, indicate that no changes were made
         return new ApiResponse<>(HttpStatus.OK.value(), "Group updated Successfully.", Collections.emptyList());
     }
@@ -1333,38 +1363,82 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserProfileResponse getUserProfile(String orgId, String userId) {
         String redisKey = cacheKeyUtil.getprofileKey(orgId);
-        String field = userId.toString();
-
         try {
             // Try from cache only if redisTemplate is not null
             if (redisTemplate != null) {
-                UserProfileResponse cachedData = (UserProfileResponse) redisTemplate.opsForHash().get(redisKey, field);
+                UserProfileResponse cachedData = (UserProfileResponse) redisTemplate.opsForHash().get(redisKey, userId);
                 if (cachedData != null) {
                     log.info("Cache hit for userId {} in orgId {}", userId, orgId);
                     return cachedData;
+                }else{
+                    // Cache miss → load entire org user profiles from DB and cache
+                    log.info("Cache miss for userId {}, loading from DB...", userId);
+                    Map<String, UserProfileResponse> loadedProfiles = cacheLoaderService.loadUsersProfile(orgId).get();
+
+                    // Return directly from DB-loaded map (even if Redis write fails)
+                    UserProfileResponse response = loadedProfiles.get(userId);
+                    if (response != null) {
+                        log.info("Fallback DB profile returned for userId {}", userId);
+                        return response;
+                    } else {
+                        log.warn("User profile not found even in DB for userId {}", userId);
+                        return null;
+                    }
                 }
-            } else {
-                log.warn("RedisTemplate is null, skipping cache fetch for userId {} in orgId {}", userId, orgId);
             }
-
-            // Cache miss → load entire org user profiles from DB and cache
-            log.info("Cache miss for userId {}, loading from DB...", userId);
-            Map<String, UserProfileResponse> loadedProfiles = cacheLoaderService.loadUsersProfile(orgId).get();
-
-            // Return directly from DB-loaded map (even if Redis write fails)
-            UserProfileResponse response = loadedProfiles.get(field);
-            if (response != null) {
-                log.info("Fallback DB profile returned for userId {}", userId);
-                return response;
-            } else {
-                log.warn("User profile not found even in DB for userId {}", userId);
-                return null;
+            else {
+                log.warn("Redis disabled, directly loading userId {} from DB", userId);
+                return loadSingleUserProfile(orgId, userId);
             }
 
         } catch (Exception e) {
             log.error("Error in user profile fetch logic for userId {}: {}", userId, e.getMessage(), e);
             return null;
         }
+    }
+
+    public UserProfileResponse loadSingleUserProfile(String orgId, String userId) {
+        UserEntity user = userAdapter.findUserByOrgIdAndUserId(orgId, userId);
+        if (user == null) {
+            log.warn("User not found for userId {} in orgId {}", userId, orgId);
+            return null;
+        }
+
+        List<UserGroupEntity> userGroups = userAdapter.findUserByOrganizationIdAndUserId(orgId, userId);
+        List<UserLocationEntity> userLocations = userAdapter.findByUser_UserId(userId);
+
+        if (userLocations.isEmpty()) {
+            log.warn("Skipping userId {} due to no locations", userId);
+            return null;
+        }
+
+        List<LocationDto> locationDtos = userLocations.stream()
+                .filter(ul -> ul.getLocation() != null)
+                .map(ul -> userDtoMapper.toDto(ul.getLocation()))
+                .toList();
+
+        List<UserGroupProfileDto> groupDtos = userGroups.isEmpty()
+                ? Collections.emptyList()
+                : userGroups.stream().map(userDtoMapper::toGroupsDto).toList();
+
+        OrganizationEntity org = organizationRepository.findByOrganizationId(orgId).orElse(null);
+        Optional<OrganizationTypeEntity> organizationType = (org != null && org.getOrgType() != null)
+                ? organizationTypeRepository.findById(org.getOrgType())
+                : Optional.empty();
+
+        return new UserProfileResponse(
+                userId,
+                user.getUserName(),
+                user.getEmail(),
+                user.getMobileNumber(),
+                user.getRole().getName(),
+                user.getDateOfJoining(),
+                locationDtos,
+                groupDtos,
+                org != null ? org.getOrgName() : null,
+                user.getWorkSchedule() != null ? user.getWorkSchedule().getScheduleName() : "-",
+                organizationType.map(OrganizationTypeEntity::getOrgTypeName).orElse("-")
+        );
     }
 
     public List<GroupResponseDto> getAllGroups(String orgId, String userId) throws JsonProcessingException {
@@ -1466,13 +1540,17 @@ public class UserServiceImpl implements UserService {
     @Override
     public void deleteMember(Long groupId, String memberId, String orgId) {
         userAdapter.deleteMember(groupId, memberId);
-        CacheEventPublisherUtil.syncReloadThenPublish(
-                publisher,
-                cacheKeyConfig.getGroups(),
-                orgId,
-                cacheReloadHandlerRegistry
-        );
-        log.info("GroupCacheReloadEvent published after Group Member Deletion");
+        if (!isRedisEnabled) {
+            CacheEventPublisherUtil.syncReloadThenPublish(
+                    publisher,
+                    cacheKeyConfig.getGroups(),
+                    orgId,
+                    cacheReloadHandlerRegistry
+            );
+            log.info("GroupCacheReloadEvent published after Group Member Deletion");
+        }else {
+            log.info("Redis is not enabled or RedisTemplate is null. Skipping cache delete member from group reload.");
+        }
     }
 
     @Override
@@ -1483,13 +1561,17 @@ public class UserServiceImpl implements UserService {
         }
         userAdapter.deleteByGroupId(groupId);
         userAdapter.deleteGroup(groupId, orgId);
-        CacheEventPublisherUtil.syncReloadThenPublish(
-                publisher,
-                cacheKeyConfig.getGroups(),
-                orgId,
-                cacheReloadHandlerRegistry
-        );
-        log.info("GroupCacheReloadEvent published after Group Deletion");
+        if (!isRedisEnabled) {
+            CacheEventPublisherUtil.syncReloadThenPublish(
+                    publisher,
+                    cacheKeyConfig.getGroups(),
+                    orgId,
+                    cacheReloadHandlerRegistry
+            );
+            log.info("GroupCacheReloadEvent published after Group Deletion");
+        }else {
+                log.info("Redis is not enabled or RedisTemplate is null. Skipping cache delete group reload.");
+            }
     }
 
     @Override
@@ -1642,30 +1724,34 @@ public class UserServiceImpl implements UserService {
             }
             LocationEntity savedEntity = userAdapter.addLocation(locationModel);
             int roleId = UserRole.SUPERADMIN.getHierarchyLevel();
-            UserEntity user = userAdapter.findUserByOrgIdAndRoleId(orgId, roleId);
+            List<UserEntity> user = userAdapter.findUserByOrgIdAndRoleId(orgId, roleId);
             if (user == null) {
-                throw new RuntimeException("No User found under the role Superadmin");
+                throw new RuntimeException("No User found under the role Superadmin for Logged Organization");
             }
             log.info("User List in role Superadmin:{}", user);
             log.info("Adding user to newly created location");
-            List<UserLocationEntity> userLocationEntities = new ArrayList<>();
             LocationEntity locations = locationRepository.findById(savedEntity.getLocationId())
                     .orElseThrow(() -> new NoSuchElementException("Location not found with ID: " + savedEntity.getLocationId()));
-
-            UserLocationEntity userLocation = new UserLocationEntity();
-            userLocation.setUser(user);
-            userLocation.setLocation(locations);
-            userLocationEntities.add(userLocation);
-            log.info("USERLOCATION:{}", userLocation);
+            List<UserLocationEntity> userLocationEntities = new ArrayList<>();
+            for(UserEntity u : user) {
+                UserLocationEntity userLocation = new UserLocationEntity();
+                userLocation.setUser(u);
+                userLocation.setLocation(locations);
+                userLocationEntities.add(userLocation);
+                log.info("USERLOCATION:{}", userLocation);
+            }
             userAdapter.saveUserLocation(userLocationEntities);
-
-            CacheEventPublisherUtil.syncReloadThenPublish(
-                    publisher,
-                    cacheKeyConfig.getLocation(),
-                    orgId,
-                    cacheReloadHandlerRegistry
-            );
-            log.info("LocationCacheReloadEvent published after location Added");
+            if (!isRedisEnabled) {
+                CacheEventPublisherUtil.syncReloadThenPublish(
+                        publisher,
+                        cacheKeyConfig.getLocation(),
+                        orgId,
+                        cacheReloadHandlerRegistry
+                );
+                log.info("LocationCacheReloadEvent published after location Added");
+            }else {
+                log.info("Redis is not enabled or RedisTemplate is null. Skipping cache add location reload.");
+            }
             return locationEntityMapper.toDto(savedEntity);
         } catch (DataIntegrityViolationException e) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Location '" + locationModel.getName() + "' already exists in this organization");
@@ -1719,13 +1805,17 @@ public class UserServiceImpl implements UserService {
     public Privilege addPrivileges(Privilege privilegeModel, String orgId) {
         PrivilegeEntity privilegeEntity = userEntityMapper.toEntity(privilegeModel);
         PrivilegeEntity privilege = userAdapter.addPrivilege(privilegeEntity);
-        CacheEventPublisherUtil.syncReloadThenPublish(
-                publisher,
-                cacheKeyConfig.getRoleprivilege(),
-                orgId,
-                cacheReloadHandlerRegistry
-        );
-        log.info("Privilege CacheReloadEvent published after Privilege Creation");
+        if (!isRedisEnabled) {
+            CacheEventPublisherUtil.syncReloadThenPublish(
+                    publisher,
+                    cacheKeyConfig.getRoleprivilege(),
+                    orgId,
+                    cacheReloadHandlerRegistry
+            );
+            log.info("Privilege CacheReloadEvent published after Privilege Creation");
+        }else {
+            log.info("Redis is not enabled or RedisTemplate is null. Skipping cache add privilege reload.");
+        }
         return userEntityMapper.toModel(privilege);
     }
 
@@ -1745,14 +1835,17 @@ public class UserServiceImpl implements UserService {
             role.getPrivilegeEntities().remove(privilegeEntity);
         }
         userAdapter.saveRole(role);
-
-        CacheEventPublisherUtil.syncReloadThenPublish(
-                publisher,
-                cacheKeyConfig.getRoleprivilege(),
-                orgId,
-                cacheReloadHandlerRegistry
-        );
-        log.info("RolewisePrivilege CacheReloadEvent published after Role wise privilege creation");
+        if (!isRedisEnabled) {
+            CacheEventPublisherUtil.syncReloadThenPublish(
+                    publisher,
+                    cacheKeyConfig.getRoleprivilege(),
+                    orgId,
+                    cacheReloadHandlerRegistry
+            );
+            log.info("RolewisePrivilege CacheReloadEvent published after Role wise privilege creation");
+        }else {
+            log.info("Redis is not enabled or RedisTemplate is null. Skipping cache add rolewise privilege reload.");
+        }
         return rolePrivilege;
     }
 
@@ -1785,28 +1878,25 @@ public class UserServiceImpl implements UserService {
             if (location.getLongitude() != null) entity.setLongitude(location.getLongitude());
             if (location.getRadius() != null) entity.setRadius(location.getRadius());
             entity.setDefault(location.isDefault() && id.equals(defaultLocationId));
-
-            // Set orgId
             OrganizationEntity organization = new OrganizationEntity();
             organization.setOrganizationId(orgId);
             entity.setOrganizationEntity(organization);
-
             updatedEntities.add(entity);
             count++;
         }
 
         List<LocationEntity> savedEntities = userAdapter.updateMultipleLocations(updatedEntities);
-
-        // Cache reload after bulk update
-        CacheEventPublisherUtil.syncReloadThenPublish(
-                publisher,
-                cacheKeyConfig.getLocation(),
-                orgId,
-                cacheReloadHandlerRegistry
-        );
-        log.info("LocationCacheReloadEvent published after bulk update");
-
-        // Return just one (or the list, depending on API response design)
+        if (!isRedisEnabled) {
+            CacheEventPublisherUtil.syncReloadThenPublish(
+                    publisher,
+                    cacheKeyConfig.getLocation(),
+                    orgId,
+                    cacheReloadHandlerRegistry
+            );
+            log.info("LocationCacheReloadEvent published after bulk update");
+        }else {
+            log.info("Redis is not enabled or RedisTemplate is null. Skipping cache update Location reload.");
+        }
         String message = String.format("%d locations updated successfully", count);
         return new ApiResponse(200, message, null);
     }
@@ -1882,14 +1972,16 @@ public class UserServiceImpl implements UserService {
                 newUserLocationsToInsert.size(), userLocationsToDelete.size());
 
         userAdapter.deleteLocation(locationIdList, orgId);
-
-        CacheEventPublisherUtil.syncReloadThenPublish(
-                publisher,
-                cacheKeyConfig.getLocation(),
-                orgId,
-                cacheReloadHandlerRegistry
-        );
-
-        log.info("Location deleted and references updated. Cache reloaded.");
+        if (!isRedisEnabled) {
+            CacheEventPublisherUtil.syncReloadThenPublish(
+                    publisher,
+                    cacheKeyConfig.getLocation(),
+                    orgId,
+                    cacheReloadHandlerRegistry
+            );
+            log.info("Location deleted and references updated. Cache reloaded.");
+        }else {
+            log.info("Redis is not enabled or RedisTemplate is null. Skipping cache delete location reload.");
+        }
     }
 }

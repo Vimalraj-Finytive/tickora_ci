@@ -77,6 +77,7 @@ public class AuthServiceImpl implements AuthService {
         }
 
         String key = cacheLoaderService.getPrivilegeKey(PrivilegeConstants.LOGIN_VIA_EMAIL);
+        log.info("Privilege key :{}", key);
         boolean hasEmailLoginPrivilege = cacheKeyUtil.roleHasPrivilege(users.get(0).getRole().getName(), key);
         log.info("has email login privilege: {}", hasEmailLoginPrivilege);
 
