@@ -43,7 +43,7 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
     @PersistenceContext
     private EntityManager entityManager;
 
-    @Value("${cache.redis.enabled:false}")
+    @Value("${cache.redis.enabled:true}")
     private boolean isRedisEnabled;
 
     private final WorkScheduleAdapter workScheduleAdapter;
@@ -169,7 +169,7 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
             case WEEKLY -> saveWeeklySchedule(model.getWeeklySchedule(), entity);
         }
 
-        if (!isRedisEnabled) {
+        if (isRedisEnabled) {
             CacheEventPublisherUtil.syncReloadThenPublish(
                     publisher,
                     cacheKeyConfig.getWorkSchedule(),
@@ -273,7 +273,7 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
                 case FLEXIBLE -> saveFlexibleSchedule(model.getFlexibleSchedule(), entity);
                 case WEEKLY -> saveWeeklySchedule(model.getWeeklySchedule(), entity);
             }
-        if (!isRedisEnabled) {
+        if (isRedisEnabled) {
             CacheEventPublisherUtil.syncReloadThenPublish(
                     publisher,
                     cacheKeyConfig.getWorkSchedule(),
@@ -314,7 +314,7 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
         workSchedule.setActive(false);
         workScheduleAdapter.saveWorkSchedule(workSchedule);
 
-        if (!isRedisEnabled) {
+        if (isRedisEnabled) {
             CacheEventPublisherUtil.syncReloadThenPublish(
                     publisher,
                     cacheKeyConfig.getWorkSchedule(),
