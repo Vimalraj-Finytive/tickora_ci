@@ -118,10 +118,11 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
     @Query("UPDATE UserEntity u SET u.workSchedule.scheduleId = :newId WHERE u.workSchedule.scheduleId = :oldId")
     void updateUserWorkSchedule(@Param("oldId") String oldId, @Param("newId") String newId);
 
-    UserEntity findUserByOrganizationIdAndRole_RoleId(String orgId, int roleId);
+    List<UserEntity> findUserByOrganizationIdAndRole_RoleId(String orgId, int roleId);
 
     @Query("SELECT u.userId FROM UserEntity u WHERE u.userId LIKE CONCAT(:orgPrefix, '%') ORDER BY u.userId DESC LIMIT 1")
     String findLastUserIdByOrgPrefix(@Param("orgPrefix") String orgPrefix);
 
     boolean existsByUserId(String userId);
+
 }
