@@ -131,7 +131,7 @@ public class UserServiceImpl implements UserService {
     @Value("${csv.upload.dir}")
     private String uploadDir;
 
-    @Value("${cache.redis.enabled:false}")
+    @Value("${cache.redis.enabled:true}")
     private boolean isRedisEnabled;
 
     @Override
@@ -572,7 +572,7 @@ public class UserServiceImpl implements UserService {
         String message = String.format(" %d Users created. Duplicate/invalid users were skipped.", uploadedCount);
         log.info("useremail: {} , username: {}", userFromToken.getEmail(), userFromToken.getUserName());
         emailUtil.sendSuccessEmail(userFromToken.getEmail(), userFromToken.getUserName(), uploadedCount, skippedCount);
-        if (!isRedisEnabled) {
+        if (isRedisEnabled) {
             CacheEventPublisherUtil.syncReloadThenPublish(
                     publisher,
                     cacheKeyConfig.getUsers(),
@@ -803,7 +803,7 @@ public class UserServiceImpl implements UserService {
         emailUtil.sendAccountCreationEmail(
                 userMiddleware.getEmail(), userMiddleware.getUserName(), defaultPassword, isNewUser
         );
-        if (!isRedisEnabled) {
+        if (isRedisEnabled) {
             CacheEventPublisherUtil.syncReloadThenPublish(
                     publisher,
                     cacheKeyConfig.getUsers(),
@@ -1010,7 +1010,7 @@ public class UserServiceImpl implements UserService {
             }
         }
         userAdapter.updateUser(existingUser);
-        if (!isRedisEnabled) {
+        if (isRedisEnabled) {
             CacheEventPublisherUtil.syncReloadThenPublish(
                     publisher,
                     cacheKeyConfig.getUsers(),
@@ -1102,7 +1102,7 @@ public class UserServiceImpl implements UserService {
             throw new RuntimeException("Unauthorized");
         }
         userAdapter.deactivateUserById(userId, orgId);
-        if (!isRedisEnabled) {
+        if (isRedisEnabled) {
             CacheEventPublisherUtil.syncReloadThenPublish(
                     publisher,
                     cacheKeyConfig.getUsers(),
@@ -1151,7 +1151,7 @@ public class UserServiceImpl implements UserService {
             createUserGroup(new UserGroup(savedEntity.getGroupId(), id, groupMiddleware.getType()), orgId);
 
         }
-        if (!isRedisEnabled) {
+        if (isRedisEnabled) {
             CacheEventPublisherUtil.syncReloadThenPublish(
                     publisher,
                     cacheKeyConfig.getGroups(),
@@ -1203,7 +1203,7 @@ public class UserServiceImpl implements UserService {
                 : "These users were already in the group: " + String.join(", ", alreadyExistsUsers) + ".";
 
         String finalMessage = addedMessage + existsMessage;
-        if (!isRedisEnabled) {
+        if (isRedisEnabled) {
             CacheEventPublisherUtil.syncReloadThenPublish(
                     publisher,
                     cacheKeyConfig.getGroups(),
@@ -1336,7 +1336,7 @@ public class UserServiceImpl implements UserService {
         if (!conflictMessages.isEmpty()) {
             return new ApiResponse<>(HttpStatus.CONFLICT.value(), finalMessage, Collections.emptyList());
         }
-        if (!isRedisEnabled) {
+        if (isRedisEnabled) {
             CacheEventPublisherUtil.syncReloadThenPublish(
                     publisher,
                     cacheKeyConfig.getGroups(),
@@ -1540,7 +1540,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public void deleteMember(Long groupId, String memberId, String orgId) {
         userAdapter.deleteMember(groupId, memberId);
-        if (!isRedisEnabled) {
+        if (isRedisEnabled) {
             CacheEventPublisherUtil.syncReloadThenPublish(
                     publisher,
                     cacheKeyConfig.getGroups(),
@@ -1561,7 +1561,7 @@ public class UserServiceImpl implements UserService {
         }
         userAdapter.deleteByGroupId(groupId);
         userAdapter.deleteGroup(groupId, orgId);
-        if (!isRedisEnabled) {
+        if (isRedisEnabled) {
             CacheEventPublisherUtil.syncReloadThenPublish(
                     publisher,
                     cacheKeyConfig.getGroups(),
@@ -1741,7 +1741,7 @@ public class UserServiceImpl implements UserService {
                 log.info("USERLOCATION:{}", userLocation);
             }
             userAdapter.saveUserLocation(userLocationEntities);
-            if (!isRedisEnabled) {
+            if (isRedisEnabled) {
                 CacheEventPublisherUtil.syncReloadThenPublish(
                         publisher,
                         cacheKeyConfig.getLocation(),
@@ -1805,7 +1805,7 @@ public class UserServiceImpl implements UserService {
     public Privilege addPrivileges(Privilege privilegeModel, String orgId) {
         PrivilegeEntity privilegeEntity = userEntityMapper.toEntity(privilegeModel);
         PrivilegeEntity privilege = userAdapter.addPrivilege(privilegeEntity);
-        if (!isRedisEnabled) {
+        if (isRedisEnabled) {
             CacheEventPublisherUtil.syncReloadThenPublish(
                     publisher,
                     cacheKeyConfig.getRoleprivilege(),
@@ -1835,7 +1835,7 @@ public class UserServiceImpl implements UserService {
             role.getPrivilegeEntities().remove(privilegeEntity);
         }
         userAdapter.saveRole(role);
-        if (!isRedisEnabled) {
+        if (isRedisEnabled) {
             CacheEventPublisherUtil.syncReloadThenPublish(
                     publisher,
                     cacheKeyConfig.getRoleprivilege(),
@@ -1886,7 +1886,7 @@ public class UserServiceImpl implements UserService {
         }
 
         List<LocationEntity> savedEntities = userAdapter.updateMultipleLocations(updatedEntities);
-        if (!isRedisEnabled) {
+        if (isRedisEnabled) {
             CacheEventPublisherUtil.syncReloadThenPublish(
                     publisher,
                     cacheKeyConfig.getLocation(),
@@ -1972,7 +1972,7 @@ public class UserServiceImpl implements UserService {
                 newUserLocationsToInsert.size(), userLocationsToDelete.size());
 
         userAdapter.deleteLocation(locationIdList, orgId);
-        if (!isRedisEnabled) {
+        if (isRedisEnabled) {
             CacheEventPublisherUtil.syncReloadThenPublish(
                     publisher,
                     cacheKeyConfig.getLocation(),
