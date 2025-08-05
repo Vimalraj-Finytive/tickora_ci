@@ -156,9 +156,8 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
             List<UserEntity> userEntities = new ArrayList<>();
             if (superAdminUser != null) {
                 for (UserEntity user : superAdminUser) {
-                    UserEntity userEntity = new UserEntity();
-                    userEntity.setWorkSchedule(savedEntity);
-                    userEntities.add(userEntity);
+                    user.setWorkSchedule(savedEntity);
+                    userEntities.add(user);
                 }
                 userAdapter.save(userEntities);
             }
@@ -261,9 +260,8 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
                 List<UserEntity> userEntities = new ArrayList<>();
                 if (superAdminUser != null) {
                     for (UserEntity user : superAdminUser) {
-                        UserEntity userEntity = new UserEntity();
-                        userEntity.setWorkSchedule(savedEntity);
-                        userEntities.add(userEntity);
+                        user.setWorkSchedule(savedEntity);
+                        userEntities.add(user);
                     }
                     userAdapter.save(userEntities);
                 }
