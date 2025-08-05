@@ -49,7 +49,8 @@ public class WorkScheduleController {
             }
             return ResponseEntity.ok(authFacade.createWorkSchedule(orgId, workScheduleDto));
         } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new ApiResponse(403,"Unauthorized",false));
+            log.error("Error occurred during CreateWorkSchedule: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new ApiResponse(403,"Unauthorized",e));
         }
     }
 
