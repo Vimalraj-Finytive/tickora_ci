@@ -36,7 +36,7 @@ public class IdGenerationServiceImpl implements IdGenerationService {
         if (updated == 0) {
             OrgUserSequenceEntity sequence = new OrgUserSequenceEntity();
             sequence.setOrgId(orgId);
-            sequence.setLastNumber(1);
+            sequence.setLastUserId(1);
             orgUserSequenceRepository.save(sequence);
             return orgId.replaceAll("\\d","") + IdGenerationType.USER.getPrefix() + String.format("%05d", 1);
         }
@@ -115,7 +115,7 @@ public class IdGenerationServiceImpl implements IdGenerationService {
             if (updated == 0) {
                 OrgUserSequenceEntity sequence = new OrgUserSequenceEntity();
                 sequence.setOrgId(organizationId);
-                sequence.setLastNumber(1);
+                sequence.setLastSecondaryUserId(1);
                 orgUserSequenceRepository.save(sequence);
                 return organizationId.replaceAll("\\d","") + IdGenerationType.SECONDARY_USER.getPrefix() + String.format("%05d", 1);
             }
