@@ -27,14 +27,6 @@ public class OrgUserSequenceEntity {
         this.orgId = orgId;
     }
 
-    public Integer getLastNumber() {
-        return lastUserId;
-    }
-
-    public void setLastNumber(Integer lastNumber) {
-        this.lastUserId = lastNumber;
-    }
-
     public Integer getLastUserId() {
         return lastUserId;
     }
