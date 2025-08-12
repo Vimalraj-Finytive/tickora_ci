@@ -13,7 +13,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -347,8 +346,8 @@ public class AuthFacade {
         return authService.authenticateUserByMobile(mobile, otp, response, request);
     }
 
-    public ResponseEntity<ApiResponse> sendOTP(String mobile, HttpSession session) {
-        return authService.sendOtp(mobile, session);
+    public ResponseEntity<ApiResponse> sendOTP(String mobile) {
+        return authService.sendOtp(mobile);
     }
 
     public ApiResponse searchUsernames( String keyword) {
@@ -431,6 +430,18 @@ public class AuthFacade {
         LocalDate startDate = request.getFromDate();
         LocalDate endDate = request.getToDate();
 
+        if(request.getGroupId() != null && request.getGroupId().size() == 1){
+            Long requestedGroupId  = request.getGroupId().get(0);
+            String requestedGroupName = userService.findGroupName(requestedGroupId);
+            log.info("Selected single Group name:{}", requestedGroupName);
+            for (UserTimesheetResponseDto dto : timesheets){
+                if (dto.getTimesheets() != null){
+                    for (TimesheetDto timesheetDto : dto.getTimesheets()){
+                        timesheetDto.setGroupname(requestedGroupName);
+                    }
+                }
+            }
+        }
         // 1. Build base filename
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
         String datePart = (timePeriod == null || timePeriod.trim().isEmpty()) ?
@@ -536,8 +547,6 @@ public class AuthFacade {
 
     public ApiResponse updateLocation( LocationListDto locationDto) {
         String orgId = authUtil.getOrgId();
-        String role = authUtil.getRole();
-        String roleName = role.replace("ROLE_" , "");
         if (orgId == null) {
             return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
         }
@@ -639,5 +648,26 @@ public class AuthFacade {
         OrganizationType dto = organizationService.getUserOrgType(orgId);
         OrganizationTypeDto response = userDtoMapper.toDto(dto);
         return new ApiResponse<>(200, "User Organization Type Fetched Successfully", response);
+    }
+
+    public ApiResponse getInactiveUsers() {
+        String orgId = authUtil.getOrgId();
+        String role = authUtil.getRole();
+        role = role.replace("ROLE_", "").toUpperCase();
+        if (orgId == null) {
+            return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
+        }
+        List<UserResponseDto> users = userService.getInactiveUsers(orgId, role);
+        return new ApiResponse(200, "Users fetched successfully", users);
+    }
+
+    public ApiResponse updateIsActive(EditUserDto editUserDto) {
+        String orgId = authUtil.getOrgId();
+        String role = authUtil.getRole();
+        if (orgId == null) {
+            return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
+        }
+        List<EditUserDto> editUserDtos = userService.updateIsActive(userDtoMapper.toMiddleware(editUserDto), orgId);
+        return new ApiResponse(200,"User is activated", null);
     }
 }

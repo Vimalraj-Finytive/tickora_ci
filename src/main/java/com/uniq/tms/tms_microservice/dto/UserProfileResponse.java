@@ -18,10 +18,11 @@ public class UserProfileResponse {
     private String organizationName;
     private String workSchedule;
     private String orgType;
+    private List<ParentDto> parent;
 
     public UserProfileResponse(){}
 
-    public UserProfileResponse(String userId, String userName, String email, String mobileNumber, String roleName, LocalDate dateOfJoining, List<LocationDto> location, List<UserGroupProfileDto> groupDtos, String organizationName, String workSchedule, String orgType) {
+    public UserProfileResponse(String userId, String userName, String email, String mobileNumber, String roleName, LocalDate dateOfJoining, List<LocationDto> location, List<UserGroupProfileDto> groupDtos, String organizationName, String workSchedule, String orgType, List<ParentDto> parent) {
         this.userId = userId;
         this.userName = userName;
         this.email = email;
@@ -33,6 +34,7 @@ public class UserProfileResponse {
         this.organizationName = organizationName;
         this.workSchedule = workSchedule;
         this.orgType = orgType;
+        this.parent = parent;
     }
 
     public LocalDate getDateOfJoining() {
@@ -100,5 +102,13 @@ public class UserProfileResponse {
 
     public void setOrgType(String orgType) {
         this.orgType = orgType;
+    }
+
+    public List<ParentDto> getParent() {
+        return parent;
+    }
+
+    public void setParentDto(List<ParentDto> parent) {
+        this.parent = parent;
     }
 }

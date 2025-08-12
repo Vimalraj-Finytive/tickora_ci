@@ -40,7 +40,7 @@ public class IdGenerationServiceImpl implements IdGenerationService {
             orgUserSequenceRepository.save(sequence);
             return orgId.replaceAll("\\d","") + IdGenerationType.USER.getPrefix() + String.format("%05d", 1);
         }
-        Integer latestNumber = orgUserSequenceRepository.getLastNumber(orgId);
+        Integer latestNumber = orgUserSequenceRepository.getLastUserId(orgId);
         return orgId.replaceAll("\\d","") + IdGenerationType.USER.getPrefix() + String.format("%05d", latestNumber);
     }
 
@@ -109,4 +109,17 @@ public class IdGenerationServiceImpl implements IdGenerationService {
         return suffix.toString();
     }
 
+    @Override
+    public String generateNextSecondaryUserId(String organizationId) {
+            int updated = orgUserSequenceRepository.incrementSecondaryUserSequence(organizationId);
+            if (updated == 0) {
+                OrgUserSequenceEntity sequence = new OrgUserSequenceEntity();
+                sequence.setOrgId(organizationId);
+                sequence.setLastNumber(1);
+                orgUserSequenceRepository.save(sequence);
+                return organizationId.replaceAll("\\d","") + IdGenerationType.SECONDARY_USER.getPrefix() + String.format("%05d", 1);
+            }
+            Integer latestNumber = orgUserSequenceRepository.getLastSecondaryUserId(organizationId);
+            return organizationId.replaceAll("\\d","") + IdGenerationType.SECONDARY_USER.getPrefix() + String.format("%05d", latestNumber);
+    }
 }

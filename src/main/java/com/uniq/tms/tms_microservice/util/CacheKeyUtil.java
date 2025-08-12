@@ -28,6 +28,8 @@ public class CacheKeyUtil {
     private String groups;
     @Value("${cache.keys.workSchedule}")
     private String workSchedule;
+    @Value("${cache.keys.inactiveUsers}")
+    private String inactiveUsers;
 
     private static final Logger log = LogManager.getLogger(CacheKeyUtil.class);
 
@@ -97,5 +99,17 @@ public class CacheKeyUtil {
 
     public String getWorkSchedule(String orgId){
         return workSchedule +":orgId:" + orgId;
+    }
+
+    public String getInactiveMemberKey(String orgId){
+        return inactiveUsers +":orgId:" + orgId;
+    }
+
+    public String getOtpCountKey(String orgId, String userId) {
+        return "otpCount:" + orgId + ":" + userId;
+    }
+
+    public String getOtpKey(String orgId, String mobile) {
+        return "otp:" + orgId + ":" + mobile;
     }
 }

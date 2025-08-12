@@ -125,4 +125,19 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
 
     boolean existsByUserId(String userId);
 
+    @Query("SELECT new com.uniq.tms.tms_microservice.model.UserResponse(" +
+            "u.userId, u.userName, u.email, u.mobileNumber, w.scheduleName, " +
+            "COALESCE(g.groupName, '-'), r.name, l.name, u.dateOfJoining, " +
+            "sd.userName, sd.mobile, sd.email, sd.relation) " +
+            "FROM UserEntity u " +
+            "LEFT JOIN UserGroupEntity ug ON ug.user.userId = u.userId " +
+            "LEFT JOIN GroupEntity g ON ug.group.groupId = g.groupId " +
+            "LEFT JOIN u.workSchedule w " +
+            "JOIN RoleEntity r ON u.role = r " +
+            "JOIN UserLocationEntity ul ON ul.user.userId= u.userId " +
+            "JOIN LocationEntity l ON ul.location.locationId = l.locationId " +
+            "LEFT JOIN SecondaryDetailsEntity sd ON sd.user.userId = u.userId " +
+            "WHERE u.organizationId = :orgId AND u.active = false AND r.hierarchyLevel > :hierarchyLevel")
+    List<UserResponse> findAllInActiveUsers(@Param("orgId") String orgId, @Param("hierarchyLevel") int hierarchyLevel);
+
 }

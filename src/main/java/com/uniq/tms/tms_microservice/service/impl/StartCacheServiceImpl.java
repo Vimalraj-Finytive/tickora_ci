@@ -41,6 +41,7 @@ public class StartCacheServiceImpl implements ApplicationRunner, StartCacheServi
             cacheLoaderService.loadAllUsers(orgId);
             cacheLoaderService.loadGroupsCache(orgId);
             cacheLoaderService.loadWorkSchedule(orgId);
+            cacheLoaderService.loadAllInactiveUsers(orgId);
         }
     }
 }

@@ -2,29 +2,38 @@ package com.uniq.tms.tms_microservice.service.impl;
 
 import com.uniq.tms.tms_microservice.adapter.AuthAdapter;
 import com.uniq.tms.tms_microservice.adapter.UserAdapter;
+import com.uniq.tms.tms_microservice.config.security.cache.OtpFallbackCache;
 import com.uniq.tms.tms_microservice.config.security.jwt.JwtUtil;
 import com.uniq.tms.tms_microservice.dto.ApiResponse;
 import com.uniq.tms.tms_microservice.dto.ChangePasswordDto;
 import com.uniq.tms.tms_microservice.dto.PrivilegeConstants;
 import com.uniq.tms.tms_microservice.entity.PrivilegeEntity;
+import com.uniq.tms.tms_microservice.entity.SecondaryDetailsEntity;
 import com.uniq.tms.tms_microservice.entity.UserEntity;
+import com.uniq.tms.tms_microservice.model.OtpSendResponse;
 import com.uniq.tms.tms_microservice.service.AuthService;
 import com.uniq.tms.tms_microservice.service.CacheLoaderService;
 import com.uniq.tms.tms_microservice.service.NettyfishService;
 import com.uniq.tms.tms_microservice.util.CacheKeyUtil;
 import com.uniq.tms.tms_microservice.util.EmailUtil;
 import com.uniq.tms.tms_microservice.util.PasswordUtil;
+import jakarta.annotation.Nullable;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -34,6 +43,7 @@ import java.util.stream.Collectors;
 
 @Service
 public class AuthServiceImpl implements AuthService {
+
     private static final Logger log = LoggerFactory.getLogger(AuthServiceImpl.class);
     private final NettyfishService nettyfishService;
     private final AuthAdapter authAdapter;
@@ -43,8 +53,10 @@ public class AuthServiceImpl implements AuthService {
     private final EmailUtil emailUtil;
     private final CacheLoaderService cacheLoaderService;
     private final CacheKeyUtil cacheKeyUtil;
+    private final StringRedisTemplate redisTemplate;
+    private final OtpFallbackCache otpFallbackCache;
 
-    public AuthServiceImpl(NettyfishService nettyfishService, AuthAdapter authAdapter, UserAdapter userAdapter, JwtUtil jwtUtil, PasswordEncoder passwordEncoder, EmailUtil emailUtil, CacheLoaderService cacheLoaderService, CacheKeyUtil cacheKeyUtil) {
+    public AuthServiceImpl(NettyfishService nettyfishService, AuthAdapter authAdapter, UserAdapter userAdapter, JwtUtil jwtUtil, PasswordEncoder passwordEncoder, EmailUtil emailUtil, CacheLoaderService cacheLoaderService, CacheKeyUtil cacheKeyUtil, @Nullable StringRedisTemplate redisTemplate, OtpFallbackCache otpFallbackCache) {
         this.nettyfishService = nettyfishService;
         this.authAdapter = authAdapter;
         this.userAdapter = userAdapter;
@@ -53,12 +65,25 @@ public class AuthServiceImpl implements AuthService {
         this.emailUtil = emailUtil;
         this.cacheLoaderService = cacheLoaderService;
         this.cacheKeyUtil = cacheKeyUtil;
+        this.redisTemplate = redisTemplate;
+        this.otpFallbackCache = otpFallbackCache;
     }
+
+    @Value("${otp.ttl.minutes}")
+    private long otpTtlMinutes;
+
+    @Value("${otp.max.daily.attempts}")
+    private int maxDailyAttempts;
+
+    @Value("${otp.test.mobile}")
+    private String testMobile;
+
+    @Value("${otp.test}")
+    private String testOtp;
 
     public ResponseEntity<ApiResponse> authenticateUserByEmail(String email, String password,
                                                                HttpServletResponse response,
                                                                HttpServletRequest request) {
-        // Step 1: Try to find the user from multiple sources
         List<Supplier<UserEntity>> userSuppliers = List.of(
                 () -> authAdapter.findByEmail(email),
                 () -> authAdapter.findUserByEmail(email)
@@ -78,10 +103,10 @@ public class AuthServiceImpl implements AuthService {
 
         String key = cacheLoaderService.getPrivilegeKey(PrivilegeConstants.LOGIN_VIA_EMAIL);
         log.info("Privilege key :{}", key);
-        boolean hasEmailLoginPrivilege = cacheKeyUtil.roleHasPrivilege(users.get(0).getRole().getName(), key);
+        log.info("User Role:{}", users.getFirst().getRole().getName());
+        boolean hasEmailLoginPrivilege = cacheKeyUtil.roleHasPrivilege(users.getFirst().getRole().getName(), key);
         log.info("has email login privilege: {}", hasEmailLoginPrivilege);
 
-        // Step 2: Find the first user with email login privilege
         Optional<UserEntity> userWithEmailPrivilege = users.stream()
                 .filter(user -> user.getRole().getPrivilegeEntities().stream()
                         .map(PrivilegeEntity::getName)
@@ -119,39 +144,104 @@ public class AuthServiceImpl implements AuthService {
                     .body(new ApiResponse(401, "You must change your default password through email before login.", null));
         }
 
-            // Step 5: Generate JWT Token
             log.info("Generating JWT Token");
-            String jwtToken = jwtUtil.generateToken(email, System.currentTimeMillis(), request);
+            String jwtToken = jwtUtil.generateToken(email, System.currentTimeMillis(), request, hasEmailLoginPrivilege);
             Cookie jwtCookie = new Cookie("JWT_TOKEN", jwtToken);
             jwtCookie.setHttpOnly(true);
             jwtCookie.setSecure(true);
             jwtCookie.setPath("/");
             response.addCookie(jwtCookie);
 
-            // Step 6: Prepare privilege set
             log.info("Preparing privilege set");
             Set<String> privileges = user.getRole().getPrivilegeEntities().stream()
                     .map(PrivilegeEntity::getName)
                     .collect(Collectors.toSet());
-
-            // Step 7: Prepare response data
 
             userData.put("username", user.getUserName());
             userData.put("role", user.getRole().getName());
             userData.put("JWT_TOKEN", jwtToken);
             userData.put("userId", user.getUserId());
             userData.put("isRegisterUser", user.isRegisterUser());
-            userData.put("userId", user.getUserId());
             userData.put("privilage", privileges);
             return ResponseEntity.ok(new ApiResponse(200, "Login Successful", userData));
     }
 
     @Override
-    public ResponseEntity<ApiResponse> sendOtp(String mobile, HttpSession session) {
-        // Step 1: Try to find the user from multiple sources
+    public ResponseEntity<ApiResponse> sendOtp(String mobile) {
+
+        UserEntity studentUser;
+        String parentUserId = null;
+        boolean isParent = false;
+
+        studentUser = authAdapter.findByMobileNumber(mobile);
+        if (studentUser == null) {
+            studentUser = authAdapter.findStudentIdByMobile(mobile);
+            if (studentUser != null) {
+                Optional<SecondaryDetailsEntity> parentEntity = authAdapter.findParentByMobile(mobile);
+                parentUserId = parentEntity.map(SecondaryDetailsEntity::getId).orElse(null);
+                isParent = true;
+            }
+        }
+
+        if (studentUser == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new ApiResponse(401, "Invalid credentials: User not found", null));
+        }
+
+        if (!isParent) {
+            String key = cacheLoaderService.getPrivilegeKey(PrivilegeConstants.LOGIN_VIA_MOBILE);
+            boolean hasMobileLoginPrivilege = cacheKeyUtil.roleHasPrivilege(studentUser.getRole().getName(), key);
+            log.info("has mobile login privilege: {}", hasMobileLoginPrivilege);
+            if (!hasMobileLoginPrivilege) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(new ApiResponse(401, "You are not allowed to login using mobile.", null));
+            }
+        } else {
+            log.info("Parent login detected. Skipping privilege check.");
+        }
+
+        String userId = studentUser.getUserId();
+        String orgId = studentUser.getOrganizationId();
+        String otpCountKey;
+        if (!isParent) {
+            otpCountKey = cacheKeyUtil.getOtpCountKey(orgId, userId);
+        } else {
+            otpCountKey = cacheKeyUtil.getOtpCountKey(orgId, parentUserId);
+        }
+        String otpKey = cacheKeyUtil.getOtpKey(orgId, mobile);
+
+        Instant now = Instant.now();
+        Instant midnight = LocalDate.now(ZoneOffset.UTC).plusDays(1).atStartOfDay().toInstant(ZoneOffset.UTC);
+        long secondsUntilMidnight = Duration.between(now, midnight).getSeconds();
+        String generatedOtp = testMobile.equals(mobile) ? testOtp : nettyfishService.generateOtp();
+        Integer currentCount = otpFallbackCache.getCount(otpCountKey);
+        if (!(testMobile.equals(mobile) && testOtp.equals(generatedOtp))) {
+            if (currentCount != null && currentCount >= maxDailyAttempts) {
+                return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                        .body(new ApiResponse(429, "Daily OTP limit reached, Try again Tomorrow.", null));
+            }
+        }
+        OtpSendResponse otpSendResponse = testMobile.equals(mobile)
+                ? new OtpSendResponse(true, "Test OTP sent successfully")
+                : nettyfishService.sendOtp(mobile, generatedOtp);
+        if (!otpSendResponse.isSuccess()) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse(500, "Failed to send OTP: " + otpSendResponse, null));
+        }
+        otpFallbackCache.saveOtp(otpKey, generatedOtp, otpTtlMinutes);
+        otpFallbackCache.incrementCount(otpCountKey, secondsUntilMidnight);
+        log.info("Generated OTP for {}: {}", mobile, generatedOtp);
+        return ResponseEntity.ok(new ApiResponse(200, "OTP sent successfully", null));
+    }
+
+    @Override
+    public ResponseEntity<ApiResponse> authenticateUserByMobile(String mobile, String otp,
+                                                                HttpServletResponse response,
+                                                                HttpServletRequest request) {
+
         List<Supplier<UserEntity>> userSuppliers = List.of(
                 () -> authAdapter.findByMobileNumber(mobile),
-                () -> authAdapter.findStudentIdByMobile(mobile) // from SecondaryDetails
+                () -> authAdapter.findStudentIdByMobile(mobile)
         );
 
         List<UserEntity> users = userSuppliers.stream()
@@ -165,129 +255,57 @@ public class AuthServiceImpl implements AuthService {
         }
 
         String key = cacheLoaderService.getPrivilegeKey(PrivilegeConstants.LOGIN_VIA_MOBILE);
-        boolean hasMobileLoginPrivilege = cacheKeyUtil.roleHasPrivilege(users.get(0).getRole().getName(), key);
-        log.info("has mobile login privilege: {}", hasMobileLoginPrivilege);
+        boolean hasMobileLoginPrivilege = cacheKeyUtil
+                .roleHasPrivilege(users.getFirst().getRole().getName(), key);
+        log.info("has mobile login privilege to login: {}", hasMobileLoginPrivilege);
 
-        // Step 2: Find the first user with mobile login privilege
-        Optional<UserEntity> userWithEmailPrivilege = users.stream()
+        Optional<UserEntity> userWithMobilePrivilege = users.stream()
                 .filter(user -> user.getRole().getPrivilegeEntities().stream()
                         .map(PrivilegeEntity::getName)
                         .anyMatch(priv -> priv.equals(key)))
                 .findFirst();
 
-        if (userWithEmailPrivilege.isEmpty()) {
+        if (userWithMobilePrivilege.isEmpty()) {
+            log.info("user with mobile login privilege not found");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(new ApiResponse(401, "You are not allowed to login using mobile.", null));
         }
 
-        UserEntity user = userWithEmailPrivilege.get();
-
-        String generatedOtp;
-        String result;
-//		if ("9952996769".equals(phoneNumber)) {
-        if ("9089798767".equals(mobile)) {
-            generatedOtp = "112233";
-            result = "success";
-        } else {
-            generatedOtp = nettyfishService.generateOtp();
-//             result = nettyfishService.sendOtp(phoneNumber, generatedOtp);
-            result="success";
-        }
-        System.out.println("Generated OTP:===================>>>>>>> " + generatedOtp);
-        System.out.println("Session ID at OTP generation: " + session.getId());
-        if ("success".equals(result)) {
-            session.setAttribute("otp", generatedOtp);
-            session.setAttribute("phone", mobile);
-            Enumeration<String> attributes = session.getAttributeNames();
-            while (attributes.hasMoreElements()) {
-                String attr = attributes.nextElement();
-                System.out.println("Session Attribute -> " + attr + ": " + session.getAttribute(attr));
-            }
-            // OTP Expiration Timer
-            Timer timer = new Timer();
-            timer.schedule(new TimerTask() {
-                @Override
-                public void run() {
-                    session.removeAttribute("otp");
-                    System.out.println("OTP expired and removed from session.");
-                }
-            }, 300000); // 5 minutes
-            return ResponseEntity.ok(new ApiResponse(200, "OTP sent to "+mobile, null));
-        } else {
-            return ResponseEntity.ok(new ApiResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(), "Failed to send OTP: " + result, null));
-        }
-    }
-
-    @Override
-    public ResponseEntity<ApiResponse> authenticateUserByMobile(String mobile, String otp, HttpServletResponse response, HttpServletRequest request) {
-
-        // Step 1: Try to find the user from multiple sources
-        List<Supplier<UserEntity>> userSuppliers = List.of(
-                () -> authAdapter.findByMobileNumber(mobile),
-                () -> authAdapter.findStudentIdByMobile(mobile) // from SecondaryDetails
-        );
-
-        List<UserEntity> users = userSuppliers.stream()
-                .map(Supplier::get)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toList());
-
-        if (users.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(new ApiResponse(401, "Invalid credentials: User not found", null));
-        }
-        UserEntity user = users.get(0);
-
-        // Fetch the OTP and mobile from the session
-        HttpSession session = request.getSession(false); // false = don't create new session if not exists
-        if (session == null) {
+        UserEntity user = users.getFirst();
+        String userId = user.getUserId();
+        String otpKey = cacheKeyUtil.getOtpKey(user.getOrganizationId(), mobile);
+        if (otpKey == null) {
             return ResponseEntity.badRequest()
-                    .body(new ApiResponse(400, "Session expired. Please request a new OTP.", null));
+                    .body(new ApiResponse(400, "OTP expired. Please request a new OTP.", null));
         }
 
-        String sessionOtp = (String) session.getAttribute("otp");
-        String sessionMobile = (String) session.getAttribute("phone");
+        String otpNumber = otpFallbackCache.getOtp(otpKey);
+        log.info("OTP retrieved from fallback cache: {}", otpNumber);
 
-        if (sessionOtp == null || sessionMobile == null) {
+        log.info("OTP (retrieved): {}", otpNumber);
+        log.info("UserId: {}", userId);
+
+        if (otpNumber == null || userId == null) {
             return ResponseEntity.badRequest()
-                    .body(new ApiResponse(400, "OTP expired or not found in session.", null));
+                    .body(new ApiResponse(400, "OTP expired or not found for user.", null));
         }
 
-        // Validate mobile number
-        if (!mobile.equals(sessionMobile)) {
-            return ResponseEntity.badRequest()
-                    .body(new ApiResponse(400, "Mobile number mismatch", null));
-        }
-
-        // Validate OTP value
-        if (!otp.equals(sessionOtp)) {
+        if (!otp.equals(otpNumber)) {
             return ResponseEntity.badRequest()
                     .body(new ApiResponse(400, "Invalid OTP", null));
         }
 
-//        // Validate expiry time
-//        long currentTime = Instant.now().getEpochSecond();
-//        if (currentTime > otpExpiry) {
-//            return ResponseEntity.badRequest()
-//                    .body(new ApiResponse(400, "OTP expired", null));
-//        }
-
-        // OTP validation success — proceed to generate main JWT token
-
-        // Step 5: Generate JWT Token
-        String jwtToken = jwtUtil.generateToken(mobile, System.currentTimeMillis(), request);
+        String jwtToken = jwtUtil.generateToken(mobile, System.currentTimeMillis(), request, false);
         Cookie jwtCookie = new Cookie("JWT_TOKEN", jwtToken);
         jwtCookie.setHttpOnly(true);
-        jwtCookie.setSecure(false); // Set to true in production with HTTPS
+        jwtCookie.setSecure(true);
         jwtCookie.setPath("/");
         response.addCookie(jwtCookie);
 
-        // Step 6: Prepare privilege set
         Set<String> privileges = user.getRole().getPrivilegeEntities().stream()
                 .map(PrivilegeEntity::getName)
                 .collect(Collectors.toSet());
 
-        // Step 7: Prepare response data
         Map<String, Object> userData = new HashMap<>();
         userData.put("username", user.getUserName());
         userData.put("role", user.getRole().getName());
@@ -295,8 +313,11 @@ public class AuthServiceImpl implements AuthService {
         userData.put("userId", user.getUserId());
         userData.put("privilage", privileges);
 
+        otpFallbackCache.clearOtp(otpKey);
+
         return ResponseEntity.ok(new ApiResponse(200, "Login Successful", userData));
     }
+
 
     public ResponseEntity<ApiResponse> logoutUser(HttpServletRequest request, HttpServletResponse response) {
         String jwtToken = null;
@@ -318,16 +339,10 @@ public class AuthServiceImpl implements AuthService {
         }
 
         try {
-            log.info("Extract username form JWT Token");
-            String username = jwtUtil.extractUsername(jwtToken);
-            if (username == null) {
-                log.info("Username not found in JWT Token");
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(new ApiResponse(401, "Invalid JWT Token", null));
-            }
             log.info("Blacklisting JWT Token");
-            jwtUtil.blacklistToken(jwtToken, request.getHeader("User-Agent"));
+            jwtUtil.blacklistToken(jwtToken);
 
+            // Clear JWT cookie
             Cookie jwtCookie = new Cookie("JWT_TOKEN", "");
             jwtCookie.setHttpOnly(true);
             jwtCookie.setPath("/");
@@ -338,7 +353,6 @@ public class AuthServiceImpl implements AuthService {
 
             return ResponseEntity.ok(new ApiResponse(200, "Logout Successful", null));
         } catch (Exception e) {
-            e.printStackTrace();
             log.error("Error during logout: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ApiResponse(500, "Error during logout", null));

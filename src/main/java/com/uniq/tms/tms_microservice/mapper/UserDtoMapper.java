@@ -2,6 +2,7 @@ package com.uniq.tms.tms_microservice.mapper;
 
 import com.uniq.tms.tms_microservice.dto.*;
 import com.uniq.tms.tms_microservice.entity.LocationEntity;
+import com.uniq.tms.tms_microservice.entity.UserEntity;
 import com.uniq.tms.tms_microservice.entity.UserGroupEntity;
 import com.uniq.tms.tms_microservice.entity.WorkScheduleTypeEntity;
 import com.uniq.tms.tms_microservice.model.*;
@@ -10,6 +11,8 @@ import com.uniq.tms.tms_microservice.model.Role;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.ReportingPolicy;
+
+import java.util.List;
 
 @Mapper(componentModel = "spring",unmappedTargetPolicy = ReportingPolicy.IGNORE, uses = {UserDtoMapper.CommonMapper.class})
 public interface UserDtoMapper {
@@ -72,4 +75,12 @@ public interface UserDtoMapper {
     Organization toModel(OrganizationDto organizationDto);
 
     OrganizationTypeDto toDto(OrganizationType organizationType);
+
+    EditUser toMiddleware(EditUserDto dto);
+
+    List<EditUserDto> toDto(List<UserEntity> user);
+
+    default List<String> map (String value){
+        return value != null ? List.of(value) : null;
+    }
 }

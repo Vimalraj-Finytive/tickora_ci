@@ -87,8 +87,6 @@ public interface UserAdapter {
     List<UserGroupEntity> findUserGroupByUserId(String userId);
     void deleteUserGroupByUserId(String userId, Set<Long> toDelete);
     void updateUserGroupByUserId(List<UserGroupEntity> newEntities);
-    boolean findByLocation(String name, String orgId);
-    List<UserEntity> findByRoleId(List<Long> roleIds, String orgId);
     List<LocationEntity> updateMultipleLocations(List<LocationEntity> updatedEntities);
     void deleteLocation(List<Long> locationIds, String orgId);
     Optional<LocationEntity> findAllDefaultLocationById(List<Long> locationIds, String orgId);
@@ -112,4 +110,5 @@ public interface UserAdapter {
     void deleteAllUserLocations(List<UserLocationEntity> userLocationsToDelete);
     List<UserGroupEntity> findUserByOrganizationIdAndUserId(String orgId, String userId);
     List<UserLocationEntity> findByUser_UserId(String userId);
+    List<GroupEntity> findGroupLocationByLocationId(List<Long> locationIds);
 }
