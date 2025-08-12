@@ -41,4 +41,7 @@ public interface UserService {
     RolePrivilege addRolwisePrivileges(RolePrivilege rolePrivilegeModel, String orgId);
     ApiResponse updateLocation(String orgId, LocationList location);
     void deleteLocation(LocationListDto locationIds, String orgId);
+    String findGroupName(Long requestedGroupId);
+    List<UserResponseDto> getInactiveUsers(String orgId, String role);
+    List<EditUserDto> updateIsActive(EditUser editUser, String orgId);
 }

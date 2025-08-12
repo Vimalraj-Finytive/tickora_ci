@@ -19,6 +19,7 @@ public class CacheReloadHandlerRegistry {
             reloadHandlers.put(cacheKeyConfig.getRoleprivilege(), orgId -> cacheLoaderService.loadAllRolesToCache());
             reloadHandlers.put(cacheKeyConfig.getRoleprivilege(), orgId -> cacheLoaderService.loadPrivilegesFromDB());
             reloadHandlers.put(cacheKeyConfig.getWorkSchedule(), cacheLoaderService::loadWorkSchedule);
+            reloadHandlers.put(cacheKeyConfig.getInactiveUsers(), cacheLoaderService::loadAllInactiveUsers);
         }
 
         public void reload(String cacheName, String orgId) {

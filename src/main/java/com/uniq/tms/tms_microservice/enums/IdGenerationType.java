@@ -8,7 +8,8 @@ public enum IdGenerationType {
     FIXED_WORK("WSFX"),
     FLEXIBLE_WORK("WSFL"),
     WEEKLY_WORK("WSWK"),
-    WORK_SCHEDULE_TYPE("WSTY");
+    WORK_SCHEDULE_TYPE("WSTY"),
+    SECONDARY_USER("USI");
 
     private final String prefix ;
 

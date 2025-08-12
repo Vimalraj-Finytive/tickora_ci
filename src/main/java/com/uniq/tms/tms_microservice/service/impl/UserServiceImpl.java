@@ -94,6 +94,7 @@ public class UserServiceImpl implements UserService {
     private final CacheReloadHandlerRegistry cacheReloadHandlerRegistry;
     private final OrganizationTypeRepository organizationTypeRepository;
     private final IdGenerationService idGenerationService;
+    private final SecondaryDetailsRepository secondaryDetailsRepository;
 
     public UserServiceImpl(Validator validator, UserAdapter userAdapter, TimesheetAdapter timesheetAdapter,
                            UserEntityMapper userEntityMapper, OrganizationRepository organizationRepository,
@@ -102,7 +103,7 @@ public class UserServiceImpl implements UserService {
                            @Nullable RedisTemplate<String, Object> redisTemplate, LocationEntityMapper locationEntityMapper,
                            CacheLoaderService cacheLoaderService, ApplicationEventPublisher publisher, WorkScheduleAdapter workScheduleAdapter,
                            CacheKeyUtil cacheKeyUtil, TeamRepository teamRepository, CacheKeyConfig cacheKeyConfig, CacheReloadHandlerRegistry cacheReloadHandlerRegistry,
-                           OrganizationTypeRepository organizationTypeRepository, IdGenerationService idGenerationService) {
+                           OrganizationTypeRepository organizationTypeRepository, IdGenerationService idGenerationService, SecondaryDetailsRepository secondaryDetailsRepository) {
         this.validator = validator;
         this.userAdapter = userAdapter;
         this.timesheetAdapter = timesheetAdapter;
@@ -124,6 +125,7 @@ public class UserServiceImpl implements UserService {
         this.cacheReloadHandlerRegistry = cacheReloadHandlerRegistry;
         this.organizationTypeRepository = organizationTypeRepository;
         this.idGenerationService = idGenerationService;
+        this.secondaryDetailsRepository = secondaryDetailsRepository;
     }
 
     private static final Logger log = LoggerFactory.getLogger(UserServiceImpl.class);
@@ -136,12 +138,11 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public List<Role> getAllRole(String orgId, String role) {
+        int hierarchyLevel = 0;
         if (role != null && role.startsWith("ROLE_")) {
             role = role.substring(5);
+             hierarchyLevel = UserRole.getLevel(role);
         }
-
-        int hierarchyLevel = UserRole.getLevel(role);
-
         // Step 1: Get orgType from orgId
         String orgTypeId = organizationRepository.findOrgTypeByOrganizationId(orgId);
         OrganizationTypeEntity orgType = organizationTypeRepository.findById(orgTypeId).orElseThrow(() ->
@@ -624,6 +625,7 @@ public class UserServiceImpl implements UserService {
 
     private SecondaryDetailsEntity createSecondaryDetails(UserEntity user, String secMobile, String secEmail, String secUserName, String relation) {
         SecondaryDetailsEntity entity = new SecondaryDetailsEntity();
+        entity.setId(idGenerationService.generateNextSecondaryUserId(user.getOrganizationId()));
         entity.setUser(user);
         entity.setMobile(secMobile);
         if (TextUtil.isBlank(secEmail)) {
@@ -748,6 +750,8 @@ public class UserServiceImpl implements UserService {
             log.info("Saving secondary details: {}", secondaryDetailsDto.getUserName());
             SecondaryDetails secondaryDetails = secondaryDetailsMapper.toMiddleware(secondaryDetailsDto);
             SecondaryDetailsEntity secondaryDetailsEntity = secondaryDetailsMapper.toEntity(secondaryDetails);
+            String customSecondaryUserId = idGenerationService.generateNextSecondaryUserId(organizationId);
+            entity.setUserId(customSecondaryUserId);
             secondaryDetailsEntity.setUser(savedUserEntity);
             secondaryDetailsEntity.setEmail(TextUtil.trim(secondaryDetails.getEmail()));
             userAdapter.saveSecondaryDetails(secondaryDetailsEntity);
@@ -1059,8 +1063,8 @@ public class UserServiceImpl implements UserService {
     }
 
     private List<UserResponseDto> fetchActiveUsers(String orgId, String role) {
-        String userCacheKey = cacheKeyUtil.getMemberKey(orgId); // e.g., "members:org:1"
-        String roleField = role.toLowerCase(); // hash field for this role
+        String userCacheKey = cacheKeyUtil.getMemberKey(orgId);
+        String roleField = role.toLowerCase();
         log.info("roleField:{}", roleField);
         try {
             // 1. Try from Redis only if redisTemplate is not null
@@ -1101,7 +1105,10 @@ public class UserServiceImpl implements UserService {
         if (!user.getOrganizationId().equals(orgId)) {
             throw new RuntimeException("Unauthorized");
         }
+
         userAdapter.deactivateUserById(userId, orgId);
+        log.info("Deactivated user: {} in org: {}", userId, orgId);
+
         if (isRedisEnabled) {
             CacheEventPublisherUtil.syncReloadThenPublish(
                     publisher,
@@ -1109,10 +1116,11 @@ public class UserServiceImpl implements UserService {
                     orgId,
                     cacheReloadHandlerRegistry
             );
-            log.info("UserCacheReloadEvent published after User Delete");
-        }else {
-            log.info("Redis is not enabled or RedisTemplate is null. Skipping cache delete user reload.");
+            log.info("Reloaded cache for active and inactive users for org: {}", orgId);
+        } else {
+            log.info("Redis is not enabled or RedisTemplate is null. Skipping cache reload.");
         }
+
         return userEntityMapper.toMiddleware(user);
     }
 
@@ -1404,9 +1412,8 @@ public class UserServiceImpl implements UserService {
             return null;
         }
 
-        List<UserGroupEntity> userGroups = userAdapter.findUserByOrganizationIdAndUserId(orgId, userId);
+        // Fetch locations
         List<UserLocationEntity> userLocations = userAdapter.findByUser_UserId(userId);
-
         if (userLocations.isEmpty()) {
             log.warn("Skipping userId {} due to no locations", userId);
             return null;
@@ -1417,15 +1424,33 @@ public class UserServiceImpl implements UserService {
                 .map(ul -> userDtoMapper.toDto(ul.getLocation()))
                 .toList();
 
+        // Fetch groups
+        List<UserGroupEntity> userGroups = userAdapter.findUserByOrganizationIdAndUserId(orgId, userId);
         List<UserGroupProfileDto> groupDtos = userGroups.isEmpty()
                 ? Collections.emptyList()
                 : userGroups.stream().map(userDtoMapper::toGroupsDto).toList();
 
+        // Fetch organization + type
         OrganizationEntity org = organizationRepository.findByOrganizationId(orgId).orElse(null);
-        Optional<OrganizationTypeEntity> organizationType = (org != null && org.getOrgType() != null)
-                ? organizationTypeRepository.findById(org.getOrgType())
-                : Optional.empty();
+        Optional<OrganizationTypeEntity> organizationType =
+                (org != null && org.getOrgType() != null)
+                        ? organizationTypeRepository.findById(org.getOrgType())
+                        : Optional.empty();
 
+        // Parent details if this user is a student
+        List<ParentDto> parentDtos = Collections.emptyList();
+        if (UserRole.STUDENT.name().equalsIgnoreCase(user.getRole().getName())) {
+            parentDtos = secondaryDetailsRepository.findByUserId(userId).stream()
+                    .map(parentEntity -> new ParentDto(
+                            parentEntity.getId(),
+                            parentEntity.getUserName(),
+                            parentEntity.getEmail(),
+                            parentEntity.getMobile()
+                    ))
+                    .toList();
+        }
+
+        // Build and return profile
         return new UserProfileResponse(
                 userId,
                 user.getUserName(),
@@ -1437,7 +1462,8 @@ public class UserServiceImpl implements UserService {
                 groupDtos,
                 org != null ? org.getOrgName() : null,
                 user.getWorkSchedule() != null ? user.getWorkSchedule().getScheduleName() : "-",
-                organizationType.map(OrganizationTypeEntity::getOrgTypeName).orElse("-")
+                organizationType.map(OrganizationTypeEntity::getOrgTypeName).orElse("-"),
+                parentDtos
         );
     }
 
@@ -1456,7 +1482,6 @@ public class UserServiceImpl implements UserService {
 
         log.info("canSeeAllGroups={}, canSeeSupervisingGroups={}", canSeeAllGroups, canSeeSupervisingGroups);
         try {
-            // CASE 1: SuperAdmin → Fetch all from groups:org:{orgId}
             if (canSeeAllGroups && redisTemplate != null) {
                 Map<Object, Object> allGroups = redisTemplate.opsForHash().entries(cacheGroupkey);
                 if (!allGroups.isEmpty()) {
@@ -1470,7 +1495,6 @@ public class UserServiceImpl implements UserService {
                 log.warn("RedisTemplate is null, skipping cache fetch for all groups.");
             }
 
-            // CASE 2: Supervisor → Fetch supervised groupIds, then group objects
             else if (canSeeSupervisingGroups && redisTemplate != null) {
                 Object groupIdSetObj = redisTemplate.opsForHash().get(cacheSupervisedGroupKey, String.valueOf(userId));
                 if (groupIdSetObj instanceof Set<?> groupIdSet && !groupIdSet.isEmpty()) {
@@ -1494,7 +1518,7 @@ public class UserServiceImpl implements UserService {
             try {
                 List<GroupResponseDto> groupsFromDb = cacheLoaderService
                         .loadGroupsCache(orgId)
-                        .get(); // Now returns ALL groups
+                        .get();
 
                 if (canSeeAllGroups) {
                     return groupsFromDb;
@@ -1983,5 +2007,78 @@ public class UserServiceImpl implements UserService {
         }else {
             log.info("Redis is not enabled or RedisTemplate is null. Skipping cache delete location reload.");
         }
+    }
+
+    @Override
+    public String findGroupName(Long requestedGroupId) {
+        return teamRepository.findGroupNameByGroupId(requestedGroupId);
+    }
+
+    @Override
+    public List<UserResponseDto> getInactiveUsers(String orgId, String role) {
+        String userCacheKey = cacheKeyUtil.getInactiveMemberKey(orgId);
+        String roleField = role.toLowerCase();
+        log.info("roleField:{}", roleField);
+        try {
+            // 1. Try from Redis only if redisTemplate is not null
+            if (redisTemplate != null) {
+                Object cachedObj = redisTemplate.opsForHash().get(userCacheKey, roleField);
+                if (cachedObj != null) {
+                    log.info("Cache hit for orgId={}, role={}", orgId, role);
+                    return (List<UserResponseDto>) cachedObj;
+                }
+            } else {
+                log.warn("RedisTemplate is null, skipping cache fetch for key: {}, field: {}", userCacheKey, roleField);
+            }
+
+            // 2. Cache miss or Redis unavailable - load all into Redis (and also get fresh data)
+            log.info("Cache miss for orgId={}, role={}. Loading from DB...", orgId, role);
+            Map<String, List<UserResponseDto>> roleMap = cacheLoaderService.loadAllInactiveUsers(orgId).get();
+            log.info("rolemap:{}", roleMap);
+            String loggedRole = roleField.toUpperCase();
+            List<UserResponseDto> fallbackList = roleMap.get(loggedRole);
+            if (fallbackList != null && !fallbackList.isEmpty()) {
+                log.info("Returning response from DB for All Users");
+                return fallbackList;
+            }
+
+        } catch (Exception e) {
+            log.error("Failed to fetch users for orgId={}, role={}. Error: {}", orgId, role, e.getMessage(), e);
+        }
+
+        // 3. Final fallback
+        throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No Users found for this organization");
+    }
+
+    @Override
+    public List<EditUserDto> updateIsActive(EditUser editUser, String orgId){
+        List<String> userIds = editUser.getUserId();
+        if(userIds == null || userIds.isEmpty()){
+            throw new RuntimeException("No userIds provided");
+        }
+        List<UserEntity> userEntityList = new ArrayList<>();
+        for(String id : userIds){
+            UserEntity userEntities = userAdapter.findUserByOrgIdAndUserId(orgId, id);
+            if (userEntities == null){
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No user found for the provided userId");
+            }
+
+            userEntities.setActive(editUser.isActive());
+            userEntityList.add(userEntities);
+        }
+        List<UserEntity> user = userAdapter.save(userEntityList);
+        List<EditUserDto> dto = userDtoMapper.toDto(user);
+        if (isRedisEnabled) {
+            CacheEventPublisherUtil.syncReloadThenPublish(
+                    publisher,
+                    cacheKeyConfig.getInactiveUsers(),
+                    orgId,
+                    cacheReloadHandlerRegistry
+            );
+            log.info("InactiveUserCacheReloadEvent published after Active update");
+        }else {
+            log.info("Redis is not enabled or RedisTemplate is null. Skipping cache update Inactive User reload.");
+        }
+        return dto;
     }
 }

@@ -116,4 +116,17 @@ public class RedisScheduler {
         }
     }
 
+    @Scheduled(cron = "0 0 * * * *")
+    public void reloadInactiveUserCacheHourly() {
+        log.info("Scheduled Inactive User cache loading triggered : {}", LocalTime.now());
+        try {
+            List<String> orgIds = organizationRepository.findAllOrgIds();
+            for(String orgId : orgIds){
+                cacheLoaderService.loadAllInactiveUsers(orgId);
+            }
+            log.info("Cache Inactive User loading completed");
+        } catch (Exception e) {
+            log.error("Error during scheduled User cache loading: {}", e.getMessage(), e);
+        }
+    }
 }

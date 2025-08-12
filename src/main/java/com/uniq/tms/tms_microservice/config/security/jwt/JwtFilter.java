@@ -1,135 +1,169 @@
 package com.uniq.tms.tms_microservice.config.security.jwt;
 
 import com.uniq.tms.tms_microservice.config.security.user.CustomUserDetails;
-import com.uniq.tms.tms_microservice.entity.RoleEntity;
+import com.uniq.tms.tms_microservice.dto.PrivilegeConstants;
 import com.uniq.tms.tms_microservice.entity.UserEntity;
+import com.uniq.tms.tms_microservice.repository.BlacklistedTokenRepository;
+import com.uniq.tms.tms_microservice.repository.SecondaryDetailsRepository;
 import com.uniq.tms.tms_microservice.repository.UserRepository;
+import com.uniq.tms.tms_microservice.service.CacheLoaderService;
+import com.uniq.tms.tms_microservice.util.CacheKeyUtil;
 import io.jsonwebtoken.Claims;
-import jakarta.servlet.Filter;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
-import jakarta.servlet.ServletRequest;
-import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
+import org.springframework.util.AntPathMatcher;
+import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.Collections;
+import java.util.List;
 
 @Component
-public class JwtFilter implements Filter {
+public class JwtFilter extends OncePerRequestFilter {
+
+    private static final Logger log = LogManager.getLogger(JwtFilter.class);
+    private static final AntPathMatcher pathMatcher = new AntPathMatcher();
 
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
+    private final SecondaryDetailsRepository secondaryDetailsRepository;
+    private final CacheLoaderService cacheLoaderService;
+    private final CacheKeyUtil cacheKeyUtil;
+    private final BlacklistedTokenRepository blacklistedTokenRepository;
 
     @Autowired
-    public JwtFilter(JwtUtil jwtUtil, UserRepository userRepository) {
+    public JwtFilter(JwtUtil jwtUtil,
+                     UserRepository userRepository,
+                     SecondaryDetailsRepository secondaryDetailsRepository,
+                     CacheLoaderService cacheLoaderService,
+                     CacheKeyUtil cacheKeyUtil,
+                     BlacklistedTokenRepository blacklistedTokenRepository) {
         this.jwtUtil = jwtUtil;
         this.userRepository = userRepository;
+        this.secondaryDetailsRepository = secondaryDetailsRepository;
+        this.cacheLoaderService = cacheLoaderService;
+        this.cacheKeyUtil = cacheKeyUtil;
+        this.blacklistedTokenRepository = blacklistedTokenRepository;
     }
 
-    private static final Logger logger = LogManager.getLogger(JwtFilter.class);
-
     @Override
-    public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
-        HttpServletRequest httpRequest = (HttpServletRequest) request;
-        HttpServletResponse httpResponse = (HttpServletResponse) response;
-        String path = httpRequest.getRequestURI();
-        if (path.equals("/login")
-                ||path.equals("/")
-                || path.equals("/favicon.ico")
-                || path.equals("/tms/loginByEmail")
-                || path.equals("/tms/reset-password")
-                || path.equals("/tms/validate-email")
-                || path.equals("/tms/organization/orgType")
-                || path.equals("/tms/organization/validate")
-                || path.equals("/tms/organization/create")) {
+    protected void doFilterInternal(@NonNull HttpServletRequest request,
+                                    @NonNull HttpServletResponse response,
+                                    @NonNull FilterChain chain)
+            throws ServletException, IOException {
+
+        String path = request.getRequestURI();
+        // Whitelisted endpoints
+        if (isWhiteListed(path)) {
             chain.doFilter(request, response);
             return;
         }
 
-        String jwtToken = null;
-        logger.info("fetch user agent from header");
-        String userAgent = httpRequest.getHeader("User-Agent");
-        String ipAddress = jwtUtil.getClientIp(httpRequest);
-        logger.info("fetch jwt token from header");
-        String authHeader = httpRequest.getHeader("Authorization");
-        logger.debug("JWT_Filter **********userAgent from the token: {}"+ userAgent);
-        logger.debug("JWT_Filter *************IP Address from the token: {}"+ ipAddress);
-        logger.debug("JWT_Filter ************AuthHeader from the token: {}"+ authHeader);       
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            logger.info("jwt token found in header");
-            jwtToken = authHeader.substring(7);
-        }
-
-        if (jwtToken == null && httpRequest.getCookies() != null) {
-            logger.info("fetch jwt token from cookie");
-            for (Cookie cookie : httpRequest.getCookies()) {
-                if ("JWT_TOKEN".equals(cookie.getName())) {
-                    jwtToken = cookie.getValue();
-                    break;
-                }
-            }
-        }
+        String jwtToken = extractTokenFromRequest(request);
 
         if (jwtToken != null) {
+            if (blacklistedTokenRepository.existsByToken(jwtToken)) {
+                log.warn("JWT token is blacklisted: {}", jwtToken);
+                sendErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, "Token is invalid or expired");
+                return;
+            }
+
             try {
-                logger.info("parsing jwt token");
-                Claims claims = jwtUtil.parseToken(jwtToken, userAgent);
-                String email = claims.getSubject();
-                String role = claims.get("roles", String.class);
-                if (email != null && role != null) {
-                    logger.info("find user by email from token");
-                    UserEntity user = userRepository.findByEmail(email);
+                Claims claims = jwtUtil.parseAndValidateToken(jwtToken, request.getHeader("User-Agent"));
+                String subject = claims.getSubject();
+                String role = claims.get("roles", String.class).replace("ROLE_", "");
+
+                UserEntity user = null;
+                String emailKey = cacheLoaderService.getPrivilegeKey(PrivilegeConstants.LOGIN_VIA_EMAIL);
+                String mobileKey = cacheLoaderService.getPrivilegeKey(PrivilegeConstants.LOGIN_VIA_MOBILE);
+
+                if (cacheKeyUtil.roleHasPrivilege(role, emailKey)) {
+                    user = userRepository.findByEmail(subject);
+                } else if (cacheKeyUtil.roleHasPrivilege(role, mobileKey)) {
+                    user = userRepository.findByMobileNumber(subject);
                     if (user == null) {
-                        logger.info("user does not exist");
-                        sendErrorResponse(httpResponse,HttpServletResponse.SC_NOT_FOUND, "User does not exist");
-                        return;
+                        user = secondaryDetailsRepository.findUserByMobile(subject);
                     }
-                    logger.info("fetching user role");
-                    RoleEntity roleEntity = user.getRole();
-                    String userRole = roleEntity.getName();
-
-                    if (userRole.startsWith("ROLE_")) {
-                        userRole = userRole.substring(5);
-                    }
-                    logger.info("setting authentication token");
-                    CustomUserDetails userDetails = new CustomUserDetails(
-                            user.getUserId(),
-                            user.getOrganizationId(),
-                            user.getRole().getName(),
-                            userRole,
-                            user.getPassword(),
-                            Collections.singletonList(new SimpleGrantedAuthority(userRole))
-                    );
-                    UsernamePasswordAuthenticationToken authentication =
-                            new UsernamePasswordAuthenticationToken(userDetails, null,userDetails.getAuthorities());
-
-                    SecurityContextHolder.getContext().setAuthentication(authentication);
-                    logger.info("authentication token set");
                 }
+
+                if (user == null) {
+                    sendErrorResponse(response, HttpServletResponse.SC_NOT_FOUND, "User does not exist");
+                    return;
+                }
+
+                UsernamePasswordAuthenticationToken authentication = buildAuth(user);
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+
             } catch (Exception e) {
-                e.printStackTrace();
-                logger.info("Invalid token",e.getMessage());
-                sendErrorResponse(httpResponse, HttpServletResponse.SC_UNAUTHORIZED, "Invalid Token");
+                log.error("JWT validation failed: {}", e.getMessage());
+                sendErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, "Invalid Token");
                 return;
             }
         }
         chain.doFilter(request, response);
     }
 
+    private String extractTokenFromRequest(HttpServletRequest request) {
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            return authHeader.substring(7);
+        }
+        if (request.getCookies() != null) {
+            for (Cookie cookie : request.getCookies()) {
+                if ("JWT_TOKEN".equals(cookie.getName())) {
+                    return cookie.getValue();
+                }
+            }
+        }
+        return null;
+    }
+
+    private UsernamePasswordAuthenticationToken buildAuth(UserEntity user) {
+        String userRole = user.getRole().getName().replaceFirst("ROLE_", "");
+        CustomUserDetails userDetails = new CustomUserDetails(
+                user.getUserId(),
+                user.getOrganizationId(),
+                user.getRole().getName(),
+                user.getUserName(),
+                user.getPassword(),
+                Collections.singletonList(new SimpleGrantedAuthority(userRole))
+        );
+        return new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+    }
+
     private void sendErrorResponse(HttpServletResponse response, int status, String message) throws IOException {
         response.setStatus(status);
         response.setContentType("application/json");
-        String json = String.format("{\"status\":%d,\"message\":\"%s\"}", status, message.replace("\"","\\\""));
+        String json = String.format("{\"status\":%d,\"message\":\"%s\"}", status, message.replace("\"", "\\\""));
         response.getWriter().write(json);
+    }
+
+    private static final List<String> WHITELISTED_PATHS = List.of(
+            "/login",
+            "/",
+            "/favicon.ico",
+            "/tms/loginByEmail",
+            "/tms/loginByMobile",
+            "/tms/reset-password/**",
+            "/tms/validate-email/**",
+            "/tms/organization/orgType",
+            "/tms/organization/validate/**",
+            "/tms/organization/create/**"
+    );
+
+    private boolean isWhiteListed(String path){
+        return WHITELISTED_PATHS.stream()
+                .anyMatch(whitelist -> pathMatcher.match(whitelist,path));
     }
 
 }

@@ -13,10 +13,12 @@ public class OrgUserSequenceEntity {
     @Column(name = "org_id", nullable = false)
     private String orgId;
 
-    @Column(name = "last_number", nullable = false)
-    private Integer lastNumber;
+    @Column(name = "last_user_id", nullable = false)
+    private Integer lastUserId;
 
-    // Getters and setters
+    @Column(name = "last_secondary_user_id", nullable = false)
+    private Integer lastSecondaryUserId;
+
     public String getOrgId() {
         return orgId;
     }
@@ -26,10 +28,26 @@ public class OrgUserSequenceEntity {
     }
 
     public Integer getLastNumber() {
-        return lastNumber;
+        return lastUserId;
     }
 
     public void setLastNumber(Integer lastNumber) {
-        this.lastNumber = lastNumber;
+        this.lastUserId = lastNumber;
+    }
+
+    public Integer getLastUserId() {
+        return lastUserId;
+    }
+
+    public void setLastUserId(Integer lastUserId) {
+        this.lastUserId = lastUserId;
+    }
+
+    public Integer getLastSecondaryUserId() {
+        return lastSecondaryUserId;
+    }
+
+    public void setLastSecondaryUserId(Integer lastSecondaryUserId) {
+        this.lastSecondaryUserId = lastSecondaryUserId;
     }
 }

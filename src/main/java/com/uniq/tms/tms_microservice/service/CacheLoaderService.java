@@ -15,4 +15,5 @@ public interface CacheLoaderService {
     CompletableFuture<Map<String, UserProfileResponse>> loadUsersProfile(String orgId);
     CompletableFuture<List<GroupResponseDto>> loadGroupsCache(String orgId);
     CompletableFuture<Map<String, List<WorkScheduleDto>>> loadWorkSchedule(String orgId);
+    CompletableFuture<Map<String, List<UserResponseDto>>> loadAllInactiveUsers(String orgId);
 }

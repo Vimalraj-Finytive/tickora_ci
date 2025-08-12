@@ -1,5 +1,6 @@
 package com.uniq.tms.tms_microservice.controller;
 
+import com.uniq.tms.tms_microservice.config.security.cache.OtpFallbackCache;
 import com.uniq.tms.tms_microservice.config.security.jwt.JwtUtil;
 import com.uniq.tms.tms_microservice.constant.UserConstant;
 import com.uniq.tms.tms_microservice.dto.ApiResponse;
@@ -9,7 +10,6 @@ import com.uniq.tms.tms_microservice.dto.LoginDto;
 import com.uniq.tms.tms_microservice.facade.AuthFacade;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import java.util.Map;
 
 @RestController
 @RequestMapping(UserConstant.Auth_Url)
@@ -32,10 +33,12 @@ public class AuthController {
 
     private final AuthFacade authFacade;
     private final JwtUtil jwtUtil;
+    private final OtpFallbackCache otpFallbackCache;
 
-    public AuthController(AuthFacade authFacade, JwtUtil jwtUtil) {
+    public AuthController(AuthFacade authFacade, JwtUtil jwtUtil, OtpFallbackCache otpFallbackCache) {
         this.authFacade = authFacade;
         this.jwtUtil = jwtUtil;
+        this.otpFallbackCache = otpFallbackCache;
     }
 
     @PostMapping("/loginByEmail")
@@ -61,24 +64,13 @@ public class AuthController {
     }
 
     @GetMapping("/loginByMobile")
-    public ResponseEntity<ApiResponse> loginByMobile(@RequestParam String mobile, @RequestParam String otp,
-                                                     HttpSession session, HttpServletResponse response, HttpServletRequest request) {
-        System.out.println("Session ID at login: " + session.getId());
-
-        String storedOtp = (String) session.getAttribute("otp");
-        System.out.println("Stored OTP in session: " + storedOtp);
-        if (storedOtp == null) {
-            System.out.println("OTP expired or not found in session.");
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(new ApiResponse(400, "OTP expired", null));
-        }
+    public ResponseEntity<ApiResponse> loginByMobile(@RequestParam String mobile, @RequestParam String otp, HttpServletResponse response, HttpServletRequest request) {
         return authFacade.authenticateUserByMobile(mobile,otp,response,request);
-
     }
 
     @GetMapping("/sendOTP")
-    public ResponseEntity<ApiResponse> sendOTP(@RequestParam String mobile, HttpSession session) {
-        ResponseEntity<ApiResponse> response = authFacade.sendOTP(mobile,session);
+    public ResponseEntity<ApiResponse> sendOTP(@RequestParam String mobile) {
+        ResponseEntity<ApiResponse> response = authFacade.sendOTP(mobile);
         return response;
     }
 
@@ -119,4 +111,15 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid or expired token: " + e.getMessage());
         }
     }
+
+    @GetMapping("/debug/otps")
+    public Map<String, String> getAllOtps() {
+        return otpFallbackCache.getAllEntries();
+    }
+
+    @GetMapping("/debug/otpsCount")
+    public Map<String, String> getAllOtpsCount() {
+        return otpFallbackCache.getAllOtpCounts();
+    }
+
 }

@@ -404,4 +404,9 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
             @Param("toDate") LocalDate toDate,
             @Param("orgId") String orgId
     );
+
+    @Query("SELECT t FROM TimesheetEntity t WHERE t.status.statusId IN :statusIds AND t.date BETWEEN :startDate AND :endDate")
+    List<TimesheetEntity> findUserByStatusStatusIdIn(@Param("statusIds") List<String> statusIds,
+                                                   @Param("startDate") LocalDate startDate,
+                                                   @Param("endDate") LocalDate endDate);
 }

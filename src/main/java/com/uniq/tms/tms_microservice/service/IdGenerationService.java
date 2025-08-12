@@ -8,4 +8,5 @@ public interface IdGenerationService {
     String generateNextId(IdGenerationType type);
     List<String> generateNextId(IdGenerationType type, int count);
     String generateOrgPrefix(String orgName);
+    String generateNextSecondaryUserId(String organizationId);
 }

@@ -160,4 +160,7 @@ public interface TeamRepository extends JpaRepository<GroupEntity, Long> {
     @Transactional
     @Query("UPDATE GroupEntity g SET g.workSchedule.scheduleId = :newId WHERE g.workSchedule.scheduleId = :oldId")
     void updateGroupWorkSchedule(@Param("oldId") String oldId, @Param("newId") String newId);
+
+    @Query("SELECT g.groupName FROM GroupEntity g WHERE g.id = :groupId")
+    String findGroupNameByGroupId(@Param("groupId") Long groupId);
 }

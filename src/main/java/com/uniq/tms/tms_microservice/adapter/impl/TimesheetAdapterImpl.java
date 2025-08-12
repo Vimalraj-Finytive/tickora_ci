@@ -55,20 +55,11 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
         Map<String, List<TimesheetDto>> userTimesheetListMap = new HashMap<>();
 
         for (Object[] row : resultList) {
-            log.info("---- Row Start ----");
-            for (int i = 0; i < row.length; i++) {
-                log.info("Column {}: {}", i, row[i]);
-            }
-            log.info("---- Row End ----");
-
             if (row[1] == null) continue;
-
             String userId = toString(row[1]);
             LocalDate date = toLocalDate(row[0]);
             if (date == null) continue;
-
             String compositeKey = userId + "-" + date;
-
             TimesheetDto dto = timesheetMap.computeIfAbsent(compositeKey, key -> {
                 TimesheetDto newDto = new TimesheetDto();
                 newDto.setId(toLong(row[7]));
@@ -401,24 +392,13 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
         Map<String, List<UserTimesheetDto>> userTimesheetListMap = new HashMap<>();
 
         for (Object[] row : resultList) {
-
-            log.info("---- Row Start ----");
-            for (int i = 0; i < row.length; i++) {
-                log.info("Column {}: {}", i, row[i]);
-            }
-            log.info("---- Row End ----");
-
             if (row[1] == null) continue;
-
             String userId = toString(row[1]);
             LocalDate date = toLocalDate(row[0]);
             if (date == null) continue;
-
             String compositeKey = userId + "-" + date;
-
             UserTimesheetDto dto = timesheetMap.computeIfAbsent(compositeKey, key -> {
                 UserTimesheetDto newDto = new UserTimesheetDto();
-
                 newDto.setDate(date);
                 newDto.setUserId(userId);
                 newDto.setUserName((String) row[2]);
@@ -561,5 +541,10 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
     @Override
     public Optional<TimesheetStatusEntity> findByStatusName(String label) {
         return timesheetStatusRepository.findByStatusName(label);
+    }
+
+    @Override
+    public List<TimesheetEntity> findUserByStatusId(List<String> statusId, LocalDate startDate, LocalDate endDate) {
+        return timesheetRepository.findUserByStatusStatusIdIn(statusId, startDate, endDate);
     }
 }

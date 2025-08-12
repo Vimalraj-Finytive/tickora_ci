@@ -22,6 +22,10 @@ public class TimesheetReportDto {
 
     private List<Long> roleId;
 
+    private List<Long> locationId;
+
+    private List<String> statusId;
+
     public LocalDate getFromDate() {
         return fromDate;
     }
@@ -76,5 +80,21 @@ public class TimesheetReportDto {
 
     public void setRoleId(List<Long> roleId) {
         this.roleId = roleId;
+    }
+
+    public List<Long> getLocationId() {
+        return locationId;
+    }
+
+    public void setLocationId(List<Long> locationId) {
+        this.locationId = locationId;
+    }
+
+    public List<String> getStatusId() {
+        return statusId;
+    }
+
+    public void setStatusId(List<String> statusId) {
+        this.statusId = statusId;
     }
 }

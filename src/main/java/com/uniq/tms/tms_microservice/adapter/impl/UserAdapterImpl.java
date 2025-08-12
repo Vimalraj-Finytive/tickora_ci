@@ -432,16 +432,6 @@ public class UserAdapterImpl implements UserAdapter {
     }
 
     @Override
-    public boolean findByLocation(String name, String orgId) {
-        return locationRepository.findByNameAndOrganizationId(name, orgId).isPresent();
-    }
-
-    @Override
-    public List<UserEntity> findByRoleId(List<Long> roleIds, String orgId){
-        return roleRepository.findByIdIn(roleIds, orgId);
-    }
-
-    @Override
     public List<LocationEntity> updateMultipleLocations(List<LocationEntity> updatedEntities) {
         return locationRepository.saveAll(updatedEntities);
     }
@@ -553,5 +543,10 @@ public class UserAdapterImpl implements UserAdapter {
     @Override
     public List<UserLocationEntity> findByUser_UserId(String userId) {
         return userLocationRepository.findByUser_UserId(userId);
+    }
+
+    @Override
+    public List<GroupEntity> findGroupLocationByLocationId(List<Long> locationIds) {
+        return teamRepository.findByLocationEntity_LocationIdIn(locationIds);
     }
 }

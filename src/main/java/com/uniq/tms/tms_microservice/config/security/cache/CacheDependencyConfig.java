@@ -21,6 +21,7 @@ public class CacheDependencyConfig {
     private String groups;
     private String userprofile;
     private String workSchedule;
+    private String inactiveUsers;
 
     private final CacheKeyConfig cacheKeyConfig;
 
@@ -37,6 +38,7 @@ public class CacheDependencyConfig {
         if (location != null) dependency.put(cacheKeyConfig.getLocation(), location);
         if (userprofile != null) dependency.put(cacheKeyConfig.getUserprofile(), userprofile);
         if (workSchedule != null) dependency.put(cacheKeyConfig.getWorkSchedule(), workSchedule);
+        if (inactiveUsers != null) dependency.put(cacheKeyConfig.getInactiveUsers(), inactiveUsers);
     }
 
     public List<String> getDependent(String cacheName){
@@ -68,5 +70,9 @@ public class CacheDependencyConfig {
 
     public void setWorkSchedule(String workSchedule) {
         this.workSchedule = workSchedule;
+    }
+
+    public void setInactiveUsers(String inactiveUsers) {
+        this.inactiveUsers = inactiveUsers;
     }
 }
