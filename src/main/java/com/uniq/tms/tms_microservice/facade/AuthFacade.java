@@ -663,7 +663,6 @@ public class AuthFacade {
 
     public ApiResponse updateIsActive(EditUserDto editUserDto) {
         String orgId = authUtil.getOrgId();
-        String role = authUtil.getRole();
         if (orgId == null) {
             return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
         }

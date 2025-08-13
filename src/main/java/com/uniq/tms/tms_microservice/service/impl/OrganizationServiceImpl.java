@@ -6,9 +6,7 @@ import com.uniq.tms.tms_microservice.dto.ApiResponse;
 import com.uniq.tms.tms_microservice.dto.OrgSetupValidationResponse;
 import com.uniq.tms.tms_microservice.dto.UserRole;
 import com.uniq.tms.tms_microservice.entity.*;
-import com.uniq.tms.tms_microservice.enums.IdGenerationType;
 import com.uniq.tms.tms_microservice.exception.CommonExceptionHandler;
-import com.uniq.tms.tms_microservice.mapper.UserDtoMapper;
 import com.uniq.tms.tms_microservice.mapper.UserEntityMapper;
 import com.uniq.tms.tms_microservice.model.Organization;
 import com.uniq.tms.tms_microservice.model.OrganizationType;
@@ -24,6 +22,7 @@ import org.apache.logging.log4j.Logger;
 import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
 import static com.uniq.tms.tms_microservice.util.TextUtil.isBlank;
 
@@ -76,7 +75,6 @@ public class OrganizationServiceImpl implements OrganizationService {
             if (userAdapter.existsByOrganizationId(orgId)) {
                 throw new RuntimeException("Organization ID already exists: " + orgId);
             }
-
             OrganizationEntity response = userAdapter.create(entity);
             log.info("Organization Created Successfully");
 

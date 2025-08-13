@@ -2,7 +2,7 @@ package com.uniq.tms.tms_microservice.service.impl;
 
 import com.uniq.tms.tms_microservice.adapter.IdGeneratorAdapter;
 import com.uniq.tms.tms_microservice.entity.OrgUserSequenceEntity;
-import com.uniq.tms.tms_microservice.enums.IdGenerationType;
+import com.uniq.tms.tms_microservice.enums.IdGenerationTypeEnum;
 import com.uniq.tms.tms_microservice.repository.OrgUserSequenceRepository;
 import com.uniq.tms.tms_microservice.repository.OrganizationRepository;
 import com.uniq.tms.tms_microservice.service.IdGenerationService;
@@ -38,19 +38,19 @@ public class IdGenerationServiceImpl implements IdGenerationService {
             sequence.setOrgId(orgId);
             sequence.setLastUserId(1);
             orgUserSequenceRepository.save(sequence);
-            return orgId.replaceAll("\\d","") + IdGenerationType.USER.getPrefix() + String.format("%05d", 1);
+            return orgId.replaceAll("\\d","") + IdGenerationTypeEnum.USER.getPrefix() + String.format("%05d", 1);
         }
         Integer latestNumber = orgUserSequenceRepository.getLastUserId(orgId);
-        return orgId.replaceAll("\\d","") + IdGenerationType.USER.getPrefix() + String.format("%05d", latestNumber);
+        return orgId.replaceAll("\\d","") + IdGenerationTypeEnum.USER.getPrefix() + String.format("%05d", latestNumber);
     }
 
     @Override
-    public String generateNextId(IdGenerationType type) {
+    public String generateNextId(IdGenerationTypeEnum type) {
         return generateNextId(type, 1).get(0);
     }
 
     @Override
-    public List<String> generateNextId(IdGenerationType type, int count) {
+    public List<String> generateNextId(IdGenerationTypeEnum type, int count) {
         log.info("Generating {} IDs for type: {}", count, type);
         String prefix = type.getPrefix();
         String maxId = idGeneratorAdapter.findMaxIdByPrefix(type, prefix);
@@ -111,15 +111,22 @@ public class IdGenerationServiceImpl implements IdGenerationService {
 
     @Override
     public String generateNextSecondaryUserId(String organizationId) {
-            int updated = orgUserSequenceRepository.incrementSecondaryUserSequence(organizationId);
+        if (organizationId == null || organizationId.isBlank()) {
+            throw new IllegalArgumentException("organizationId cannot be null or blank");
+        }
+        log.info("OrganizationId: {}", organizationId);
+        int updated = orgUserSequenceRepository.incrementSecondaryUserSequence(organizationId);
+        log.info("Increment number:{}", updated);
             if (updated == 0) {
                 OrgUserSequenceEntity sequence = new OrgUserSequenceEntity();
                 sequence.setOrgId(organizationId);
                 sequence.setLastSecondaryUserId(1);
                 orgUserSequenceRepository.save(sequence);
-                return organizationId.replaceAll("\\d","") + IdGenerationType.SECONDARY_USER.getPrefix() + String.format("%05d", 1);
+                return organizationId.replaceAll("\\d","") + IdGenerationTypeEnum.SECONDARY_USER.getPrefix() + String.format("%05d", 1);
             }
+            log.info("Call repo to get last sequence");
             Integer latestNumber = orgUserSequenceRepository.getLastSecondaryUserId(organizationId);
-            return organizationId.replaceAll("\\d","") + IdGenerationType.SECONDARY_USER.getPrefix() + String.format("%05d", latestNumber);
+            log.info("latestNumber:{}", latestNumber);
+            return organizationId.replaceAll("\\d","") + IdGenerationTypeEnum.SECONDARY_USER.getPrefix() + String.format("%05d", latestNumber);
     }
 }

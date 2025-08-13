@@ -1,7 +1,7 @@
 package com.uniq.tms.tms_microservice.adapter.impl;
 
 import com.uniq.tms.tms_microservice.adapter.IdGeneratorAdapter;
-import com.uniq.tms.tms_microservice.enums.IdGenerationType;
+import com.uniq.tms.tms_microservice.enums.IdGenerationTypeEnum;
 import com.uniq.tms.tms_microservice.repository.*;
 import org.springframework.stereotype.Component;
 
@@ -23,7 +23,7 @@ public class IdGeneratorAdapterImpl implements IdGeneratorAdapter {
     }
 
 
-    public String findMaxIdByPrefix(IdGenerationType type, String prefix) {
+    public String findMaxIdByPrefix(IdGenerationTypeEnum type, String prefix) {
         return switch (type) {
             case WORK_SCHEDULE -> workScheduleRepository.findMaxIdByPrefix(prefix);
             case WORK_SCHEDULE_TYPE -> workScheduleTypeRepository.findMaxIdByPrefix(prefix);
