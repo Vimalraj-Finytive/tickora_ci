@@ -1,6 +1,6 @@
 package com.uniq.tms.tms_microservice.enums;
 
-public enum IdGenerationType {
+public enum IdGenerationTypeEnum {
 
     TICKORA("TK"),
     USER("UI"),
@@ -13,7 +13,7 @@ public enum IdGenerationType {
 
     private final String prefix ;
 
-    IdGenerationType(String prefix){
+    IdGenerationTypeEnum(String prefix){
         this.prefix = prefix;
     }
 

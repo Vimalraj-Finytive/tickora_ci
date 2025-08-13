@@ -8,7 +8,7 @@ import com.uniq.tms.tms_microservice.config.security.cache.CacheReloadHandlerReg
 import com.uniq.tms.tms_microservice.dto.*;
 import com.uniq.tms.tms_microservice.entity.*;
 import com.uniq.tms.tms_microservice.entity.WorkScheduleEntity;
-import com.uniq.tms.tms_microservice.enums.IdGenerationType;
+import com.uniq.tms.tms_microservice.enums.IdGenerationTypeEnum;
 import com.uniq.tms.tms_microservice.enums.WorkScheduleTypeEnum;
 import com.uniq.tms.tms_microservice.mapper.WorkScheduleEntityMapper;
 import com.uniq.tms.tms_microservice.model.WorkSchedule;
@@ -142,7 +142,7 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
 
         WorkScheduleEntity entity = workScheduleEntityMapper.toEntity(model);
         entity.setOrganizationEntity(organizationEntity);
-        entity.setScheduleId(idGenerationService.generateNextId(IdGenerationType.WORK_SCHEDULE));
+        entity.setScheduleId(idGenerationService.generateNextId(IdGenerationTypeEnum.WORK_SCHEDULE));
         entity.setType(typeEntity);
         entity.setActive(true);
 
@@ -185,14 +185,14 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
 
     private void saveWeeklySchedule(WeeklyScheduleDto dto, WorkScheduleEntity parent) {
         WeeklyWorkScheduleEntity entity = workScheduleEntityMapper.toWeeklyEntity(dto);
-        entity.setWeeklyWorkScheduleId(idGenerationService.generateNextId(IdGenerationType.WEEKLY_WORK));
+        entity.setWeeklyWorkScheduleId(idGenerationService.generateNextId(IdGenerationTypeEnum.WEEKLY_WORK));
         entity.setWorkScheduleEntity(parent);
         workScheduleAdapter.save(entity);
     }
 
     private void saveFlexibleSchedule(List<FlexibleScheduleDto> flexibleSchedule, WorkScheduleEntity parent) {
         List<FlexibleWorkScheduleEntity> entities = workScheduleEntityMapper.toFlexibleEntity(flexibleSchedule);
-        List<java.lang.String> ids = idGenerationService.generateNextId(IdGenerationType.FLEXIBLE_WORK, entities.size());
+        List<java.lang.String> ids = idGenerationService.generateNextId(IdGenerationTypeEnum.FLEXIBLE_WORK, entities.size());
 
         for (int i = 0; i < entities.size(); i++) {
             FlexibleWorkScheduleEntity entity = entities.get(i);
@@ -205,7 +205,7 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
     private void saveFixedSchedule(List<FixedScheduleDto> dtos, WorkScheduleEntity parent) {
         List<FixedWorkScheduleEntity> entities = workScheduleEntityMapper.toEntity(dtos);
 
-        List<String> ids = idGenerationService.generateNextId(IdGenerationType.FIXED_WORK, entities.size());
+        List<String> ids = idGenerationService.generateNextId(IdGenerationTypeEnum.FIXED_WORK, entities.size());
 
         for (int i = 0; i < entities.size(); i++) {
             FixedWorkScheduleEntity entity = entities.get(i);
@@ -218,7 +218,7 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
     @Override
     public ApiResponse addType(WorkScheduleTypeDto type) {
         WorkScheduleTypeEntity entity = new WorkScheduleTypeEntity();
-        java.lang.String generatedId = idGenerationService.generateNextId(IdGenerationType.WORK_SCHEDULE_TYPE);
+        java.lang.String generatedId = idGenerationService.generateNextId(IdGenerationTypeEnum.WORK_SCHEDULE_TYPE);
         entity.setTypeId(generatedId);
         entity.setType(WorkScheduleTypeEnum.valueOf(type.getType()));
         workScheduleAdapter.addType(entity);

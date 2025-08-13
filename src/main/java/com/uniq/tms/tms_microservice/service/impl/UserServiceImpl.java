@@ -95,6 +95,7 @@ public class UserServiceImpl implements UserService {
     private final OrganizationTypeRepository organizationTypeRepository;
     private final IdGenerationService idGenerationService;
     private final SecondaryDetailsRepository secondaryDetailsRepository;
+    private final UserFaceRepository userFaceRepository;
 
     public UserServiceImpl(Validator validator, UserAdapter userAdapter, TimesheetAdapter timesheetAdapter,
                            UserEntityMapper userEntityMapper, OrganizationRepository organizationRepository,
@@ -103,7 +104,7 @@ public class UserServiceImpl implements UserService {
                            @Nullable RedisTemplate<String, Object> redisTemplate, LocationEntityMapper locationEntityMapper,
                            CacheLoaderService cacheLoaderService, ApplicationEventPublisher publisher, WorkScheduleAdapter workScheduleAdapter,
                            CacheKeyUtil cacheKeyUtil, TeamRepository teamRepository, CacheKeyConfig cacheKeyConfig, CacheReloadHandlerRegistry cacheReloadHandlerRegistry,
-                           OrganizationTypeRepository organizationTypeRepository, IdGenerationService idGenerationService, SecondaryDetailsRepository secondaryDetailsRepository) {
+                           OrganizationTypeRepository organizationTypeRepository, IdGenerationService idGenerationService, SecondaryDetailsRepository secondaryDetailsRepository, UserFaceRepository userFaceRepository) {
         this.validator = validator;
         this.userAdapter = userAdapter;
         this.timesheetAdapter = timesheetAdapter;
@@ -126,6 +127,7 @@ public class UserServiceImpl implements UserService {
         this.organizationTypeRepository = organizationTypeRepository;
         this.idGenerationService = idGenerationService;
         this.secondaryDetailsRepository = secondaryDetailsRepository;
+        this.userFaceRepository = userFaceRepository;
     }
 
     private static final Logger log = LoggerFactory.getLogger(UserServiceImpl.class);
@@ -138,11 +140,11 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public List<Role> getAllRole(String orgId, String role) {
-        int hierarchyLevel = 0;
+
         if (role != null && role.startsWith("ROLE_")) {
             role = role.substring(5);
-             hierarchyLevel = UserRole.getLevel(role);
         }
+        int  hierarchyLevel = UserRole.getLevel(role);
         // Step 1: Get orgType from orgId
         String orgTypeId = organizationRepository.findOrgTypeByOrganizationId(orgId);
         OrganizationTypeEntity orgType = organizationTypeRepository.findById(orgTypeId).orElseThrow(() ->
@@ -750,8 +752,9 @@ public class UserServiceImpl implements UserService {
             log.info("Saving secondary details: {}", secondaryDetailsDto.getUserName());
             SecondaryDetails secondaryDetails = secondaryDetailsMapper.toMiddleware(secondaryDetailsDto);
             SecondaryDetailsEntity secondaryDetailsEntity = secondaryDetailsMapper.toEntity(secondaryDetails);
+            log.info("Call id generation service: {}", organizationId);
             String customSecondaryUserId = idGenerationService.generateNextSecondaryUserId(organizationId);
-            entity.setUserId(customSecondaryUserId);
+            secondaryDetailsEntity.setId(customSecondaryUserId);
             secondaryDetailsEntity.setUser(savedUserEntity);
             secondaryDetailsEntity.setEmail(TextUtil.trim(secondaryDetails.getEmail()));
             userAdapter.saveSecondaryDetails(secondaryDetailsEntity);
@@ -2046,8 +2049,7 @@ public class UserServiceImpl implements UserService {
             log.error("Failed to fetch users for orgId={}, role={}. Error: {}", orgId, role, e.getMessage(), e);
         }
 
-        // 3. Final fallback
-        throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No Users found for this organization");
+        throw new ResponseStatusException(HttpStatus.OK, "No Inactive Users found for this organization");
     }
 
     @Override
@@ -2067,6 +2069,7 @@ public class UserServiceImpl implements UserService {
             userEntityList.add(userEntities);
         }
         List<UserEntity> user = userAdapter.save(userEntityList);
+        userFaceRepository.deleteAllById(editUser.getUserId());
         List<EditUserDto> dto = userDtoMapper.toDto(user);
         if (isRedisEnabled) {
             CacheEventPublisherUtil.syncReloadThenPublish(
