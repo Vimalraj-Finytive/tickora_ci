@@ -57,7 +57,7 @@ public class TextUtil {
             return objectMapper.readValue(json, new TypeReference<>() {});
         } catch (JsonProcessingException e) {
             log.error("Failed to parse membersDetails JSON: {}", e.getMessage(), e);
-            return Collections.emptyList(); // Or throw if you want stricter handling
+            return Collections.emptyList();
         }
     }
 

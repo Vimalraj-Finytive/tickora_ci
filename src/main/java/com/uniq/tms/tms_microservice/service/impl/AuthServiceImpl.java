@@ -4,20 +4,28 @@ import com.uniq.tms.tms_microservice.adapter.AuthAdapter;
 import com.uniq.tms.tms_microservice.adapter.UserAdapter;
 import com.uniq.tms.tms_microservice.config.security.cache.OtpFallbackCache;
 import com.uniq.tms.tms_microservice.config.security.jwt.JwtUtil;
+import com.uniq.tms.tms_microservice.config.security.schema.TenantContext;
 import com.uniq.tms.tms_microservice.dto.ApiResponse;
 import com.uniq.tms.tms_microservice.dto.ChangePasswordDto;
+import com.uniq.tms.tms_microservice.dto.OrganizationDropdownDto;
 import com.uniq.tms.tms_microservice.dto.PrivilegeConstants;
-import com.uniq.tms.tms_microservice.entity.PrivilegeEntity;
 import com.uniq.tms.tms_microservice.entity.SecondaryDetailsEntity;
 import com.uniq.tms.tms_microservice.entity.UserEntity;
+import com.uniq.tms.tms_microservice.enums.CountryEnum;
+import com.uniq.tms.tms_microservice.enums.OrganizationSizeRangeEnum;
+import com.uniq.tms.tms_microservice.exception.CommonExceptionHandler;
+import com.uniq.tms.tms_microservice.helper.EmailHelper;
+import com.uniq.tms.tms_microservice.helper.RolePrivilegeHelper;
+import com.uniq.tms.tms_microservice.helper.TenantResolverHelper;
 import com.uniq.tms.tms_microservice.model.OtpSendResponse;
 import com.uniq.tms.tms_microservice.service.AuthService;
 import com.uniq.tms.tms_microservice.service.CacheLoaderService;
 import com.uniq.tms.tms_microservice.service.NettyfishService;
 import com.uniq.tms.tms_microservice.util.CacheKeyUtil;
-import com.uniq.tms.tms_microservice.util.EmailUtil;
 import com.uniq.tms.tms_microservice.util.PasswordUtil;
 import jakarta.annotation.Nullable;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -29,6 +37,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import java.time.Duration;
 import java.time.Instant;
@@ -50,24 +60,31 @@ public class AuthServiceImpl implements AuthService {
     private final UserAdapter userAdapter;
     private final JwtUtil jwtUtil;
     private final PasswordEncoder passwordEncoder;
-    private final EmailUtil emailUtil;
+    private final EmailHelper emailHelper;
     private final CacheLoaderService cacheLoaderService;
     private final CacheKeyUtil cacheKeyUtil;
     private final StringRedisTemplate redisTemplate;
     private final OtpFallbackCache otpFallbackCache;
+    private final TenantResolverHelper tenantResolverHelper;
+    private final RolePrivilegeHelper rolePrivilegeHelper;
 
-    public AuthServiceImpl(NettyfishService nettyfishService, AuthAdapter authAdapter, UserAdapter userAdapter, JwtUtil jwtUtil, PasswordEncoder passwordEncoder, EmailUtil emailUtil, CacheLoaderService cacheLoaderService, CacheKeyUtil cacheKeyUtil, @Nullable StringRedisTemplate redisTemplate, OtpFallbackCache otpFallbackCache) {
+    public AuthServiceImpl(NettyfishService nettyfishService, AuthAdapter authAdapter, UserAdapter userAdapter, JwtUtil jwtUtil, PasswordEncoder passwordEncoder, EmailHelper emailHelper, CacheLoaderService cacheLoaderService, CacheKeyUtil cacheKeyUtil, @Nullable StringRedisTemplate redisTemplate, OtpFallbackCache otpFallbackCache, TenantResolverHelper tenantResolverHelper, RolePrivilegeHelper rolePrivilegeHelper) {
         this.nettyfishService = nettyfishService;
         this.authAdapter = authAdapter;
         this.userAdapter = userAdapter;
         this.jwtUtil = jwtUtil;
         this.passwordEncoder = passwordEncoder;
-        this.emailUtil = emailUtil;
+        this.emailHelper = emailHelper;
         this.cacheLoaderService = cacheLoaderService;
         this.cacheKeyUtil = cacheKeyUtil;
         this.redisTemplate = redisTemplate;
         this.otpFallbackCache = otpFallbackCache;
+        this.tenantResolverHelper = tenantResolverHelper;
+        this.rolePrivilegeHelper = rolePrivilegeHelper;
     }
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     @Value("${otp.ttl.minutes}")
     private long otpTtlMinutes;
@@ -81,9 +98,13 @@ public class AuthServiceImpl implements AuthService {
     @Value("${otp.test}")
     private String testOtp;
 
+    @Override
+    @Transactional
     public ResponseEntity<ApiResponse> authenticateUserByEmail(String email, String password,
                                                                HttpServletResponse response,
                                                                HttpServletRequest request) {
+        String schemaName = tenantResolverHelper.getUserSchemaByEmail(email);
+        log.info("schema name from login:{}", schemaName);
         List<Supplier<UserEntity>> userSuppliers = List.of(
                 () -> authAdapter.findByEmail(email),
                 () -> authAdapter.findUserByEmail(email)
@@ -104,12 +125,12 @@ public class AuthServiceImpl implements AuthService {
         String key = cacheLoaderService.getPrivilegeKey(PrivilegeConstants.LOGIN_VIA_EMAIL);
         log.info("Privilege key :{}", key);
         log.info("User Role:{}", users.getFirst().getRole().getName());
-        boolean hasEmailLoginPrivilege = cacheKeyUtil.roleHasPrivilege(users.getFirst().getRole().getName(), key);
+        boolean hasEmailLoginPrivilege = rolePrivilegeHelper.roleHasPrivilege(users.getFirst().getRole().getName(), key);
         log.info("has email login privilege: {}", hasEmailLoginPrivilege);
 
         Optional<UserEntity> userWithEmailPrivilege = users.stream()
-                .filter(user -> user.getRole().getPrivilegeEntities().stream()
-                        .map(PrivilegeEntity::getName)
+                .filter(user -> user.getRole().getPrivilegeMappings().stream()
+                        .map(mapping -> mapping.getPrivilege().getName())
                         .anyMatch(priv -> priv.equals(key)))
                 .findFirst();
 
@@ -130,7 +151,6 @@ public class AuthServiceImpl implements AuthService {
 
         boolean isPasswordValid = PasswordUtil.isPasswordMatch(password, user.getPassword());
         log.info("password valid: {}", isPasswordValid);
-        // Step 3: Validate password
         if (!isPasswordValid) {
             log.info("password not valid");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -145,7 +165,7 @@ public class AuthServiceImpl implements AuthService {
         }
 
             log.info("Generating JWT Token");
-            String jwtToken = jwtUtil.generateToken(email, System.currentTimeMillis(), request, hasEmailLoginPrivilege);
+            String jwtToken = jwtUtil.generateToken(email, System.currentTimeMillis(), request, hasEmailLoginPrivilege, schemaName);
             Cookie jwtCookie = new Cookie("JWT_TOKEN", jwtToken);
             jwtCookie.setHttpOnly(true);
             jwtCookie.setSecure(true);
@@ -153,8 +173,8 @@ public class AuthServiceImpl implements AuthService {
             response.addCookie(jwtCookie);
 
             log.info("Preparing privilege set");
-            Set<String> privileges = user.getRole().getPrivilegeEntities().stream()
-                    .map(PrivilegeEntity::getName)
+            Set<String> privileges = user.getRole().getPrivilegeMappings().stream()
+                    .map(mapping -> mapping.getPrivilege().getName())
                     .collect(Collectors.toSet());
 
             userData.put("username", user.getUserName());
@@ -168,7 +188,6 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public ResponseEntity<ApiResponse> sendOtp(String mobile) {
-
         UserEntity studentUser;
         String parentUserId = null;
         boolean isParent = false;
@@ -190,7 +209,7 @@ public class AuthServiceImpl implements AuthService {
 
         if (!isParent) {
             String key = cacheLoaderService.getPrivilegeKey(PrivilegeConstants.LOGIN_VIA_MOBILE);
-            boolean hasMobileLoginPrivilege = cacheKeyUtil.roleHasPrivilege(studentUser.getRole().getName(), key);
+            boolean hasMobileLoginPrivilege = rolePrivilegeHelper.roleHasPrivilege(studentUser.getRole().getName(), key);
             log.info("has mobile login privilege: {}", hasMobileLoginPrivilege);
             if (!hasMobileLoginPrivilege) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -199,6 +218,14 @@ public class AuthServiceImpl implements AuthService {
         } else {
             log.info("Parent login detected. Skipping privilege check.");
         }
+
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("count", 1);
+        response.put("time", "1M 6S");
+
+        List<Map<String, Object>> dataList = new ArrayList<>();
+        dataList.add(response);
 
         String userId = studentUser.getUserId();
         String orgId = studentUser.getOrganizationId();
@@ -214,11 +241,12 @@ public class AuthServiceImpl implements AuthService {
         Instant midnight = LocalDate.now(ZoneOffset.UTC).plusDays(1).atStartOfDay().toInstant(ZoneOffset.UTC);
         long secondsUntilMidnight = Duration.between(now, midnight).getSeconds();
         String generatedOtp = testMobile.equals(mobile) ? testOtp : nettyfishService.generateOtp();
+        log.info("Generated OTP:{}", generatedOtp);
         Integer currentCount = otpFallbackCache.getCount(otpCountKey);
         if (!(testMobile.equals(mobile) && testOtp.equals(generatedOtp))) {
             if (currentCount != null && currentCount >= maxDailyAttempts) {
                 return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
-                        .body(new ApiResponse(429, "Daily OTP limit reached, Try again Tomorrow.", null));
+                        .body(new ApiResponse(429, "Daily OTP limit reached, Try again Tomorrow.", response));
             }
         }
         OtpSendResponse otpSendResponse = testMobile.equals(mobile)
@@ -231,14 +259,15 @@ public class AuthServiceImpl implements AuthService {
         otpFallbackCache.saveOtp(otpKey, generatedOtp, otpTtlMinutes);
         otpFallbackCache.incrementCount(otpCountKey, secondsUntilMidnight);
         log.info("Generated OTP for {}: {}", mobile, generatedOtp);
-        return ResponseEntity.ok(new ApiResponse(200, "OTP sent successfully", null));
+        return ResponseEntity.ok(new ApiResponse(200, "OTP sent successfully", dataList));
     }
 
     @Override
+    @Transactional
     public ResponseEntity<ApiResponse> authenticateUserByMobile(String mobile, String otp,
                                                                 HttpServletResponse response,
                                                                 HttpServletRequest request) {
-
+        String schemaName = tenantResolverHelper.getUserSchemaByMobile(mobile);
         List<Supplier<UserEntity>> userSuppliers = List.of(
                 () -> authAdapter.findByMobileNumber(mobile),
                 () -> authAdapter.findStudentIdByMobile(mobile)
@@ -255,13 +284,13 @@ public class AuthServiceImpl implements AuthService {
         }
 
         String key = cacheLoaderService.getPrivilegeKey(PrivilegeConstants.LOGIN_VIA_MOBILE);
-        boolean hasMobileLoginPrivilege = cacheKeyUtil
+        boolean hasMobileLoginPrivilege = rolePrivilegeHelper
                 .roleHasPrivilege(users.getFirst().getRole().getName(), key);
         log.info("has mobile login privilege to login: {}", hasMobileLoginPrivilege);
 
         Optional<UserEntity> userWithMobilePrivilege = users.stream()
-                .filter(user -> user.getRole().getPrivilegeEntities().stream()
-                        .map(PrivilegeEntity::getName)
+                .filter(user -> user.getRole().getPrivilegeMappings().stream()
+                        .map(mapping -> mapping.getPrivilege().getName())
                         .anyMatch(priv -> priv.equals(key)))
                 .findFirst();
 
@@ -295,15 +324,15 @@ public class AuthServiceImpl implements AuthService {
                     .body(new ApiResponse(400, "Invalid OTP", null));
         }
 
-        String jwtToken = jwtUtil.generateToken(mobile, System.currentTimeMillis(), request, false);
+        String jwtToken = jwtUtil.generateToken(mobile, System.currentTimeMillis(), request, false, schemaName);
         Cookie jwtCookie = new Cookie("JWT_TOKEN", jwtToken);
         jwtCookie.setHttpOnly(true);
         jwtCookie.setSecure(true);
         jwtCookie.setPath("/");
         response.addCookie(jwtCookie);
 
-        Set<String> privileges = user.getRole().getPrivilegeEntities().stream()
-                .map(PrivilegeEntity::getName)
+        Set<String> privileges = user.getRole().getPrivilegeMappings().stream()
+                .map(mapping -> mapping.getPrivilege().getName())
                 .collect(Collectors.toSet());
 
         Map<String, Object> userData = new HashMap<>();
@@ -317,7 +346,6 @@ public class AuthServiceImpl implements AuthService {
 
         return ResponseEntity.ok(new ApiResponse(200, "Login Successful", userData));
     }
-
 
     public ResponseEntity<ApiResponse> logoutUser(HttpServletRequest request, HttpServletResponse response) {
         String jwtToken = null;
@@ -360,34 +388,61 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public ResponseEntity<ApiResponse> resetPassword(String email, ChangePasswordDto request) {
+        log.info("About to reset password for tenant: {}", TenantContext.getCurrentTenant());
+
+        log.info("Reset password operation completed for tenant: {}", TenantContext.getCurrentTenant());
 
         UserEntity user = userAdapter.findByEmail(email)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Invalid Email"));
-
+        log.info("Check password");
         if (!passwordEncoder.matches(request.getOldPassword(), user.getPassword())) {
+            log.info("Incorrect password");
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Old password is incorrect");
         }
         if (passwordEncoder.matches(request.getNewPassword(), user.getPassword())) {
+            log.info("Correct password");
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "New password must be different from the old password");
         }
-
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         user.setDefaultPassword(false);
         userAdapter.updatePassword(user);
-
-        return ResponseEntity.ok(new ApiResponse(201,"Password reset successfully", true));
+        log.info("Update password success");
+        return ResponseEntity.ok(new ApiResponse(201, "Password reset successfully", true));
     }
 
     public ResponseEntity<ApiResponse> forgotPassword(String email) {
-        UserEntity user = userAdapter.findByEmail(email)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Invalid Email"));
+        try {
+            UserEntity user = userAdapter.findByEmail(email)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Invalid Email"));
             String defaultPassword = PasswordUtil.generateDefaultPassword();
             user.setPassword(PasswordUtil.encryptPassword(defaultPassword));
             user.setDefaultPassword(true);
             userAdapter.saveUser(user);
             boolean isNewUser = false;
-            emailUtil.sendForgotPasswordReminderEmail(user.getEmail(), user.getUserName(), defaultPassword, isNewUser);
+            emailHelper.sendForgotPasswordReminderEmail(user.getEmail(), user.getUserName(), defaultPassword, isNewUser);
             return ResponseEntity.ok(new ApiResponse(200, "New default password sent to email", null));
+        } catch (Exception e) {
+            log.info("Invalid user: {}", e.getMessage());
+            throw new CommonExceptionHandler.SchemaNotFoundException("Invalid User Email");
+        }
+    }
+
+    @Override
+    public OrganizationDropdownDto getDropDowns() {
+
+        List<Map<String, Object>> orgSize = Arrays.stream(OrganizationSizeRangeEnum.values())
+                .map(size -> Map.<String, Object>of(
+                        "displayValue", size.getDisplayValue(),
+                        "maxCount", size.getMaxCount()
+                ))
+                .toList();
+
+        List<String> country = Arrays.stream(CountryEnum.values())
+                .map(CountryEnum::getCounty)
+                .toList();
+
+        return new OrganizationDropdownDto(country, orgSize);
     }
 }

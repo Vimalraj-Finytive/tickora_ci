@@ -14,12 +14,18 @@ public interface RoleRepository extends JpaRepository<RoleEntity, Long> {
     @Query("SELECT r FROM RoleEntity r WHERE r.hierarchyLevel > :hierarchyLevel ")
     List<RoleEntity> findRolesByOrgIdAndRoleLevel(@Param("hierarchyLevel") int hierarchyLevel);
 
-    @Query("SELECT r FROM RoleEntity r JOIN FETCH r.privilegeEntities")
+    @Query("SELECT DISTINCT r FROM RoleEntity r " +
+            "LEFT JOIN FETCH r.privilegeMappings rpm " +
+            "LEFT JOIN FETCH rpm.privilege " +
+            "WHERE rpm.enabled=true")
     List<RoleEntity> findAllWithPrivileges();
 
     @Query(value = "SELECT name, role_id FROM role", nativeQuery = true)
     List<Object[]> findRoleNameIdMappings();
 
-    @Query("SELECT r FROM RoleEntity r JOIN FETCH r.privilegeEntities WHERE LOWER(r.name) = LOWER(:name)")
+    @Query("SELECT r FROM RoleEntity r " +
+            "JOIN FETCH r.privilegeMappings rpm " +
+            "JOIN FETCH rpm.privilege " +
+            "WHERE rpm.enabled = true AND LOWER(r.name) = LOWER(:name)")
     Optional<RoleEntity> findByNameWithPrivileges(@Param("name") String name);
 }

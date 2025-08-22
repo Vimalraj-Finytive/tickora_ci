@@ -29,7 +29,7 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
             ug.user_id,
             STRING_AGG(g.group_name, ', ') AS group_name
         FROM user_group ug
-        JOIN group_table g ON ug.group_id = g.group_id
+        JOIN org_groups g ON ug.group_id = g.group_id
         GROUP BY ug.user_id
     ),
     
@@ -47,7 +47,7 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
         SELECT
             gs.work_date,
             TO_CHAR(gs.work_date, 'FMDay') AS day_name,
-            EXTRACT(DOW FROM gs.work_date)::INT AS day_num,
+            CAST(EXTRACT(DOW FROM gs.work_date) AS INT) AS day_num,
             u.user_id,
             u.user_name,
             u.role_id,
@@ -131,8 +131,8 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
         ws.work_schedule_name AS work_schedule,
         ug.group_name,
         t.id AS timesheet_id,
-        t.first_clock_in::TIME AS first_clock_in,
-        t.last_clock_out::TIME AS last_clock_out,
+        CAST(t.first_clock_in AS TIME) AS first_clock_in,
+        CAST(t.last_clock_out AS TIME) AS last_clock_out,
         COALESCE(CAST(t.tracked_hours AS TEXT), '00:00:00') AS tracked_hours,
         COALESCE(CAST(t.regular_hours AS TEXT), '00:00:00') AS regular_hours,
         t.status_id,
@@ -218,7 +218,7 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
             ug.user_id,
             STRING_AGG(g.group_name, ', ') AS group_name
         FROM user_group ug
-        JOIN group_table g ON ug.group_id = g.group_id
+        JOIN org_groups g ON ug.group_id = g.group_id
         GROUP BY ug.user_id
     ),
     
@@ -236,7 +236,7 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
         SELECT
             gs.work_date,
             TO_CHAR(gs.work_date, 'FMDay') AS day_name,
-            EXTRACT(DOW FROM gs.work_date)::INT AS day_num,
+            CAST(EXTRACT(DOW FROM gs.work_date) AS INT) AS day_num,
             u.user_id,
             u.user_name,
             u.role_id,
@@ -320,8 +320,8 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
         ws.work_schedule_name AS work_schedule,
         ug.group_name,
         t.id AS timesheet_id,
-        t.first_clock_in::TIME AS first_clock_in,
-        t.last_clock_out::TIME AS last_clock_out,
+        CAST(t.first_clock_in AS TIME) AS first_clock_in,
+        CAST(t.last_clock_out AS TIME) AS last_clock_out,
         COALESCE(CAST(t.tracked_hours AS TEXT), '00:00:00') AS tracked_hours,
         COALESCE(CAST(t.regular_hours AS TEXT), '00:00:00') AS regular_hours,
         t.status_id,
@@ -392,11 +392,12 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
         d.log_date AS logDate,
         t.status_id AS statusId
     FROM (
-        SELECT generate_series(:fromDate, :toDate, interval '1 day')::date AS log_date
+        SELECT CAST(generate_series(:fromDate, :toDate, interval '1 day') AS date) AS log_date
     ) d
     JOIN users u ON u.active = true
     LEFT JOIN timesheet t ON u.user_id = t.user_id AND t.date = d.log_date
     WHERE u.organization_id = :orgId
+      AND u.user_id IN (:userIds)
     """, nativeQuery = true)
     List<UserDashboard> getDashboard(
             @Param("userIds") List<String> userIds,

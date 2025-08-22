@@ -111,4 +111,11 @@ public interface UserAdapter {
     List<UserGroupEntity> findUserByOrganizationIdAndUserId(String orgId, String userId);
     List<UserLocationEntity> findByUser_UserId(String userId);
     List<GroupEntity> findGroupLocationByLocationId(List<Long> locationIds);
+    UserSchemaMappingEntity create(UserSchemaMappingEntity userSchemaMappingEntity);
+    UserSchemaMappingEntity findUserByEmail(String email);
+    UserSchemaMappingEntity findUserByMobile(String mobile);
+    String findByPlan();
+    SubscriptionEntity saveSubscription(SubscriptionEntity subscriptionEntity);
+    void saveAllMappings(List<UserSchemaMappingEntity> mappings);
+    void saveAllSecondaryMappings(List<UserSchemaMappingEntity> secondaryMappings);
 }

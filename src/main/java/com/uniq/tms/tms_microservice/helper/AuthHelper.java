@@ -1,4 +1,4 @@
-package com.uniq.tms.tms_microservice.util;
+package com.uniq.tms.tms_microservice.helper;
 
 import com.uniq.tms.tms_microservice.config.security.user.CustomUserDetails;
 import org.springframework.security.core.Authentication;
@@ -6,7 +6,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
 @Component
-public class AuthUtil {
+public class AuthHelper {
 
     public CustomUserDetails getCurrentUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -32,5 +32,5 @@ public class AuthUtil {
     public String getRole() {
         return getCurrentUser().getRole();
     }
-}
 
+}

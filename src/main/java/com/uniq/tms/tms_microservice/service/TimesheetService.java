@@ -14,7 +14,7 @@ public interface TimesheetService {
 
     List<UserTimesheetResponseDto> getAllTimesheets(String userIdFromToken, String orgId, String role, TimesheetReportDto request);
     List<TimesheetHistory> processTimesheetLogs(List<TimesheetHistory> timesheetMiddlewareLogs);
-    TimesheetDto updateClockInOut(String userId, LocalDate date, TimesheetDto request);
+    TimesheetDto updateClockInOut(String userId, LocalDate date, TimesheetDto request, String orgId);
     void autoClockOut();
     List<UserDashboardDto> getAllUserInfo(String orgId, String userIdFromToken, LocalDate fromDate, LocalDate toDate, String userId, List<Long>groupIds, String type);
     List<UserTimesheetDto> getUserTimesheets(String userIdFromToken, String orgId, String role, TimesheetReportDto request);

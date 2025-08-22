@@ -44,4 +44,5 @@ public interface UserService {
     String findGroupName(Long requestedGroupId);
     List<UserResponseDto> getInactiveUsers(String orgId, String role);
     List<EditUserDto> updateIsActive(EditUser editUser, String orgId);
+    ApiResponse createSuperAdminUser(Organization organization, String orgId, String schemaName);
 }

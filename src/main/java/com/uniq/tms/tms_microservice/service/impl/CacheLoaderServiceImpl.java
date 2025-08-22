@@ -187,9 +187,8 @@ public class CacheLoaderServiceImpl implements CacheLoaderService {
 
         Map<String, Set<String>> rolePrivileges = new HashMap<>();
         for (RoleEntity role : roles) {
-            Set<String> privileges = role.getPrivilegeEntities()
-                    .stream()
-                    .map(PrivilegeEntity::getName)
+            Set<String> privileges = role.getPrivilegeMappings().stream()
+                    .map(mapping -> mapping.getPrivilege().getName())
                     .collect(Collectors.toSet());
             rolePrivileges.put(role.getName(), privileges);
         }

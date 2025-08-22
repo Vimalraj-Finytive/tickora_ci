@@ -252,6 +252,12 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
             entity.setType(typeEntity);
             entity.setScheduleId(model.getScheduleId());
             entity.setActive(true);
+            if (entity.getFixedWorkSchedules() == null) {
+                entity.setFixedWorkSchedules(new ArrayList<>());
+            }
+            if (entity.getFlexibleWorkSchedules() == null) {
+                entity.setFlexibleWorkSchedules(new ArrayList<>());
+            }
             boolean shouldAssignToSuperAdmin = model.isDefault() || workScheduleAdapter.countByOrgId(orgId) == 0;
             WorkScheduleEntity savedEntity = workScheduleAdapter.saveWorkSchedule(entity);
             if (shouldAssignToSuperAdmin) {

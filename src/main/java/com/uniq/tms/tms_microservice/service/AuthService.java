@@ -2,6 +2,7 @@ package com.uniq.tms.tms_microservice.service;
 
 import com.uniq.tms.tms_microservice.dto.ApiResponse;
 import com.uniq.tms.tms_microservice.dto.ChangePasswordDto;
+import com.uniq.tms.tms_microservice.dto.OrganizationDropdownDto;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.ResponseEntity;
@@ -20,4 +21,6 @@ public interface AuthService {
     ResponseEntity<ApiResponse> forgotPassword(String email);
 
     ResponseEntity<ApiResponse> sendOtp(String mobile);
+
+    OrganizationDropdownDto getDropDowns();
 }

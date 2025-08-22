@@ -110,6 +110,7 @@ public class IdGenerationServiceImpl implements IdGenerationService {
     }
 
     @Override
+    @Transactional
     public String generateNextSecondaryUserId(String organizationId) {
         if (organizationId == null || organizationId.isBlank()) {
             throw new IllegalArgumentException("organizationId cannot be null or blank");
@@ -126,7 +127,36 @@ public class IdGenerationServiceImpl implements IdGenerationService {
             }
             log.info("Call repo to get last sequence");
             Integer latestNumber = orgUserSequenceRepository.getLastSecondaryUserId(organizationId);
+        if (latestNumber == null) {
+            orgUserSequenceRepository.updateLastSecondaryId(organizationId, 1);
+            latestNumber = 1;
+        }
             log.info("latestNumber:{}", latestNumber);
             return organizationId.replaceAll("\\d","") + IdGenerationTypeEnum.SECONDARY_USER.getPrefix() + String.format("%05d", latestNumber);
+    }
+
+    @Override
+    public String generateNextSubscriptionId(String organizationId) {
+        if (organizationId == null || organizationId.isBlank()) {
+            throw new IllegalArgumentException("organizationId cannot be null or blank");
+        }
+        log.info("OrganizationId: {}", organizationId);
+        int updated = orgUserSequenceRepository.incrementSubscriptionSequence(organizationId);
+        log.info("Increment number:{}", updated);
+        if (updated == 0) {
+            OrgUserSequenceEntity sequence = new OrgUserSequenceEntity();
+            sequence.setOrgId(organizationId);
+            sequence.setLastSubscriptionId(1);
+            orgUserSequenceRepository.save(sequence);
+            return organizationId.replaceAll("\\d","") + IdGenerationTypeEnum.SUBSCRIPTION.getPrefix() + String.format("%03d", 1);
+        }
+        log.info("Call repo to get last sequence of subscription Id");
+        Integer latestNumber = orgUserSequenceRepository.getLastSubscription(organizationId);
+        log.info("latestNumber:{}", latestNumber);
+        if (latestNumber == null) {
+            orgUserSequenceRepository.updateLastSubscriptionId(organizationId, 1);
+            latestNumber = 1;
+        }
+        return organizationId.replaceAll("\\d","") + IdGenerationTypeEnum.SUBSCRIPTION.getPrefix() + String.format("%03d", latestNumber);
     }
 }

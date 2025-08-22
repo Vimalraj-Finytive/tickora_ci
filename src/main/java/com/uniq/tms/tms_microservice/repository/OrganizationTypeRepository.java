@@ -6,5 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface OrganizationTypeRepository extends JpaRepository<OrganizationTypeEntity, String> {
-    OrganizationTypeEntity findByorgType(String orgType);
+    OrganizationTypeEntity findByOrgType(String orgType);
 }

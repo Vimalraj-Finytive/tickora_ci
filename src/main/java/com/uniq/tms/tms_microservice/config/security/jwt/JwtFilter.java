@@ -1,13 +1,14 @@
 package com.uniq.tms.tms_microservice.config.security.jwt;
 
+import com.uniq.tms.tms_microservice.config.security.schema.TenantContext;
 import com.uniq.tms.tms_microservice.config.security.user.CustomUserDetails;
 import com.uniq.tms.tms_microservice.dto.PrivilegeConstants;
 import com.uniq.tms.tms_microservice.entity.UserEntity;
+import com.uniq.tms.tms_microservice.helper.RolePrivilegeHelper;
 import com.uniq.tms.tms_microservice.repository.BlacklistedTokenRepository;
 import com.uniq.tms.tms_microservice.repository.SecondaryDetailsRepository;
 import com.uniq.tms.tms_microservice.repository.UserRepository;
 import com.uniq.tms.tms_microservice.service.CacheLoaderService;
-import com.uniq.tms.tms_microservice.util.CacheKeyUtil;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -17,6 +18,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.annotation.Order;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -29,6 +31,7 @@ import java.util.Collections;
 import java.util.List;
 
 @Component
+@Order(2)
 public class JwtFilter extends OncePerRequestFilter {
 
     private static final Logger log = LogManager.getLogger(JwtFilter.class);
@@ -38,22 +41,21 @@ public class JwtFilter extends OncePerRequestFilter {
     private final UserRepository userRepository;
     private final SecondaryDetailsRepository secondaryDetailsRepository;
     private final CacheLoaderService cacheLoaderService;
-    private final CacheKeyUtil cacheKeyUtil;
     private final BlacklistedTokenRepository blacklistedTokenRepository;
+    private final RolePrivilegeHelper rolePrivilegeHelper;
 
     @Autowired
     public JwtFilter(JwtUtil jwtUtil,
                      UserRepository userRepository,
                      SecondaryDetailsRepository secondaryDetailsRepository,
                      CacheLoaderService cacheLoaderService,
-                     CacheKeyUtil cacheKeyUtil,
-                     BlacklistedTokenRepository blacklistedTokenRepository) {
+                     BlacklistedTokenRepository blacklistedTokenRepository, RolePrivilegeHelper rolePrivilegeHelper) {
         this.jwtUtil = jwtUtil;
         this.userRepository = userRepository;
         this.secondaryDetailsRepository = secondaryDetailsRepository;
         this.cacheLoaderService = cacheLoaderService;
-        this.cacheKeyUtil = cacheKeyUtil;
         this.blacklistedTokenRepository = blacklistedTokenRepository;
+        this.rolePrivilegeHelper = rolePrivilegeHelper;
     }
 
     @Override
@@ -63,7 +65,6 @@ public class JwtFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         String path = request.getRequestURI();
-        // Whitelisted endpoints
         if (isWhiteListed(path)) {
             chain.doFilter(request, response);
             return;
@@ -72,6 +73,10 @@ public class JwtFilter extends OncePerRequestFilter {
         String jwtToken = extractTokenFromRequest(request);
 
         if (jwtToken != null) {
+            String tenant = extractSchemaFromToken(jwtToken);
+            log.info("Tenant:{}", tenant);
+            TenantContext.setCurrentTenant(tenant);
+            log.info("Current tenant:{}", TenantContext.getCurrentTenant());
             if (blacklistedTokenRepository.existsByToken(jwtToken)) {
                 log.warn("JWT token is blacklisted: {}", jwtToken);
                 sendErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, "Token is invalid or expired");
@@ -84,22 +89,34 @@ public class JwtFilter extends OncePerRequestFilter {
                 String role = claims.get("roles", String.class).replace("ROLE_", "");
 
                 UserEntity user = null;
+                boolean isParentLogin = false;
                 String emailKey = cacheLoaderService.getPrivilegeKey(PrivilegeConstants.LOGIN_VIA_EMAIL);
+                log.info("email key : {}", emailKey);
                 String mobileKey = cacheLoaderService.getPrivilegeKey(PrivilegeConstants.LOGIN_VIA_MOBILE);
-
-                if (cacheKeyUtil.roleHasPrivilege(role, emailKey)) {
+                log.info("mobile key: {}",mobileKey);
+                if (rolePrivilegeHelper.roleHasPrivilege(role, emailKey)) {
                     user = userRepository.findByEmail(subject);
-                } else if (cacheKeyUtil.roleHasPrivilege(role, mobileKey)) {
+                    log.info("user from repo :{}", user);
+                } else if (rolePrivilegeHelper.roleHasPrivilege(role, mobileKey)) {
                     user = userRepository.findByMobileNumber(subject);
-                    if (user == null) {
-                        user = secondaryDetailsRepository.findUserByMobile(subject);
+                    log.info("mobile user from repo:{}", user);
+                }
+
+                if (user == null) {
+                    log.info("Student not found. Checking if this is a parent login...");
+                    user = secondaryDetailsRepository.findUserByMobile(subject);
+                    if (user != null) {
+                        isParentLogin = true;
+                        log.info("Parent login detected. Student user fetched: {}", user);
                     }
                 }
 
                 if (user == null) {
+                    log.info("user is null:{}", user);
                     sendErrorResponse(response, HttpServletResponse.SC_NOT_FOUND, "User does not exist");
                     return;
                 }
+
 
                 UsernamePasswordAuthenticationToken authentication = buildAuth(user);
                 SecurityContextHolder.getContext().setAuthentication(authentication);
@@ -113,7 +130,23 @@ public class JwtFilter extends OncePerRequestFilter {
         chain.doFilter(request, response);
     }
 
-    private String extractTokenFromRequest(HttpServletRequest request) {
+    private String extractSchemaFromToken(String jwtToken) {
+        try {
+            Claims claims = jwtUtil.extractAllClaims(jwtToken);
+            String schema = claims.get("userSchema", String.class);
+            if (schema == null || schema.isBlank()) {
+                log.warn("Schema not found in token, defaulting to 'public'");
+                return "public";
+            }
+            return schema;
+        } catch (Exception e) {
+            log.error("Failed to extract schema from token, defaulting to 'public'", e);
+            return "public";
+        }
+    }
+
+
+    public String extractTokenFromRequest(HttpServletRequest request) {
         String authHeader = request.getHeader("Authorization");
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             return authHeader.substring(7);
@@ -154,11 +187,11 @@ public class JwtFilter extends OncePerRequestFilter {
             "/favicon.ico",
             "/tms/loginByEmail",
             "/tms/loginByMobile",
-            "/tms/reset-password/**",
-            "/tms/validate-email/**",
+            "/tms/reset-password",
+            "/tms/validate-email",
             "/tms/organization/orgType",
-            "/tms/organization/validate/**",
-            "/tms/organization/create/**"
+            "/tms/organization/validate",
+            "/tms/organization/create"
     );
 
     private boolean isWhiteListed(String path){
