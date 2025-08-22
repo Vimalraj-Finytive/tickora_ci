@@ -6,7 +6,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 @Entity
-@Table(name = "org_type")
+@Table(name = "org_type", schema = "public")
 public class OrganizationTypeEntity {
 
     @Id

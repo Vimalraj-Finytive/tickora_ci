@@ -5,7 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "organization")
+@Table(name = "organization", schema = "public")
 public class OrganizationEntity {
 
     @Id
@@ -18,19 +18,25 @@ public class OrganizationEntity {
     @Column(name = "org_type", nullable = false, length = 100)
     private String orgType;
 
-    @OneToMany(mappedBy = "organizationEntity", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Column(name = "org_size", nullable = false)
+    private Integer orgSize;
+
+    @Column(name = "country", nullable = false, length = 100)
+    private String country;
+
+    @Column(name = "schema_name", nullable = false, unique = true)
+    private String schemaName;
+
+    @Column(name = "time_zone", nullable = false, length = 100)
+    private String timeZone;
+
+    @OneToMany(mappedBy = "organizationEntity", cascade = {}, orphanRemoval = true)
     private List<LocationEntity> locations = new ArrayList<>();
 
-    @OneToMany(mappedBy = "organizationEntity", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<RoleEntity> roles = new ArrayList<>();
-
-    @OneToMany(mappedBy = "organizationEntity", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<GroupEntity> teams = new ArrayList<>();
-
-    @OneToMany(mappedBy = "organizationEntity", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "organizationEntity", cascade = {}, orphanRemoval = true)
     private List<GroupEntity> groups = new ArrayList<>();
 
-    @OneToMany(mappedBy = "organizationEntity", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "organizationEntity", cascade = {}, orphanRemoval = true)
     private List<WorkScheduleEntity> workSchedule = new ArrayList<>();
 
     public List<GroupEntity> getGroups() {
@@ -47,22 +53,6 @@ public class OrganizationEntity {
 
     public void setLocations(List<LocationEntity> locations) {
         this.locations = locations;
-    }
-
-    public List<RoleEntity> getRoles() {
-        return roles;
-    }
-
-    public void setRoles(List<RoleEntity> roles) {
-        this.roles = roles;
-    }
-
-    public List<GroupEntity> getTeams() {
-        return teams;
-    }
-
-    public void setTeams(List<GroupEntity> teams) {
-        this.teams = teams;
     }
 
     public String getOrganizationId() {
@@ -95,5 +85,37 @@ public class OrganizationEntity {
 
     public void setWorkSchedule(List<WorkScheduleEntity > workSchedule) {
         this.workSchedule = workSchedule;
+    }
+
+    public String getSchemaName() {
+        return schemaName;
+    }
+
+    public void setSchemaName(String schemaName) {
+        this.schemaName = schemaName;
+    }
+
+    public Integer getOrgSize() {
+        return orgSize;
+    }
+
+    public void setOrgSize(Integer orgSize) {
+        this.orgSize = orgSize;
+    }
+
+    public String getCountry() {
+        return country;
+    }
+
+    public void setCountry(String country) {
+        this.country = country;
+    }
+
+    public String getTimeZone() {
+        return timeZone;
+    }
+
+    public void setTimeZone(String timeZone) {
+        this.timeZone = timeZone;
     }
 }

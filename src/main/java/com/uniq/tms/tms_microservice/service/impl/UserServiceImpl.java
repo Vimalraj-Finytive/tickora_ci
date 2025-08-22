@@ -6,6 +6,7 @@ import com.uniq.tms.tms_microservice.adapter.UserAdapter;
 import com.uniq.tms.tms_microservice.adapter.WorkScheduleAdapter;
 import com.uniq.tms.tms_microservice.config.security.cache.CacheKeyConfig;
 import com.uniq.tms.tms_microservice.config.security.cache.CacheReloadHandlerRegistry;
+import com.uniq.tms.tms_microservice.config.security.schema.TenantContext;
 import com.uniq.tms.tms_microservice.dto.AddGroupDto;
 import com.uniq.tms.tms_microservice.dto.GroupDto;
 import com.uniq.tms.tms_microservice.dto.GroupResponseDto;
@@ -17,7 +18,10 @@ import com.uniq.tms.tms_microservice.entity.TimesheetEntity;
 import com.uniq.tms.tms_microservice.entity.UserEntity;
 import com.uniq.tms.tms_microservice.entity.UserGroupEntity;
 import com.uniq.tms.tms_microservice.entity.WorkScheduleEntity;
+import com.uniq.tms.tms_microservice.enums.OrganizationStatusEnum;
 import com.uniq.tms.tms_microservice.exception.CommonExceptionHandler;
+import com.uniq.tms.tms_microservice.helper.EmailHelper;
+import com.uniq.tms.tms_microservice.helper.RolePrivilegeHelper;
 import com.uniq.tms.tms_microservice.mapper.LocationEntityMapper;
 import com.uniq.tms.tms_microservice.mapper.UserDtoMapper;
 import com.uniq.tms.tms_microservice.mapper.UserEntityMapper;
@@ -34,7 +38,6 @@ import com.uniq.tms.tms_microservice.service.UserService;
 import com.uniq.tms.tms_microservice.util.*;
 import jakarta.annotation.Nullable;
 import jakarta.persistence.EntityNotFoundException;
-import jakarta.transaction.Transactional;
 import jakarta.validation.Validator;
 import org.apache.commons.io.FilenameUtils;
 import org.slf4j.Logger;
@@ -52,6 +55,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 import java.io.*;
@@ -80,7 +85,7 @@ public class UserServiceImpl implements UserService {
     private final OrganizationRepository organizationRepository;
     private final RoleRepository roleRepository;
     private final LocationRepository locationRepository;
-    private final EmailUtil emailUtil;
+    private final EmailHelper emailHelper;
     private final UserDtoMapper userDtoMapper;
     private final SecondaryDetailsMapper secondaryDetailsMapper;
     private final WorkScheduleAdapter workScheduleAdapter;
@@ -96,15 +101,16 @@ public class UserServiceImpl implements UserService {
     private final IdGenerationService idGenerationService;
     private final SecondaryDetailsRepository secondaryDetailsRepository;
     private final UserFaceRepository userFaceRepository;
+    private final RolePrivilegeHelper rolePrivilegeHelper;
 
     public UserServiceImpl(Validator validator, UserAdapter userAdapter, TimesheetAdapter timesheetAdapter,
                            UserEntityMapper userEntityMapper, OrganizationRepository organizationRepository,
-                           RoleRepository roleRepository, LocationRepository locationRepository, EmailUtil emailUtil,
+                           RoleRepository roleRepository, LocationRepository locationRepository, EmailHelper emailHelper,
                            UserDtoMapper userDtoMapper, SecondaryDetailsMapper secondaryDetailsMapper,
                            @Nullable RedisTemplate<String, Object> redisTemplate, LocationEntityMapper locationEntityMapper,
                            CacheLoaderService cacheLoaderService, ApplicationEventPublisher publisher, WorkScheduleAdapter workScheduleAdapter,
                            CacheKeyUtil cacheKeyUtil, TeamRepository teamRepository, CacheKeyConfig cacheKeyConfig, CacheReloadHandlerRegistry cacheReloadHandlerRegistry,
-                           OrganizationTypeRepository organizationTypeRepository, IdGenerationService idGenerationService, SecondaryDetailsRepository secondaryDetailsRepository, UserFaceRepository userFaceRepository) {
+                           OrganizationTypeRepository organizationTypeRepository, IdGenerationService idGenerationService, SecondaryDetailsRepository secondaryDetailsRepository, UserFaceRepository userFaceRepository, RolePrivilegeHelper rolePrivilegeHelper) {
         this.validator = validator;
         this.userAdapter = userAdapter;
         this.timesheetAdapter = timesheetAdapter;
@@ -112,7 +118,7 @@ public class UserServiceImpl implements UserService {
         this.organizationRepository = organizationRepository;
         this.roleRepository = roleRepository;
         this.locationRepository = locationRepository;
-        this.emailUtil = emailUtil;
+        this.emailHelper = emailHelper;
         this.userDtoMapper = userDtoMapper;
         this.secondaryDetailsMapper = secondaryDetailsMapper;
         this.workScheduleAdapter = workScheduleAdapter;
@@ -128,6 +134,7 @@ public class UserServiceImpl implements UserService {
         this.idGenerationService = idGenerationService;
         this.secondaryDetailsRepository = secondaryDetailsRepository;
         this.userFaceRepository = userFaceRepository;
+        this.rolePrivilegeHelper = rolePrivilegeHelper;
     }
 
     private static final Logger log = LoggerFactory.getLogger(UserServiceImpl.class);
@@ -138,6 +145,9 @@ public class UserServiceImpl implements UserService {
     @Value("${cache.redis.enabled:true}")
     private boolean isRedisEnabled;
 
+    @Value("${basic.plan.max.users}")
+    private int subscribedUsers;
+
     @Override
     public List<Role> getAllRole(String orgId, String role) {
 
@@ -147,6 +157,7 @@ public class UserServiceImpl implements UserService {
         int  hierarchyLevel = UserRole.getLevel(role);
         // Step 1: Get orgType from orgId
         String orgTypeId = organizationRepository.findOrgTypeByOrganizationId(orgId);
+        log.info("orgtype:{}",orgTypeId);
         OrganizationTypeEntity orgType = organizationTypeRepository.findById(orgTypeId).orElseThrow(() ->
                 new RuntimeException("Org Type not found for id: " + orgTypeId));
         log.info("Org type:{}", orgType);
@@ -220,7 +231,6 @@ public class UserServiceImpl implements UserService {
             throw new RuntimeException("Invalid file input.");
         }
         if (fileName.endsWith(".csv") || contentType.equals("text/csv") || contentType.equals("application/vnd.ms-excel")) {
-            // Process CSV
             try {
                 String filePath = saveCsvToLocal(file);
                 return processCsvFileFromPath(filePath, orgId, userId);
@@ -262,7 +272,6 @@ public class UserServiceImpl implements UserService {
         int rowNumber = 1;
 
         try {
-            // Preload data
             log.info("Fetching existing mobile numbers for orgId: {}", orgId);
             Set<String> existingMobiles = userAdapter.getAllMobileNumbers(orgId);
             log.info("Fetched {} existing mobile numbers: {}", existingMobiles.size(), existingMobiles);
@@ -296,7 +305,6 @@ public class UserServiceImpl implements UserService {
             log.info("Fetched {} work schedules: {}", workScheduleMap.size(), workScheduleMap);
 
             UserEntity userEntity = new UserEntity();
-            // Expected headers
             List<String> expectedHeaders = List.of(
                     "username", "email", "mobilenumber", "rolename", "locationname", "dateofjoining",
                     "secondaryusername", "secondarymobile", "secondaryemail", "relation", "groupname", "workschedule"
@@ -410,7 +418,7 @@ public class UserServiceImpl implements UserService {
 
                     log.info("Rolename in csv", roleName);
                     String key = cacheLoaderService.getPrivilegeKey(PrivilegeConstants.HAVE_SECONDARY_DETAILS);
-                    boolean hasSecondaryDetailsPrivilege = cacheKeyUtil.roleHasPrivilege(roleName, key);
+                    boolean hasSecondaryDetailsPrivilege = rolePrivilegeHelper.roleHasPrivilege(roleName, key);
 
                     // Validate primary email/mobile
                     if (existingEmails.contains(email) || existingMobiles.contains(mobile)) {
@@ -528,8 +536,30 @@ public class UserServiceImpl implements UserService {
 
             // Persist users and secondary details
             List<UserEntity> savedUsers = userAdapter.saveAllUsers(userEntities);
-            userAdapter.saveAllSecondaryDetails(secondaryDetailsEntities);
+            List<SecondaryDetailsEntity> savedSecondaryDetails = userAdapter.saveAllSecondaryDetails(secondaryDetailsEntities);
 
+            log.info("Creating user mapping for all saved users in bulk upload");
+            List<UserSchemaMappingEntity> mappings = savedUsers.stream()
+                    .map(u -> userEntityMapper.toSchema(
+                            u.getEmail(),
+                            u.getMobileNumber(),
+                            orgId,
+                            TenantContext.getCurrentTenant()))
+                    .toList();
+
+            userAdapter.saveAllMappings(mappings);
+
+            log.info("Creating user mapping for all saved secondary users in bulk upload");
+            List<UserSchemaMappingEntity> secondaryMappings = savedSecondaryDetails.stream()
+                    .map(su -> userEntityMapper.toSchema(
+                            su.getEmail(),
+                            su.getMobile(),
+                            orgId,
+                            TenantContext.getCurrentTenant()
+                    ))
+                    .toList();
+
+            userAdapter.saveAllSecondaryMappings(secondaryMappings);
             // Persist user-group mappings
             List<UserGroupEntity> groupEntities = userGroupMappings.entrySet().stream()
                     .flatMap(entry -> entry.getValue().stream()
@@ -574,7 +604,7 @@ public class UserServiceImpl implements UserService {
 
         String message = String.format(" %d Users created. Duplicate/invalid users were skipped.", uploadedCount);
         log.info("useremail: {} , username: {}", userFromToken.getEmail(), userFromToken.getUserName());
-        emailUtil.sendSuccessEmail(userFromToken.getEmail(), userFromToken.getUserName(), uploadedCount, skippedCount);
+        emailHelper.sendSuccessEmail(userFromToken.getEmail(), userFromToken.getUserName(), uploadedCount, skippedCount);
         if (isRedisEnabled) {
             CacheEventPublisherUtil.syncReloadThenPublish(
                     publisher,
@@ -606,10 +636,7 @@ public class UserServiceImpl implements UserService {
             destinationPath = tempDirPath.resolve(newFileName);
             count++;
         }
-
-        // Save file to temp directory
         file.transferTo(destinationPath.toFile());
-        // Log for debugging
         System.out.println("File saved at: " + destinationPath.toAbsolutePath());
 
         return destinationPath.toAbsolutePath().toString();
@@ -630,7 +657,7 @@ public class UserServiceImpl implements UserService {
         entity.setId(idGenerationService.generateNextSecondaryUserId(user.getOrganizationId()));
         entity.setUser(user);
         entity.setMobile(secMobile);
-        if (TextUtil.isBlank(secEmail)) {
+        if (isBlank(secEmail)) {
             entity.setEmail(null);
         } else {
             entity.setEmail(secEmail);
@@ -640,7 +667,6 @@ public class UserServiceImpl implements UserService {
         return entity;
     }
 
-    // The Methods are using for CreateBulkUser method.. Start<<<<
     private void validateFixedHeaders(String[] actual, List<String> expected) {
         if (actual.length != expected.size())
             throw new RuntimeException("Header count mismatch. Expected: " + expected.size() + " but found: " + actual.length);
@@ -674,7 +700,7 @@ public class UserServiceImpl implements UserService {
 
         for (EmailData emailData : emailRequests) {
             try {
-                emailUtil.sendAccountCreationEmail(emailData.getEmail(), emailData.getUserName(), emailData.getGeneratedPass(), emailData.isNewUser());
+                emailHelper.sendAccountCreationEmail(emailData.getEmail(), emailData.getUserName(), emailData.getGeneratedPass(), emailData.isNewUser());
                 successCount++;
             } catch (Exception e) {
                 log.error("Failed to send email to {}", emailData.getEmail(), e);
@@ -702,17 +728,13 @@ public class UserServiceImpl implements UserService {
         Optional<RoleEntity> roleName = userAdapter.findRoleById(userDto.getRoleId());
         log.info("Role from DB for creating user: {}", roleName.get().getName());
         String key = cacheLoaderService.getPrivilegeKey(PrivilegeConstants.HAVE_SECONDARY_DETAILS);
-        boolean hasSecondaryDetailsPrivilege = cacheKeyUtil.roleHasPrivilege(roleName.get().getName(), key);
+        boolean hasSecondaryDetailsPrivilege = rolePrivilegeHelper.roleHasPrivilege(roleName.get().getName(), key);
         log.info("hasSecondaryDetailsPrivilege: {}", hasSecondaryDetailsPrivilege);
-        // Step 1: Privilege-based secondary validation
         if (hasSecondaryDetailsPrivilege) {
             validateSecondaryUser(secondaryDetailsDto);
         }
-
-        // Step 2: Validate primary user (always checked)
         validatePrimaryUser(userDto);
 
-        // Step 3: Create user
         log.info("Creating user: {}", userDto.getUserName());
         User userMiddleware = userDtoMapper.toMiddleware(userDto);
         UserEntity entity = userEntityMapper.toEntity(userMiddleware);
@@ -747,7 +769,7 @@ public class UserServiceImpl implements UserService {
         UserEntity savedUserEntity = userAdapter.saveUser(entity);
         List<Long> locationIds = null;
         List<Long> groupIds = null;
-        // Step 4: Save secondary details if provided
+        SecondaryDetailsEntity saveSecondaryUser = null;
         if (hasSecondaryDetailsPrivilege) {
             log.info("Saving secondary details: {}", secondaryDetailsDto.getUserName());
             SecondaryDetails secondaryDetails = secondaryDetailsMapper.toMiddleware(secondaryDetailsDto);
@@ -757,11 +779,28 @@ public class UserServiceImpl implements UserService {
             secondaryDetailsEntity.setId(customSecondaryUserId);
             secondaryDetailsEntity.setUser(savedUserEntity);
             secondaryDetailsEntity.setEmail(TextUtil.trim(secondaryDetails.getEmail()));
-            userAdapter.saveSecondaryDetails(secondaryDetailsEntity);
+            saveSecondaryUser = userAdapter.saveSecondaryDetails(secondaryDetailsEntity);
             log.info("Saved secondary details: {}", secondaryDetails);
         }
 
-        // Step 5: Add user to given locations
+        log.info("Creating user mapping for all saved users");
+        UserSchemaMappingEntity mappings = userEntityMapper.toSchema(
+                savedUserEntity.getEmail(),
+                savedUserEntity.getMobileNumber(),
+                organizationId,
+                TenantContext.getCurrentTenant());
+
+        userAdapter.create(mappings);
+
+        log.info("Creating user mapping for all saved secondary users");
+        UserSchemaMappingEntity secondaryMappings = userEntityMapper.toSchema(
+                        null,
+                        saveSecondaryUser.getMobile(),
+                        organizationId,
+                        TenantContext.getCurrentTenant()
+                );
+
+        userAdapter.create(secondaryMappings);
         if (!isBlank(userDto.getLocationId())) {
             log.info("Adding user to location: {}", userDto.getLocationId());
             List<UserLocationEntity> userLocationEntities = new ArrayList<>();
@@ -780,7 +819,6 @@ public class UserServiceImpl implements UserService {
                     .toList();
         }
 
-        // Step 6: Add user to group if provided
         if (!isBlank(userDto.getGroupId())) {
             log.info("Adding user to group: {}", userDto.getGroupId());
             List<UserGroupEntity> userGroupEntities = new ArrayList<>();
@@ -805,9 +843,8 @@ public class UserServiceImpl implements UserService {
         finalUser.setLocationId(locationIds);
         finalUser.setGroupId(groupIds);
 
-        // Step 7: Send account creation email
         boolean isNewUser = savedUserEntity.isDefaultPassword();
-        emailUtil.sendAccountCreationEmail(
+        emailHelper.sendAccountCreationEmail(
                 userMiddleware.getEmail(), userMiddleware.getUserName(), defaultPassword, isNewUser
         );
         if (isRedisEnabled) {
@@ -987,8 +1024,7 @@ public class UserServiceImpl implements UserService {
             }
 
             String key = cacheLoaderService.getPrivilegeKey(PrivilegeConstants.HAVE_SECONDARY_DETAILS);
-            boolean hasSecondaryDetailsPrivilege = cacheKeyUtil.roleHasPrivilege(existingUser.getRole().getName(), key);
-            //If user is edit the table also edit the secondary table...
+            boolean hasSecondaryDetailsPrivilege = rolePrivilegeHelper.roleHasPrivilege(existingUser.getRole().getName(), key);
             if (hasSecondaryDetailsPrivilege) {
                 SecondaryDetailsDto secondaryDetails = updates.getSecondaryDetails();
                 SecondaryDetailsEntity existingSecondaryUser = userAdapter.findSecondaryUserById(userId)
@@ -1070,7 +1106,6 @@ public class UserServiceImpl implements UserService {
         String roleField = role.toLowerCase();
         log.info("roleField:{}", roleField);
         try {
-            // 1. Try from Redis only if redisTemplate is not null
             if (redisTemplate != null) {
                 Object cachedObj = redisTemplate.opsForHash().get(userCacheKey, roleField);
                 if (cachedObj != null) {
@@ -1096,7 +1131,6 @@ public class UserServiceImpl implements UserService {
             log.error("Failed to fetch users for orgId={}, role={}. Error: {}", orgId, role, e.getMessage(), e);
         }
 
-        // 3. Final fallback
         throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No Users found for this organization");
     }
 
@@ -1128,6 +1162,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public AddGroup createGroup(AddGroup groupMiddleware, String orgId) {
         if (userAdapter.findByGroup(groupMiddleware.getGroupName(), orgId)) {
             throw new DataIntegrityViolationException("Group '" + groupMiddleware.getGroupName() + "' already exists in this organization");
@@ -1190,10 +1225,9 @@ public class UserServiceImpl implements UserService {
             }
         }
 
-        // Proceed to add members if all exist
         for (String id : userIds) {
             List<UserGroupEntity> existing = userAdapter.findByUserIdAndGroupId(id, addMemberMiddleware.getGroupId());
-            UserEntity userEntity = userAdapter.findById(id).get(); // safe because already validated
+            UserEntity userEntity = userAdapter.findById(id).get();
 
             if (!existing.isEmpty()) {
                 alreadyExistsUsers.add(userEntity.getUserName());
@@ -1204,7 +1238,6 @@ public class UserServiceImpl implements UserService {
             addedUserNames.add(userEntity.getUserName());
         }
 
-        // Prepare message
         String addedMessage = addedUserNames.isEmpty()
                 ? ""
                 : "Successfully added users: " + String.join(", ", addedUserNames) + ".";
@@ -1225,7 +1258,6 @@ public class UserServiceImpl implements UserService {
         }else {
             log.info("Redis is not enabled or RedisTemplate is null. Skipping cache add User to group reload.");
         }
-        // Return ApiResponse — no need to return data list of users
         return new ApiResponse<>(200, finalMessage, null);
     }
 
@@ -1254,13 +1286,11 @@ public class UserServiceImpl implements UserService {
         List<String> conflictMessages = new ArrayList<>();
         List<String> addedSupervisors = new ArrayList<>();
 
-        // Fetch existing group
         GroupEntity existingGroup = userAdapter.findByGroupId(groupId).orElse(null);
         if (existingGroup == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Group not found with ID: " + groupId);
         }
 
-        // Check for duplicate group name in the same org
         boolean groupNameChanged = false;
         if (addGroup.getGroupName() != null && !addGroup.getGroupName().equals(existingGroup.getGroupName())) {
             boolean nameExists = userAdapter.existsGroupNameInOrganization(addGroup.getGroupName(), orgId, groupId);
@@ -1272,7 +1302,6 @@ public class UserServiceImpl implements UserService {
             }
         }
 
-        // Update location if provided
         if (addGroup.getLocationId() != null) {
             LocationEntity locationEntity = userAdapter.findLocationById(addGroup.getLocationId(), orgId);
             if (locationEntity == null) {
@@ -1289,10 +1318,8 @@ public class UserServiceImpl implements UserService {
             existingGroup.setWorkSchedule(workScheduleEntity);
         }
 
-        // Save updated group details (name/location)
         userAdapter.saveGroup(existingGroup);
 
-        // Remove supervisors not in the new list
         List<String> existingSupervisorIds = userAdapter.findSupervisorIdsByGroupId(groupId);
         Set<String> newSupervisorIds = addGroup.getSupervisorsId() != null
                 ? new HashSet<>(addGroup.getSupervisorsId())
@@ -1304,11 +1331,9 @@ public class UserServiceImpl implements UserService {
             }
         }
 
-        // Insert new supervisors, checking against existing members
         List<String> existingMemberIds = userAdapter.findMemberIdsByGroupId(groupId);
         for (String supervisorId : newSupervisorIds) {
             if (existingMemberIds.contains(supervisorId)) {
-                // Fetch username for the supervisor
                 UserEntity supervisorUser = userAdapter.findById(supervisorId).orElse(null);
                 if (supervisorUser != null) {
                     conflictMessages.add("User " + supervisorUser.getUserName() + " is already a member in this group");
@@ -1316,17 +1341,14 @@ public class UserServiceImpl implements UserService {
                     conflictMessages.add("User ID " + supervisorId + " is already a member in this group");
                 }
             } else {
-                // Delete if already supervisor (safe clean-up)
                 userAdapter.deleteSupervisorsByGroupId(groupId, supervisorId);
 
-                // Add new supervisor entry
                 UserGroupEntity supervisorEntry = new UserGroupEntity();
                 supervisorEntry.setGroup(existingGroup);
                 supervisorEntry.setUser(new UserEntity(supervisorId));
                 supervisorEntry.setType("Supervisor");
                 userAdapter.saveUserGroup(supervisorEntry);
 
-                // Fetch username for the added supervisor
                 UserEntity supervisorUser = userAdapter.findById(supervisorId).orElse(null);
                 if (supervisorUser != null) {
                     addedSupervisors.add(supervisorUser.getUserName());
@@ -1336,14 +1358,12 @@ public class UserServiceImpl implements UserService {
             }
         }
 
-        // Build final message
         String conflictMessage = conflictMessages.isEmpty()
                 ? ""
                 : String.join(", ", conflictMessages) + ".";
 
         String finalMessage = conflictMessage.trim();
 
-        // If conflicts occurred, return only conflict message (if any)
         if (!conflictMessages.isEmpty()) {
             return new ApiResponse<>(HttpStatus.CONFLICT.value(), finalMessage, Collections.emptyList());
         }
@@ -1358,7 +1378,6 @@ public class UserServiceImpl implements UserService {
         }else {
             log.info("Redis is not enabled or RedisTemplate is null. Skipping cache update group reload.");
         }
-        // If no conflicts and no supervisors added, indicate that no changes were made
         return new ApiResponse<>(HttpStatus.OK.value(), "Group updated Successfully.", Collections.emptyList());
     }
 
@@ -1375,18 +1394,15 @@ public class UserServiceImpl implements UserService {
     public UserProfileResponse getUserProfile(String orgId, String userId) {
         String redisKey = cacheKeyUtil.getprofileKey(orgId);
         try {
-            // Try from cache only if redisTemplate is not null
             if (redisTemplate != null) {
                 UserProfileResponse cachedData = (UserProfileResponse) redisTemplate.opsForHash().get(redisKey, userId);
                 if (cachedData != null) {
                     log.info("Cache hit for userId {} in orgId {}", userId, orgId);
                     return cachedData;
                 }else{
-                    // Cache miss → load entire org user profiles from DB and cache
                     log.info("Cache miss for userId {}, loading from DB...", userId);
                     Map<String, UserProfileResponse> loadedProfiles = cacheLoaderService.loadUsersProfile(orgId).get();
 
-                    // Return directly from DB-loaded map (even if Redis write fails)
                     UserProfileResponse response = loadedProfiles.get(userId);
                     if (response != null) {
                         log.info("Fallback DB profile returned for userId {}", userId);
@@ -1415,7 +1431,6 @@ public class UserServiceImpl implements UserService {
             return null;
         }
 
-        // Fetch locations
         List<UserLocationEntity> userLocations = userAdapter.findByUser_UserId(userId);
         if (userLocations.isEmpty()) {
             log.warn("Skipping userId {} due to no locations", userId);
@@ -1427,20 +1442,17 @@ public class UserServiceImpl implements UserService {
                 .map(ul -> userDtoMapper.toDto(ul.getLocation()))
                 .toList();
 
-        // Fetch groups
         List<UserGroupEntity> userGroups = userAdapter.findUserByOrganizationIdAndUserId(orgId, userId);
         List<UserGroupProfileDto> groupDtos = userGroups.isEmpty()
                 ? Collections.emptyList()
                 : userGroups.stream().map(userDtoMapper::toGroupsDto).toList();
 
-        // Fetch organization + type
         OrganizationEntity org = organizationRepository.findByOrganizationId(orgId).orElse(null);
         Optional<OrganizationTypeEntity> organizationType =
                 (org != null && org.getOrgType() != null)
                         ? organizationTypeRepository.findById(org.getOrgType())
                         : Optional.empty();
 
-        // Parent details if this user is a student
         List<ParentDto> parentDtos = Collections.emptyList();
         if (UserRole.STUDENT.name().equalsIgnoreCase(user.getRole().getName())) {
             parentDtos = secondaryDetailsRepository.findByUserId(userId).stream()
@@ -1453,7 +1465,6 @@ public class UserServiceImpl implements UserService {
                     .toList();
         }
 
-        // Build and return profile
         return new UserProfileResponse(
                 userId,
                 user.getUserName(),
@@ -1479,9 +1490,9 @@ public class UserServiceImpl implements UserService {
         String roleName = currentUser.getRole().getName().toUpperCase();
 
         String canSeeAllGroupskey = cacheLoaderService.getPrivilegeKey(PrivilegeConstants.CAN_SEE_ALL_GROUPS);
-        boolean canSeeAllGroups = cacheKeyUtil.roleHasPrivilege(roleName, canSeeAllGroupskey);
+        boolean canSeeAllGroups = rolePrivilegeHelper.roleHasPrivilege(roleName, canSeeAllGroupskey);
         String canSeeSupervisingGroupsKey = cacheLoaderService.getPrivilegeKey(PrivilegeConstants.CAN_SEE_SUPERVISING_GROUPS);
-        boolean canSeeSupervisingGroups = cacheKeyUtil.roleHasPrivilege(roleName, canSeeSupervisingGroupsKey);
+        boolean canSeeSupervisingGroups = rolePrivilegeHelper.roleHasPrivilege(roleName, canSeeSupervisingGroupsKey);
 
         log.info("canSeeAllGroups={}, canSeeSupervisingGroups={}", canSeeAllGroups, canSeeSupervisingGroups);
         try {
@@ -1516,7 +1527,6 @@ public class UserServiceImpl implements UserService {
                 log.warn("RedisTemplate is null, skipping supervisor cache fetch.");
             }
 
-            // DB fallback
             log.info("Loading from DB as cache is missing for orgId={}, userId={}", orgId, userId);
             try {
                 List<GroupResponseDto> groupsFromDb = cacheLoaderService
@@ -1526,7 +1536,6 @@ public class UserServiceImpl implements UserService {
                 if (canSeeAllGroups) {
                     return groupsFromDb;
                 } else if (canSeeSupervisingGroups) {
-                    // Manually filter groups where this user is a supervisor
                     return groupsFromDb.stream()
                             .filter(group -> group.getMembersDetails().stream()
                                     .anyMatch(m -> m.getUserId().equals(userId) && "SUPERVISOR".equalsIgnoreCase(m.getType())))
@@ -1548,7 +1557,6 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public boolean updateUserGroupType(UserGroup userGroup) {
-        // Map of valid prefixes to their corresponding roles
         Map<String, String> typeMap = Map.of(
                 "m", MemberType.MEMBER.getValue(),
                 "s", MemberType.SUPERVISOR.getValue()
@@ -1603,15 +1611,12 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public List<User> getMembers(String orgId, Long roleId) {
-        // if roleId is present, get users by roleId
         if (roleId != null) {
             return userAdapter.getMembers(orgId, roleId).stream()
                     .map(userEntityMapper::toMiddleware).toList();
         } else {
-            // Get the hierarchy level of the "Student" role dynamically
             int studentHierarchyLevel = UserRole.STUDENT.getHierarchyLevel();
             int superadminHierarchyLevel = UserRole.SUPERADMIN.getHierarchyLevel();
-            // Get all roles above the "Student" role hierarchy level
             List<UserRole> higherRoles = Arrays.stream(UserRole.values())
                     .filter(r -> r.getHierarchyLevel() < studentHierarchyLevel && r.getHierarchyLevel() > superadminHierarchyLevel)
                     .toList();
@@ -1636,34 +1641,28 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public List<Map<String, Object>> getGroupMembers(Long groupId, String orgId, LocalDate date, String userIdFromToken) {
-
-        // Fetch group members, filtering out supervisors and logged-in user
         List<UserGroupEntity> groupEntity = userAdapter.getGroupMembersByGroupId(groupId, orgId);
 
         List<String> memberIds = groupEntity.stream()
                 .map(ug -> ug.getUser().getUserId())
-                .filter(id -> !id.equals(userIdFromToken))  // Exclude logged-in user
+                .filter(id -> !id.equals(userIdFromToken))
                 .toList();
 
         if (memberIds == null || memberIds.isEmpty()) {
-            return Collections.emptyList();  // If no members found, return empty
+            return Collections.emptyList();
         }
-        //Fetch user type
         Map<String, String> userType = groupEntity.stream()
                 .collect(Collectors.toMap(
                         ug -> ug.getUser().getUserId(),
                         UserGroupEntity::getType
                 ));
 
-        // Fetch list of users based on memberIds
         List<UserEntity> groupUsers = userAdapter.getUsersByIds(memberIds, orgId);
 
-        // Fetch the latest timesheet logs for the members
         List<TimesheetEntity> latestLogs = timesheetAdapter.getLatestLogsByTimesheetIds(memberIds, orgId, date);
         Map<String, TimesheetEntity> latestLogsMap = latestLogs.stream()
                 .collect(Collectors.toMap(TimesheetEntity::getUserId, Function.identity()));
 
-        // Map user details to return response
         List<Map<String, Object>> userDetailsList = groupUsers.stream()
                 .map(user -> {
                     Map<String, Object> map = new HashMap<>();
@@ -1694,7 +1693,6 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public List<UserNameSuggestionDto> getGroupUsers(List<Long> groupIds, String orgId, String loggedInUserId, String role) {
-        // Case 1: groupIds is null or empty → return all active users
         if (groupIds == null || groupIds.isEmpty()) {
             int hierarchyLevel = UserRole.getLevel(role);
             List<UserNameSuggestionDto> allUsers = userAdapter.getAllActiveUsers(orgId, hierarchyLevel);
@@ -1720,18 +1718,17 @@ public class UserServiceImpl implements UserService {
             return groupMembers;
         }
         log.info("Role not used" + role);
-        // Case 2: groupIds provided → return only members from those groups
         List<UserGroupEntity> groupEntity = userAdapter.getGroupUsersByGroupId(groupIds, orgId);
 
         List<String> memberIds = groupEntity.stream()
-                .filter(ug -> ug.getType().equalsIgnoreCase("Member"))  // Only members
+                .filter(ug -> ug.getType().equalsIgnoreCase("Member"))
                 .map(ug -> ug.getUser().getUserId())
-                .filter(id -> !id.equals(loggedInUserId))  // Exclude logged-in user
+                .filter(id -> !id.equals(loggedInUserId))
                 .distinct()
                 .collect(Collectors.toList());
 
         if (memberIds.isEmpty()) {
-            return Collections.emptyList();  // No valid members
+            return Collections.emptyList();
         }
 
         List<UserEntity> groupUsers = userAdapter.getUsersByIds(memberIds, orgId);
@@ -1849,19 +1846,29 @@ public class UserServiceImpl implements UserService {
     @Override
     public RolePrivilege addRolwisePrivileges(RolePrivilege rolePrivilege, String orgId) {
 
-        //Find Role
         RoleEntity role = userAdapter.findRoleById(rolePrivilege.getRoleId())
                 .orElseThrow(() -> new RuntimeException("Role not found"));
-        //Find Privileges
+
         PrivilegeEntity privilegeEntity = userAdapter.findPrivilegeById(rolePrivilege.getPrivilegeId())
                 .orElseThrow(() -> new RuntimeException("Privilege not found"));
 
-        if (rolePrivilege.isType() == true) {
-            role.getPrivilegeEntities().add(privilegeEntity);
+        if (rolePrivilege.isType()) {
+            boolean exists = role.getPrivilegeMappings().stream()
+                    .anyMatch(mapping -> mapping.getPrivilege().equals(privilegeEntity));
+            if (!exists) {
+                RolePrivilegeMapEntity mapping = new RolePrivilegeMapEntity();
+                mapping.setRole(role);
+                mapping.setPrivilege(privilegeEntity);
+                mapping.setEnabled(true);
+                mapping.setCreatedAt(LocalDateTime.now());
+                role.getPrivilegeMappings().add(mapping);
+            }
         } else {
-            role.getPrivilegeEntities().remove(privilegeEntity);
+            role.getPrivilegeMappings().removeIf(mapping -> mapping.getPrivilege().equals(privilegeEntity));
         }
+
         userAdapter.saveRole(role);
+
         if (isRedisEnabled) {
             CacheEventPublisherUtil.syncReloadThenPublish(
                     publisher,
@@ -1870,7 +1877,7 @@ public class UserServiceImpl implements UserService {
                     cacheReloadHandlerRegistry
             );
             log.info("RolewisePrivilege CacheReloadEvent published after Role wise privilege creation");
-        }else {
+        } else {
             log.info("Redis is not enabled or RedisTemplate is null. Skipping cache add rolewise privilege reload.");
         }
         return rolePrivilege;
@@ -2023,7 +2030,6 @@ public class UserServiceImpl implements UserService {
         String roleField = role.toLowerCase();
         log.info("roleField:{}", roleField);
         try {
-            // 1. Try from Redis only if redisTemplate is not null
             if (redisTemplate != null) {
                 Object cachedObj = redisTemplate.opsForHash().get(userCacheKey, roleField);
                 if (cachedObj != null) {
@@ -2034,7 +2040,6 @@ public class UserServiceImpl implements UserService {
                 log.warn("RedisTemplate is null, skipping cache fetch for key: {}, field: {}", userCacheKey, roleField);
             }
 
-            // 2. Cache miss or Redis unavailable - load all into Redis (and also get fresh data)
             log.info("Cache miss for orgId={}, role={}. Loading from DB...", orgId, role);
             Map<String, List<UserResponseDto>> roleMap = cacheLoaderService.loadAllInactiveUsers(orgId).get();
             log.info("rolemap:{}", roleMap);
@@ -2084,4 +2089,74 @@ public class UserServiceImpl implements UserService {
         }
         return dto;
     }
+
+    @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public ApiResponse createSuperAdminUser(Organization organization, String organizationId, String schemaName) {
+        try {
+            log.info("Creating SuperAdmin in schema: {} for OrgId {}", schemaName, organizationId);
+
+            if (isBlank(organization.getUserName()) ||
+                    isBlank(organization.getMobile()) ||
+                    isBlank(organization.getEmail())) {
+                throw new CommonExceptionHandler.BadRequestException("Mandatory fields must not be null");
+            }
+            log.info("find user by mobile number");
+            userAdapter.findByMobileNumber(organization.getMobile()).ifPresent(user -> {
+                throw new CommonExceptionHandler.DuplicateUserException("Mobile number already in use.");
+            });
+            log.info("find user by email");
+            userAdapter.findByEmail(organization.getEmail()).ifPresent(user -> {
+                throw new CommonExceptionHandler.DuplicateUserException("Email already in use.");
+            });
+            log.info("find user by role");
+            RoleEntity role = roleRepository.findById((long) UserRole.SUPERADMIN.getHierarchyLevel())
+                    .orElseThrow(() -> new RuntimeException("Role not found"));
+            log.info("Role founded");
+            UserEntity entity = new UserEntity();
+            entity.setUserName(organization.getUserName());
+            entity.setEmail(organization.getEmail());
+            entity.setMobileNumber(organization.getMobile());
+            entity.setOrganizationId(organizationId);
+
+            String customUserId = idGenerationService.generateNextUserId(organizationId);
+            entity.setUserId(customUserId);
+            entity.setRole(role);
+            entity.setDateOfJoining(LocalDate.now());
+
+            String defaultPassword = PasswordUtil.generateDefaultPassword();
+            entity.setPassword(PasswordUtil.encryptPassword(defaultPassword));
+            entity.setDefaultPassword(true);
+            entity.setActive(true);
+            entity.setCreatedAt(LocalDateTime.now());
+
+            log.info("Save superadmin");
+            UserEntity savedUser = userAdapter.saveUser(entity);
+
+            String planId = userAdapter.findByPlan();
+            SubscriptionEntity subscriptionEntity = new SubscriptionEntity();
+            subscriptionEntity.setSubId(idGenerationService.generateNextSubscriptionId(organizationId));
+            subscriptionEntity.setOrgId(organizationId);
+            subscriptionEntity.setPlanId(planId);
+            subscriptionEntity.setSchemaName(schemaName);
+            subscriptionEntity.setStatus(OrganizationStatusEnum.ACTIVE.getDisplayValue());
+            subscriptionEntity.setStartDate(LocalDateTime.now());
+            subscriptionEntity.setEndDate(LocalDateTime.now().plusDays(7));
+            subscriptionEntity.setSubscribedUsers(subscribedUsers);
+            log.info("Save subscription for created Organization");
+            SubscriptionEntity saveSubscription = userAdapter.saveSubscription(subscriptionEntity);
+
+            emailHelper.sendAccountCreationEmail(
+                    savedUser.getEmail(), savedUser.getUserName(), defaultPassword, true
+            );
+
+            log.info("SuperAdmin created successfully in schema.users for org {}", organizationId);
+            return new ApiResponse(201, "SuperAdmin created successfully", userEntityMapper.toMiddleware(savedUser));
+
+        } catch (Exception e) {
+            log.error("Error creating SuperAdmin user: {}", e.getMessage(), e);
+            throw new CommonExceptionHandler.InternalServerException("Failed to create SuperAdmin user. " + e.getMessage());
+        }
+    }
+
 }

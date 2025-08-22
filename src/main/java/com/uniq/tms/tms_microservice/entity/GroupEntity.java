@@ -10,7 +10,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
 @Entity
-@Table(name = "group_table")
+@Table(name = "org_groups")
 public class GroupEntity {
 
     @Id

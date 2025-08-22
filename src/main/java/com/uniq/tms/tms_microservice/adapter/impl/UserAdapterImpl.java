@@ -33,8 +33,11 @@ public class UserAdapterImpl implements UserAdapter {
     private final UserLocationRepository userLocationRepository;
     private final OrganizationRepository organizationRepository;
     private final OrganizationTypeRepository organizationTypeRepository;
+    private final UserSchemaMapperRepository userSchemaMapperRepository;
+    private final PlanRepository planRepository;
+    private final SubscriptionRepository subscriptionRepository;
 
-    public UserAdapterImpl(RoleRepository roleRepository, TeamRepository teamRepository, LocationRepository locationRepository, UserRepository userRepository, UserGroupRepository userGroupRepository, SecondaryDetailsRepository secondaryDetailsRepository, LocationEntityMapper locationEntityMapper, PrivilegeRepository privilegeRepository, UserLocationRepository userLocationRepository, OrganizationRepository organizationRepository, OrganizationTypeRepository organizationTypeRepository) {
+    public UserAdapterImpl(RoleRepository roleRepository, TeamRepository teamRepository, LocationRepository locationRepository, UserRepository userRepository, UserGroupRepository userGroupRepository, SecondaryDetailsRepository secondaryDetailsRepository, LocationEntityMapper locationEntityMapper, PrivilegeRepository privilegeRepository, UserLocationRepository userLocationRepository, OrganizationRepository organizationRepository, OrganizationTypeRepository organizationTypeRepository, UserSchemaMapperRepository userSchemaMapperRepository, PlanRepository planRepository, SubscriptionRepository subscriptionRepository) {
         this.roleRepository = roleRepository;
         this.teamRepository = teamRepository;
         this.locationRepository = locationRepository;
@@ -46,6 +49,9 @@ public class UserAdapterImpl implements UserAdapter {
         this.userLocationRepository = userLocationRepository;
         this.organizationRepository = organizationRepository;
         this.organizationTypeRepository = organizationTypeRepository;
+        this.userSchemaMapperRepository = userSchemaMapperRepository;
+        this.planRepository = planRepository;
+        this.subscriptionRepository = subscriptionRepository;
     }
 
     @Override
@@ -106,7 +112,7 @@ public class UserAdapterImpl implements UserAdapter {
 
     @Override
     public boolean findByGroup(String teamName, String orgId) {
-        return teamRepository.findBygroupNameAndOrganizationId(teamName, orgId).isPresent();
+        return teamRepository.findByGroupNameAndOrganizationId(teamName, orgId).isPresent();
     }
 
     @Override
@@ -481,6 +487,7 @@ public class UserAdapterImpl implements UserAdapter {
         teamRepository.updateGroupWorkSchedule(scheduleId, scheduleId1);
     }
 
+    @Override
     public OrganizationEntity create(OrganizationEntity entity){
         return organizationRepository.save(entity);
     }
@@ -522,7 +529,7 @@ public class UserAdapterImpl implements UserAdapter {
 
     @Override
     public OrganizationTypeEntity findOrgType(String orgType) {
-        return organizationTypeRepository.findByorgType(orgType);
+        return organizationTypeRepository.findByOrgType(orgType);
     }
 
     @Override
@@ -548,5 +555,40 @@ public class UserAdapterImpl implements UserAdapter {
     @Override
     public List<GroupEntity> findGroupLocationByLocationId(List<Long> locationIds) {
         return teamRepository.findByLocationEntity_LocationIdIn(locationIds);
+    }
+
+    @Override
+    public UserSchemaMappingEntity create(UserSchemaMappingEntity entity) {
+        return userSchemaMapperRepository.save(entity);
+    }
+
+    @Override
+    public UserSchemaMappingEntity findUserByEmail(String email){
+        return userSchemaMapperRepository.findUserByEmail(email);
+    }
+
+    @Override
+    public UserSchemaMappingEntity findUserByMobile(String mobile) {
+        return userSchemaMapperRepository.findUserByMobile(mobile);
+    }
+
+    @Override
+    public String findByPlan() {
+        return planRepository.findByIsDefault();
+    }
+
+    @Override
+    public SubscriptionEntity saveSubscription(SubscriptionEntity subscriptionEntity) {
+        return subscriptionRepository.save(subscriptionEntity);
+    }
+
+    @Override
+    public void saveAllMappings(List<UserSchemaMappingEntity> mappings) {
+        userSchemaMapperRepository.saveAll(mappings);
+    }
+
+    @Override
+    public void saveAllSecondaryMappings(List<UserSchemaMappingEntity> secondaryMappings) {
+        userSchemaMapperRepository.saveAll(secondaryMappings);
     }
 }

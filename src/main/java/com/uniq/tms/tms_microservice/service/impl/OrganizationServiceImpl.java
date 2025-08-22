@@ -2,29 +2,34 @@ package com.uniq.tms.tms_microservice.service.impl;
 
 import com.uniq.tms.tms_microservice.adapter.UserAdapter;
 import com.uniq.tms.tms_microservice.adapter.WorkScheduleAdapter;
+import com.uniq.tms.tms_microservice.config.security.schema.TenantContext;
 import com.uniq.tms.tms_microservice.dto.ApiResponse;
 import com.uniq.tms.tms_microservice.dto.OrgSetupValidationResponse;
-import com.uniq.tms.tms_microservice.dto.UserRole;
 import com.uniq.tms.tms_microservice.entity.*;
+import com.uniq.tms.tms_microservice.enums.CountryEnum;
 import com.uniq.tms.tms_microservice.exception.CommonExceptionHandler;
 import com.uniq.tms.tms_microservice.mapper.UserEntityMapper;
 import com.uniq.tms.tms_microservice.model.Organization;
 import com.uniq.tms.tms_microservice.model.OrganizationType;
-import com.uniq.tms.tms_microservice.model.User;
-import com.uniq.tms.tms_microservice.repository.RoleRepository;
 import com.uniq.tms.tms_microservice.service.IdGenerationService;
 import com.uniq.tms.tms_microservice.service.OrganizationService;
-import com.uniq.tms.tms_microservice.util.EmailUtil;
-import com.uniq.tms.tms_microservice.util.PasswordUtil;
-import jakarta.transaction.Transactional;
+import com.uniq.tms.tms_microservice.service.UserService;
+import liquibase.Contexts;
+import liquibase.LabelExpression;
+import liquibase.Liquibase;
+import liquibase.database.DatabaseFactory;
+import liquibase.database.jvm.JdbcConnection;
+import liquibase.resource.ClassLoaderResourceAccessor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.Arrays;
+import org.springframework.transaction.annotation.Transactional;
+import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.List;
-import static com.uniq.tms.tms_microservice.util.TextUtil.isBlank;
 
 @Service
 public class OrganizationServiceImpl implements OrganizationService {
@@ -33,115 +38,133 @@ public class OrganizationServiceImpl implements OrganizationService {
     private final UserEntityMapper userEntityMapper;
     private final UserAdapter userAdapter;
     private final WorkScheduleAdapter workScheduleAdapter;
-    private final EmailUtil emailUtil;
-    private final RoleRepository roleRepository;
     private final IdGenerationService idGenerationService;
+    private final DataSource dataSource;
 
-    public OrganizationServiceImpl(UserEntityMapper userEntityMapper, UserAdapter userAdapter, WorkScheduleAdapter workScheduleAdapter, EmailUtil emailUtil, RoleRepository roleRepository, IdGenerationService idGenerationService) {
+    @Autowired
+    private UserService userService;
+
+    public OrganizationServiceImpl(UserEntityMapper userEntityMapper, UserAdapter userAdapter, WorkScheduleAdapter workScheduleAdapter, IdGenerationService idGenerationService, DataSource dataSource) {
         this.userEntityMapper = userEntityMapper;
         this.userAdapter = userAdapter;
         this.workScheduleAdapter = workScheduleAdapter;
-        this.emailUtil = emailUtil;
-        this.roleRepository = roleRepository;
         this.idGenerationService = idGenerationService;
+        this.dataSource = dataSource;
     }
 
     /**
      *
      * @param organization
      * @Create organization and Org Superadmin
-     * @return Success
+     * @return SuccessT
      */
     @Override
     @Transactional
     public Organization create(Organization organization) {
+        String schemaName = organization.getOrgName().toLowerCase().replaceAll("\\s+", "_");
+        log.info("Testing");
         OrganizationEntity entity = userEntityMapper.toEntity(organization);
 
-        // Generate unique org prefix
+        // Generate orgId
         String prefix = idGenerationService.generateOrgPrefix(organization.getOrgName()).toUpperCase();
-        log.info("Prefix: {}", prefix);
-
-        // Generate formatted organization number
         Long count = userAdapter.countOrganizations();
-        String formattedNumber = String.format("%04d", count + 1);
-
-        // Final orgId
+        String formattedNumber = String.format("%04d", count);
         String orgId = prefix + formattedNumber;
-        log.info("Organization Id : {}", orgId);
 
         entity.setOrganizationId(orgId);
+        entity.setTimeZone(CountryEnum.getTimeZoneByCountry(organization.getCountry()));
+        log.info("Getting Org Range from Enum:{}", organization.getOrgSize());
+        log.info("orgRange:{}", entity.getOrgSize());
+        entity.setSchemaName(schemaName);
+
+        if (userAdapter.existsByOrganizationId(orgId)) {
+            throw new RuntimeException("Organization ID already exists: " + orgId);
+        }
 
         try {
-            if (userAdapter.existsByOrganizationId(orgId)) {
-                throw new RuntimeException("Organization ID already exists: " + orgId);
-            }
-            OrganizationEntity response = userAdapter.create(entity);
-            log.info("Organization Created Successfully");
+            OrganizationEntity savedOrg = saveOrganizationPublic(entity);
+            Organization orgModel = userEntityMapper.toModel(savedOrg);
 
-            Organization orgModel = userEntityMapper.toModel(response);
+            createSchema(schemaName);
+            initSchemaTables(schemaName, organization.getOrgType());
 
-            log.info("Creating Superadmin based on created organization");
-            createSuperAdminUser(organization, orgId);
+            TenantContext.setCurrentTenant(schemaName);
 
+            ApiResponse response = userService.createSuperAdminUser(organization, orgId, schemaName);
+
+            TenantContext.setCurrentTenant("public");
+
+            log.info("setting user map:{}", orgId);
+            UserSchemaMappingEntity mapping = userEntityMapper.toSchema(
+                    organization.getEmail(),
+                    organization.getMobile(),
+                    orgId,
+                    schemaName
+            );
+            userAdapter.create(mapping);
+
+            log.info("Organization + Tenant setup completed for OrgId: {}", orgId);
             return orgModel;
 
         } catch (Exception e) {
-            log.error("Organization creation failed: {}", e.getMessage(), e);
-            throw e;
+            log.error("Organization creation failed. Dropping schema {}. Cause: {}", schemaName, e.getMessage(), e);
+            dropSchema(schemaName);
+            throw new CommonExceptionHandler.InternalServerException(
+                    "Failed to create organization or SuperAdmin user: " + e.getMessage()
+            );
+        } finally {
+            TenantContext.clear();
         }
     }
 
-    /**
-     *
-     * @param organization
-     * @param organizationId
-     * create superadmin along with organization creation
-     * @return success once SA is created
-     */
-    @Transactional
-    public ApiResponse createSuperAdminUser(Organization organization, String organizationId) {
-        if (isBlank(organization.getUserName()) || isBlank(organization.getMobile()) || isBlank(organization.getEmail())) {
-            throw new CommonExceptionHandler.BadRequestException("Mandatory fields must not be null");
+    private OrganizationEntity saveOrganizationPublic(OrganizationEntity entity) {
+        try {
+            return userAdapter.create(entity);
+        } catch (Exception e) {
+            log.error("Failed to save organization in public schema: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to save organization in public schema", e);
         }
-        userAdapter.findByMobileNumber(organization.getMobile()).ifPresent(user -> {
-            if (!user.isActive()) throw new CommonExceptionHandler.DuplicateUserException("Inactive user.");
-            throw new CommonExceptionHandler.DuplicateUserException("Mobile number already in use.");
-        });
+    }
 
-        userAdapter.findByEmail(organization.getEmail()).ifPresent(user -> {
-            if (!user.isActive()) throw new CommonExceptionHandler.DuplicateUserException("Inactive user.");
-            throw new CommonExceptionHandler.DuplicateUserException("Email already in use.");
-        });
+    private void createSchema(String schemaName) {
+        try (Connection conn = dataSource.getConnection();
+             Statement stmt = conn.createStatement()) {
+            stmt.execute("CREATE SCHEMA IF NOT EXISTS " + schemaName);
+            log.info("Schema {} created successfully", schemaName);
+        } catch (SQLException e) {
+            throw new RuntimeException("Failed to create schema: " + schemaName, e);
+        }
+    }
 
-        Long roleId = Long.valueOf(UserRole.SUPERADMIN.getHierarchyLevel());
-        RoleEntity role = roleRepository.findById(roleId)
-                .orElseThrow(() -> new RuntimeException("Role not found with ID: " + roleId));
+    private void initSchemaTables(String schemaName, String orgType) {
+        try (Connection conn = dataSource.getConnection()) {
+            conn.setAutoCommit(false);
+            Liquibase liquibase = new Liquibase(
+                    "db/changelog/schema_template.sql",
+                    new ClassLoaderResourceAccessor(),
+                    DatabaseFactory.getInstance().findCorrectDatabaseImplementation(new JdbcConnection(conn))
+            );
+            liquibase.getDatabase().setDefaultSchemaName(schemaName);
+            liquibase.setChangeLogParameter("schemaName", schemaName);
+            liquibase.setChangeLogParameter("orgType", orgType);
+            liquibase.update(new Contexts(), new LabelExpression());
+            conn.commit();
+            log.info("Tables created in schema {}", schemaName);
+        } catch (Exception e) {
+            log.error("Liquibase failed for schema {}. Dropping schema. Cause: {}", schemaName, e.getMessage(), e);
+            dropSchema(schemaName);
+            throw new RuntimeException("Failed to initialize schema tables for: " + schemaName, e);
+        }
+    }
 
-        UserEntity entity = new UserEntity();
-        entity.setUserName(organization.getUserName());
-        entity.setEmail(organization.getEmail());
-        entity.setMobileNumber(organization.getMobile());
-        entity.setOrganizationId(organizationId);
-        String customUserId = idGenerationService.generateNextUserId(organizationId);
-        log.info("SuperAdmin User Id:{}",customUserId);
-        entity.setUserId(customUserId);
-        entity.setRole(role);
-        entity.setDateOfJoining(LocalDate.now());
-        String defaultPassword = PasswordUtil.generateDefaultPassword();
-        String encryptedPassword = PasswordUtil.encryptPassword(defaultPassword);
-        entity.setPassword(encryptedPassword);
-        entity.setDefaultPassword(true);
-        entity.setActive(true);
-        entity.setCreatedAt(LocalDateTime.now());
-        entity.setWorkSchedule(null);
-        UserEntity savedUser = userAdapter.saveUser(entity);
-
-        emailUtil.sendAccountCreationEmail(
-                savedUser.getEmail(), savedUser.getUserName(), defaultPassword, true
-        );
-
-        User finalUser = userEntityMapper.toMiddleware(savedUser);
-        return new ApiResponse(201, "SuperAdmin created successfully", finalUser);
+    private void dropSchema(String schemaName) {
+        try (Connection conn = dataSource.getConnection();
+             Statement stmt = conn.createStatement()) {
+            stmt.execute("DROP SCHEMA IF EXISTS " + schemaName + " CASCADE");
+            log.warn("Schema {} dropped successfully", schemaName);
+        } catch (SQLException e) {
+            log.error("Failed to drop schema {}: {}", schemaName, e.getMessage(), e);
+        }
     }
 
     /**
@@ -200,7 +223,6 @@ public class OrganizationServiceImpl implements OrganizationService {
         } else {
             dto.setShowFilter(false);
         }
-
         return dto;
     }
 

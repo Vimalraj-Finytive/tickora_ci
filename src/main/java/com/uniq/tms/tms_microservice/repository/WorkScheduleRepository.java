@@ -25,49 +25,48 @@ public interface WorkScheduleRepository extends JpaRepository<WorkScheduleEntity
 
     @Query(value = """
     SELECT
-      w.work_schedule_id as workScheduleId,
-      w.work_schedule_name as workScheduleName,
-      COALESCE(w.is_default, false) as isDefault,
-      COALESCE(w.is_active, false) as isActive,
-      w.organization_id as organizationId,
-      w.work_schedule_type as workScheduleType,
-      w.work_schedule_name as workScheduleName,
-
+      w.work_schedule_id AS workScheduleId,
+      w.work_schedule_name AS workScheduleName,
+      COALESCE(w.is_default, false) AS isDefault,
+      COALESCE(w.is_active, false) AS isActive,
+      w.organization_id AS organizationId,
+      w.work_schedule_type AS workScheduleType,
+    
       (
         SELECT json_agg(jsonb_build_object(
           'day', fws.day,
-          'startTime', fws.start_time::text,
-          'endTime', fws.end_time::text,
-          'duration', fws.duration::text
+          'startTime', CAST(fws.start_time AS text),
+          'endTime', CAST(fws.end_time AS text),
+          'duration', CAST(fws.duration AS text)
         ))
         FROM fixed_work_schedule fws
         WHERE fws.work_schedule_id = w.work_schedule_id
-      )::text AS fixedSchedule,
-
+      )\\:\\:text AS fixedSchedule,
+    
       (
         SELECT json_agg(jsonb_build_object(
           'day', fls.day,
-          'duration', fls.duration::text
+          'duration', CAST(fls.duration AS text)
         ))
         FROM flexible_work_schedule fls
         WHERE fls.work_schedule_id = w.work_schedule_id
-      )::text AS flexibleSchedule,
-
+      )\\:\\:text AS flexibleSchedule,
+    
       (
         SELECT jsonb_build_object(
-          'duration', COALESCE(wws.duration, 0)::text,
+          'duration', CAST(COALESCE(wws.duration, 0) AS text),
           'startDay', wws.start_day,
           'endDay', wws.end_day
         )
         FROM weekly_work_schedule wws
         WHERE wws.work_schedule_id = w.work_schedule_id
         LIMIT 1
-      )::text AS weeklySchedule
-
+      )\\:\\:text AS weeklySchedule
+    
     FROM work_schedule w
     WHERE w.organization_id = :orgId
       AND w.is_active = true
-""", nativeQuery = true)
+    """, nativeQuery = true)
     List<WorkScheduleData> findAllWithChildrenByOrgId(@Param("orgId") String orgId);
 
     @Query("SELECT w FROM WorkScheduleEntity w WHERE w.scheduleName = :scheduleName AND w.organizationEntity.organizationId = :orgId")

@@ -3,14 +3,14 @@ package com.uniq.tms.tms_microservice.mapper;
 import com.uniq.tms.tms_microservice.dto.LocationDto;
 import com.uniq.tms.tms_microservice.entity.*;
 import com.uniq.tms.tms_microservice.model.*;
-import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
-import org.mapstruct.ReportingPolicy;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.mapstruct.*;
 
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface UserEntityMapper {
 
-    @Mapping(target = "orgId", source = "organizationEntity.organizationId")
+    Logger log = LogManager.getLogger(UserEntityMapper.class);
     Role toMiddleware(RoleEntity entity);
 
     @Mapping(target = "orgId", source = "organizationEntity.organizationId")
@@ -74,4 +74,7 @@ public interface UserEntityMapper {
     Organization toModel(OrganizationEntity organizationEntity);
 
     OrganizationType toModel(OrganizationTypeEntity organizationType);
+
+    UserSchemaMappingEntity toSchema(String email, String mobile, String orgId, String schemaName);
+
 }

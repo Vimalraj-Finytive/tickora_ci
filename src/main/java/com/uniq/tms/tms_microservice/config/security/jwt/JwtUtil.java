@@ -1,13 +1,16 @@
 package com.uniq.tms.tms_microservice.config.security.jwt;
 
 import com.uniq.tms.tms_microservice.adapter.AuthAdapter;
+import com.uniq.tms.tms_microservice.adapter.UserAdapter;
 import com.uniq.tms.tms_microservice.dto.PrivilegeConstants;
 import com.uniq.tms.tms_microservice.entity.*;
+import com.uniq.tms.tms_microservice.helper.RolePrivilegeHelper;
 import com.uniq.tms.tms_microservice.repository.*;
 import com.uniq.tms.tms_microservice.service.CacheLoaderService;
-import com.uniq.tms.tms_microservice.util.CacheKeyUtil;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import org.apache.logging.log4j.LogManager;
@@ -32,30 +35,35 @@ public class JwtUtil {
     private final RoleRepository roleRepository;
     private final OrganizationRepository organizationRepository;
     private final AuthAdapter authAdapter;
-    private final CacheKeyUtil cacheKeyUtil;
     private final CacheLoaderService cacheLoaderService;
     private final SecondaryDetailsRepository secondaryDetailsRepository;
+    private final UserAdapter userAdapter;
+    private final RolePrivilegeHelper rolePrivilegeHelper;
 
     private static final long INACTIVITY_TIMEOUT = 90L * 24 * 60 * 60 * 1000;
 
-    public JwtUtil(BlacklistedTokenRepository blacklistedTokenRepository, UserRepository userRepository, RoleRepository roleRepository, OrganizationRepository organizationRepository, AuthAdapter authAdapter, CacheKeyUtil cacheKeyUtil, CacheLoaderService cacheLoaderService, SecondaryDetailsRepository secondaryDetailsRepository) {
+    public JwtUtil(BlacklistedTokenRepository blacklistedTokenRepository, UserRepository userRepository, RoleRepository roleRepository, OrganizationRepository organizationRepository, AuthAdapter authAdapter, CacheLoaderService cacheLoaderService, SecondaryDetailsRepository secondaryDetailsRepository, UserAdapter userAdapter, RolePrivilegeHelper rolePrivilegeHelper) {
         this.blacklistedTokenRepository = blacklistedTokenRepository;
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.organizationRepository = organizationRepository;
         this.authAdapter = authAdapter;
-        this.cacheKeyUtil = cacheKeyUtil;
         this.cacheLoaderService = cacheLoaderService;
         this.secondaryDetailsRepository = secondaryDetailsRepository;
+        this.userAdapter = userAdapter;
+        this.rolePrivilegeHelper = rolePrivilegeHelper;
     }
+
+    @PersistenceContext
+    private EntityManager entityManager;
+
     public SecretKey getSecretKey() {
         byte[] keyBytes = Base64.getDecoder().decode(secretKeyBase64);
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
-    public String generateToken(String loginInput, long l, HttpServletRequest request, boolean hasEmailLoginPrivilege) {
+    public String generateToken(String loginInput, long l, HttpServletRequest request, boolean hasEmailLoginPrivilege, String currentTenant) {
         log.info("generating token for: {}", loginInput);
-
         UserEntity loggedInUser = null;
         UserEntity studentUser = null;
         String parentUserId = null;
@@ -97,6 +105,7 @@ public class JwtUtil {
                 .setSubject(loginInput)
                 .claim("orgId", orgId)
                 .claim("userId", loggedInUser.getUserId())
+                .claim("userSchema",currentTenant)
                 .claim("userAgent", userAgent)
                 .setIssuedAt(new Date(currentTime))
                 .setExpiration(new Date(currentTime + INACTIVITY_TIMEOUT))
@@ -142,10 +151,10 @@ public class JwtUtil {
         String emailKey = cacheLoaderService.getPrivilegeKey(PrivilegeConstants.LOGIN_VIA_EMAIL);
         String mobileKey = cacheLoaderService.getPrivilegeKey(PrivilegeConstants.LOGIN_VIA_MOBILE);
         UserEntity user = null;
-        if (cacheKeyUtil.roleHasPrivilege(role, emailKey)) {
+        if (rolePrivilegeHelper.roleHasPrivilege(role, emailKey)) {
             user = userRepository.findByEmail(subject);
         }
-        else if (cacheKeyUtil.roleHasPrivilege(role, mobileKey)) {
+        else if (rolePrivilegeHelper.roleHasPrivilege(role, mobileKey)) {
             user = userRepository.findByMobileNumber(subject);
             if (user == null) {
                 user = secondaryDetailsRepository.findUserByMobile(subject);

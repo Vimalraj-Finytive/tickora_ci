@@ -5,6 +5,7 @@ import com.uniq.tms.tms_microservice.adapter.UserAdapter;
 import com.uniq.tms.tms_microservice.adapter.WorkScheduleAdapter;
 import com.uniq.tms.tms_microservice.dto.*;
 import com.uniq.tms.tms_microservice.entity.*;
+import com.uniq.tms.tms_microservice.helper.RolePrivilegeHelper;
 import com.uniq.tms.tms_microservice.mapper.TimesheetDtoMapper;
 import com.uniq.tms.tms_microservice.mapper.TimesheetEntityMapper;
 import com.uniq.tms.tms_microservice.model.TimesheetHistory;
@@ -43,16 +44,16 @@ public class TimesheetServiceImpl implements TimesheetService {
     private final UserAdapter userAdapter;
     private final WorkScheduleAdapter workScheduleAdapter;
     private final CacheLoaderService cacheLoaderService;
-    private final CacheKeyUtil cacheKeyUtil;
+    private final RolePrivilegeHelper rolePrivilegeHelper;
 
-    public TimesheetServiceImpl(TimesheetAdapter timesheetAdapter, TimesheetEntityMapper timesheetEntityMapper, TimesheetDtoMapper timesheetDtoMapper, UserAdapter userAdapter, WorkScheduleAdapter workScheduleAdapter, CacheLoaderService cacheLoaderService, CacheKeyUtil cacheKeyUtil) {
+    public TimesheetServiceImpl(TimesheetAdapter timesheetAdapter, TimesheetEntityMapper timesheetEntityMapper, TimesheetDtoMapper timesheetDtoMapper, UserAdapter userAdapter, WorkScheduleAdapter workScheduleAdapter, CacheLoaderService cacheLoaderService, RolePrivilegeHelper rolePrivilegeHelper) {
         this.timesheetAdapter = timesheetAdapter;
         this.timesheetEntityMapper = timesheetEntityMapper;
         this.timesheetDtoMapper = timesheetDtoMapper;
         this.userAdapter = userAdapter;
         this.workScheduleAdapter = workScheduleAdapter;
         this.cacheLoaderService = cacheLoaderService;
-        this.cacheKeyUtil = cacheKeyUtil;
+        this.rolePrivilegeHelper = rolePrivilegeHelper;
     }
 
     public List<UserTimesheetResponseDto> getAllTimesheets(String userIdFromToken, String orgId, String role, TimesheetReportDto request) {
@@ -103,11 +104,11 @@ public class TimesheetServiceImpl implements TimesheetService {
         log.info("Role name: {}", roleName);
 
         String canSeeOwnKey = cacheLoaderService.getPrivilegeKey(PrivilegeConstants.CAN_SEE_OWN_TIMESHEET);
-        boolean canSeeOwn = cacheKeyUtil.roleHasPrivilege(roleName, canSeeOwnKey);
+        boolean canSeeOwn = rolePrivilegeHelper.roleHasPrivilege(roleName, canSeeOwnKey);
         String canSeeGroupKey = cacheLoaderService.getPrivilegeKey(PrivilegeConstants.CAN_SEE_GROUP_LEVEL_TIMESHEETS);
-        boolean canSeeGroup = cacheKeyUtil.roleHasPrivilege(roleName, canSeeGroupKey);
+        boolean canSeeGroup = rolePrivilegeHelper.roleHasPrivilege(roleName, canSeeGroupKey);
         String canSeeAllKey = cacheLoaderService.getPrivilegeKey(PrivilegeConstants.CAN_SEE_ALL_TIMESHEETS);
-        boolean canSeeAll = cacheKeyUtil.roleHasPrivilege(roleName, canSeeAllKey);
+        boolean canSeeAll = rolePrivilegeHelper.roleHasPrivilege(roleName, canSeeAllKey);
 
         log.info("Privileges - Own: {}, Group: {}, All: {}", canSeeOwn, canSeeGroup, canSeeAll);
         boolean hasGroupFilter = groupIds != null && !groupIds.isEmpty();
@@ -116,6 +117,9 @@ public class TimesheetServiceImpl implements TimesheetService {
         boolean hasStatusFilter = statusId != null && !statusId.isEmpty();
 
         if (canSeeOwn && canSeeGroup && canSeeAll) {
+            if(userId != null && !userId.isEmpty()){
+                return List.of(currentUser);
+            }
             List<UserEntity> allUsers = userAdapter.getAllUsers(orgId, userIdFromToken, UserRole.SUPERADMIN.getHierarchyLevel());
             Stream<UserEntity> filteredStream = allUsers.stream();
 
@@ -174,12 +178,15 @@ public class TimesheetServiceImpl implements TimesheetService {
             }
             List<UserEntity> filteredUsers = filteredStream.toList();
             if (filteredUsers.isEmpty()) {
-                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No users matched the applied filters");
+                throw new ResponseStatusException(HttpStatus.OK, "No users matched the applied filters");
             }
             return filteredUsers;
         }
 
         if (canSeeOwn && canSeeGroup) {
+            if(userId != null && !userId.isEmpty()){
+                return List.of(currentUser);
+            }
             List<Long> supervisedGroupIds = userAdapter.findGroupIdsBySupervisorId(userIdFromToken);
             log.info("Supervised group ids: {}", supervisedGroupIds);
 
@@ -245,7 +252,7 @@ public class TimesheetServiceImpl implements TimesheetService {
             }
             List<UserEntity> filteredUsers = filteredStream.toList();
             if (filteredUsers.isEmpty()) {
-                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No users matched the applied filters");
+                throw new ResponseStatusException(HttpStatus.OK, "No users matched the applied filters");
             }
             return filteredUsers;
         }
@@ -331,7 +338,7 @@ public class TimesheetServiceImpl implements TimesheetService {
     }
 
     @Override
-    public TimesheetDto updateClockInOut(String userId, LocalDate date, TimesheetDto request) {
+    public TimesheetDto updateClockInOut(String userId, LocalDate date, TimesheetDto request, String orgId) {
         TimesheetEntity timesheet = timesheetAdapter.findUserIdAndDate(userId, date);
         boolean isNew = false;
 
@@ -392,6 +399,7 @@ public class TimesheetServiceImpl implements TimesheetService {
         calculateHours(timesheet);
         timesheet = timesheetAdapter.save(timesheet);
 
+        LocationEntity locationEntity = userAdapter.findDefaultLocationByOrgId(orgId);
         if (isNew) {
             if (request.getFirstClockIn() != null) {
                 TimesheetHistoryEntity clockInHistory = new TimesheetHistoryEntity();
@@ -399,7 +407,7 @@ public class TimesheetServiceImpl implements TimesheetService {
                 clockInHistory.setLogTime(request.getFirstClockIn());
                 clockInHistory.setLogType(LogType.CLOCK_IN);
                 clockInHistory.setLogFrom(LogFrom.WEB_APP);
-                clockInHistory.setLocationId(0L);
+                clockInHistory.setLocationId(locationEntity.getLocationId());
                 clockInHistory.setLoggedTimestamp(LocalDateTime.now());
                 timesheetAdapter.saveTimesheetHistory(clockInHistory);
             }
@@ -490,11 +498,11 @@ public class TimesheetServiceImpl implements TimesheetService {
         log.info("Role dashboard: {}", roleName);
 
         String canSeeOwnKey = cacheLoaderService.getPrivilegeKey(PrivilegeConstants.CAN_SEE_OWN_TIMESHEET);
-        boolean canSeeOwn = cacheKeyUtil.roleHasPrivilege(roleName, canSeeOwnKey);
+        boolean canSeeOwn = rolePrivilegeHelper.roleHasPrivilege(roleName, canSeeOwnKey);
         String canSeeGroupKey = cacheLoaderService.getPrivilegeKey(PrivilegeConstants.CAN_SEE_GROUP_LEVEL_TIMESHEETS);
-        boolean canSeeGroup = cacheKeyUtil.roleHasPrivilege(roleName, canSeeGroupKey);
+        boolean canSeeGroup = rolePrivilegeHelper.roleHasPrivilege(roleName, canSeeGroupKey);
         String canSeeAllKey = cacheLoaderService.getPrivilegeKey(PrivilegeConstants.CAN_SEE_ALL_TIMESHEETS);
-        boolean canSeeAll = cacheKeyUtil.roleHasPrivilege(roleName, canSeeAllKey);
+        boolean canSeeAll = rolePrivilegeHelper.roleHasPrivilege(roleName, canSeeAllKey);
         log.info("Privileges - Own: {}, Group: {}, All: {}", canSeeOwn, canSeeGroup, canSeeAll);
 
         List<UserEntity> filterUsers;
@@ -503,7 +511,6 @@ public class TimesheetServiceImpl implements TimesheetService {
             filterUsers = Collections.singletonList(userAdapter.getUserById(userId));
         } else if (canSeeAll) {
             if (type != null && type.equalsIgnoreCase(RoleName.STAFF.getRoleName())) {
-                // Get all users with STAFF / ADMIN / MANAGER roles
                 Set<String> roles = Set.of(RoleName.STAFF.getRoleName(), RoleName.ADMIN.getRoleName(), RoleName.MANAGER.getRoleName());
                 log.info("Roles: {}", roles);
                 filterUsers = userAdapter.getUsersByRoles(roles, orgId);
@@ -528,13 +535,10 @@ public class TimesheetServiceImpl implements TimesheetService {
                 filterUsers = userAdapter.findUsersByRolesAndGroupIds(roles, supervisedGroupIds, orgId);
                 log.info("Filtered users (supervised): {}", filterUsers);
             } else if (type != null && !type.isBlank()) {
-                // Filter by given role within supervised groups
                 filterUsers = userAdapter.findUsersByRolesAndGroupIds(Set.of(type), supervisedGroupIds, orgId);
             } else if ((type == null || type.isBlank()) && groupIds != null && !groupIds.isEmpty()) {
-                // Groups explicitly selected by frontend (assumed to be part of supervised groups)
                 filterUsers = userAdapter.findMembersByGroupIds(groupIds, userIdFromToken);
             } else {
-                // All members from groups they supervise
                 filterUsers = userAdapter.findMembersByGroupIds(supervisedGroupIds, userIdFromToken);
             }
         } else if (canSeeOwn) {

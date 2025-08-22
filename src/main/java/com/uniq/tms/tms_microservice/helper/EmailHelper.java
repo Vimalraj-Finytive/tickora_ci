@@ -1,4 +1,4 @@
-package com.uniq.tms.tms_microservice.util;
+package com.uniq.tms.tms_microservice.helper;
 
 import com.uniq.tms.tms_microservice.service.impl.EmailService;
 import org.apache.logging.log4j.LogManager;
@@ -6,12 +6,12 @@ import org.apache.logging.log4j.Logger;
 import org.springframework.stereotype.Component;
 
 @Component
-public class EmailUtil {
+public class EmailHelper {
 
-    private final Logger log = LogManager.getLogger(EmailUtil.class);
+    private final Logger log = LogManager.getLogger(EmailHelper.class);
     private final EmailService emailService;
 
-    public EmailUtil(EmailService emailService) {
+    public EmailHelper(EmailService emailService) {
         this.emailService = emailService;
     }
 

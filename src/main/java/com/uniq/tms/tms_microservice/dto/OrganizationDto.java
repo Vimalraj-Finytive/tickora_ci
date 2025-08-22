@@ -6,6 +6,8 @@ public class OrganizationDto {
 
     private String orgName;
     private String orgType;
+    private Integer orgSize;
+    private String country;
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String userName;
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
@@ -51,5 +53,21 @@ public class OrganizationDto {
 
     public void setMobile(String mobile) {
         this.mobile = mobile;
+    }
+
+    public String getCountry() {
+        return country;
+    }
+
+    public void setCountry(String country) {
+        this.country = country;
+    }
+
+    public Integer getOrgSize() {
+        return orgSize;
+    }
+
+    public void setOrgSize(Integer orgSize) {
+        this.orgSize = orgSize;
     }
 }

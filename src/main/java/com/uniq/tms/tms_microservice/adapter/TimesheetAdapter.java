@@ -33,5 +33,5 @@ public interface TimesheetAdapter {
     List<TimesheetStatusEntity> getStatus();
     Optional<TimesheetStatusEntity> findById(String status);
     Optional<TimesheetStatusEntity> findByStatusName(String label);
-    List<TimesheetEntity> findUserByStatusId(List<String> statusId, LocalDate startdate, LocalDate endDate);
+    List<TimesheetEntity> findUserByStatusId(List<String> statusId, LocalDate startDate, LocalDate endDate);
 }

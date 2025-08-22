@@ -16,8 +16,14 @@ public class OrgUserSequenceEntity {
     @Column(name = "last_user_id", nullable = false)
     private Integer lastUserId;
 
-    @Column(name = "last_secondary_user_id", nullable = false)
+    @Column(name = "last_secondary_user_id")
     private Integer lastSecondaryUserId;
+
+    @Column(name = "last_subscription_id")
+    private Integer lastSubscriptionId;
+
+    @Column(name = "last_payment_id")
+    private Integer lastPaymentId;
 
     public String getOrgId() {
         return orgId;
@@ -41,5 +47,21 @@ public class OrgUserSequenceEntity {
 
     public void setLastSecondaryUserId(Integer lastSecondaryUserId) {
         this.lastSecondaryUserId = lastSecondaryUserId;
+    }
+
+    public Integer getLastSubscriptionId() {
+        return lastSubscriptionId;
+    }
+
+    public void setLastSubscriptionId(Integer lastSubscriptionId) {
+        this.lastSubscriptionId = lastSubscriptionId;
+    }
+
+    public Integer getLastPaymentId() {
+        return lastPaymentId;
+    }
+
+    public void setLastPaymentId(Integer lastPaymentId) {
+        this.lastPaymentId = lastPaymentId;
     }
 }

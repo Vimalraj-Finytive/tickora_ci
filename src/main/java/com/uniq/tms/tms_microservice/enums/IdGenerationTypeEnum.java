@@ -9,7 +9,10 @@ public enum IdGenerationTypeEnum {
     FLEXIBLE_WORK("WSFL"),
     WEEKLY_WORK("WSWK"),
     WORK_SCHEDULE_TYPE("WSTY"),
-    SECONDARY_USER("USI");
+    SECONDARY_USER("USI"),
+    PLAN("PL"),
+    SUBSCRIPTION("SUB"),
+    PAYMENT("PAY");
 
     private final String prefix ;
 

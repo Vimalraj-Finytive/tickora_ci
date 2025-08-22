@@ -9,4 +9,5 @@ public interface IdGenerationService {
     List<String> generateNextId(IdGenerationTypeEnum type, int count);
     String generateOrgPrefix(String orgName);
     String generateNextSecondaryUserId(String organizationId);
+    String generateNextSubscriptionId(String organizationId);
 }

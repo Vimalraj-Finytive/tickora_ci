@@ -10,6 +10,7 @@ import com.uniq.tms.tms_microservice.dto.UserDashboardDto;
 import com.uniq.tms.tms_microservice.dto.UserTimesheetDto;
 import com.uniq.tms.tms_microservice.dto.UserTimesheetResponseDto;
 import com.uniq.tms.tms_microservice.facade.AuthFacade;
+import com.uniq.tms.tms_microservice.helper.AuthHelper;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,8 +22,11 @@ import java.util.List;
 public class  TimesheetController {
 
     private final AuthFacade authFacade;
-    public TimesheetController(AuthFacade authFacade) {
+    private final AuthHelper authHelper;
+
+    public TimesheetController(AuthFacade authFacade, AuthHelper authHelper) {
         this.authFacade = authFacade;
+        this.authHelper = authHelper;
     }
 
     @PostMapping
@@ -43,8 +47,8 @@ public class  TimesheetController {
             @RequestParam String userId,
             @RequestParam LocalDate date,
             @RequestBody TimesheetDto request) {
-
-        TimesheetDto updatedTimesheet = authFacade.updateClockInOut(userId, date, request);
+        String orgId = authHelper.getOrgId();
+        TimesheetDto updatedTimesheet = authFacade.updateClockInOut(userId, date, request,orgId);
 
         if (updatedTimesheet == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)

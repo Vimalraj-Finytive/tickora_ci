@@ -19,4 +19,14 @@ public class CommonExceptionHandler {
             super("No locations assigned to logged user");
         }
     }
+
+    public static class InternalServerException extends RuntimeException {
+        public InternalServerException(String message){
+            super(message);
+        }
+    }
+
+    public static class SchemaNotFoundException extends RuntimeException{
+        public SchemaNotFoundException(String message){super(message);}
+    }
 }
