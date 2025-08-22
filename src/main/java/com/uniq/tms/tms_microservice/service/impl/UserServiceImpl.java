@@ -538,28 +538,31 @@ public class UserServiceImpl implements UserService {
             List<UserEntity> savedUsers = userAdapter.saveAllUsers(userEntities);
             List<SecondaryDetailsEntity> savedSecondaryDetails = userAdapter.saveAllSecondaryDetails(secondaryDetailsEntities);
 
-            log.info("Creating user mapping for all saved users in bulk upload");
-            List<UserSchemaMappingEntity> mappings = savedUsers.stream()
-                    .map(u -> userEntityMapper.toSchema(
-                            u.getEmail(),
-                            u.getMobileNumber(),
-                            orgId,
-                            TenantContext.getCurrentTenant()))
-                    .toList();
+            if(savedUsers != null) {
+                log.info("Creating user mapping for all saved users in bulk upload");
+                List<UserSchemaMappingEntity> mappings = savedUsers.stream()
+                        .map(u -> userEntityMapper.toSchema(
+                                u.getEmail(),
+                                u.getMobileNumber(),
+                                orgId,
+                                TenantContext.getCurrentTenant()))
+                        .toList();
 
-            userAdapter.saveAllMappings(mappings);
+                userAdapter.saveAllMappings(mappings);
+            }
+            if(savedSecondaryDetails != null) {
+                log.info("Creating user mapping for all saved secondary users in bulk upload");
+                List<UserSchemaMappingEntity> secondaryMappings = savedSecondaryDetails.stream()
+                        .map(su -> userEntityMapper.toSchema(
+                                su.getEmail(),
+                                su.getMobile(),
+                                orgId,
+                                TenantContext.getCurrentTenant()
+                        ))
+                        .toList();
 
-            log.info("Creating user mapping for all saved secondary users in bulk upload");
-            List<UserSchemaMappingEntity> secondaryMappings = savedSecondaryDetails.stream()
-                    .map(su -> userEntityMapper.toSchema(
-                            su.getEmail(),
-                            su.getMobile(),
-                            orgId,
-                            TenantContext.getCurrentTenant()
-                    ))
-                    .toList();
-
-            userAdapter.saveAllSecondaryMappings(secondaryMappings);
+                userAdapter.saveAllSecondaryMappings(secondaryMappings);
+            }
             // Persist user-group mappings
             List<UserGroupEntity> groupEntities = userGroupMappings.entrySet().stream()
                     .flatMap(entry -> entry.getValue().stream()
@@ -783,24 +786,27 @@ public class UserServiceImpl implements UserService {
             log.info("Saved secondary details: {}", secondaryDetails);
         }
 
-        log.info("Creating user mapping for all saved users");
-        UserSchemaMappingEntity mappings = userEntityMapper.toSchema(
-                savedUserEntity.getEmail(),
-                savedUserEntity.getMobileNumber(),
-                organizationId,
-                TenantContext.getCurrentTenant());
+        if(savedUserEntity != null) {
+            log.info("Creating user mapping for all saved users");
+            UserSchemaMappingEntity mappings = userEntityMapper.toSchema(
+                    savedUserEntity.getEmail(),
+                    savedUserEntity.getMobileNumber(),
+                    organizationId,
+                    TenantContext.getCurrentTenant());
 
-        userAdapter.create(mappings);
+            userAdapter.create(mappings);
+        }
+        if(saveSecondaryUser != null) {
+            log.info("Creating user mapping for all saved secondary users");
+            UserSchemaMappingEntity secondaryMappings = userEntityMapper.toSchema(
+                    null,
+                    saveSecondaryUser.getMobile(),
+                    organizationId,
+                    TenantContext.getCurrentTenant()
+            );
 
-        log.info("Creating user mapping for all saved secondary users");
-        UserSchemaMappingEntity secondaryMappings = userEntityMapper.toSchema(
-                        null,
-                        saveSecondaryUser.getMobile(),
-                        organizationId,
-                        TenantContext.getCurrentTenant()
-                );
-
-        userAdapter.create(secondaryMappings);
+            userAdapter.create(secondaryMappings);
+        }
         if (!isBlank(userDto.getLocationId())) {
             log.info("Adding user to location: {}", userDto.getLocationId());
             List<UserLocationEntity> userLocationEntities = new ArrayList<>();
