@@ -682,4 +682,13 @@ public class AuthFacade {
         OrganizationDropdownDto response = authService.getDropDowns();
         return new ApiResponse<>(200,"DropDowns Fetched Successfully", response);
     }
+
+    public ApiResponse<String> getSchema() {
+        String orgSchema = authHelper.getSchema();
+        if(orgSchema  != null) {
+            return new ApiResponse<>(200, "Organization schema send successfully", orgSchema);
+        }else{
+            return new ApiResponse<>(404,"User Schema not found for this organization",null);
+        }
+    }
 }

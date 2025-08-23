@@ -35,9 +35,8 @@ CREATE TABLE IF NOT EXISTS public.user_schema_mapping (
     org_id VARCHAR(20) NOT NULL,
     schema_name VARCHAR(255) NOT NULL,
     CONSTRAINT fk_schema_org FOREIGN KEY (org_id)
-        REFERENCES public.organization(organization_id),
-    CONSTRAINT uk_schema_org UNIQUE (org_id, schema_name)
-);
+        REFERENCES public.organization(organization_id)
+    );
 
 --Table : Plan
 CREATE TABLE plan (

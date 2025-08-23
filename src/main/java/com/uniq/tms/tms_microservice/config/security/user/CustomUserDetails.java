@@ -11,22 +11,24 @@ public class CustomUserDetails implements UserDetails {
     private final String role;
     private final String userName;
     private final String password;
+    private final String schemaName;
     private final Collection<? extends GrantedAuthority> authorities;
 
-    public CustomUserDetails(String userId, String orgId, String role, String userName, String password,
+    public CustomUserDetails(String userId, String orgId, String role, String userName, String password, String schemaName,
                              Collection<? extends GrantedAuthority> authorities) {
         this.userId = userId;
         this.orgId = orgId;
         this.role = role;
         this.userName = userName;
         this.password = password;
+        this.schemaName = schemaName;
         this.authorities = authorities;
     }
 
     public String getUserId() { return userId; }
     public String getOrgId() { return orgId; }
     public String getRole() { return role; }
-
+    public String getSchemaName() {return schemaName;}
     @Override public Collection<? extends GrantedAuthority> getAuthorities() { return authorities; }
     @Override public String getUsername() { return userName; }
     @Override public String getPassword() { return password; }

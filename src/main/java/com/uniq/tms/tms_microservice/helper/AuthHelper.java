@@ -33,4 +33,5 @@ public class AuthHelper {
         return getCurrentUser().getRole();
     }
 
+    public String getSchema(){ return getCurrentUser().getSchemaName(); }
 }

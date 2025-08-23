@@ -23,6 +23,7 @@ import com.uniq.tms.tms_microservice.service.CacheLoaderService;
 import com.uniq.tms.tms_microservice.service.NettyfishService;
 import com.uniq.tms.tms_microservice.util.CacheKeyUtil;
 import com.uniq.tms.tms_microservice.util.PasswordUtil;
+import com.uniq.tms.tms_microservice.util.TenantUtil;
 import jakarta.annotation.Nullable;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -188,6 +189,8 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public ResponseEntity<ApiResponse> sendOtp(String mobile) {
+        String schema = TenantUtil.getCurrentTenant();
+        log.info("Current send otp tenant:{}", schema);
         UserEntity studentUser;
         String parentUserId = null;
         boolean isParent = false;
@@ -231,11 +234,11 @@ public class AuthServiceImpl implements AuthService {
         String orgId = studentUser.getOrganizationId();
         String otpCountKey;
         if (!isParent) {
-            otpCountKey = cacheKeyUtil.getOtpCountKey(orgId, userId);
+            otpCountKey = cacheKeyUtil.getOtpCountKey(orgId, userId,schema);
         } else {
-            otpCountKey = cacheKeyUtil.getOtpCountKey(orgId, parentUserId);
+            otpCountKey = cacheKeyUtil.getOtpCountKey(orgId, parentUserId,schema);
         }
-        String otpKey = cacheKeyUtil.getOtpKey(orgId, mobile);
+        String otpKey = cacheKeyUtil.getOtpKey(orgId, mobile,schema);
 
         Instant now = Instant.now();
         Instant midnight = LocalDate.now(ZoneOffset.UTC).plusDays(1).atStartOfDay().toInstant(ZoneOffset.UTC);
@@ -302,7 +305,7 @@ public class AuthServiceImpl implements AuthService {
 
         UserEntity user = users.getFirst();
         String userId = user.getUserId();
-        String otpKey = cacheKeyUtil.getOtpKey(user.getOrganizationId(), mobile);
+        String otpKey = cacheKeyUtil.getOtpKey(user.getOrganizationId(), mobile,schemaName);
         if (otpKey == null) {
             return ResponseEntity.badRequest()
                     .body(new ApiResponse(400, "OTP expired. Please request a new OTP.", null));

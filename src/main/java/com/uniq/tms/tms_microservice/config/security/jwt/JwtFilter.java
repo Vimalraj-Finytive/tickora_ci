@@ -71,9 +71,9 @@ public class JwtFilter extends OncePerRequestFilter {
         }
 
         String jwtToken = extractTokenFromRequest(request);
+        String tenant = extractSchemaFromToken(jwtToken);
 
         if (jwtToken != null) {
-            String tenant = extractSchemaFromToken(jwtToken);
             log.info("Tenant:{}", tenant);
             TenantContext.setCurrentTenant(tenant);
             log.info("Current tenant:{}", TenantContext.getCurrentTenant());
@@ -118,7 +118,7 @@ public class JwtFilter extends OncePerRequestFilter {
                 }
 
 
-                UsernamePasswordAuthenticationToken authentication = buildAuth(user);
+                UsernamePasswordAuthenticationToken authentication = buildAuth(user,tenant);
                 SecurityContextHolder.getContext().setAuthentication(authentication);
 
             } catch (Exception e) {
@@ -161,7 +161,7 @@ public class JwtFilter extends OncePerRequestFilter {
         return null;
     }
 
-    private UsernamePasswordAuthenticationToken buildAuth(UserEntity user) {
+    private UsernamePasswordAuthenticationToken buildAuth(UserEntity user, String schema) {
         String userRole = user.getRole().getName().replaceFirst("ROLE_", "");
         CustomUserDetails userDetails = new CustomUserDetails(
                 user.getUserId(),
@@ -169,6 +169,7 @@ public class JwtFilter extends OncePerRequestFilter {
                 user.getRole().getName(),
                 user.getUserName(),
                 user.getPassword(),
+                schema,
                 Collections.singletonList(new SimpleGrantedAuthority(userRole))
         );
         return new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());

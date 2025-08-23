@@ -186,7 +186,8 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public List<Location> getAllLocation(String orgId) {
-        String redisKey = cacheKeyUtil.getLocationKey(orgId);
+        String schema = TenantContext.getCurrentTenant();
+        String redisKey = cacheKeyUtil.getLocationKey(orgId,schema);
         CachedData<Location> cachedData = null;
 
         // Only try Redis if redisTemplate is not null
@@ -209,7 +210,7 @@ public class UserServiceImpl implements UserService {
             log.info("Cache missing for key: locations, DB Called");
 
             // Load and cache if missing
-            List<Location> locations = cacheLoaderService.loadLocationTable(orgId).get();
+            List<Location> locations = cacheLoaderService.loadLocationTable(orgId,schema).get();
             log.info("Total locations fetched from DB: {}", locations.size());
             locations.forEach(loc -> log.info("Location ID: {}, Org ID: {}", loc.getLocationId(), loc.getOrgId()));
             return locations;
@@ -255,6 +256,7 @@ public class UserServiceImpl implements UserService {
 
     public ApiResponse processCsvFile(InputStream inputStream, String originalFileName, String orgId, String userId) {
 
+        String schema = TenantUtil.getCurrentTenant();
         UserEntity userFromToken = userAdapter.findUserByOrgIdAndUserId(orgId, userId);
         log.info("Starting processing for file: {}", originalFileName);
         long startTime = System.currentTimeMillis();
@@ -613,6 +615,7 @@ public class UserServiceImpl implements UserService {
                     publisher,
                     cacheKeyConfig.getUsers(),
                     orgId,
+                    schema,
                     cacheReloadHandlerRegistry
             );
             log.info("UserCacheReloadEvent published after User bulk creation");
@@ -727,6 +730,7 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public ApiResponse createUser(UserDto userDto, SecondaryDetailsDto secondaryDetailsDto, String organizationId) {
+        String schema = TenantUtil.getCurrentTenant();
         log.info("Checking if the user is student: {}", userDto.getRoleId());
         Optional<RoleEntity> roleName = userAdapter.findRoleById(userDto.getRoleId());
         log.info("Role from DB for creating user: {}", roleName.get().getName());
@@ -858,6 +862,7 @@ public class UserServiceImpl implements UserService {
                     publisher,
                     cacheKeyConfig.getUsers(),
                     organizationId,
+                    schema,
                     cacheReloadHandlerRegistry
             );
             log.info("UserCacheReloadEvent published after User creation");
@@ -932,7 +937,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public User updateUser(CreateUserDto updates, String orgId, String userId) {
-
+        String schema = TenantUtil.getCurrentTenant();
         UserEntity existingUser = userAdapter.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -1064,6 +1069,7 @@ public class UserServiceImpl implements UserService {
                     publisher,
                     cacheKeyConfig.getUsers(),
                     orgId,
+                    schema,
                     cacheReloadHandlerRegistry
             );
             log.info("UserCacheReloadEvent published after User update");
@@ -1108,23 +1114,25 @@ public class UserServiceImpl implements UserService {
     }
 
     private List<UserResponseDto> fetchActiveUsers(String orgId, String role) {
-        String userCacheKey = cacheKeyUtil.getMemberKey(orgId);
+        String schema = TenantUtil.getCurrentTenant();
+        log.info("Current active user tenant:{}", schema);
+        String userCacheKey = cacheKeyUtil.getMemberKey(orgId,schema);
         String roleField = role.toLowerCase();
         log.info("roleField:{}", roleField);
         try {
             if (redisTemplate != null) {
                 Object cachedObj = redisTemplate.opsForHash().get(userCacheKey, roleField);
                 if (cachedObj != null) {
-                    log.info("Cache hit for orgId={}, role={}", orgId, role);
+                    log.info("Cache hit for Active User orgId={}, role={}", orgId, role);
                     return (List<UserResponseDto>) cachedObj;
                 }
             } else {
-                log.warn("RedisTemplate is null, skipping cache fetch for key: {}, field: {}", userCacheKey, roleField);
+                log.warn("RedisTemplate is null, skipping cache fetch for Active User key: {}, field: {}", userCacheKey, roleField);
             }
 
             // 2. Cache miss or Redis unavailable - load all into Redis (and also get fresh data)
-            log.info("Cache miss for orgId={}, role={}. Loading from DB...", orgId, role);
-            Map<String, List<UserResponseDto>> roleMap = cacheLoaderService.loadAllUsers(orgId).get();
+            log.info("Cache miss for Active user orgId={}, role={}. Loading from DB...", orgId, role);
+            Map<String, List<UserResponseDto>> roleMap = cacheLoaderService.loadAllUsers(orgId,schema).get();
             log.info("rolemap:{}", roleMap);
             String loggedRole = roleField.toUpperCase();
             List<UserResponseDto> fallbackList = roleMap.get(loggedRole);
@@ -1142,6 +1150,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public User deleteUser(String orgId, String userId) {
+        String schema = TenantUtil.getCurrentTenant();
         UserEntity user = userAdapter.findById(userId)
                 .orElseThrow(() -> new UsernameNotFoundException("User ID not found."));
 
@@ -1157,6 +1166,7 @@ public class UserServiceImpl implements UserService {
                     publisher,
                     cacheKeyConfig.getUsers(),
                     orgId,
+                    schema,
                     cacheReloadHandlerRegistry
             );
             log.info("Reloaded cache for active and inactive users for org: {}", orgId);
@@ -1170,6 +1180,7 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public AddGroup createGroup(AddGroup groupMiddleware, String orgId) {
+        String schema = TenantUtil.getCurrentTenant();
         if (userAdapter.findByGroup(groupMiddleware.getGroupName(), orgId)) {
             throw new DataIntegrityViolationException("Group '" + groupMiddleware.getGroupName() + "' already exists in this organization");
         }
@@ -1208,6 +1219,7 @@ public class UserServiceImpl implements UserService {
                     publisher,
                     cacheKeyConfig.getGroups(),
                     orgId,
+                    schema,
                     cacheReloadHandlerRegistry
             );
             log.info("GroupCacheReloadEvent published after Group Creation");
@@ -1219,6 +1231,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public ApiResponse addUserToGroup(AddMember addMemberMiddleware, String orgId) {
+        String schema = TenantUtil.getCurrentTenant();
         List<String> userIds = addMemberMiddleware.getUserId();
         List<String> addedUserNames = new ArrayList<>();
         List<String> alreadyExistsUsers = new ArrayList<>();
@@ -1258,6 +1271,7 @@ public class UserServiceImpl implements UserService {
                     publisher,
                     cacheKeyConfig.getGroups(),
                     orgId,
+                    schema,
                     cacheReloadHandlerRegistry
             );
             log.info("GroupCacheReloadEvent published after Adding user to the Group");
@@ -1287,6 +1301,7 @@ public class UserServiceImpl implements UserService {
     @Transactional
     @Override
     public ApiResponse<?> updateGroupDetails(AddGroupDto addGroupDto, Long groupId, String orgId) {
+        String schema = TenantUtil.getCurrentTenant();
         AddGroup addGroup = userDtoMapper.toMiddleware(addGroupDto);
 
         List<String> conflictMessages = new ArrayList<>();
@@ -1378,6 +1393,7 @@ public class UserServiceImpl implements UserService {
                     publisher,
                     cacheKeyConfig.getGroups(),
                     orgId,
+                    schema,
                     cacheReloadHandlerRegistry
             );
             log.info("GroupCacheReloadEvent published after Group Update");
@@ -1398,7 +1414,9 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserProfileResponse getUserProfile(String orgId, String userId) {
-        String redisKey = cacheKeyUtil.getprofileKey(orgId);
+        String schema = TenantUtil.getCurrentTenant();
+        log.info("Current User Profile tenant:{}", schema);
+        String redisKey = cacheKeyUtil.getProfileKey(orgId,schema);
         try {
             if (redisTemplate != null) {
                 UserProfileResponse cachedData = (UserProfileResponse) redisTemplate.opsForHash().get(redisKey, userId);
@@ -1407,7 +1425,7 @@ public class UserServiceImpl implements UserService {
                     return cachedData;
                 }else{
                     log.info("Cache miss for userId {}, loading from DB...", userId);
-                    Map<String, UserProfileResponse> loadedProfiles = cacheLoaderService.loadUsersProfile(orgId).get();
+                    Map<String, UserProfileResponse> loadedProfiles = cacheLoaderService.loadUsersProfile(orgId,schema).get();
 
                     UserProfileResponse response = loadedProfiles.get(userId);
                     if (response != null) {
@@ -1488,9 +1506,10 @@ public class UserServiceImpl implements UserService {
     }
 
     public List<GroupResponseDto> getAllGroups(String orgId, String userId) throws JsonProcessingException {
-
-        String cacheGroupkey = cacheKeyUtil.getAllGroupsKey(orgId);
-        String cacheSupervisedGroupKey = cacheKeyUtil.getSupervisedGroupsKey(orgId);
+        String schema = TenantUtil.getCurrentTenant();
+        log.info("Current Group tenant:{}", schema);
+        String cacheGroupkey = cacheKeyUtil.getAllGroupsKey(orgId,schema);
+        String cacheSupervisedGroupKey = cacheKeyUtil.getSupervisedGroupsKey(orgId,schema);
 
         UserEntity currentUser = userAdapter.getUserById(userId);
         String roleName = currentUser.getRole().getName().toUpperCase();
@@ -1536,7 +1555,7 @@ public class UserServiceImpl implements UserService {
             log.info("Loading from DB as cache is missing for orgId={}, userId={}", orgId, userId);
             try {
                 List<GroupResponseDto> groupsFromDb = cacheLoaderService
-                        .loadGroupsCache(orgId)
+                        .loadGroupsCache(orgId,schema)
                         .get();
 
                 if (canSeeAllGroups) {
@@ -1580,12 +1599,14 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public void deleteMember(Long groupId, String memberId, String orgId) {
+        String schema = TenantUtil.getCurrentTenant();
         userAdapter.deleteMember(groupId, memberId);
         if (isRedisEnabled) {
             CacheEventPublisherUtil.syncReloadThenPublish(
                     publisher,
                     cacheKeyConfig.getGroups(),
                     orgId,
+                    schema,
                     cacheReloadHandlerRegistry
             );
             log.info("GroupCacheReloadEvent published after Group Member Deletion");
@@ -1596,6 +1617,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public void deleteGroup(Long groupId, String orgId) {
+        String schema = TenantUtil.getCurrentTenant();
         boolean exist = teamRepository.existsByGroupIdAndOrganizationEntity_OrganizationId(groupId, orgId);
         if (!exist) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Group not found or access denied");
@@ -1607,6 +1629,7 @@ public class UserServiceImpl implements UserService {
                     publisher,
                     cacheKeyConfig.getGroups(),
                     orgId,
+                    schema,
                     cacheReloadHandlerRegistry
             );
             log.info("GroupCacheReloadEvent published after Group Deletion");
@@ -1746,6 +1769,7 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public Location addLocation(LocationDto locationDto, String orgId) {
+        String schema = TenantUtil.getCurrentTenant();
         Location locationModel = locationEntityMapper.toModel(locationDto);
         try {
             locationModel.setOrgId(orgId);
@@ -1776,6 +1800,7 @@ public class UserServiceImpl implements UserService {
                         publisher,
                         cacheKeyConfig.getLocation(),
                         orgId,
+                        schema,
                         cacheReloadHandlerRegistry
                 );
                 log.info("LocationCacheReloadEvent published after location Added");
@@ -1833,6 +1858,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public Privilege addPrivileges(Privilege privilegeModel, String orgId) {
+        String schema = TenantUtil.getCurrentTenant();
         PrivilegeEntity privilegeEntity = userEntityMapper.toEntity(privilegeModel);
         PrivilegeEntity privilege = userAdapter.addPrivilege(privilegeEntity);
         if (isRedisEnabled) {
@@ -1840,6 +1866,7 @@ public class UserServiceImpl implements UserService {
                     publisher,
                     cacheKeyConfig.getRoleprivilege(),
                     orgId,
+                    schema,
                     cacheReloadHandlerRegistry
             );
             log.info("Privilege CacheReloadEvent published after Privilege Creation");
@@ -1851,7 +1878,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public RolePrivilege addRolwisePrivileges(RolePrivilege rolePrivilege, String orgId) {
-
+        String schema = TenantUtil.getCurrentTenant();
         RoleEntity role = userAdapter.findRoleById(rolePrivilege.getRoleId())
                 .orElseThrow(() -> new RuntimeException("Role not found"));
 
@@ -1880,6 +1907,7 @@ public class UserServiceImpl implements UserService {
                     publisher,
                     cacheKeyConfig.getRoleprivilege(),
                     orgId,
+                    schema,
                     cacheReloadHandlerRegistry
             );
             log.info("RolewisePrivilege CacheReloadEvent published after Role wise privilege creation");
@@ -1891,6 +1919,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public ApiResponse updateLocation(String orgId, LocationList location) {
+        String schema = TenantUtil.getCurrentTenant();
         List<Long> locationIds = location.getLocationId();
         if (locationIds == null || locationIds.isEmpty()) {
             throw new RuntimeException("No location IDs provided");
@@ -1931,6 +1960,7 @@ public class UserServiceImpl implements UserService {
                     publisher,
                     cacheKeyConfig.getLocation(),
                     orgId,
+                    schema,
                     cacheReloadHandlerRegistry
             );
             log.info("LocationCacheReloadEvent published after bulk update");
@@ -1943,6 +1973,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public void deleteLocation(LocationListDto locationDto, String orgId) {
+        String schema = TenantUtil.getCurrentTenant();
         List<Long> locationIdList = locationDto.getLocationId();
 
         boolean exist = locationRepository.existsBylocationIdInAndOrganizationEntity_OrganizationId(locationIdList, orgId);
@@ -2017,6 +2048,7 @@ public class UserServiceImpl implements UserService {
                     publisher,
                     cacheKeyConfig.getLocation(),
                     orgId,
+                    schema,
                     cacheReloadHandlerRegistry
             );
             log.info("Location deleted and references updated. Cache reloaded.");
@@ -2032,7 +2064,9 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public List<UserResponseDto> getInactiveUsers(String orgId, String role) {
-        String userCacheKey = cacheKeyUtil.getInactiveMemberKey(orgId);
+        String schema = TenantUtil.getCurrentTenant();
+        log.info("Current location tenant:{}", schema);
+        String userCacheKey = cacheKeyUtil.getInactiveMemberKey(orgId,schema);
         String roleField = role.toLowerCase();
         log.info("roleField:{}", roleField);
         try {
@@ -2047,7 +2081,7 @@ public class UserServiceImpl implements UserService {
             }
 
             log.info("Cache miss for orgId={}, role={}. Loading from DB...", orgId, role);
-            Map<String, List<UserResponseDto>> roleMap = cacheLoaderService.loadAllInactiveUsers(orgId).get();
+            Map<String, List<UserResponseDto>> roleMap = cacheLoaderService.loadAllInactiveUsers(orgId,schema).get();
             log.info("rolemap:{}", roleMap);
             String loggedRole = roleField.toUpperCase();
             List<UserResponseDto> fallbackList = roleMap.get(loggedRole);
@@ -2065,6 +2099,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public List<EditUserDto> updateIsActive(EditUser editUser, String orgId){
+        String schema = TenantUtil.getCurrentTenant();
         List<String> userIds = editUser.getUserId();
         if(userIds == null || userIds.isEmpty()){
             throw new RuntimeException("No userIds provided");
@@ -2087,6 +2122,7 @@ public class UserServiceImpl implements UserService {
                     publisher,
                     cacheKeyConfig.getInactiveUsers(),
                     orgId,
+                    schema,
                     cacheReloadHandlerRegistry
             );
             log.info("InactiveUserCacheReloadEvent published after Active update");

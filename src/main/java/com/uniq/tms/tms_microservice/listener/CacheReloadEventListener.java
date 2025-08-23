@@ -27,11 +27,11 @@ public class CacheReloadEventListener {
         log.info("Received CacheReloadEvent. Reloading cache...");
         String cacheName = event.getCacheName();
         String orgId = event.getOrgId();
-
+        String schema = event.getSchema();
         List<String> dependents = cacheDependencyConfig.getDependent(cacheName);
         log.info("Dependents of cachename: {} are : {}", cacheName, dependents);
         for (String dependent : dependents) {
             log.info("Reloading dependent cache: {}", dependent);
-            cacheReloadHandlerRegistry.reload(dependent, orgId);
+            cacheReloadHandlerRegistry.reload(dependent, orgId,schema);
         }    }
 }
