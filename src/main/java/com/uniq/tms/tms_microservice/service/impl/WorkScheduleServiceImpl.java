@@ -18,6 +18,7 @@ import com.uniq.tms.tms_microservice.service.IdGenerationService;
 import com.uniq.tms.tms_microservice.service.WorkScheduleService;
 import com.uniq.tms.tms_microservice.util.CacheEventPublisherUtil;
 import com.uniq.tms.tms_microservice.util.CacheKeyUtil;
+import com.uniq.tms.tms_microservice.util.TenantUtil;
 import jakarta.annotation.Nullable;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -73,7 +74,8 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
 
     @Override
     public List<WorkScheduleDto> getAllWorkSchedules(String orgId) {
-        String redisKey = cacheKeyUtil.getWorkSchedule(orgId);
+        String schema = TenantUtil.getCurrentTenant();
+        String redisKey = cacheKeyUtil.getWorkSchedule(orgId,schema);
         ObjectMapper mapper = new ObjectMapper();
 
         try {
@@ -97,7 +99,7 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
 
             // Cache miss, load from DB and repopulate cache
             log.info("Cache miss for workSchedule, loading from DB...");
-            Map<String, List<WorkScheduleDto>> loadedMap = cacheLoaderService.loadWorkSchedule(orgId).get();
+            Map<String, List<WorkScheduleDto>> loadedMap = cacheLoaderService.loadWorkSchedule(orgId,schema).get();
             List<WorkScheduleDto> response = loadedMap.get(orgId);
 
             if (response != null && !response.isEmpty()) {
@@ -126,6 +128,7 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
     @Override
     @Transactional
     public ApiResponse createWorkSchedule(WorkSchedule model, String orgId) {
+        String schema = TenantUtil.getCurrentTenant();
         if (workScheduleAdapter.findByWorkschedule(model.getScheduleName(), orgId)) {
             return new ApiResponse(403, "WorkSchedule Name already exists", false);
         }
@@ -173,6 +176,7 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
                     publisher,
                     cacheKeyConfig.getWorkSchedule(),
                     orgId,
+                    schema,
                     cacheReloadHandlerRegistry
             );
             log.info("WorkScheduleCacheReloadEvent published after WorkSchedule Added");
@@ -228,7 +232,7 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
     @Override
     @Transactional
     public void updateWorkSchedule(WorkSchedule model, String orgId) {
-
+        String schema = TenantUtil.getCurrentTenant();
         if ((workScheduleAdapter.findByScheduleName(model.getScheduleId(), model.getScheduleName(), orgId)))
         {
             throw new DataIntegrityViolationException("WorkScheduleName already exists in this organization");
@@ -282,6 +286,7 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
                     publisher,
                     cacheKeyConfig.getWorkSchedule(),
                     orgId,
+                    schema,
                     cacheReloadHandlerRegistry
             );
             log.info("WorkScheduleCacheReloadEvent published after WorkSchedule Updated");
@@ -293,6 +298,7 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
     @Override
     @Transactional
     public void deleteWorkSchedule(String orgId, String scheduleId) {
+        String schema = TenantUtil.getCurrentTenant();
         WorkScheduleEntity workSchedule = workScheduleAdapter.findByScheduleId(scheduleId, orgId);
 
         // 1. Validate organization ownership
@@ -323,6 +329,7 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
                     publisher,
                     cacheKeyConfig.getWorkSchedule(),
                     orgId,
+                    schema,
                     cacheReloadHandlerRegistry
             );
             log.info("WorkSchedule deleted and references updated. Cache reloaded.");

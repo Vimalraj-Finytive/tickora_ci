@@ -121,5 +121,10 @@ public class AuthController {
     public Map<String, String> getAllOtpsCount() {
         return otpFallbackCache.getAllOtpCounts();
     }
-    
+
+    @PostMapping("/orgSchema")
+    public ResponseEntity<ApiResponse<String>> getOrgSchema(@RequestHeader("Authorization") String token){
+        ApiResponse<String> orgSchema = authFacade.getSchema();
+        return ResponseEntity.status(orgSchema.getStatusCode()).body(orgSchema);
+    }
 }

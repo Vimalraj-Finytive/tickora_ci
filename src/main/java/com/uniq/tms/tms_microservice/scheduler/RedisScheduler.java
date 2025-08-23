@@ -1,5 +1,6 @@
 package com.uniq.tms.tms_microservice.scheduler;
 
+import com.uniq.tms.tms_microservice.entity.OrganizationEntity;
 import com.uniq.tms.tms_microservice.repository.OrganizationRepository;
 import com.uniq.tms.tms_microservice.service.CacheLoaderService;
 import org.slf4j.Logger;
@@ -26,9 +27,9 @@ public class RedisScheduler {
     public void reloadLocationCacheHourly() {
         log.info("Scheduled Location cache loading triggered : {}", LocalTime.now());
         try {
-            List<String> orgIds = organizationRepository.findAllOrgIds();
-            for(String orgId : orgIds){
-                cacheLoaderService.loadLocationTable(orgId);
+            List<OrganizationEntity> orgIds = organizationRepository.findAll();
+            for(OrganizationEntity orgId : orgIds){
+                cacheLoaderService.loadLocationTable(orgId.getOrganizationId(),orgId.getSchemaName());
             }
             log.info("Location Cache loading completed");
         } catch (Exception e) {
@@ -40,9 +41,9 @@ public class RedisScheduler {
     public void reloadUserCacheHourly() {
         log.info("Scheduled User cache loading triggered : {}", LocalTime.now());
         try {
-            List<String> orgIds = organizationRepository.findAllOrgIds();
-            for(String orgId : orgIds){
-                cacheLoaderService.loadAllUsers(orgId);
+            List<OrganizationEntity> orgIds = organizationRepository.findAll();
+            for(OrganizationEntity orgId : orgIds){
+                cacheLoaderService.loadAllUsers(orgId.getOrganizationId(),orgId.getSchemaName());
             }
             log.info("Cache User loading completed");
         } catch (Exception e) {
@@ -54,9 +55,9 @@ public class RedisScheduler {
     public void reloadProfileCacheHourly() {
         log.info("Scheduled User Profile cache loading triggered : {}", LocalTime.now());
         try {
-            List<String> orgIds = organizationRepository.findAllOrgIds();
-            for(String orgId : orgIds){
-                cacheLoaderService.loadUsersProfile(orgId);
+            List<OrganizationEntity> orgIds = organizationRepository.findAll();
+            for(OrganizationEntity orgId : orgIds){
+                cacheLoaderService.loadUsersProfile(orgId.getOrganizationId(),orgId.getSchemaName());
             }
             log.info("Cache User Profile loading completed");
         } catch (Exception e) {
@@ -68,9 +69,9 @@ public class RedisScheduler {
     public void reloadRolesCacheHourly() {
         log.info("Scheduled Role cache loading triggered : {}", LocalTime.now());
         try {
-            List<String> orgIds = organizationRepository.findAllOrgIds();
-            for(String orgId : orgIds) {
-                cacheLoaderService.loadGroupsCache(orgId);
+            List<OrganizationEntity> orgIds = organizationRepository.findAll();
+            for(OrganizationEntity orgId : orgIds) {
+                cacheLoaderService.loadGroupsCache(orgId.getOrganizationId(),orgId.getSchemaName());
             }
             log.info("Cache Role loading completed");
         } catch (Exception e) {
@@ -82,7 +83,10 @@ public class RedisScheduler {
     public void reloadPrivilegeCacheHourly() {
         log.info("Scheduled Privilege cache loading triggered : {}", LocalTime.now());
         try {
-                cacheLoaderService.loadPrivilegesFromDB();
+            List<OrganizationEntity> orgIds = organizationRepository.findAll();
+            for(OrganizationEntity orgId : orgIds) {
+                cacheLoaderService.loadPrivilegesFromDB(orgId.getSchemaName());
+            }
             log.info("Cache Privilege loading completed");
         } catch (Exception e) {
             log.error("Error during scheduled Privilege cache loading: {}", e.getMessage(), e);
@@ -93,9 +97,9 @@ public class RedisScheduler {
     public void reloadGroupsCacheHourly() {
         log.info("Scheduled Groups cache loading triggered : {}", LocalTime.now());
         try {
-            List<String> orgIds = organizationRepository.findAllOrgIds();
-            for(String orgId : orgIds) {
-                cacheLoaderService.loadGroupsCache(orgId);
+            List<OrganizationEntity> orgIds = organizationRepository.findAll();
+            for(OrganizationEntity orgId : orgIds) {
+                cacheLoaderService.loadGroupsCache(orgId.getOrganizationId(),orgId.getSchemaName());
             }
             log.info("Cache Groups loading completed");
         } catch (Exception e) {
@@ -106,9 +110,9 @@ public class RedisScheduler {
     public void reloadWorkScheduleCacheHourly() {
         log.info("Scheduled WorkSchedule cache loading triggered : {}", LocalTime.now());
         try {
-            List<String> orgIds = organizationRepository.findAllOrgIds();
-            for(String orgId : orgIds) {
-                cacheLoaderService.loadWorkSchedule(orgId);
+            List<OrganizationEntity> orgIds = organizationRepository.findAll();
+            for(OrganizationEntity orgId : orgIds) {
+                cacheLoaderService.loadWorkSchedule(orgId.getOrganizationId(),orgId.getSchemaName());
             }
             log.info("Cache WorkSchedule loading completed");
         } catch (Exception e) {
@@ -120,9 +124,9 @@ public class RedisScheduler {
     public void reloadInactiveUserCacheHourly() {
         log.info("Scheduled Inactive User cache loading triggered : {}", LocalTime.now());
         try {
-            List<String> orgIds = organizationRepository.findAllOrgIds();
-            for(String orgId : orgIds){
-                cacheLoaderService.loadAllInactiveUsers(orgId);
+            List<OrganizationEntity> orgIds = organizationRepository.findAll();
+            for(OrganizationEntity orgId : orgIds){
+                cacheLoaderService.loadAllInactiveUsers(orgId.getOrganizationId(),orgId.getSchemaName());
             }
             log.info("Cache Inactive User loading completed");
         } catch (Exception e) {

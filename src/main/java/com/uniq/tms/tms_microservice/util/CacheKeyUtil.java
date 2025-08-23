@@ -22,42 +22,46 @@ public class CacheKeyUtil {
     private String workSchedule;
     @Value("${cache.keys.inactiveUsers}")
     private String inactiveUsers;
+    @Value("${cache.keys.otpCount}")
+    private String otpCount;
+    @Value("${cache.keys.otpKey}")
+    private String otpKey;
 
     private static final Logger log = LogManager.getLogger(CacheKeyUtil.class);
 
-    public String getLocationKey(String orgId){
-        return location +":orgId:" + orgId;
+    public String getLocationKey(String orgId, String schema){
+        return location + ":" + schema + ":" + orgId;
     }
 
-    public String getprofileKey(String orgId){
-        return userProfile +":orgId:" + orgId;
+    public String getProfileKey(String orgId, String schema){
+        return userProfile + ":" + schema + ":" + orgId;
     }
 
-    public String getMemberKey(String orgId){
-        return users +":orgId:" + orgId;
+    public String getMemberKey(String orgId, String schema){
+        return users + ":" + schema + ":" + orgId;
     }
 
-    public String getAllGroupsKey(String orgId){ return groups +":orgId:" + orgId; }
+    public String getAllGroupsKey(String orgId, String schema){ return groups + ":" + schema + ":" + orgId; }
 
-    public String getSupervisedGroupsKey(String orgId){ return groups+ "supervised:" +":orgId:" + orgId;}
+    public String getSupervisedGroupsKey(String orgId, String schema){ return groups+ ":supervised:" + schema + ":" + orgId;}
 
-    public String getRoleKey() {
-        return roleprivilege;
+    public String getRoleKey(String schema) {
+        return schema + ":"+ roleprivilege;
     }
 
-    public String getWorkSchedule(String orgId){
-        return workSchedule +":orgId:" + orgId;
+    public String getWorkSchedule(String orgId, String schema){
+        return workSchedule + ":" + schema + ":" + orgId;
     }
 
-    public String getInactiveMemberKey(String orgId){
-        return inactiveUsers +":orgId:" + orgId;
+    public String getInactiveMemberKey(String orgId, String schema){
+        return inactiveUsers + ":" +  schema + ":" + orgId;
     }
 
-    public String getOtpCountKey(String orgId, String userId) {
-        return "otpCount:" + orgId + ":" + userId;
+    public String getOtpCountKey(String orgId, String schema, String userId) {
+        return otpCount + ":" + schema + ":" + orgId + ":" + userId;
     }
 
-    public String getOtpKey(String orgId, String mobile) {
-        return "otp:" + orgId + ":" + mobile;
+    public String getOtpKey(String orgId, String schema, String mobile) {
+        return otpKey + ":" + schema + ":" + orgId + ":" + mobile;
     }
 }
