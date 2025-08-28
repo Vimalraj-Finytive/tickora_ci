@@ -1,7 +1,7 @@
 package com.uniq.tms.tms_microservice.service.impl;
 
 import com.uniq.tms.tms_microservice.adapter.UserAdapter;
-import com.uniq.tms.tms_microservice.dto.PrivilegeConstants;
+import com.uniq.tms.tms_microservice.enums.PrivilegeConstants;
 import com.uniq.tms.tms_microservice.entity.RoleEntity;
 import com.uniq.tms.tms_microservice.entity.UserEntity;
 import com.uniq.tms.tms_microservice.helper.RolePrivilegeHelper;

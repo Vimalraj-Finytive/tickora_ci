@@ -5,6 +5,7 @@ import com.uniq.tms.tms_microservice.adapter.UserAdapter;
 import com.uniq.tms.tms_microservice.adapter.WorkScheduleAdapter;
 import com.uniq.tms.tms_microservice.dto.*;
 import com.uniq.tms.tms_microservice.entity.*;
+import com.uniq.tms.tms_microservice.enums.*;
 import com.uniq.tms.tms_microservice.helper.RolePrivilegeHelper;
 import com.uniq.tms.tms_microservice.mapper.TimesheetDtoMapper;
 import com.uniq.tms.tms_microservice.mapper.TimesheetEntityMapper;
@@ -12,7 +13,6 @@ import com.uniq.tms.tms_microservice.model.TimesheetHistory;
 import com.uniq.tms.tms_microservice.model.TimesheetStatus;
 import com.uniq.tms.tms_microservice.service.CacheLoaderService;
 import com.uniq.tms.tms_microservice.service.TimesheetService;
-import com.uniq.tms.tms_microservice.util.CacheKeyUtil;
 import org.apache.logging.log4j.LogManager;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -29,7 +29,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.logging.log4j.Logger;
-import static com.uniq.tms.tms_microservice.dto.TimesheetStatusEnum.*;
+import static com.uniq.tms.tms_microservice.enums.TimesheetStatusEnum.*;
 import static com.uniq.tms.tms_microservice.enums.WorkScheduleTypeEnum.FIXED;
 import static com.uniq.tms.tms_microservice.enums.WorkScheduleTypeEnum.FLEXIBLE;
 
@@ -117,7 +117,7 @@ public class TimesheetServiceImpl implements TimesheetService {
         boolean hasStatusFilter = statusId != null && !statusId.isEmpty();
 
         if (canSeeOwn && canSeeGroup && canSeeAll) {
-            if(userId != null && !userId.isEmpty()){
+            if(userId != null && !userId.isEmpty() && userId.equals(userIdFromToken)){
                 return List.of(currentUser);
             }
             List<UserEntity> allUsers = userAdapter.getAllUsers(orgId, userIdFromToken, UserRole.SUPERADMIN.getHierarchyLevel());
@@ -184,7 +184,7 @@ public class TimesheetServiceImpl implements TimesheetService {
         }
 
         if (canSeeOwn && canSeeGroup) {
-            if(userId != null && !userId.isEmpty()){
+            if(userId != null && !userId.isEmpty() && userId.equals(userIdFromToken)){
                 return List.of(currentUser);
             }
             List<Long> supervisedGroupIds = userAdapter.findGroupIdsBySupervisorId(userIdFromToken);
@@ -456,13 +456,14 @@ public class TimesheetServiceImpl implements TimesheetService {
     }
 
     @Override
-    public void autoClockOut() {
+    public void autoClockOut(String orgId) {
         LocalDate yesterday = LocalDate.now().minusDays(1);
         List<TimesheetEntity> openClockIns = timesheetAdapter.findActiveTimesheetsByDate(yesterday);
         List<TimesheetHistoryEntity> historyEntries = new ArrayList<>();
 
         log.info("Timesheets fetched for {}: {}", yesterday, openClockIns.size());
-
+        LocationEntity locationEntity = new LocationEntity();
+        LocationEntity location = timesheetAdapter.getDefaultLocation(orgId);
         for (TimesheetEntity entry : openClockIns) {
             if (entry.getFirstClockIn() != null && entry.getLastClockOut() == null) {
                 log.info("Auto clock-out for userId={}, setting lastClockOut to 23:59", entry.getUserId());
@@ -471,7 +472,7 @@ public class TimesheetServiceImpl implements TimesheetService {
                 calculateHours(entry);
 
                 TimesheetHistoryEntity history = new TimesheetHistoryEntity();
-                history.setLocationId(0L);
+                history.setLocationId(location.getLocationId());
                 history.setLogTime(LocalTime.of(23, 59));
                 history.setLogType(LogType.CLOCK_OUT);
                 history.setLogFrom(LogFrom.SYSTEM_GENERATED);

@@ -1,4 +1,4 @@
-package com.uniq.tms.tms_microservice.dto;
+package com.uniq.tms.tms_microservice.enums;
 
 import com.uniq.tms.tms_microservice.service.impl.TimesheetServiceImpl;
 import java.time.LocalDate;

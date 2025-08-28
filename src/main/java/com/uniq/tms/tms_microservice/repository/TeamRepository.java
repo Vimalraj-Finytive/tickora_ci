@@ -1,7 +1,7 @@
 package com.uniq.tms.tms_microservice.repository;
 
 import com.uniq.tms.tms_microservice.dto.GroupDto;
-import com.uniq.tms.tms_microservice.dto.GroupsData;
+import com.uniq.tms.tms_microservice.projection.GroupsData;
 import com.uniq.tms.tms_microservice.entity.GroupEntity;
 import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;

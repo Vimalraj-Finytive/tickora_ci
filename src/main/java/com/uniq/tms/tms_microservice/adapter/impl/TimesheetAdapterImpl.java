@@ -4,11 +4,17 @@ import com.uniq.tms.tms_microservice.adapter.TimesheetAdapter;
 import com.uniq.tms.tms_microservice.adapter.WorkScheduleAdapter;
 import com.uniq.tms.tms_microservice.dto.*;
 import com.uniq.tms.tms_microservice.entity.*;
+import com.uniq.tms.tms_microservice.enums.LogFrom;
+import com.uniq.tms.tms_microservice.enums.LogType;
+import com.uniq.tms.tms_microservice.enums.TimesheetStatusEnum;
+import com.uniq.tms.tms_microservice.projection.UserDashboard;
+import com.uniq.tms.tms_microservice.repository.LocationRepository;
 import com.uniq.tms.tms_microservice.repository.TimesheetHistoryRepository;
 import com.uniq.tms.tms_microservice.repository.TimesheetRepository;
 import com.uniq.tms.tms_microservice.repository.TimesheetStatusRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import java.sql.Date;
 import java.sql.Time;
@@ -33,13 +39,18 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
     private final TimesheetHistoryRepository timesheetHistoryRepository;
     private final WorkScheduleAdapter workScheduleAdapter;
     private final TimesheetStatusRepository timesheetStatusRepository;
+    private final LocationRepository locationRepository;
 
-    public TimesheetAdapterImpl(TimesheetRepository timesheetRepository, TimesheetHistoryRepository timesheetHistoryRepository, WorkScheduleAdapter workScheduleAdapter, TimesheetStatusRepository timesheetStatusRepository) {
+    public TimesheetAdapterImpl(TimesheetRepository timesheetRepository, TimesheetHistoryRepository timesheetHistoryRepository, WorkScheduleAdapter workScheduleAdapter, TimesheetStatusRepository timesheetStatusRepository, LocationRepository locationRepository) {
         this.timesheetRepository = timesheetRepository;
         this.timesheetHistoryRepository = timesheetHistoryRepository;
         this.workScheduleAdapter = workScheduleAdapter;
         this.timesheetStatusRepository = timesheetStatusRepository;
+        this.locationRepository = locationRepository;
     }
+
+    @Value("${timesheet.extra.worked.seconds}")
+    private int extraWorkedSeconds;
 
     private static final Logger log = LoggerFactory.getLogger(TimesheetAdapterImpl.class);
 
@@ -47,7 +58,7 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
     public List<UserTimesheetResponseDto> filterTimesheetsForAllUsers(LocalDate startDate, LocalDate endDate, List<String> userIds, String orgId) {
         String[] userIdArray = userIds.toArray(new String[0]);
 
-        List<Object[]> resultList = timesheetRepository.fetchTimesheetsWithHistory(startDate, endDate, userIdArray, orgId);
+        List<Object[]> resultList = timesheetRepository.fetchTimesheetsWithHistory(startDate, endDate, userIdArray, orgId, extraWorkedSeconds);
 
         Map<String, TimesheetDto> timesheetMap = new LinkedHashMap<>();
         LocalDate today = LocalDate.now();
@@ -98,7 +109,7 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
                     System.err.println("Invalid LogType: " + row[19]);
                 }
 
-                historyDto.setLocationId(toLong(row[20]));
+                historyDto.setLocationName((String) row[20]);
 
                 try {
                     historyDto.setLogFrom(row[21] != null ? LogFrom.valueOf(row[21].toString()) : null);
@@ -380,7 +391,7 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
     public List<UserTimesheetDto> fetchUserTimesheetsWithHistory(LocalDate startDate, LocalDate endDate, List<String> userIds, String orgId) {
         String[] userIdArray = userIds.toArray(new String[0]);
 
-        List<Object[]> resultList = timesheetRepository.fetchUserTimesheetsWithHistory(startDate, endDate, userIdArray, orgId);
+        List<Object[]> resultList = timesheetRepository.fetchUserTimesheetsWithHistory(startDate, endDate, userIdArray, orgId, extraWorkedSeconds);
 
         Map<String, UserTimesheetDto> timesheetMap = new LinkedHashMap<>();
         LocalDate today = LocalDate.now();
@@ -428,7 +439,7 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
                     System.err.println("Invalid LogType: " + row[19]);
                 }
 
-                historyDto.setLocationId(toLong(row[20]));
+                historyDto.setLocationName( (String) (row[20]));
 
                 try {
                     historyDto.setLogFrom(row[21] != null ? LogFrom.valueOf(row[21].toString()) : null);
@@ -546,5 +557,10 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
     @Override
     public List<TimesheetEntity> findUserByStatusId(List<String> statusId, LocalDate startDate, LocalDate endDate) {
         return timesheetRepository.findUserByStatusStatusIdIn(statusId, startDate, endDate);
+    }
+
+    @Override
+    public LocationEntity getDefaultLocation(String orgId) {
+        return locationRepository.findDefaultLocationById(orgId);
     }
 }

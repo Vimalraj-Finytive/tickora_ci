@@ -1,4 +1,6 @@
-package com.uniq.tms.tms_microservice.dto;
+package com.uniq.tms.tms_microservice.projection;
+
+import com.uniq.tms.tms_microservice.dto.WeeklyScheduleDto;
 
 public interface WorkScheduleData {
 

@@ -1,7 +1,7 @@
 package com.uniq.tms.tms_microservice.repository;
 
 import com.uniq.tms.tms_microservice.dto.UserAttendanceDto;
-import com.uniq.tms.tms_microservice.dto.UserDashboard;
+import com.uniq.tms.tms_microservice.projection.UserDashboard;
 import com.uniq.tms.tms_microservice.entity.TimesheetEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -162,6 +162,8 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
                           AND th2.log_type = 'CLOCK_OUT'
                           AND th2.log_from = 'SYSTEM_GENERATED'
                     ) THEN 'Failed Clock Out'
+                    WHEN (EXTRACT(EPOCH FROM (t.last_clock_out - t.first_clock_in))) >= COALESCE(wsd.expected_seconds, 0) + :extraWorkedSeconds
+                    THEN 'OverTime'
                     WHEN (EXTRACT(EPOCH FROM (t.last_clock_out - t.first_clock_in))) >= COALESCE(wsd.expected_seconds, 0)
                     THEN 'Sufficient Hours'
                     ELSE 'Less Worked Hours'
@@ -172,7 +174,7 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
         th.id AS history_id,
         th.log_time,
         th.log_type,
-        th.location_id,
+        COALESCE(l.name, 'Unknown Location') AS location_name,
         th.log_from,
         th.logged_timestamp
     
@@ -186,15 +188,16 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
     LEFT JOIN work_schedule_type wst ON ws.work_schedule_type = wst.type_id
     LEFT JOIN WorkScheduleDuration wsd ON ws.work_schedule_id = wsd.work_schedule_id
     LEFT JOIN timesheet_history th ON t.id = th.timesheet_id
+    LEFT JOIN location l ON th.location_id = l.location_id
     LEFT JOIN UserGroups ug ON udm.user_id = ug.user_id
-    
     ORDER BY udm.user_id, udm.work_date, th.logged_timestamp
     """, nativeQuery = true)
         List<Object[]> fetchTimesheetsWithHistory(
                 @Param("startDate") LocalDate startDate,
                 @Param("endDate") LocalDate endDate,
                 @Param("userIds") String[] userIds,
-                @Param("orgId") String orgId
+                @Param("orgId") String orgId,
+                @Param("extraWorkedSeconds") int extraWorkedSeconds
         );
 
     List<TimesheetEntity> findActiveTimesheetsByDate(LocalDate today);
@@ -351,6 +354,8 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
                           AND th2.log_type = 'CLOCK_OUT'
                           AND th2.log_from = 'SYSTEM_GENERATED'
                     ) THEN 'Failed Clock Out'
+                    WHEN (EXTRACT(EPOCH FROM (t.last_clock_out - t.first_clock_in))) >= COALESCE(wsd.expected_seconds, 0) + :extraWorkedSeconds
+                    THEN 'OverTime'
                     WHEN (EXTRACT(EPOCH FROM (t.last_clock_out - t.first_clock_in))) >= COALESCE(wsd.expected_seconds, 0)
                     THEN 'Sufficient Hours'
                     ELSE 'Less Worked Hours'
@@ -361,7 +366,7 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
         th.id AS history_id,
         th.log_time,
         th.log_type,
-        th.location_id,
+        COALESCE(l.name, 'Unknown Location') AS location_name,
         th.log_from,
         th.logged_timestamp
     
@@ -375,15 +380,16 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
     LEFT JOIN work_schedule_type wst ON ws.work_schedule_type = wst.type_id
     LEFT JOIN WorkScheduleDuration wsd ON ws.work_schedule_id = wsd.work_schedule_id
     LEFT JOIN timesheet_history th ON t.id = th.timesheet_id
+    LEFT JOIN location l ON th.location_id = l.location_id
     LEFT JOIN UserGroups ug ON udm.user_id = ug.user_id
-    
     ORDER BY udm.user_id, udm.work_date, th.logged_timestamp
     """, nativeQuery = true)
     List<Object[]> fetchUserTimesheetsWithHistory(
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate,
             @Param("userIds") String[] userIds,
-            @Param("orgId") String orgId
+            @Param("orgId") String orgId,
+            @Param("extraWorkedSeconds") int extraWorkedSeconds
     );
 
     @Query(value = """
