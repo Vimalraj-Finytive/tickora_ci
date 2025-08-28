@@ -1,4 +1,4 @@
-package com.uniq.tms.tms_microservice.dto;
+package com.uniq.tms.tms_microservice.projection;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.time.LocalDate;

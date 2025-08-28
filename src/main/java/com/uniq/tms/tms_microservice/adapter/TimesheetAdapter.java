@@ -1,10 +1,11 @@
 package com.uniq.tms.tms_microservice.adapter;
 
-import com.uniq.tms.tms_microservice.dto.LogType;
+import com.uniq.tms.tms_microservice.enums.LogType;
 import com.uniq.tms.tms_microservice.dto.UserAttendanceDto;
-import com.uniq.tms.tms_microservice.dto.UserDashboard;
+import com.uniq.tms.tms_microservice.projection.UserDashboard;
 import com.uniq.tms.tms_microservice.dto.UserTimesheetDto;
 import com.uniq.tms.tms_microservice.dto.UserTimesheetResponseDto;
+import com.uniq.tms.tms_microservice.entity.LocationEntity;
 import com.uniq.tms.tms_microservice.entity.TimesheetEntity;
 import com.uniq.tms.tms_microservice.entity.TimesheetHistoryEntity;
 import com.uniq.tms.tms_microservice.entity.TimesheetStatusEntity;
@@ -34,4 +35,5 @@ public interface TimesheetAdapter {
     Optional<TimesheetStatusEntity> findById(String status);
     Optional<TimesheetStatusEntity> findByStatusName(String label);
     List<TimesheetEntity> findUserByStatusId(List<String> statusId, LocalDate startDate, LocalDate endDate);
+    LocationEntity getDefaultLocation(String orgId);
 }

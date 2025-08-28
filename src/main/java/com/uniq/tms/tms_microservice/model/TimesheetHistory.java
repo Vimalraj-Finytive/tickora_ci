@@ -1,14 +1,14 @@
 package com.uniq.tms.tms_microservice.model;
 
-import com.uniq.tms.tms_microservice.dto.LogFrom;
-import com.uniq.tms.tms_microservice.dto.LogType;
+import com.uniq.tms.tms_microservice.enums.LogFrom;
+import com.uniq.tms.tms_microservice.enums.LogType;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 
 public class TimesheetHistory {
 
-    private Long locationId;
+    private String locationName;
     private LocalTime logTime;
     private LogType logType;
     private LogFrom logFrom;
@@ -16,12 +16,12 @@ public class TimesheetHistory {
     private String userId;
     private LocalDate date;
 
-    public Long getLocationId() {
-        return locationId;
+    public String getLocationName() {
+        return locationName;
     }
 
-    public void setLocationId(Long locationId) {
-        this.locationId = locationId;
+    public void setLocationName(String locationName) {
+        this.locationName = locationName;
     }
 
     public LocalTime getLogTime() {

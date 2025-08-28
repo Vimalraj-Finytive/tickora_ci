@@ -1,4 +1,4 @@
-package com.uniq.tms.tms_microservice.dto;
+package com.uniq.tms.tms_microservice.enums;
 
 public enum UserRole {
     SUPERADMIN(1), ADMIN(2), MANAGER(3), STAFF(4), STUDENT(5);

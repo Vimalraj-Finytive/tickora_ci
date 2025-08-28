@@ -8,7 +8,7 @@ import com.uniq.tms.tms_microservice.config.security.schema.TenantContext;
 import com.uniq.tms.tms_microservice.dto.ApiResponse;
 import com.uniq.tms.tms_microservice.dto.ChangePasswordDto;
 import com.uniq.tms.tms_microservice.dto.OrganizationDropdownDto;
-import com.uniq.tms.tms_microservice.dto.PrivilegeConstants;
+import com.uniq.tms.tms_microservice.enums.PrivilegeConstants;
 import com.uniq.tms.tms_microservice.entity.SecondaryDetailsEntity;
 import com.uniq.tms.tms_microservice.entity.UserEntity;
 import com.uniq.tms.tms_microservice.enums.CountryEnum;

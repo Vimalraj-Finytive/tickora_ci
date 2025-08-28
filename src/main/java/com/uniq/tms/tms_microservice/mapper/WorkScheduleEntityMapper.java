@@ -8,14 +8,12 @@ import com.uniq.tms.tms_microservice.entity.WorkScheduleEntity;
 import com.uniq.tms.tms_microservice.enums.DayOfWeekEnum;
 import com.uniq.tms.tms_microservice.model.WorkSchedule;
 import com.uniq.tms.tms_microservice.model.WorkScheduleType;
-import org.mapstruct.AfterMapping;
-import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
-import org.mapstruct.MappingTarget;
+import org.mapstruct.*;
+
 import java.sql.Time;
 import java.util.List;
 
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface WorkScheduleEntityMapper {
 
     @Mapping(source = "type", target = "type")

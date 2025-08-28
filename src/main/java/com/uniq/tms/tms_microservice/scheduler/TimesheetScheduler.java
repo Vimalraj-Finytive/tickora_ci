@@ -23,14 +23,15 @@ public class TimesheetScheduler {
         this.organizationRepository = organizationRepository;
     }
 
-    @Scheduled(cron = "0 0 0 * * ?")
+    @Scheduled(cron = "0 0/2 * * * ?")
     public void autoClockOutForAllEmployees() {
         try{
             List<OrganizationEntity> orgIds = organizationRepository.findAll();
             for(OrganizationEntity orgId : orgIds) {
                 TenantUtil.setCurrentTenant(orgId.getSchemaName());
                 log.info("Scheduled clock triggered for schema:{}", orgId.getSchemaName());
-                timesheetService.autoClockOut();
+                String organizationId = orgId.getOrganizationId();
+                timesheetService.autoClockOut(organizationId);
             }
         } catch (Exception e) {
             log.error("Error while auto clock out", e);

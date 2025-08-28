@@ -1,6 +1,6 @@
 package com.uniq.tms.tms_microservice.repository;
 
-import com.uniq.tms.tms_microservice.dto.WorkScheduleData;
+import com.uniq.tms.tms_microservice.projection.WorkScheduleData;
 import com.uniq.tms.tms_microservice.entity.WorkScheduleEntity;
 import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;

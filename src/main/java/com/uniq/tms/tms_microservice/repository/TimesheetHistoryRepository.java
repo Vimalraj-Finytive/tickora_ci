@@ -1,6 +1,6 @@
 package com.uniq.tms.tms_microservice.repository;
 
-import com.uniq.tms.tms_microservice.dto.LogType;
+import com.uniq.tms.tms_microservice.enums.LogType;
 import com.uniq.tms.tms_microservice.entity.TimesheetEntity;
 import com.uniq.tms.tms_microservice.entity.TimesheetHistoryEntity;
 import jakarta.transaction.Transactional;

@@ -2,7 +2,7 @@ package com.uniq.tms.tms_microservice.config.security.jwt;
 
 import com.uniq.tms.tms_microservice.config.security.schema.TenantContext;
 import com.uniq.tms.tms_microservice.config.security.user.CustomUserDetails;
-import com.uniq.tms.tms_microservice.dto.PrivilegeConstants;
+import com.uniq.tms.tms_microservice.enums.PrivilegeConstants;
 import com.uniq.tms.tms_microservice.entity.UserEntity;
 import com.uniq.tms.tms_microservice.helper.RolePrivilegeHelper;
 import com.uniq.tms.tms_microservice.repository.BlacklistedTokenRepository;
@@ -97,9 +97,19 @@ public class JwtFilter extends OncePerRequestFilter {
                 if (rolePrivilegeHelper.roleHasPrivilege(role, emailKey)) {
                     user = userRepository.findByEmail(subject);
                     log.info("user from repo :{}", user);
+                    if (!user.isActive()){
+                        log.info("Your account is deactivated");
+                        sendErrorResponse(response, HttpServletResponse.SC_FORBIDDEN, "Your account has been Inactivated.");
+                        return;
+                    }
                 } else if (rolePrivilegeHelper.roleHasPrivilege(role, mobileKey)) {
                     user = userRepository.findByMobileNumber(subject);
                     log.info("mobile user from repo:{}", user);
+                    if (!user.isActive()){
+                        log.info("Your account is deactivated.");
+                        sendErrorResponse(response, HttpServletResponse.SC_FORBIDDEN, "Your account has been Inactivated.");
+                        return;
+                    }
                 }
 
                 if (user == null) {
