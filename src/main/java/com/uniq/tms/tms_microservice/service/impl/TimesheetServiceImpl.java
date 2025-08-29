@@ -19,11 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import java.math.RoundingMode;
 import java.text.DecimalFormat;
-import java.time.DayOfWeek;
-import java.time.Duration;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
+import java.time.*;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -299,7 +295,9 @@ public class TimesheetServiceImpl implements TimesheetService {
                 date = history.getLoggedTimestamp().toLocalDate();
             }
 
-            LocalDate finalDate = date;
+//            LocalDate finalDate = date;
+            ZoneId IST = ZoneId.of("Asia/Kolkata");
+            LocalDate finalDate = LocalDate.now(IST);
             timesheet = timesheetAdapter.findByUserIdAndDate(userId, date)
                     .orElseGet(() -> {
                         TimesheetEntity newTimesheet = new TimesheetEntity();
