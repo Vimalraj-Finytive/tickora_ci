@@ -398,8 +398,10 @@ public class AuthFacade {
     public List<UserDashboardDto> getAllUserInfo( DashboardDto request) {
         LocalDate fromDate = request.getFromDate();
         LocalDate toDate = request.getToDate();
-        if (toDate.isAfter(LocalDate.now())) {
-            toDate = LocalDate.now();
+        if (toDate.isAfter(LocalDate.now(ZoneId.of("Asia/Kolkata"))
+)) {
+            toDate = LocalDate.now(ZoneId.of("Asia/Kolkata"))
+;
         }
         String userId = request.getUserId();
 

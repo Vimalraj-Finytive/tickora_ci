@@ -61,7 +61,8 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
         List<Object[]> resultList = timesheetRepository.fetchTimesheetsWithHistory(startDate, endDate, userIdArray, orgId, extraWorkedSeconds);
 
         Map<String, TimesheetDto> timesheetMap = new LinkedHashMap<>();
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Kolkata"))
+;
 
         Map<String, List<TimesheetDto>> userTimesheetListMap = new HashMap<>();
 
@@ -165,7 +166,8 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
                     holiday++;
                     if (t.getStatus() == null) t.setStatus(TimesheetStatusEnum.HOLIDAY.getLabel());
                 } else if (t.getStatus() == null) {
-                    if (endDate.equals(LocalDate.now())) {
+                    if (endDate.equals(LocalDate.now(ZoneId.of("Asia/Kolkata"))
+)) {
                         notMarked++;
                         t.setStatus(TimesheetStatusEnum.NOT_MARKED.getLabel());
                     } else {
@@ -394,7 +396,8 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
         List<Object[]> resultList = timesheetRepository.fetchUserTimesheetsWithHistory(startDate, endDate, userIdArray, orgId, extraWorkedSeconds);
 
         Map<String, UserTimesheetDto> timesheetMap = new LinkedHashMap<>();
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Kolkata"))
+;
 
         WorkScheduleEntity schedule = workScheduleAdapter.findDefaultActiveSchedule(orgId);
         if (schedule == null) {
@@ -502,7 +505,8 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
                         t.setStatus(TimesheetStatusEnum.HOLIDAY.getLabel());
                     }
                 } else if (t.getStatus() == null) {
-                    if (t.getDate().equals(LocalDate.now())) {
+                    if (t.getDate().equals(LocalDate.now(ZoneId.of("Asia/Kolkata"))
+)) {
                         notMarked++;
                         t.setStatus(TimesheetStatusEnum.NOT_MARKED.getLabel());
                     } else {

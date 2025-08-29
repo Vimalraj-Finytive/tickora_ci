@@ -70,15 +70,19 @@ public class TimesheetServiceImpl implements TimesheetService {
             startDate = range.startDate();
             endDate = range.endDate();
             log.info("startDate: {}, endDate: {}", startDate, endDate);
-            if (endDate.isAfter(LocalDate.now())) {
-                endDate = LocalDate.now();
+            if (endDate.isAfter(LocalDate.now(ZoneId.of("Asia/Kolkata"))
+)) {
+                endDate = LocalDate.now(ZoneId.of("Asia/Kolkata"))
+;
                 log.info("endDate: {}", endDate);
             }
         } else if (fromDate != null && toDate != null) {
             startDate = fromDate;
             endDate = toDate;
-            if (endDate.isAfter(LocalDate.now())) {
-                endDate = LocalDate.now();
+            if (endDate.isAfter(LocalDate.now(ZoneId.of("Asia/Kolkata"))
+)) {
+                endDate = LocalDate.now(ZoneId.of("Asia/Kolkata"))
+;
                 log.info("endDate: {}", endDate);
             }
         }
@@ -344,7 +348,10 @@ public class TimesheetServiceImpl implements TimesheetService {
             isNew = true;
             timesheet = new TimesheetEntity();
             timesheet.setUserId(userId);
-            timesheet.setDate(date);
+//            timesheet.setDate(date);
+            ZoneId IST = ZoneId.of("Asia/Kolkata");
+            timesheet.setDate(LocalDate.now(IST));
+
             timesheet.setCreatedAt(LocalDateTime.now());
             timesheet.setFirstClockIn(null);
             timesheet.setLastClockOut(null);
@@ -455,7 +462,8 @@ public class TimesheetServiceImpl implements TimesheetService {
 
     @Override
     public void autoClockOut(String orgId) {
-        LocalDate yesterday = LocalDate.now().minusDays(1);
+        LocalDate yesterday = LocalDate.now(ZoneId.of("Asia/Kolkata"))
+.minusDays(1);
         List<TimesheetEntity> openClockIns = timesheetAdapter.findActiveTimesheetsByDate(yesterday);
         List<TimesheetHistoryEntity> historyEntries = new ArrayList<>();
 
@@ -591,7 +599,8 @@ public class TimesheetServiceImpl implements TimesheetService {
 
         for (LocalDate date = fromDate; !date.isAfter(toDate); date = date.plusDays(1)) {
             DayOfWeek currentDay = date.getDayOfWeek();
-            boolean isToday = date.equals(LocalDate.now());
+            boolean isToday = date.equals(LocalDate.now(ZoneId.of("Asia/Kolkata"))
+);
 
             for (String userId : userIds) {
                 total++;
@@ -674,20 +683,25 @@ public class TimesheetServiceImpl implements TimesheetService {
             startDate = range.startDate();
             endDate = range.endDate();
             log.info("startDate: {}, endDate: {}", startDate, endDate);
-            if (endDate.isAfter(LocalDate.now())) {
-                endDate = LocalDate.now();
+            if (endDate.isAfter(LocalDate.now(ZoneId.of("Asia/Kolkata"))
+)) {
+                endDate = LocalDate.now(ZoneId.of("Asia/Kolkata"))
+;
                 log.info("endDate: {}", endDate);
             }
         } else if (fromDate != null && toDate != null) {
             startDate = fromDate;
             endDate = toDate;
             log.info("startDate: {}, endDate: {}", startDate, endDate);
-            if (endDate.isAfter(LocalDate.now())) {
-                endDate = LocalDate.now();
+            if (endDate.isAfter(LocalDate.now(ZoneId.of("Asia/Kolkata"))
+)) {
+                endDate = LocalDate.now(ZoneId.of("Asia/Kolkata"))
+;
                 log.info("endDate: {}", endDate);
             }
         } else if (fromDate == null && toDate == null && userIds != null) {
-            endDate = LocalDate.now();
+            endDate = LocalDate.now(ZoneId.of("Asia/Kolkata"))
+;
         }
 
         List<UserTimesheetDto> rawResults = timesheetAdapter.fetchUserTimesheetsWithHistory(startDate, endDate, userIds, orgId);

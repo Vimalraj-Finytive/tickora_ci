@@ -2163,7 +2163,8 @@ public class UserServiceImpl implements UserService {
             String customUserId = idGenerationService.generateNextUserId(organizationId);
             entity.setUserId(customUserId);
             entity.setRole(role);
-            entity.setDateOfJoining(LocalDate.now());
+            entity.setDateOfJoining(LocalDate.now(ZoneId.of("Asia/Kolkata"))
+);
 
             String defaultPassword = PasswordUtil.generateDefaultPassword();
             entity.setPassword(PasswordUtil.encryptPassword(defaultPassword));
