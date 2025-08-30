@@ -14,6 +14,9 @@ public class ParentDto{
         this.mobileNumber = mobile;
     }
 
+    public ParentDto(){
+
+    }
     public String getParentId() {
         return parentId;
     }

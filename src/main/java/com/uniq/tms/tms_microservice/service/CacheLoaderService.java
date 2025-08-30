@@ -13,7 +13,7 @@ public interface CacheLoaderService {
     void loadAllRolesToCache(String orgId, String schema);
     void loadPrivilegesFromDB(String schema);
     String getPrivilegeKey(PrivilegeConstants constant);
-    CompletableFuture<Map<String, UserProfileResponse>> loadUsersProfile(String orgId, String schema);
+    CompletableFuture<Map<String, UserProfileResponseDto>> loadUsersProfile(String orgId, String schema);
     CompletableFuture<List<GroupResponseDto>> loadGroupsCache(String orgId, String schema);
     CompletableFuture<Map<String, List<WorkScheduleDto>>> loadWorkSchedule(String orgId, String schema);
     CompletableFuture<Map<String, List<UserResponseDto>>> loadAllInactiveUsers(String orgId, String schema);

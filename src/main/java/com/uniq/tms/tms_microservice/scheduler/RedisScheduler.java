@@ -3,6 +3,7 @@ package com.uniq.tms.tms_microservice.scheduler;
 import com.uniq.tms.tms_microservice.entity.OrganizationEntity;
 import com.uniq.tms.tms_microservice.repository.OrganizationRepository;
 import com.uniq.tms.tms_microservice.service.CacheLoaderService;
+import com.uniq.tms.tms_microservice.util.TenantUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -29,7 +30,9 @@ public class RedisScheduler {
         try {
             List<OrganizationEntity> orgIds = organizationRepository.findAll();
             for(OrganizationEntity orgId : orgIds){
+                TenantUtil.setCurrentTenant(orgId.getSchemaName());
                 cacheLoaderService.loadLocationTable(orgId.getOrganizationId(),orgId.getSchemaName());
+                TenantUtil.clearTenant();
             }
             log.info("Location Cache loading completed");
         } catch (Exception e) {
@@ -43,7 +46,9 @@ public class RedisScheduler {
         try {
             List<OrganizationEntity> orgIds = organizationRepository.findAll();
             for(OrganizationEntity orgId : orgIds){
+                TenantUtil.setCurrentTenant(orgId.getSchemaName());
                 cacheLoaderService.loadAllUsers(orgId.getOrganizationId(),orgId.getSchemaName());
+                TenantUtil.clearTenant();
             }
             log.info("Cache User loading completed");
         } catch (Exception e) {
@@ -57,7 +62,9 @@ public class RedisScheduler {
         try {
             List<OrganizationEntity> orgIds = organizationRepository.findAll();
             for(OrganizationEntity orgId : orgIds){
+                TenantUtil.setCurrentTenant(orgId.getSchemaName());
                 cacheLoaderService.loadUsersProfile(orgId.getOrganizationId(),orgId.getSchemaName());
+                TenantUtil.clearTenant();
             }
             log.info("Cache User Profile loading completed");
         } catch (Exception e) {
@@ -71,7 +78,9 @@ public class RedisScheduler {
         try {
             List<OrganizationEntity> orgIds = organizationRepository.findAll();
             for(OrganizationEntity orgId : orgIds) {
+                TenantUtil.setCurrentTenant(orgId.getSchemaName());
                 cacheLoaderService.loadGroupsCache(orgId.getOrganizationId(),orgId.getSchemaName());
+                TenantUtil.clearTenant();
             }
             log.info("Cache Role loading completed");
         } catch (Exception e) {
@@ -85,7 +94,9 @@ public class RedisScheduler {
         try {
             List<OrganizationEntity> orgIds = organizationRepository.findAll();
             for(OrganizationEntity orgId : orgIds) {
+                TenantUtil.setCurrentTenant(orgId.getSchemaName());
                 cacheLoaderService.loadPrivilegesFromDB(orgId.getSchemaName());
+                TenantUtil.clearTenant();
             }
             log.info("Cache Privilege loading completed");
         } catch (Exception e) {
@@ -99,7 +110,9 @@ public class RedisScheduler {
         try {
             List<OrganizationEntity> orgIds = organizationRepository.findAll();
             for(OrganizationEntity orgId : orgIds) {
+                TenantUtil.setCurrentTenant(orgId.getSchemaName());
                 cacheLoaderService.loadGroupsCache(orgId.getOrganizationId(),orgId.getSchemaName());
+                TenantUtil.clearTenant();
             }
             log.info("Cache Groups loading completed");
         } catch (Exception e) {
@@ -112,7 +125,9 @@ public class RedisScheduler {
         try {
             List<OrganizationEntity> orgIds = organizationRepository.findAll();
             for(OrganizationEntity orgId : orgIds) {
+                TenantUtil.setCurrentTenant(orgId.getSchemaName());
                 cacheLoaderService.loadWorkSchedule(orgId.getOrganizationId(),orgId.getSchemaName());
+                TenantUtil.clearTenant();
             }
             log.info("Cache WorkSchedule loading completed");
         } catch (Exception e) {
@@ -126,7 +141,9 @@ public class RedisScheduler {
         try {
             List<OrganizationEntity> orgIds = organizationRepository.findAll();
             for(OrganizationEntity orgId : orgIds){
+                TenantUtil.setCurrentTenant(orgId.getSchemaName());
                 cacheLoaderService.loadAllInactiveUsers(orgId.getOrganizationId(),orgId.getSchemaName());
+                TenantUtil.clearTenant();
             }
             log.info("Cache Inactive User loading completed");
         } catch (Exception e) {

@@ -59,7 +59,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 import java.io.*;
-import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -936,6 +935,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public User updateUser(CreateUserDto updates, String orgId, String userId) {
         String schema = TenantUtil.getCurrentTenant();
         UserEntity existingUser = userAdapter.findById(userId)
@@ -962,106 +962,124 @@ public class UserServiceImpl implements UserService {
         List<Long> location = userDto.getLocationId();
         List<Long> group = userDto.getGroupId();
 
-        if (userDto != null) {
+        if (userDto.getRoleId() != null) {
+            existingUser.setRole(userAdapter.findRoleById(userDto.getRoleId())
+                    .orElseThrow(() -> new RuntimeException("Role not found")));
+        }
+        if (userDto.getEmail() != null) {
+            existingUser.setEmail(userDto.getEmail());
+        }
+        if (userDto.getUserName() != null) {
+            existingUser.setUserName(userDto.getUserName());
+        }
+        if (userDto.getMobileNumber() != null) {
+            existingUser.setMobileNumber(userDto.getMobileNumber());
+        }
+        if (userDto.isRegisterUser()) {
+            existingUser.setRegisterUser(userDto.isRegisterUser());
+        }
+        if (userDto.getWorkSchedule() != null) {
+            existingUser.setWorkSchedule(workScheduleAdapter.findByScheduleId(userDto.getWorkSchedule(), orgId));
+        }
+        if (location != null) {
+            Set<Long> toDelete = new HashSet<>(userLocation);
+            location.forEach(toDelete::remove);
+            Set<Long> toInsert = new HashSet<>(location);
+            userLocation.forEach(toInsert::remove);
+            if (!toDelete.isEmpty()) {
+                userAdapter.deleteUserLocationByUserId(userId, toDelete);
+                log.info("Deleted user location: {}", toDelete);
+            }
+            if (!toInsert.isEmpty()) {
+                List<UserLocationEntity> newEntities = toInsert.stream()
+                        .map(locations ->
+                        {
+                            UserLocationEntity userLocationEntity = new UserLocationEntity();
+                            userLocationEntity.setUser(existingUser);
+                            userLocationEntity.setLocation(locationRepository.findById(locations)
+                                    .orElseThrow(() -> new RuntimeException("Location not found")));
+                            return userLocationEntity;
+                        })
+                        .toList();
+                userAdapter.updateUserLocationByUserId(newEntities);
+                log.info("Added user location: {}", toInsert);
+            }
+        }
+        if (group != null) {
+            Set<Long> toDelete = new HashSet<>(userGroup);
+            group.forEach(toDelete::remove);
+            Set<Long> toInsert = new HashSet<>(group);
+            userGroup.forEach(toInsert::remove);
+            if (!toDelete.isEmpty()) {
+                userAdapter.deleteUserGroupByUserId(userId, toDelete);
+                log.info("Deleted user group: {}", toDelete);
+            }
+            if (!toInsert.isEmpty()) {
+                List<UserGroupEntity> newEntities = toInsert.stream()
+                        .map(groups ->
+                        {
+                            UserGroupEntity userGroupEntity = new UserGroupEntity();
+                            userGroupEntity.setUser(existingUser);
+                            userGroupEntity.setGroup(teamRepository.findById(groups)
+                                    .orElseThrow(() -> new RuntimeException("Group not found")));
+                            return userGroupEntity;
+                        })
+                        .toList();
+                userAdapter.updateUserGroupByUserId(newEntities);
+            }
+        }
+        if (userDto.getDateOfJoining() != null) {
+            existingUser.setDateOfJoining(userDto.getDateOfJoining());
+        }
 
-            if (userDto.getRoleId() != null) {
-                existingUser.setRole(userAdapter.findRoleById(userDto.getRoleId())
-                        .orElseThrow(() -> new RuntimeException("Role not found")));
-            }
-            if (userDto.getEmail() != null) {
-                existingUser.setEmail(userDto.getEmail());
-            }
-            if (userDto.getUserName() != null) {
-                existingUser.setUserName(userDto.getUserName());
-            }
-            if (userDto.getMobileNumber() != null) {
-                existingUser.setMobileNumber(userDto.getMobileNumber());
-            }
-            if (userDto.isRegisterUser()) {
-                existingUser.setRegisterUser(userDto.isRegisterUser());
-            }
-            if (userDto.getWorkSchedule() != null) {
-                existingUser.setWorkSchedule(workScheduleAdapter.findByScheduleId(userDto.getWorkSchedule(), orgId));
-            }
-            if (location != null) {
-                Set<Long> toDelete = new HashSet<>(userLocation);
-                toDelete.removeAll(location);
-                Set<Long> toInsert = new HashSet<>(location);
-                toInsert.removeAll(userLocation);
-                if (toDelete.size() > 0) {
-                    userAdapter.deleteUserLocationByUserId(userId, toDelete);
-                    log.info("Deleted user location: {}", toDelete);
-                }
-                if (toInsert.size() > 0) {
-                    List<UserLocationEntity> newEntities = toInsert.stream()
-                            .map(locations ->
-                            {
-                                UserLocationEntity userLocationEntity = new UserLocationEntity();
-                                userLocationEntity.setUser(existingUser);
-                                userLocationEntity.setLocation(locationRepository.findById(locations)
-                                        .orElseThrow(() -> new RuntimeException("Location not found")));
-                                return userLocationEntity;
-                            })
-                            .toList();
-                    userAdapter.updateUserLocationByUserId(newEntities);
-                    log.info("Added user location: {}", toInsert);
-                }
-            }
-            if (group != null) {
-                Set<Long> toDelete = new HashSet<>(userGroup);
-                toDelete.removeAll(group);
-                Set<Long> toInsert = new HashSet<>(group);
-                toInsert.removeAll(userGroup);
-                if (toDelete.size() > 0) {
-                    userAdapter.deleteUserGroupByUserId(userId, toDelete);
-                    log.info("Deleted user group: {}", toDelete);
-                }
-                if (toInsert.size() > 0) {
-                    List<UserGroupEntity> newEntities = toInsert.stream()
-                            .map(groups ->
-                            {
-                                UserGroupEntity userGroupEntity = new UserGroupEntity();
-                                userGroupEntity.setUser(existingUser);
-                                userGroupEntity.setGroup(teamRepository.findById(groups)
-                                        .orElseThrow(() -> new RuntimeException("Group not found")));
-                                return userGroupEntity;
-                            })
-                            .toList();
-                    userAdapter.updateUserGroupByUserId(newEntities);
-                }
-            }
-            if (userDto.getDateOfJoining() != null) {
-                existingUser.setDateOfJoining(userDto.getDateOfJoining());
-            }
+        String key = cacheLoaderService.getPrivilegeKey(PrivilegeConstants.HAVE_SECONDARY_DETAILS);
+        boolean hasSecondaryDetailsPrivilege = rolePrivilegeHelper.roleHasPrivilege(existingUser.getRole().getName(), key);
+        SecondaryDetailsEntity savedSecondaryUser = null;
+        if (hasSecondaryDetailsPrivilege) {
+            SecondaryDetailsDto secondaryDetails = updates.getSecondaryDetails();
 
-            String key = cacheLoaderService.getPrivilegeKey(PrivilegeConstants.HAVE_SECONDARY_DETAILS);
-            boolean hasSecondaryDetailsPrivilege = rolePrivilegeHelper.roleHasPrivilege(existingUser.getRole().getName(), key);
-            if (hasSecondaryDetailsPrivilege) {
-                SecondaryDetailsDto secondaryDetails = updates.getSecondaryDetails();
-                SecondaryDetailsEntity existingSecondaryUser = userAdapter.findSecondaryUserById(userId)
-                        .orElseThrow(() -> new RuntimeException("Secondary User not found"));
-                System.out.println("Fetched Secondary User Id: " + existingSecondaryUser.getId());
-                System.out.println("Fetched Secondary User's User Id: " + existingSecondaryUser.getUser().getUserId());
+            if (secondaryDetails != null) {
+                Optional<SecondaryDetailsEntity> existingSecondaryUser = userAdapter.findSecondaryUserById(userId);
+                SecondaryDetailsEntity secondaryUser;
 
-                if (secondaryDetails != null) {
-                    if (secondaryDetails.getUserName() != null) {
-                        existingSecondaryUser.setUserName(secondaryDetails.getUserName());
-                    }
-                    if (secondaryDetails.getMobile() != null) {
-                        existingSecondaryUser.setMobile(secondaryDetails.getMobile());
-                    }
-                    if (secondaryDetails.getEmail() != null) {
-                        existingSecondaryUser.setEmail(TextUtil.trim(secondaryDetails.getEmail()));
-                    }
-                    if (secondaryDetails.getRelation() != null) {
-                        existingSecondaryUser.setRelation(secondaryDetails.getRelation());
-                    }
-
+                if (existingSecondaryUser.isPresent()) {
+                    secondaryUser = existingSecondaryUser.get();
+                    log.info("Updating existing secondary details for userId: {}", existingUser.getUserId());
+                } else {
+                    secondaryUser = new SecondaryDetailsEntity();
+                    secondaryUser.setId(idGenerationService.generateNextSecondaryUserId(orgId));
+                    secondaryUser.setUser(existingUser);
+                    log.info("Creating new secondary details row for userId: {}", existingUser.getUserId());
                 }
-                userAdapter.saveSecondaryDetails(existingSecondaryUser);
+
+                if (secondaryDetails.getUserName() != null) {
+                    secondaryUser.setUserName(secondaryDetails.getUserName());
+                }
+                if (secondaryDetails.getMobile() != null) {
+                    secondaryUser.setMobile(secondaryDetails.getMobile());
+                }
+                if (secondaryDetails.getEmail() != null) {
+                    secondaryUser.setEmail(TextUtil.trim(secondaryDetails.getEmail()));
+                }
+                if (secondaryDetails.getRelation() != null) {
+                    secondaryUser.setRelation(secondaryDetails.getRelation());
+                }
+                savedSecondaryUser = userAdapter.saveSecondaryDetails(secondaryUser);
             } else {
-                System.out.println("User Role Id: " + existingUser.getRole().getRoleId());
+                log.info("No secondary details provided. Skipping secondary details update.");
             }
+            if (savedSecondaryUser != null) {
+                log.info("Updating secondary user mapping in public.user_map table");
+                UserSchemaMappingEntity secondaryMappings = userEntityMapper.toSchema(
+                        null,
+                        savedSecondaryUser.getMobile(),
+                        orgId,
+                        TenantContext.getCurrentTenant()
+                );
+                userAdapter.create(secondaryMappings);
+            }
+        } else {
+            log.info("User Role Id: {} does not have secondary details privilege", existingUser.getRole().getRoleId());
         }
         userAdapter.updateUser(existingUser);
         if (isRedisEnabled) {
@@ -1079,35 +1097,6 @@ public class UserServiceImpl implements UserService {
         return userEntityMapper.toMiddleware(existingUser);
     }
 
-    private void setField(UserEntity user, String key, Object value) {
-        try {
-            Field field = UserEntity.class.getDeclaredField(key);
-            field.setAccessible(true);
-            field.set(user, convertValue(field.getType(), value));
-        } catch (NoSuchFieldException | IllegalAccessException e) {
-            throw new RuntimeException("Error updating field: " + key, e);
-        }
-    }
-
-    private Object convertValue(Class<?> fieldType, Object value) {
-        if (value == null) {
-            return null;
-        }
-        if (fieldType.equals(Long.class) || fieldType.equals(long.class)) {
-            return Long.parseLong(value.toString());
-        }
-        if (fieldType.equals(Integer.class) || fieldType.equals(int.class)) {
-            return Integer.parseInt(value.toString());
-        }
-        if (fieldType.equals(Double.class)) {
-            return Double.parseDouble(value.toString());
-        }
-        if (fieldType.equals(LocalDate.class)) {
-            return LocalDate.parse(value.toString(), DateTimeFormatter.ofPattern("yyyy-MM-dd"));
-        }
-        return value;
-    }
-
     @Override
     public List<UserResponseDto> getUsers(String orgId, String role) {
         return fetchActiveUsers(orgId, role);
@@ -1115,37 +1104,44 @@ public class UserServiceImpl implements UserService {
 
     private List<UserResponseDto> fetchActiveUsers(String orgId, String role) {
         String schema = TenantUtil.getCurrentTenant();
-        log.info("Current active user tenant:{}", schema);
-        String userCacheKey = cacheKeyUtil.getMemberKey(orgId,schema);
+        log.info("Fetching active users | tenant: {}", schema);
+
+        String userCacheKey = cacheKeyUtil.getMemberKey(orgId, schema);
         String roleField = role.toLowerCase();
-        log.info("roleField:{}", roleField);
+        log.info("Fetching from cache key: {}, field: {}", userCacheKey, roleField);
+
         try {
+            // 1. Try fetching from Redis first
             if (redisTemplate != null) {
                 Object cachedObj = redisTemplate.opsForHash().get(userCacheKey, roleField);
-                if (cachedObj != null) {
-                    log.info("Cache hit for Active User orgId={}, role={}", orgId, role);
-                    return (List<UserResponseDto>) cachedObj;
+
+                if (cachedObj instanceof List<?> cachedList && !cachedList.isEmpty()) {
+                    log.info("Cache hit | orgId={}, role={}", orgId, role);
+                    return (List<UserResponseDto>) cachedList;
+                } else {
+                    log.warn("Cache miss or empty list | orgId={}, role={}", orgId, role);
                 }
             } else {
-                log.warn("RedisTemplate is null, skipping cache fetch for Active User key: {}, field: {}", userCacheKey, roleField);
+                log.warn("RedisTemplate is null, skipping cache fetch for key: {}, field: {}", userCacheKey, roleField);
             }
 
-            // 2. Cache miss or Redis unavailable - load all into Redis (and also get fresh data)
-            log.info("Cache miss for Active user orgId={}, role={}. Loading from DB...", orgId, role);
-            Map<String, List<UserResponseDto>> roleMap = cacheLoaderService.loadAllUsers(orgId,schema).get();
-            log.info("rolemap:{}", roleMap);
-            String loggedRole = roleField.toUpperCase();
-            List<UserResponseDto> fallbackList = roleMap.get(loggedRole);
-            if (fallbackList != null && !fallbackList.isEmpty()) {
-                log.info("Returning response from DB for All Users");
-                return fallbackList;
+            // 2. Cache miss OR empty cache → Fetch from DB & reload cache
+            log.info("Loading fresh users from DB for orgId={}, role={}", orgId, role);
+            Map<String, List<UserResponseDto>> roleMap = cacheLoaderService.loadAllUsers(orgId, schema).get();
+
+            List<UserResponseDto> freshUsers = roleMap.get(role.toUpperCase());
+
+            if (freshUsers != null && !freshUsers.isEmpty()) {
+                log.info("Returning fresh users from DB for orgId={}, role={}", orgId, role);
+                return freshUsers;
             }
 
         } catch (Exception e) {
-            log.error("Failed to fetch users for orgId={}, role={}. Error: {}", orgId, role, e.getMessage(), e);
+            log.error("Failed to fetch users | orgId={}, role={}. Error: {}", orgId, role, e.getMessage(), e);
         }
 
-        throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No Users found for this organization");
+        // 3. If everything fails → Throw exception
+        throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No users found for this organization");
     }
 
     @Override
@@ -1413,21 +1409,21 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public UserProfileResponse getUserProfile(String orgId, String userId) {
+    public UserProfileResponseDto getUserProfile(String orgId, String userId) {
         String schema = TenantUtil.getCurrentTenant();
         log.info("Current User Profile tenant:{}", schema);
         String redisKey = cacheKeyUtil.getProfileKey(orgId,schema);
         try {
             if (redisTemplate != null) {
-                UserProfileResponse cachedData = (UserProfileResponse) redisTemplate.opsForHash().get(redisKey, userId);
+                UserProfileResponseDto cachedData = (UserProfileResponseDto) redisTemplate.opsForHash().get(redisKey, userId);
                 if (cachedData != null) {
                     log.info("Cache hit for userId {} in orgId {}", userId, orgId);
                     return cachedData;
                 }else{
                     log.info("Cache miss for userId {}, loading from DB...", userId);
-                    Map<String, UserProfileResponse> loadedProfiles = cacheLoaderService.loadUsersProfile(orgId,schema).get();
+                    Map<String, UserProfileResponseDto> loadedProfiles = cacheLoaderService.loadUsersProfile(orgId,schema).get();
 
-                    UserProfileResponse response = loadedProfiles.get(userId);
+                    UserProfileResponseDto response = loadedProfiles.get(userId);
                     if (response != null) {
                         log.info("Fallback DB profile returned for userId {}", userId);
                         return response;
@@ -1448,7 +1444,7 @@ public class UserServiceImpl implements UserService {
         }
     }
 
-    public UserProfileResponse loadSingleUserProfile(String orgId, String userId) {
+    public UserProfileResponseDto loadSingleUserProfile(String orgId, String userId) {
         UserEntity user = userAdapter.findUserByOrgIdAndUserId(orgId, userId);
         if (user == null) {
             log.warn("User not found for userId {} in orgId {}", userId, orgId);
@@ -1489,7 +1485,7 @@ public class UserServiceImpl implements UserService {
                     .toList();
         }
 
-        return new UserProfileResponse(
+        return new UserProfileResponseDto(
                 userId,
                 user.getUserName(),
                 user.getEmail(),

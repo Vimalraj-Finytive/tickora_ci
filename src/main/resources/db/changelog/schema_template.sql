@@ -141,7 +141,7 @@ WHERE (role_id, privilege_id) IN (
     (4,21), (4,22), (4,26),
 
     -- Student (Applied only if academic)
-    (5,13), (5,15), (5,18), (5,22), (5,24))
+    (5,13), (5,15), (5,18), (5,23), (5,24))
 AND (
     '${orgType}' = 'ORGTY001'
     OR role_id <> 5

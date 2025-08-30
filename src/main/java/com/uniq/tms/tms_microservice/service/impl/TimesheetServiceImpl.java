@@ -117,13 +117,15 @@ public class TimesheetServiceImpl implements TimesheetService {
         boolean hasStatusFilter = statusId != null && !statusId.isEmpty();
 
         if (canSeeOwn && canSeeGroup && canSeeAll) {
-            if(userId != null && !userId.isEmpty() && userId.equals(userIdFromToken)){
+            if(userId != null && !userId.isEmpty() && userId.contains(userIdFromToken)){
+                log.info("Logged user timesheet");
                 return List.of(currentUser);
             }
             List<UserEntity> allUsers = userAdapter.getAllUsers(orgId, userIdFromToken, UserRole.SUPERADMIN.getHierarchyLevel());
             Stream<UserEntity> filteredStream = allUsers.stream();
 
             if(userId!=null && !userId.isEmpty()){
+                log.info("Heirarchy level user timesheet");
                 filteredStream = filteredStream
                         .filter(user -> userId.contains(user.getUserId()));
             }
@@ -299,9 +301,7 @@ public class TimesheetServiceImpl implements TimesheetService {
                 date = history.getLoggedTimestamp().toLocalDate();
             }
 
-//            LocalDate finalDate = date;
-            ZoneId IST = ZoneId.of("Asia/Kolkata");
-            LocalDate finalDate = LocalDate.now(IST);
+            LocalDate finalDate = date;
             timesheet = timesheetAdapter.findByUserIdAndDate(userId, date)
                     .orElseGet(() -> {
                         TimesheetEntity newTimesheet = new TimesheetEntity();
@@ -348,10 +348,7 @@ public class TimesheetServiceImpl implements TimesheetService {
             isNew = true;
             timesheet = new TimesheetEntity();
             timesheet.setUserId(userId);
-//            timesheet.setDate(date);
-            ZoneId IST = ZoneId.of("Asia/Kolkata");
-            timesheet.setDate(LocalDate.now(IST));
-
+            timesheet.setDate(date);
             timesheet.setCreatedAt(LocalDateTime.now());
             timesheet.setFirstClockIn(null);
             timesheet.setLastClockOut(null);
@@ -411,32 +408,34 @@ public class TimesheetServiceImpl implements TimesheetService {
                 clockInHistory.setTimesheet(timesheet);
                 clockInHistory.setLogTime(request.getFirstClockIn());
                 clockInHistory.setLogType(LogType.CLOCK_IN);
-                clockInHistory.setLogFrom(LogFrom.WEB_APP);
+                clockInHistory.setLogFrom(LogFrom.MANUAL_ENTRY);
                 clockInHistory.setLocationId(locationEntity.getLocationId());
                 clockInHistory.setLoggedTimestamp(LocalDateTime.now());
                 timesheetAdapter.saveTimesheetHistory(clockInHistory);
             }
-
+            log.info("Saved clock-in history ID");
             if (request.getLastClockOut() != null) {
                 TimesheetHistoryEntity clockOutHistory = new TimesheetHistoryEntity();
                 clockOutHistory.setTimesheet(timesheet);
                 clockOutHistory.setLogTime(request.getLastClockOut());
                 clockOutHistory.setLogType(LogType.CLOCK_OUT);
-                clockOutHistory.setLogFrom(LogFrom.WEB_APP);
-                clockOutHistory.setLocationId(0L);
+                clockOutHistory.setLogFrom(LogFrom.MANUAL_ENTRY);
+                clockOutHistory.setLocationId(locationEntity.getLocationId());
                 clockOutHistory.setLoggedTimestamp(LocalDateTime.now());
                 timesheetAdapter.saveTimesheetHistory(clockOutHistory);
             }
+            log.info("Saved clock-out history ID");
         } else {
             if (request.getFirstClockIn() != null) {
                 timesheetAdapter.updateTimesheetHistory(
                         timesheet.getId(), LogType.CLOCK_IN, request.getFirstClockIn());
             }
-
+            log.info("Saved clock-In history for existing");
             if (request.getLastClockOut() != null) {
                 timesheetAdapter.updateTimesheetHistory(
                         timesheet.getId(), LogType.CLOCK_OUT, request.getLastClockOut());
             }
+            log.info("Saved clock-out history for existing");
         }
         return timesheetDtoMapper.toDto(timesheet);
     }
