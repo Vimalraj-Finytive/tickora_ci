@@ -28,33 +28,40 @@ public class StartCacheServiceImpl implements ApplicationRunner, StartCacheServi
     private boolean isRedisEnabled;
 
     @Override
-    public void run(ApplicationArguments args) throws Exception {
+    public void run(ApplicationArguments args) {
 
         if (!isRedisEnabled) {
-            System.out.println("Redis cache disabled, skipping cache initialization.");
+            log.info("Redis cache disabled, skipping cache initialization.");
             return;
         }
 
-        List<OrganizationEntity> organization = organizationRepository.findAll();
-        for(OrganizationEntity org : organization){
+        log.info("Starting Cache Initialization for All Organizations");
+
+        List<OrganizationEntity> organizations = organizationRepository.findAll();
+        for (OrganizationEntity org : organizations) {
             String orgSchema = org.getSchemaName();
             String orgId = org.getOrganizationId();
-            try{
+
+            try {
                 TenantUtil.setCurrentTenant(orgSchema);
-                log.info("Current tenant in cache loading:{}",TenantUtil.getCurrentTenant());
-                cacheLoaderService.loadLocationTable(orgId,orgSchema);
-                cacheLoaderService.loadUsersProfile(orgId,orgSchema);
-                cacheLoaderService.loadAllUsers(orgId,orgSchema);
-                cacheLoaderService.loadGroupsCache(orgId,orgSchema);
-                cacheLoaderService.loadWorkSchedule(orgId,orgSchema);
-                cacheLoaderService.loadAllInactiveUsers(orgId,orgSchema);
-                cacheLoaderService.loadAllRolesToCache(orgId,orgSchema);
+                log.info("Starting cache initialization for tenant: {}", orgSchema);
+
+                cacheLoaderService.loadLocationTable(orgId, orgSchema);
+                cacheLoaderService.loadUsersProfile(orgId, orgSchema);
+                cacheLoaderService.loadAllUsers(orgId, orgSchema);
+                cacheLoaderService.loadGroupsCache(orgId, orgSchema);
+                cacheLoaderService.loadWorkSchedule(orgId, orgSchema);
+                cacheLoaderService.loadAllInactiveUsers(orgId, orgSchema);
+                cacheLoaderService.loadAllRolesToCache(orgId, orgSchema);
                 cacheLoaderService.loadPrivilegesFromDB(orgSchema);
+
+                log.info("Cache initialization completed for tenant: {}", orgSchema);
             } catch (Exception e) {
-                log.info("Error while loading caches to Schema : {} ", orgSchema);
-                throw new RuntimeException(e);
+                log.error("Cache initialization failed for tenant: {} | Reason: {}", orgSchema, e.getMessage(), e);
+            } finally {
+                TenantUtil.clearTenant();
             }
         }
-        TenantUtil.clearTenant();
+        log.info("All Cache Initialization Tasks Completed");
     }
 }
