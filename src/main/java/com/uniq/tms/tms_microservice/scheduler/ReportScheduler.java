@@ -21,7 +21,7 @@ public class ReportScheduler {
         this.tempDirectory = tempDirectory;
     }
 
-    @Scheduled(cron = "0 0 * * * ?")
+    @Scheduled(cron = "0 0 * * * *")
     public void reportScheduler() {
         log.info("Report Cleanup Scheduler started");
         if (!Files.exists(tempDirectory)) return;

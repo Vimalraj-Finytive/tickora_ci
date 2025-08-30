@@ -21,7 +21,7 @@ public class CreateBulkUserScheduler {
         this.uploadDir = uploadDir;
     }
 
-    @Scheduled(cron = "0 0 * * * ?")
+    @Scheduled(cron = "0 0 * * * *")
     public void deleteOldCsvFiles() {
         log.info("Bulk User Cleanup Scheduler started");
         if (!Files.exists(uploadDir)) return;

@@ -32,7 +32,7 @@ public interface UserService {
     UserGroup createUserGroup(UserGroup userGroupMiddleware, String orgId);
     ApiResponse updateGroupDetails(AddGroupDto addGroupDto, Long groupId, String orgId);
     List<UserNameSuggestionDto> searchUsernames(String keywords);
-    UserProfileResponse getUserProfile(String orgId, String userId);
+    UserProfileResponseDto getUserProfile(String orgId, String userId);
     List<UserNameSuggestionDto> getGroupUsers(List<Long> groupIds, String orgId, String loggedInUserId, String role);
     Location addLocation(LocationDto locationDto, String orgId);
     List<LocationDto> getUserLocation(String userId);

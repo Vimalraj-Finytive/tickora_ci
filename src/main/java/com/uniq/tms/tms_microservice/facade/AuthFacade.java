@@ -135,7 +135,7 @@ public class AuthFacade {
         if (userId == null) {
             userId = authHelper.getUserId();
         }
-        UserProfileResponse response = userService.getUserProfile(orgId, userId);
+        UserProfileResponseDto response = userService.getUserProfile(orgId, userId);
         return new ApiResponse(HttpStatus.OK.value(), "User Profile fetched successfully", response);
     }
 

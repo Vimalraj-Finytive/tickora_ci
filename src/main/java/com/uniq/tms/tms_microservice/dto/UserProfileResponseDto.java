@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import java.time.LocalDate;
 import java.util.List;
 
-public class UserProfileResponse {
+public class UserProfileResponseDto {
 
     private String userId;
     private String userName;
@@ -20,9 +20,9 @@ public class UserProfileResponse {
     private String orgType;
     private List<ParentDto> parent;
 
-    public UserProfileResponse(){}
+    public UserProfileResponseDto(){}
 
-    public UserProfileResponse(String userId, String userName, String email, String mobileNumber, String roleName, LocalDate dateOfJoining, List<LocationDto> location, List<UserGroupProfileDto> groupDtos, String organizationName, String workSchedule, String orgType, List<ParentDto> parent) {
+    public UserProfileResponseDto(String userId, String userName, String email, String mobileNumber, String roleName, LocalDate dateOfJoining, List<LocationDto> location, List<UserGroupProfileDto> groupDtos, String organizationName, String workSchedule, String orgType, List<ParentDto> parent) {
         this.userId = userId;
         this.userName = userName;
         this.email = email;
