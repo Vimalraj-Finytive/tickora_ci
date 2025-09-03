@@ -9,4 +9,5 @@ public class UserConstant {
     public static final String WorkSchedule_Url = "tms/work-schedule";
     public static final String REPORT_URL = "tms/report";
     public static final String ORGANIZATION_URL ="tms/organization";
+    public static final String FACE_URL = "/tms/faceRecognition";
 }

@@ -18,4 +18,6 @@ public interface TimesheetEntityMapper {
 
     TimesheetHistoryDto toDto(TimesheetHistory timesheetHistory);
 
+    TimesheetHistory toMiddleware(TimesheetHistoryDto dto);
+
 }

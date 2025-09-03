@@ -714,4 +714,102 @@ public class TimesheetServiceImpl implements TimesheetService {
                 .toList();
         return status;
     }
+
+    @Override
+    public List<TimesheetHistory> processTimesheet(List<TimesheetHistory> timesheetMiddlewareLogs) {
+        List<TimesheetHistoryEntity> timesheetEntities = timesheetMiddlewareLogs.stream()
+                .map(timesheetEntityMapper::toDto)
+                .map(timesheetEntityMapper::toEntity)
+                .toList();
+
+        List<TimesheetHistoryEntity> savedEntities = new ArrayList<>();
+
+        for (TimesheetHistoryEntity history : timesheetEntities) {
+            if (history.getTimesheet() == null) {
+                throw new IllegalArgumentException("Timesheet must not be null in TimesheetHistoryEntity.");
+            }
+
+            TimesheetEntity timesheet = history.getTimesheet();
+            String userId = timesheet.getUserId();
+            LocalDate date = timesheet.getDate();
+
+            if (userId == null) {
+                throw new IllegalArgumentException("User ID must not be null. Check mapping!");
+            }
+
+            if (date == null) {
+                date = history.getLoggedTimestamp().toLocalDate();
+            }
+
+            LocalDate finalDate = date;
+
+            Optional<TimesheetEntity> existingTimesheetOpt = timesheetAdapter.findByUserIdAndDate(userId, date);
+
+            if (existingTimesheetOpt.isPresent()) {
+                timesheet = existingTimesheetOpt.get();
+
+                // Condition: if already clocked out, reject new clock-in
+                if (history.getLogType() == LogType.CLOCK_IN && timesheet.getLastClockOut() != null) {
+                    throw new IllegalStateException("User has already clocked out for today. Cannot clock in again.");
+                }
+
+                // Condition: if already clocked in, reject duplicate clock-in
+                if (history.getLogType() == LogType.CLOCK_IN && timesheet.getFirstClockIn() != null) {
+                    throw new IllegalStateException("User has already clocked in for today.");
+                }
+
+                // Condition: if clocking out but no clock-in yet
+                if (history.getLogType() == LogType.CLOCK_OUT && timesheet.getFirstClockIn() == null) {
+                    throw new IllegalStateException("User has not clocked in yet. Cannot clock out.");
+                }
+
+            } else {
+                // Create new timesheet if none exists
+                timesheet = new TimesheetEntity();
+                timesheet.setUserId(userId);
+                timesheet.setDate(finalDate);
+                timesheet.setCreatedAt(LocalDateTime.now());
+                timesheet.setTrackedHours(LocalTime.of(0, 0));
+                timesheet.setTotalBreakHours(LocalTime.of(0, 0));
+                timesheet.setRegularHours(LocalTime.of(0, 0));
+
+                TimesheetStatusEntity presentStatus = timesheetAdapter.findByStatusName(TimesheetStatusEnum.PRESENT.getLabel())
+                        .orElseThrow(() -> new IllegalStateException("Status Present Not Found"));
+                timesheet.setStatus(presentStatus);
+
+                // Set clock-in/out depending on the first log
+                if (history.getLogType() == LogType.CLOCK_IN) {
+                    timesheet.setFirstClockIn(LocalTime.now());
+                } else if (history.getLogType() == LogType.CLOCK_OUT) {
+                    throw new IllegalStateException("Cannot clock out before clocking in.");
+                }
+
+                timesheet = timesheetAdapter.saveTimesheet(timesheet);
+            }
+
+            // Set timesheet in history
+            history.setTimesheet(timesheet);
+
+            // Save history and update timesheet
+            history.setLogTime(LocalTime.now());
+            history.setLoggedTimestamp(LocalDateTime.now());
+            savedEntities.add(timesheetAdapter.saveTimesheetHistory(history));
+
+            // Update timesheet clock-in/out if not already set
+            if (history.getLogType() == LogType.CLOCK_IN && timesheet.getFirstClockIn() == null) {
+                timesheet.setFirstClockIn(LocalTime.now());
+            } else if (history.getLogType() == LogType.CLOCK_OUT && timesheet.getLastClockOut() == null) {
+                timesheet.setLastClockOut(LocalTime.now());
+            }
+
+            timesheetAdapter.saveTimesheet(timesheet);
+        }
+
+        timesheetAdapter.calculateTrackedAndBreakHours(savedEntities);
+
+        return savedEntities.stream()
+                .map(timesheetEntityMapper::toMiddleware)
+                .toList();
+    }
+
 }

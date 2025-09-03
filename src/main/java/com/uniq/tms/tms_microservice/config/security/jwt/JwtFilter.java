@@ -186,10 +186,17 @@ public class JwtFilter extends OncePerRequestFilter {
     }
 
     private void sendErrorResponse(HttpServletResponse response, int status, String message) throws IOException {
+        if (response.isCommitted()) {
+            log.warn("Response already committed. Skipping error response.");
+            return;
+        }
+        response.resetBuffer();
         response.setStatus(status);
-        response.setContentType("application/json");
-        String json = String.format("{\"status\":%d,\"message\":\"%s\"}", status, message.replace("\"", "\\\""));
+        response.setContentType("application/json;charset=UTF-8");
+        String json = String.format("{\"status\":%d,\"message\":\"%s\",\"data\":null}",
+                status, message.replace("\"", "\\\""));
         response.getWriter().write(json);
+        response.flushBuffer();
     }
 
     private static final List<String> WHITELISTED_PATHS = List.of(
@@ -202,8 +209,9 @@ public class JwtFilter extends OncePerRequestFilter {
             "/tms/validate-email",
             "/tms/organization/orgType",
             "/tms/organization/validate",
-            "/tms/organization/create"
-    );
+            "/tms/organization/create",
+            "/tms/sendOTP"
+            );
 
     private boolean isWhiteListed(String path){
         return WHITELISTED_PATHS.stream()

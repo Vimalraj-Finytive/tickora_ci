@@ -15,6 +15,7 @@ public class TimesheetHistory {
     private LocalDateTime loggedTimestamp;
     private String userId;
     private LocalDate date;
+    private Long locationId;
 
     public String getLocationName() {
         return locationName;
@@ -70,5 +71,13 @@ public class TimesheetHistory {
 
     public void setDate(LocalDate date) {
         this.date = date;
+    }
+
+    public Long getLocationId() {
+        return locationId;
+    }
+
+    public void setLocationId(Long locationId) {
+        this.locationId = locationId;
     }
 }

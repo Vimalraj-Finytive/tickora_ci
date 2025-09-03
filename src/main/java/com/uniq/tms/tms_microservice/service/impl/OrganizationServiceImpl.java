@@ -96,6 +96,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 
             log.info("setting user map:{}", orgId);
             UserSchemaMappingEntity mapping = userEntityMapper.toSchema(
+                    null,
                     organization.getEmail(),
                     organization.getMobile(),
                     orgId,

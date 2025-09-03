@@ -13,6 +13,8 @@ public class TimesheetHistoryDto {
 
     private Long timesheetHistoryId;
     private String locationName;
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    private Long locationId;
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "HH:mm:ss")
     private LocalTime logTime;
     private LogType logType;
@@ -85,5 +87,13 @@ public class TimesheetHistoryDto {
 
     public void setTimesheetHistoryId(Long timesheetHistoryId) {
         this.timesheetHistoryId = timesheetHistoryId;
+    }
+
+    public Long getLocationId() {
+        return locationId;
+    }
+
+    public void setLocationId(Long locationId) {
+        this.locationId = locationId;
     }
 }

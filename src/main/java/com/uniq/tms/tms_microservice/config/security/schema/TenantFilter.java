@@ -13,6 +13,8 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.core.annotation.Order;
+import org.springframework.lang.NonNull;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import javax.sql.DataSource;
@@ -36,9 +38,9 @@ public class TenantFilter extends OncePerRequestFilter {
     }
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
-                                    FilterChain filterChain) throws ServletException, IOException {
+    protected void doFilterInternal(@NonNull HttpServletRequest request,
+                                    @NonNull HttpServletResponse response,
+                                    @NonNull FilterChain filterChain) throws ServletException, IOException {
         String tenantId = null;
 
         String token = jwtFilter.extractTokenFromRequest(request);
@@ -62,14 +64,20 @@ public class TenantFilter extends OncePerRequestFilter {
 
             String mobileParam = request.getParameter("mobile");
             if ((tenantId == null || tenantId.isBlank()) && mobileParam != null && !mobileParam.isBlank()) {
-                tenantId = getUserSchemaByMobileDirectJDBC(mobileParam);
+                tenantId = getUserSchemaByMobileDirectJDBC(mobileParam,response);
                 log.info("Resolved tenant from mobile param {}: {}", mobileParam, tenantId);
+                if (tenantId == null) {
+                    return;
+                }
             }
 
             String emailParam = request.getParameter("email");
             if ((tenantId == null || tenantId.isBlank()) && emailParam != null && !emailParam.isBlank()) {
-                tenantId = getUserSchemaByEmailDirectJDBC(emailParam);
+                tenantId = getUserSchemaByEmailDirectJDBC(emailParam, response);
                 log.info("Resolved tenant from email param {}: {}", emailParam, tenantId);
+                if (tenantId == null) {
+                    return;
+                }
             }
         }
 
@@ -96,13 +104,13 @@ public class TenantFilter extends OncePerRequestFilter {
 
                         if ((tenantId == null || tenantId.isBlank()) && jsonNode.has("email")) {
                             String emailBody = jsonNode.get("email").asText();
-                            tenantId = getUserSchemaByEmailDirectJDBC(emailBody);
+                            tenantId = getUserSchemaByEmailDirectJDBC(emailBody,response);
                             log.info("Resolved tenant from JSON email {}: {}", emailBody, tenantId);
                         }
 
                         if ((tenantId == null || tenantId.isBlank()) && jsonNode.has("mobile")) {
                             String mobileBody = jsonNode.get("mobile").asText();
-                            tenantId = getUserSchemaByMobileDirectJDBC(mobileBody);
+                            tenantId = getUserSchemaByMobileDirectJDBC(mobileBody,response);
                             log.info("Resolved tenant from JSON mobile {}: {}", mobileBody, tenantId);
                         }
                     } catch (Exception e) {
@@ -129,7 +137,7 @@ public class TenantFilter extends OncePerRequestFilter {
     }
 
     /** Get schema by email directly using JDBC */
-    private String getUserSchemaByEmailDirectJDBC(String email) {
+    private String getUserSchemaByEmailDirectJDBC(String email, HttpServletResponse response) throws IOException {
         String sql = "SELECT schema_name FROM public.user_schema_mapping WHERE email = ?";
         try (Connection connection = dataSource.getConnection();
              PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -145,15 +153,20 @@ public class TenantFilter extends OncePerRequestFilter {
                 }
             }
             log.warn("No schema mapping found for email: {}", email);
+            sendErrorResponse(response, HttpServletResponse.SC_NOT_FOUND, "User not found for email");
+            response.flushBuffer();
             return null;
         } catch (SQLException e) {
             log.error("Error finding schema for email using direct JDBC: {}", email, e);
+            sendErrorResponse(response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
+                    "Database error while fetching schema for email: " + email);
+            response.flushBuffer();
             return null;
         }
     }
 
     /** Get schema by mobile directly using JDBC */
-    private String getUserSchemaByMobileDirectJDBC(String mobile) {
+    private String getUserSchemaByMobileDirectJDBC(String mobile, HttpServletResponse response) throws IOException {
         String sql = "SELECT schema_name FROM public.user_schema_mapping WHERE mobile_number = ?";
         try (Connection connection = dataSource.getConnection();
              PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -169,10 +182,30 @@ public class TenantFilter extends OncePerRequestFilter {
                 }
             }
             log.warn("No schema mapping found for mobile: {}", mobile);
+            sendErrorResponse(response, HttpServletResponse.SC_NOT_FOUND, "User not found for Given Mobile");
+            response.flushBuffer();
             return null;
         } catch (SQLException e) {
             log.error("Error finding schema for mobile using direct JDBC: {}", mobile, e);
+            sendErrorResponse(response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
+                    "Database error while fetching schema for mobile: " + mobile);
+            response.flushBuffer();
             return null;
         }
     }
+
+    private void sendErrorResponse(HttpServletResponse response, int status, String message) throws IOException {
+        if (response.isCommitted()) {
+            log.warn("Response already committed. Skipping error response.");
+            return;
+        }
+        response.resetBuffer();
+        response.setStatus(status);
+        response.setContentType("application/json;charset=UTF-8");
+        String json = String.format("{\"status\":%d,\"message\":\"%s\",\"data\":null}",
+                status, message.replace("\"", "\\\""));
+        response.getWriter().write(json);
+        response.flushBuffer();
+    }
+
 }

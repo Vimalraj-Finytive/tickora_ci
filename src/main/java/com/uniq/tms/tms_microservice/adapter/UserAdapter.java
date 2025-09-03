@@ -118,4 +118,8 @@ public interface UserAdapter {
     SubscriptionEntity saveSubscription(SubscriptionEntity subscriptionEntity);
     void saveAllMappings(List<UserSchemaMappingEntity> mappings);
     void saveAllSecondaryMappings(List<UserSchemaMappingEntity> secondaryMappings);
+    void saveUserFace(UserFaceEntity userFaceEntity);
+    Optional<UserFaceEntity> findUserEmbeddingsById(String userId);
+    Optional<LocationEntity> findLocationByLocationId(Long locationId);
+    UserSchemaMappingEntity update(UserSchemaMappingEntity mapping);
 }

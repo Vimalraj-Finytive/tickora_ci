@@ -1,11 +1,14 @@
 package com.uniq.tms.tms_microservice.mapper;
 
 import com.uniq.tms.tms_microservice.dto.LocationDto;
+import com.uniq.tms.tms_microservice.dto.UserValidationDto;
 import com.uniq.tms.tms_microservice.entity.*;
 import com.uniq.tms.tms_microservice.model.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.mapstruct.*;
+
+import java.util.Optional;
 
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface UserEntityMapper {
@@ -75,6 +78,7 @@ public interface UserEntityMapper {
 
     OrganizationType toModel(OrganizationTypeEntity organizationType);
 
-    UserSchemaMappingEntity toSchema(String email, String mobile, String orgId, String schemaName);
+    UserSchemaMappingEntity toSchema(Long id,String email, String mobile, String orgId, String schemaName);
 
+    UserValidationDto toDto(UserEntity user);
 }

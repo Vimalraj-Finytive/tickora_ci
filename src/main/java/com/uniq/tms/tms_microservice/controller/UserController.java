@@ -271,7 +271,7 @@ public class UserController {
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
-    @PatchMapping("/inactiveuser")
+    @PatchMapping("/inActiveUser")
     public ResponseEntity<ApiResponse> updateIsActive(@RequestHeader("Authorization") String token , @RequestBody EditUserDto editUserDto){
         ApiResponse response = authFacade.updateIsActive(editUserDto);
         return ResponseEntity.status(response.getStatusCode()).body(response);

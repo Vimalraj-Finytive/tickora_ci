@@ -11,6 +11,7 @@ import com.uniq.tms.tms_microservice.mapper.WorkScheduleDtoMapper;
 import com.uniq.tms.tms_microservice.model.*;
 import com.uniq.tms.tms_microservice.model.Privilege;
 import com.uniq.tms.tms_microservice.service.*;
+import com.uniq.tms.tms_microservice.util.TimesheetLogParserUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
@@ -47,9 +48,11 @@ public class AuthFacade {
     private final ReportService reportService;
     private final OrganizationService organizationService;
     private final AuthHelper authHelper;
-    private final UserAdapter userAdapter;
+    private final FaceService faceService;
 
-    public AuthFacade(AuthService authService, UserService userService, UserDtoMapper userDtoMapper, TimesheetService timesheetService, TimesheetDtoMapper timesheetDtoMapper, WorkScheduleService workScheduleService, WorkScheduleDtoMapper workScheduleDtoMapper, ReportService reportService, OrganizationService organizationService, AuthHelper authHelper, UserAdapter userAdapter) {
+    public AuthFacade(AuthService authService, UserService userService, UserDtoMapper userDtoMapper, TimesheetService timesheetService,
+                      TimesheetDtoMapper timesheetDtoMapper, WorkScheduleService workScheduleService, WorkScheduleDtoMapper workScheduleDtoMapper,
+                      ReportService reportService, OrganizationService organizationService, AuthHelper authHelper, FaceService faceService) {
 
         this.authService = authService;
         this.userService = userService;
@@ -61,7 +64,7 @@ public class AuthFacade {
         this.reportService = reportService;
         this.organizationService = organizationService;
         this.authHelper = authHelper;
-        this.userAdapter = userAdapter;
+        this.faceService = faceService;
     }
 
     @Autowired
@@ -694,5 +697,34 @@ public class AuthFacade {
         }else{
             return new ApiResponse<>(404,"User Schema not found for this organization",null);
         }
+    }
+
+    public ApiResponse<RegisterDto> registerUserFace(RegisterDto registerDto) {
+        String orgSchema = authHelper.getSchema();
+        return faceService.UserFaceRegister(registerDto,orgSchema);
+    }
+
+    public ApiResponse<ClockInOutRequestDto> clockInOutUser(ClockInOutRequestDto registerDto) {
+        String orgSchema = authHelper.getSchema();
+        log.info("Incoming timesheetLogsJson: {}", registerDto.getTimesheetLogsJson());
+
+        try {
+            List<TimesheetHistoryDto> logs = TimesheetLogParserUtil.parseLogs(registerDto.getTimesheetLogsJson());
+            registerDto.setTimesheetLogs(logs);
+            return faceService.clockInOutUser(registerDto, orgSchema);
+        } catch (IllegalArgumentException e) {
+            log.error("Failed to parse timesheet logs", e);
+            return new ApiResponse<>(40,"Invalid timesheet data format: " + e.getMessage(),null);
+        }
+    }
+
+    public ApiResponse<RegisterDto> compareMultiFace(FaceDto faceDto) {
+        String orgSchema = authHelper.getSchema();
+        return faceService.compareMultiFace(faceDto,orgSchema);
+    }
+
+    public ApiResponse<UserValidationDto> validateUser(String userId) {
+        String orgSchema = authHelper.getSchema();
+        return userService.validateUser(userId);
     }
 }
