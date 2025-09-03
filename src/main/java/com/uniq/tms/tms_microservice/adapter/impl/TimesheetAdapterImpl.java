@@ -567,4 +567,9 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
     public LocationEntity getDefaultLocation(String orgId) {
         return locationRepository.findDefaultLocationById(orgId);
     }
+
+    @Override
+    public List<LogType> getUserLatestLogType(String userId) {
+        return timesheetHistoryRepository.findLatestLogTypesByUserIdForToday(userId);
+    }
 }

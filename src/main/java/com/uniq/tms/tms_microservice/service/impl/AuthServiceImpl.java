@@ -93,8 +93,8 @@ public class AuthServiceImpl implements AuthService {
     @Value("${otp.max.daily.attempts}")
     private int maxDailyAttempts;
 
-    @Value("${otp.test.mobile}")
-    private String testMobile;
+    @Value("#{'${otp.test.mobiles}'.split(',')}")
+    private List<String> testMobiles;
 
     @Value("${otp.test}")
     private String testOtp;
@@ -212,6 +212,8 @@ public class AuthServiceImpl implements AuthService {
 
         if (!isParent) {
             String key = cacheLoaderService.getPrivilegeKey(PrivilegeConstants.LOGIN_VIA_MOBILE);
+            log.info("student role :{}", studentUser.getRole().getName());
+            log.info("Privilege Key : {}", key);
             boolean hasMobileLoginPrivilege = rolePrivilegeHelper.roleHasPrivilege(studentUser.getRole().getName(), key);
             log.info("has mobile login privilege: {}", hasMobileLoginPrivilege);
             if (!hasMobileLoginPrivilege) {
@@ -243,16 +245,16 @@ public class AuthServiceImpl implements AuthService {
         Instant now = Instant.now();
         Instant midnight = LocalDate.now(ZoneOffset.UTC).plusDays(1).atStartOfDay().toInstant(ZoneOffset.UTC);
         long secondsUntilMidnight = Duration.between(now, midnight).getSeconds();
-        String generatedOtp = testMobile.equals(mobile) ? testOtp : nettyfishService.generateOtp();
+        String generatedOtp = testMobiles.contains(mobile.trim()) ? testOtp : nettyfishService.generateOtp();
         log.info("Generated OTP:{}", generatedOtp);
         Integer currentCount = otpFallbackCache.getCount(otpCountKey);
-        if (!(testMobile.equals(mobile) && testOtp.equals(generatedOtp))) {
+        if (!(testMobiles.contains(mobile) && testOtp.equals(generatedOtp))) {
             if (currentCount != null && currentCount >= maxDailyAttempts) {
                 return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                         .body(new ApiResponse(429, "Daily OTP limit reached, Try again Tomorrow.", response));
             }
         }
-        OtpSendResponse otpSendResponse = testMobile.equals(mobile)
+        OtpSendResponse otpSendResponse = testMobiles.contains(mobile)
                 ? new OtpSendResponse(true, "Test OTP sent successfully")
                 : nettyfishService.sendOtp(mobile, generatedOtp);
         if (!otpSendResponse.isSuccess()) {

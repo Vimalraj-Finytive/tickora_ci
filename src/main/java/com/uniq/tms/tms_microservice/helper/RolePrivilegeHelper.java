@@ -2,6 +2,8 @@ package com.uniq.tms.tms_microservice.helper;
 
 import com.uniq.tms.tms_microservice.entity.RoleEntity;
 import com.uniq.tms.tms_microservice.repository.RoleRepository;
+import com.uniq.tms.tms_microservice.util.CacheKeyUtil;
+import com.uniq.tms.tms_microservice.util.TenantUtil;
 import jakarta.annotation.Nullable;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -19,13 +21,15 @@ public class RolePrivilegeHelper {
 
     private final RedisTemplate<String, Object> redisTemplate;
     private final RoleRepository roleRepository;
+    private final CacheKeyUtil cacheKeyUtil;
 
     @Value("${cache.keys.roleprivilege}")
     private String roleprivilege;
 
-    public RolePrivilegeHelper(@Nullable RedisTemplate<String, Object> redisTemplate, RoleRepository roleRepository) {
+    public RolePrivilegeHelper(@Nullable RedisTemplate<String, Object> redisTemplate, RoleRepository roleRepository, CacheKeyUtil cacheKeyUtil) {
         this.redisTemplate = redisTemplate;
         this.roleRepository = roleRepository;
+        this.cacheKeyUtil = cacheKeyUtil;
     }
 
     public boolean roleHasPrivilege(String roleName, String privilegeKey) {
@@ -33,8 +37,10 @@ public class RolePrivilegeHelper {
             log.warn("Privilege key is null or empty. Skipping privilege check.");
             return false;
         }
-
-        String redisKey = roleprivilege + roleName.toLowerCase();
+        String schema = TenantUtil.getCurrentTenant();
+        log.info("Current tenant :{}", schema);
+        String redisKey = cacheKeyUtil.getRoleKey(schema);
+        log.info("Redis key : {}", redisKey);
         Set<String> privileges = null;
 
         if (redisTemplate != null) {
@@ -56,7 +62,7 @@ public class RolePrivilegeHelper {
                 .collect(Collectors.toSet());
 
         if (redisTemplate != null) {
-            redisTemplate.opsForValue().set(redisKey, privileges);
+            redisTemplate.opsForValue().set(redisKey + roleName.toLowerCase(), privileges);
             log.info("Repopulated Redis cache for role '{}'", roleName);
         }
 
