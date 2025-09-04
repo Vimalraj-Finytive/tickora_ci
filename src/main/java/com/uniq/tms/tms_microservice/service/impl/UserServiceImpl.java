@@ -543,7 +543,6 @@ public class UserServiceImpl implements UserService {
                 log.info("Creating user mapping for all saved users in bulk upload");
                 List<UserSchemaMappingEntity> mappings = savedUsers.stream()
                         .map(u -> userEntityMapper.toSchema(
-                                null,
                                 u.getEmail(),
                                 u.getMobileNumber(),
                                 orgId,
@@ -556,7 +555,6 @@ public class UserServiceImpl implements UserService {
                 log.info("Creating user mapping for all saved secondary users in bulk upload");
                 List<UserSchemaMappingEntity> secondaryMappings = savedSecondaryDetails.stream()
                         .map(su -> userEntityMapper.toSchema(
-                                null,
                                 su.getEmail(),
                                 su.getMobile(),
                                 orgId,
@@ -794,7 +792,6 @@ public class UserServiceImpl implements UserService {
         if (savedUserEntity != null) {
             log.info("Creating user mapping for all saved users");
             UserSchemaMappingEntity mappings = userEntityMapper.toSchema(
-                    null,
                     savedUserEntity.getEmail(),
                     savedUserEntity.getMobileNumber(),
                     organizationId,
@@ -805,7 +802,6 @@ public class UserServiceImpl implements UserService {
         if (saveSecondaryUser != null) {
             log.info("Creating user mapping for all saved secondary users");
             UserSchemaMappingEntity secondaryMappings = userEntityMapper.toSchema(
-                    null,
                     null,
                     saveSecondaryUser.getMobile(),
                     organizationId,
@@ -1072,25 +1068,19 @@ public class UserServiceImpl implements UserService {
             } else {
                 log.info("No secondary details provided. Skipping secondary details update.");
             }
-            if (savedSecondaryUser != null) {
+            if (secondaryDetails != null) {
                 log.info("Processing secondary user mapping in public.user_map table...");
-
-                UserSchemaMappingEntity existingMapping = userAdapter.findUserByMobile(savedSecondaryUser.getMobile());
-
-                UserSchemaMappingEntity mapping = userEntityMapper.toSchema(
-                        existingMapping != null ? existingMapping.getId() : null,
-                        null,
-                        savedSecondaryUser.getMobile(),
-                        orgId,
-                        TenantContext.getCurrentTenant()
-                );
-
-                UserSchemaMappingEntity savedMapping = userAdapter.update(mapping);
-
-                if (existingMapping != null) {
-                    log.info("Updated existing mapping for mobile {} in public.user_map", savedSecondaryUser.getMobile());
-                } else {
-                    log.info("Created new mapping for mobile {} in public.user_map", savedSecondaryUser.getMobile());
+                log.info("User mobile number : {}", secondaryDetails.getMobile());
+                Optional<UserSchemaMappingEntity> existingMappingOpt =
+                        userAdapter.findUserByMobileAndOrgId(secondaryDetails.getMobile(), orgId);
+                if(existingMappingOpt.isEmpty()) {
+                    UserSchemaMappingEntity mapping = userEntityMapper.toSchema(
+                            null,
+                            secondaryDetails.getMobile(),
+                            orgId,
+                            TenantContext.getCurrentTenant()
+                    );
+                    UserSchemaMappingEntity savedMapping = userAdapter.update(mapping);
                 }
             }
         }

@@ -122,4 +122,5 @@ public interface UserAdapter {
     Optional<UserFaceEntity> findUserEmbeddingsById(String userId);
     Optional<LocationEntity> findLocationByLocationId(Long locationId);
     UserSchemaMappingEntity update(UserSchemaMappingEntity mapping);
+    Optional<UserSchemaMappingEntity> findUserByMobileAndOrgId(String mobile, String orgId);
 }

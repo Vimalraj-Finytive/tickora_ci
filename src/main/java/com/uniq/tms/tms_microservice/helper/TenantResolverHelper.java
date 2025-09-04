@@ -30,8 +30,8 @@ public class TenantResolverHelper {
         }
     }
 
-    public String getUserSchemaByMobile(String email) {
-        UserSchemaMappingEntity entity = userAdapter.findUserByMobile(email);
+    public String getUserSchemaByMobile(String mobile) {
+        UserSchemaMappingEntity entity = userAdapter.findUserByMobile(mobile);
         if (entity != null) {
             log.info("Found schema for user mobile: {} -> {}", entity.getMobile(), entity.getSchemaName());
             return entity.getSchemaName();

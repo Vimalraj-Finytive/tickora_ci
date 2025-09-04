@@ -78,7 +78,7 @@ public interface UserEntityMapper {
 
     OrganizationType toModel(OrganizationTypeEntity organizationType);
 
-    UserSchemaMappingEntity toSchema(Long id,String email, String mobile, String orgId, String schemaName);
+    UserSchemaMappingEntity toSchema(String email, String mobile, String orgId, String schemaName);
 
     UserValidationDto toDto(UserEntity user);
 }
