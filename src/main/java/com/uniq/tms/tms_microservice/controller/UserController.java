@@ -139,9 +139,9 @@ public class UserController {
         return ResponseEntity.ok(response);
     }
 
-    @DeleteMapping("/deleteUser")
-    public ResponseEntity<ApiResponse> deleteUser(@RequestHeader("Authorization") String token, @RequestParam String userId) {
-        ApiResponse response = authFacade.deleteUser( userId);
+    @PostMapping("/deleteUser")
+    public ResponseEntity<ApiResponse> deleteUser(@RequestHeader("Authorization") String token, @Valid @RequestBody DeactivateUserRequestDto requestDto) {
+        ApiResponse response = authFacade.deleteUser( requestDto);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
@@ -271,9 +271,18 @@ public class UserController {
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
-    @PatchMapping("/inActiveUser")
+    @PatchMapping("/activateUser")
     public ResponseEntity<ApiResponse> updateIsActive(@RequestHeader("Authorization") String token , @RequestBody EditUserDto editUserDto){
         ApiResponse response = authFacade.updateIsActive(editUserDto);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
+
+    @PostMapping("/userHistoryLog")
+    public ResponseEntity<ApiResponse<List<UserHistoryResponseDto>>> getUserHistoryLog(
+            @RequestHeader("Authorization") String token,
+            @RequestBody UserValidationRequestDto requestDto) {
+
+        ApiResponse<List<UserHistoryResponseDto>> response = authFacade.getUserHistoryLog(requestDto.getUserId());
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 

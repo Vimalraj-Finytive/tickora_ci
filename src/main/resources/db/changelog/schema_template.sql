@@ -460,7 +460,7 @@ CREATE TABLE IF NOT EXISTS ${schemaName}.org_user_sequence (
 --changeset system:create-user-embedding
 CREATE TABLE IF NOT EXISTS ${schemaName}.user_embedding (
     face_id BIGSERIAL PRIMARY KEY,
-    user_id VARCHAR(20) PRIMARY KEY,
+    user_id VARCHAR(20) NOT NULL UNIQUE,
     embeddings TEXT
 );
 

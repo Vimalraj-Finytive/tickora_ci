@@ -1,7 +1,6 @@
 package com.uniq.tms.tms_microservice.facade;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.uniq.tms.tms_microservice.adapter.UserAdapter;
 import com.uniq.tms.tms_microservice.dto.*;
 import com.uniq.tms.tms_microservice.enums.Timeperiod;
 import com.uniq.tms.tms_microservice.helper.AuthHelper;
@@ -172,12 +171,13 @@ public class AuthFacade {
         return new ApiResponse(200, "Users fetched successfully", users);
     }
 
-    public ApiResponse deleteUser( String userId) {
+    public ApiResponse deleteUser( DeactivateUserRequestDto requestDto) {
         String orgId = authHelper.getOrgId();
+        String userNameFromToken = authHelper.getUsername();
         if (orgId == null) {
             return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
         }
-        User user = userService.deleteUser(orgId, userId);
+        User user = userService.deleteUser(orgId, requestDto, userNameFromToken);
         return new ApiResponse(204, "User Deleted successfully", "No Content");
     }
 
@@ -678,10 +678,11 @@ public class AuthFacade {
 
     public ApiResponse updateIsActive(EditUserDto editUserDto) {
         String orgId = authHelper.getOrgId();
+        String userNameFromToken = authHelper.getUsername();
         if (orgId == null) {
             return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
         }
-        List<EditUserDto> editUserDtos = userService.updateIsActive(userDtoMapper.toMiddleware(editUserDto), orgId);
+        List<EditUserDto> editUserDtos = userService.updateIsActive(userDtoMapper.toMiddleware(editUserDto), orgId, userNameFromToken);
         return new ApiResponse(200,"User is activated", null);
     }
 
@@ -726,5 +727,9 @@ public class AuthFacade {
     public ApiResponse<UserValidationDto> validateUser(String userId) {
         String orgSchema = authHelper.getSchema();
         return userService.validateUser(userId);
+    }
+
+    public ApiResponse<List<UserHistoryResponseDto>> getUserHistoryLog(String userId) {
+        return userService.getUserHistoryLog(userId);
     }
 }

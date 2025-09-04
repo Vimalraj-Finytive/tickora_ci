@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS public.organization (
 --Table: User_Org Map
 CREATE TABLE IF NOT EXISTS public.user_schema_mapping (
     id SERIAL PRIMARY KEY,
-    email VARCHAR(255) UNIQUE NOT NULL,
+    email VARCHAR(255) UNIQUE,
     mobile_number VARCHAR(20) UNIQUE NOT NULL,
     org_id VARCHAR(20) NOT NULL,
     schema_name VARCHAR(255) NOT NULL,

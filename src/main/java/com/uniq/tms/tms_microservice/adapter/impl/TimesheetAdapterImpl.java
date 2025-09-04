@@ -161,16 +161,18 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
                 Set<DayOfWeek> userWorkingDays = userWorkingDaysMap.getOrDefault(t.getUserId(), Collections.emptySet());
                 DayOfWeek currentDay = t.getDate().getDayOfWeek();
                 log.info("Current Day:{}", currentDay);
-
+                LocalDate timesheetDate = t.getDate();
+                log.info("Current currentDay:{}", currentDay);
+                LocalDate todayDate = LocalDate.now(ZoneId.of("Asia/Kolkata"));
+                log.info("Current todayDate:{}", todayDate);
                 if (!userWorkingDays.contains(currentDay)) {
                     holiday++;
                     if (t.getStatus() == null) t.setStatus(TimesheetStatusEnum.HOLIDAY.getLabel());
                 } else if (t.getStatus() == null) {
-                    if (endDate.equals(LocalDate.now(ZoneId.of("Asia/Kolkata"))
-)) {
+                    if (timesheetDate.isEqual(todayDate)) {
                         notMarked++;
                         t.setStatus(TimesheetStatusEnum.NOT_MARKED.getLabel());
-                    } else {
+                    } else if (timesheetDate.isBefore(todayDate)) {
                         absent++;
                         t.setStatus(TimesheetStatusEnum.ABSENT.getLabel());
                     }
@@ -494,9 +496,14 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
 
             int present = 0, absent = 0, holiday = 0, notMarked = 0, paidLeave = 0, halfDay = 0, permission = 0;
             for (UserTimesheetDto t : timesheets) {
+
                 DayOfWeek currentDay = t.getDate().getDayOfWeek();
                 log.info("Current Day:{}", currentDay);
                 Set<DayOfWeek> userWorkingDays = userWorkingDaysMap.getOrDefault(t.getUserId(), Collections.emptySet());
+                LocalDate timesheetDate = t.getDate();
+                log.info("Current currentDay:{}", currentDay);
+                LocalDate todayDate = LocalDate.now(ZoneId.of("Asia/Kolkata"));
+                log.info("Current todayDate:{}", todayDate);
 
                 if (!userWorkingDays.contains(currentDay)) {
                     // It's a rest day for the user
@@ -505,11 +512,10 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
                         t.setStatus(TimesheetStatusEnum.HOLIDAY.getLabel());
                     }
                 } else if (t.getStatus() == null) {
-                    if (t.getDate().equals(LocalDate.now(ZoneId.of("Asia/Kolkata"))
-)) {
+                    if (timesheetDate.isEqual(todayDate)) {
                         notMarked++;
                         t.setStatus(TimesheetStatusEnum.NOT_MARKED.getLabel());
-                    } else {
+                    } else if (timesheetDate.isBefore(todayDate)) {
                         absent++;
                         t.setStatus(TimesheetStatusEnum.ABSENT.getLabel());
                     }

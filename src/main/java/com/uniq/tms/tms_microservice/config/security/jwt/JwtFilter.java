@@ -103,7 +103,7 @@ public class JwtFilter extends OncePerRequestFilter {
                         return;
                     }
                 } else if (rolePrivilegeHelper.roleHasPrivilege(role, mobileKey)) {
-                    user = userRepository.findByMobileNumber(subject);
+                    user = secondaryDetailsRepository.findUserByMobile(subject);
                     log.info("mobile user from repo:{}", user);
                     if (!user.isActive()){
                         log.info("Your account is deactivated.");

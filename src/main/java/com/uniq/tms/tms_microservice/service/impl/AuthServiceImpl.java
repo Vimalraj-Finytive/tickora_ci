@@ -227,7 +227,7 @@ public class AuthServiceImpl implements AuthService {
 
         Map<String, Object> response = new HashMap<>();
         response.put("count", 1);
-        response.put("time", "1M 6S");
+        response.put("time", "5M 0S");
 
         List<Map<String, Object>> dataList = new ArrayList<>();
         dataList.add(response);

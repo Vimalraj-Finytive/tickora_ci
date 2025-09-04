@@ -558,27 +558,33 @@ public class TimesheetServiceImpl implements TimesheetService {
         return calculateAttendanceSummaryForUsers(userIds, fromDate, toDate, orgId);
     }
 
-    private List<UserDashboardDto> calculateAttendanceSummaryForUsers(List<String> userIds, LocalDate fromDate, LocalDate toDate, String orgId) {
+    private List<UserDashboardDto> calculateAttendanceSummaryForUsers(
+            List<String> userIds, LocalDate fromDate, LocalDate toDate, String orgId) {
+
         if (userIds == null || userIds.isEmpty()) {
             return Collections.singletonList(UserDashboardDto.empty());
         }
 
+        // Fetch attendance data for the given users and date range
         List<UserAttendanceDto> attendanceList = timesheetAdapter.findAttendanceForUserInRange(userIds, fromDate, toDate);
 
-        Map<String, String> attendanceMap = new HashMap<>();
+        // Use LocalDate as key instead of String to avoid mismatches
+        Map<String, Map<LocalDate, String>> attendanceMap = new HashMap<>();
         for (UserAttendanceDto dto : attendanceList) {
-            String key = dto.getUserId() + "|" + dto.getDate();
-            attendanceMap.put(key, dto.getStatus());
+            attendanceMap
+                    .computeIfAbsent(dto.getUserId(), k -> new HashMap<>())
+                    .put(dto.getDate(), dto.getStatus());
         }
 
+        // Fetch working days for each user
         Map<String, Set<DayOfWeek>> userWorkingDaysMap = new HashMap<>();
         for (String userId : userIds) {
             WorkScheduleEntity ws = workScheduleAdapter.getScheduleForUser(userId);
             if (ws == null) {
                 throw new IllegalStateException("Work Schedule not assigned or inactive for user: " + userId);
             }
-            Set<DayOfWeek> workingDays = new HashSet<>();
 
+            Set<DayOfWeek> workingDays = new HashSet<>();
             if (ws.getType().getType().name().equalsIgnoreCase(FLEXIBLE.getScheduleType())) {
                 List<FlexibleWorkScheduleEntity> flexDays = workScheduleAdapter.findByWorkScheduleId(ws.getScheduleId());
                 for (FlexibleWorkScheduleEntity f : flexDays) {
@@ -590,24 +596,27 @@ public class TimesheetServiceImpl implements TimesheetService {
                     workingDays.add(DayOfWeek.valueOf(f.getDay().toString()));
                 }
             }
+
             userWorkingDaysMap.put(userId, workingDays);
         }
 
+        // Attendance counters
         int present = 0, absent = 0, paidLeave = 0, notMarked = 0, holiday = 0, halfDay = 0, permission = 0;
         int total = 0;
 
+        // Loop through each date in the range
         for (LocalDate date = fromDate; !date.isAfter(toDate); date = date.plusDays(1)) {
             DayOfWeek currentDay = date.getDayOfWeek();
-            boolean isToday = date.equals(LocalDate.now(ZoneId.of("Asia/Kolkata"))
-);
+            boolean isToday = date.equals(LocalDate.now(ZoneId.of("Asia/Kolkata")));
 
             for (String userId : userIds) {
                 total++;
-                String key = userId + "|" + date;
-                Set<DayOfWeek> workingDays = userWorkingDaysMap.getOrDefault(userId, Collections.emptySet());
 
+                Set<DayOfWeek> workingDays = userWorkingDaysMap.getOrDefault(userId, Collections.emptySet());
+                String status = attendanceMap.getOrDefault(userId, Collections.emptyMap()).get(date);
+
+                // If the user does NOT work on this day → mark as holiday unless they have attendance
                 if (!workingDays.contains(currentDay)) {
-                    String status = attendanceMap.get(key);
                     if ("Present".equalsIgnoreCase(status)) {
                         present++;
                     } else {
@@ -616,7 +625,7 @@ public class TimesheetServiceImpl implements TimesheetService {
                     continue;
                 }
 
-                String status = attendanceMap.get(key);
+                // If no attendance status recorded
                 if (status == null) {
                     if (isToday) {
                         notMarked++;
@@ -636,6 +645,7 @@ public class TimesheetServiceImpl implements TimesheetService {
             }
         }
 
+        // Prepare the summary DTO
         UserDashboardDto summary = new UserDashboardDto();
         summary.setPresentCount(present);
         summary.setAbsentCount(absent);
@@ -646,17 +656,18 @@ public class TimesheetServiceImpl implements TimesheetService {
         summary.setHolidayCount(holiday);
         summary.setTotalCount(total);
 
+        // Calculate percentages safely
         int totalDays = (int) ChronoUnit.DAYS.between(fromDate, toDate) + 1;
         double totalCount = totalDays * userIds.size();
-        double totalCountPercentage = totalCount > 0 ? totalCount : 1.0;
+        double divisor = totalCount > 0 ? totalCount : 1.0;
 
-        summary.setPresentPercentage(Double.parseDouble(formatToDecimal(present / totalCountPercentage * 100.0)));
-        summary.setAbsentPercentage(Double.parseDouble(formatToDecimal(absent / totalCountPercentage * 100.0)));
-        summary.setPaidLeavePercentage(Double.parseDouble(formatToDecimal(paidLeave / totalCountPercentage * 100.0)));
-        summary.setNotMarkedPercentage(Double.parseDouble(formatToDecimal(notMarked / totalCountPercentage * 100.0)));
-        summary.setHolidayPercentage(Double.parseDouble(formatToDecimal(holiday / totalCountPercentage * 100.0)));
-        summary.setHalfDayPercentage(Double.parseDouble(formatToDecimal(halfDay / totalCountPercentage * 100.0)));
-        summary.setPermissionPercentage(Double.parseDouble(formatToDecimal(permission / totalCountPercentage * 100.0)));
+        summary.setPresentPercentage(Double.parseDouble(formatToDecimal(present / divisor * 100.0)));
+        summary.setAbsentPercentage(Double.parseDouble(formatToDecimal(absent / divisor * 100.0)));
+        summary.setPaidLeavePercentage(Double.parseDouble(formatToDecimal(paidLeave / divisor * 100.0)));
+        summary.setNotMarkedPercentage(Double.parseDouble(formatToDecimal(notMarked / divisor * 100.0)));
+        summary.setHolidayPercentage(Double.parseDouble(formatToDecimal(holiday / divisor * 100.0)));
+        summary.setHalfDayPercentage(Double.parseDouble(formatToDecimal(halfDay / divisor * 100.0)));
+        summary.setPermissionPercentage(Double.parseDouble(formatToDecimal(permission / divisor * 100.0)));
 
         return Collections.singletonList(summary);
     }
@@ -682,27 +693,21 @@ public class TimesheetServiceImpl implements TimesheetService {
             startDate = range.startDate();
             endDate = range.endDate();
             log.info("startDate: {}, endDate: {}", startDate, endDate);
-            if (endDate.isAfter(LocalDate.now(ZoneId.of("Asia/Kolkata"))
-)) {
-                endDate = LocalDate.now(ZoneId.of("Asia/Kolkata"))
-;
+            if (endDate.isAfter(LocalDate.now(ZoneId.of("Asia/Kolkata")))) {
+                endDate = LocalDate.now(ZoneId.of("Asia/Kolkata"));
                 log.info("endDate: {}", endDate);
             }
         } else if (fromDate != null && toDate != null) {
             startDate = fromDate;
             endDate = toDate;
             log.info("startDate: {}, endDate: {}", startDate, endDate);
-            if (endDate.isAfter(LocalDate.now(ZoneId.of("Asia/Kolkata"))
-)) {
-                endDate = LocalDate.now(ZoneId.of("Asia/Kolkata"))
-;
+            if (endDate.isAfter(LocalDate.now(ZoneId.of("Asia/Kolkata")))) {
+                endDate = LocalDate.now(ZoneId.of("Asia/Kolkata"));
                 log.info("endDate: {}", endDate);
             }
         } else if (fromDate == null && toDate == null && userIds != null) {
-            endDate = LocalDate.now(ZoneId.of("Asia/Kolkata"))
-;
+            endDate = LocalDate.now(ZoneId.of("Asia/Kolkata"));
         }
-
         List<UserTimesheetDto> rawResults = timesheetAdapter.fetchUserTimesheetsWithHistory(startDate, endDate, userIds, orgId);
         return rawResults;
     }
@@ -748,23 +753,19 @@ public class TimesheetServiceImpl implements TimesheetService {
             if (existingTimesheetOpt.isPresent()) {
                 timesheet = existingTimesheetOpt.get();
 
-                // Condition: if already clocked out, reject new clock-in
                 if (history.getLogType() == LogType.CLOCK_IN && timesheet.getLastClockOut() != null) {
                     throw new IllegalStateException("User has already clocked out for today. Cannot clock in again.");
                 }
 
-                // Condition: if already clocked in, reject duplicate clock-in
                 if (history.getLogType() == LogType.CLOCK_IN && timesheet.getFirstClockIn() != null) {
                     throw new IllegalStateException("User has already clocked in for today.");
                 }
 
-                // Condition: if clocking out but no clock-in yet
                 if (history.getLogType() == LogType.CLOCK_OUT && timesheet.getFirstClockIn() == null) {
                     throw new IllegalStateException("User has not clocked in yet. Cannot clock out.");
                 }
 
             } else {
-                // Create new timesheet if none exists
                 timesheet = new TimesheetEntity();
                 timesheet.setUserId(userId);
                 timesheet.setDate(finalDate);
@@ -777,9 +778,8 @@ public class TimesheetServiceImpl implements TimesheetService {
                         .orElseThrow(() -> new IllegalStateException("Status Present Not Found"));
                 timesheet.setStatus(presentStatus);
 
-                // Set clock-in/out depending on the first log
                 if (history.getLogType() == LogType.CLOCK_IN) {
-                    timesheet.setFirstClockIn(LocalTime.now());
+                    timesheet.setFirstClockIn(LocalTime.now(ZoneId.of("Asia/Kolkata")));
                 } else if (history.getLogType() == LogType.CLOCK_OUT) {
                     throw new IllegalStateException("Cannot clock out before clocking in.");
                 }
@@ -787,19 +787,16 @@ public class TimesheetServiceImpl implements TimesheetService {
                 timesheet = timesheetAdapter.saveTimesheet(timesheet);
             }
 
-            // Set timesheet in history
             history.setTimesheet(timesheet);
 
-            // Save history and update timesheet
-            history.setLogTime(LocalTime.now());
+            history.setLogTime(LocalTime.now(ZoneId.of("Asia/Kolkata")));
             history.setLoggedTimestamp(LocalDateTime.now());
             savedEntities.add(timesheetAdapter.saveTimesheetHistory(history));
 
-            // Update timesheet clock-in/out if not already set
             if (history.getLogType() == LogType.CLOCK_IN && timesheet.getFirstClockIn() == null) {
-                timesheet.setFirstClockIn(LocalTime.now());
+                timesheet.setFirstClockIn(LocalTime.now(ZoneId.of("Asia/Kolkata")));
             } else if (history.getLogType() == LogType.CLOCK_OUT && timesheet.getLastClockOut() == null) {
-                timesheet.setLastClockOut(LocalTime.now());
+                timesheet.setLastClockOut(LocalTime.now(ZoneId.of("Asia/Kolkata")));
             }
 
             timesheetAdapter.saveTimesheet(timesheet);
