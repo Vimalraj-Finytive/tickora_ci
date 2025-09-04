@@ -123,4 +123,7 @@ public interface UserAdapter {
     Optional<LocationEntity> findLocationByLocationId(Long locationId);
     UserSchemaMappingEntity update(UserSchemaMappingEntity mapping);
     Optional<UserSchemaMappingEntity> findUserByMobileAndOrgId(String mobile, String orgId);
+    void saveUserHistory(UserHistoryEntity userHistoryEntity);
+    void deleteUserFace(String userId);
+    List<UserHistoryEntity> getUserHistoryLog(String userId);
 }

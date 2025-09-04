@@ -25,34 +25,34 @@ public class NettyfishServiceImpl implements NettyfishService {
 
     @Override
     public OtpSendResponse sendOtp(String mobile, String generatedOtp) {
-//        String nettyfishApiUrl ="https://sms.nettyfish.com/api/v2/SendSMS?SenderId="+nettyfishConfig.getSenderId()+"&TemplateId="+
-//                nettyfishConfig.getTemplateId()+"&Message=Dear customer, Your OTP for logging into auction portal  "+
-//                generatedOtp+" . Please do not share this OTP with anyone. This OTP is valid only for 5mins.U.N.I.Q TECHNO&PrincipleEntityId="+
-//                nettyfishConfig.getPrincipleEntityId()+"&ApiKey="+nettyfishConfig.getApiKey()+"&ClientId="+nettyfishConfig.getClientId()+
-//                "&MobileNumbers="+mobile+"&Is_Unicode=false";
-//        RestTemplate restTemplate = new RestTemplate();
-//        String response = restTemplate.getForObject(nettyfishApiUrl, String.class);
-//        System.out.println("Nettyfish Response: " + response);
-//        try {
-//            ObjectMapper mapper = new ObjectMapper();
-//            JsonNode root = mapper.readTree(response);
-//
-//            int errorCode = root.path("ErrorCode").asInt();
-//            JsonNode dataNode = root.path("Data").isArray() && root.path("Data").size() > 0
-//                    ? root.path("Data").get(0)
-//                    : null;
-//
-//            int messageErrorCode = dataNode != null ? dataNode.path("MessageErrorCode").asInt() : -1;
-//            String messageErrorDescription = dataNode != null ? dataNode.path("MessageErrorDescription").asText() : "";
-//
-//            if (errorCode == 0 && messageErrorCode == 0) {
-//                return new OtpSendResponse(true, "OTP sent successfully");
-//            } else {
-//                return new OtpSendResponse(false, "Failed to send OTP: " + messageErrorDescription);
-//            }
-//        } catch (Exception e) {
-//            return new OtpSendResponse(false, "Error parsing Nettyfish response: " + e.getMessage());
-//        }
-        return new OtpSendResponse(true,"OTP Sent successfully");
+        String nettyfishApiUrl ="https://sms.nettyfish.com/api/v2/SendSMS?SenderId="+nettyfishConfig.getSenderId()+"&TemplateId="+
+                nettyfishConfig.getTemplateId()+"&Message=Dear User. Use  "+
+                generatedOtp+" as your Tickora login code. This OTP is valid for 5 minutes. Never share it with anyone, even if they claim to be from Tickora.By FINYTIVE&PrincipleEntityId="+
+                nettyfishConfig.getPrincipleEntityId()+"&ApiKey="+nettyfishConfig.getApiKey()+"&ClientId="+nettyfishConfig.getClientId()+
+                "&MobileNumbers="+mobile+"&Is_Unicode=false";
+        RestTemplate restTemplate = new RestTemplate();
+        String response = restTemplate.getForObject(nettyfishApiUrl, String.class);
+        System.out.println("Nettyfish Response: " + response);
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode root = mapper.readTree(response);
+
+            int errorCode = root.path("ErrorCode").asInt();
+            JsonNode dataNode = root.path("Data").isArray() && root.path("Data").size() > 0
+                    ? root.path("Data").get(0)
+                    : null;
+
+            int messageErrorCode = dataNode != null ? dataNode.path("MessageErrorCode").asInt() : -1;
+            String messageErrorDescription = dataNode != null ? dataNode.path("MessageErrorDescription").asText() : "";
+
+            if (errorCode == 0 && messageErrorCode == 0) {
+                return new OtpSendResponse(true, "OTP sent successfully");
+            } else {
+                return new OtpSendResponse(false, "Failed to send OTP: " + messageErrorDescription);
+            }
+        } catch (Exception e) {
+            return new OtpSendResponse(false, "Error parsing Nettyfish response: " + e.getMessage());
+        }
+//        return new OtpSendResponse(true,"OTP Sent successfully");
     }
 }

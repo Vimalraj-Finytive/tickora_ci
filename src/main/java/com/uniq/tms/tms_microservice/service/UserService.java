@@ -19,7 +19,7 @@ public interface UserService {
     ApiResponse createUser(UserDto userDto,SecondaryDetailsDto secondaryDetailsDto, String organizationId);
     User updateUser(CreateUserDto updates, String orgId, String userId);
     List<UserResponseDto> getUsers(String orgId, String role);
-    User deleteUser(String orgId, String userId);
+    User deleteUser(String orgId, DeactivateUserRequestDto requestDto, String userNameFromToken);
     AddGroup createGroup(AddGroup groupMiddleware, String orgId);
     void deleteMember(Long groupId, String memberId, String orgId);
     void deleteGroup(Long groupId, String orgId);
@@ -43,7 +43,8 @@ public interface UserService {
     void deleteLocation(LocationListDto locationIds, String orgId);
     String findGroupName(Long requestedGroupId);
     List<UserResponseDto> getInactiveUsers(String orgId, String role);
-    List<EditUserDto> updateIsActive(EditUser editUser, String orgId);
+    List<EditUserDto> updateIsActive(EditUser editUser, String orgId, String userNameFromToken);
     ApiResponse createSuperAdminUser(Organization organization, String orgId, String schemaName);
     ApiResponse<UserValidationDto> validateUser(String userId);
+    ApiResponse<List<UserHistoryResponseDto>> getUserHistoryLog(String userId);
 }

@@ -1148,8 +1148,9 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public User deleteUser(String orgId, String userId) {
+    public User deleteUser(String orgId, DeactivateUserRequestDto requestDto, String userNameFromToken) {
         String schema = TenantUtil.getCurrentTenant();
+        String userId = requestDto.getUserId();
         UserEntity user = userAdapter.findById(userId)
                 .orElseThrow(() -> new UsernameNotFoundException("User ID not found."));
 
@@ -1159,7 +1160,14 @@ public class UserServiceImpl implements UserService {
 
         userAdapter.deactivateUserById(userId, orgId);
         log.info("Deactivated user: {} in org: {}", userId, orgId);
-
+        String Comments = "Inactivated By " + userNameFromToken + "- " + requestDto.getComments();
+        UserHistoryEntity userHistoryEntity = userEntityMapper.toInactiveUserEntity(userId,Comments);
+        log.info("Save User History Log");
+        userAdapter.saveUserHistory(userHistoryEntity);
+        log.info("Saved User log History");
+        log.info("Deleting User Face");
+        userAdapter.deleteUserFace(userId);
+        log.info("User face deleted Successfully");
         if (isRedisEnabled) {
             CacheEventPublisherUtil.syncReloadThenPublish(
                     publisher,
@@ -1172,7 +1180,6 @@ public class UserServiceImpl implements UserService {
         } else {
             log.info("Redis is not enabled or RedisTemplate is null. Skipping cache reload.");
         }
-
         return userEntityMapper.toMiddleware(user);
     }
 
@@ -2094,7 +2101,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public List<EditUserDto> updateIsActive(EditUser editUser, String orgId) {
+    public List<EditUserDto> updateIsActive(EditUser editUser, String orgId, String userNameFromToken) {
         String schema = TenantUtil.getCurrentTenant();
         List<String> userIds = editUser.getUserId();
         if (userIds == null || userIds.isEmpty()) {
@@ -2109,9 +2116,14 @@ public class UserServiceImpl implements UserService {
 
             userEntities.setActive(editUser.isActive());
             userEntityList.add(userEntities);
+
+            String Comments = "Activated By " + userNameFromToken + "- " + editUser.getComments();
+            UserHistoryEntity userHistoryEntity = userEntityMapper.toActiveUserEntity(id,Comments);
+            log.info("Save User History Log");
+            userAdapter.saveUserHistory(userHistoryEntity);
+            log.info("Saved User log History");
         }
         List<UserEntity> user = userAdapter.save(userEntityList);
-        userFaceRepository.deleteAllById(editUser.getUserId());
         List<EditUserDto> dto = userDtoMapper.toDto(user);
         if (isRedisEnabled) {
             CacheEventPublisherUtil.syncReloadThenPublish(
@@ -2217,4 +2229,15 @@ public class UserServiceImpl implements UserService {
         return new ApiResponse<>(404, "User not found", null);
     }
 
+    @Override
+    public ApiResponse<List<UserHistoryResponseDto>> getUserHistoryLog(String userId) {
+        log.info("Fetching user history for userId: {}", userId);
+        List<UserHistoryEntity> responseDtos = userAdapter.getUserHistoryLog(userId);
+        log.info("Fetched {} history records for userId {}", responseDtos.size(), userId);
+        if (responseDtos.isEmpty()) {
+            return new ApiResponse<>(404, "No history found for this user", null);
+        }
+        List<UserHistoryResponseDto> responseDtoList = userEntityMapper.toHistoryDto(responseDtos);
+        return  new ApiResponse<>(200,"User History Log return successfully",responseDtoList);
+    }
 }

@@ -6,6 +6,7 @@ public class EditUserDto {
 
     private List<String> userId;
     private boolean active;
+    private String comments;
 
     public List<String> getUserId() {
         return userId;
@@ -21,5 +22,13 @@ public class EditUserDto {
 
     public void setActive(boolean active) {
         this.active = active;
+    }
+
+    public String getComments() {
+        return comments;
+    }
+
+    public void setComments(String comments) {
+        this.comments = comments;
     }
 }

@@ -13,7 +13,6 @@ import com.uniq.tms.tms_microservice.model.UserResponse;
 import com.uniq.tms.tms_microservice.dto.UserNameSuggestionDto;
 import com.uniq.tms.tms_microservice.entity.*;
 import com.uniq.tms.tms_microservice.repository.*;
-import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
@@ -38,8 +37,9 @@ public class UserAdapterImpl implements UserAdapter {
     private final PlanRepository planRepository;
     private final SubscriptionRepository subscriptionRepository;
     private final UserFaceRepository userFaceRepository;
+    private final UserHistoryRepository userHistoryRepository;
 
-    public UserAdapterImpl(RoleRepository roleRepository, TeamRepository teamRepository, LocationRepository locationRepository, UserRepository userRepository, UserGroupRepository userGroupRepository, SecondaryDetailsRepository secondaryDetailsRepository, LocationEntityMapper locationEntityMapper, PrivilegeRepository privilegeRepository, UserLocationRepository userLocationRepository, OrganizationRepository organizationRepository, OrganizationTypeRepository organizationTypeRepository, UserSchemaMapperRepository userSchemaMapperRepository, PlanRepository planRepository, SubscriptionRepository subscriptionRepository, UserFaceRepository userFaceRepository) {
+    public UserAdapterImpl(RoleRepository roleRepository, TeamRepository teamRepository, LocationRepository locationRepository, UserRepository userRepository, UserGroupRepository userGroupRepository, SecondaryDetailsRepository secondaryDetailsRepository, LocationEntityMapper locationEntityMapper, PrivilegeRepository privilegeRepository, UserLocationRepository userLocationRepository, OrganizationRepository organizationRepository, OrganizationTypeRepository organizationTypeRepository, UserSchemaMapperRepository userSchemaMapperRepository, PlanRepository planRepository, SubscriptionRepository subscriptionRepository, UserFaceRepository userFaceRepository, UserHistoryRepository userHistoryRepository) {
         this.roleRepository = roleRepository;
         this.teamRepository = teamRepository;
         this.locationRepository = locationRepository;
@@ -55,6 +55,7 @@ public class UserAdapterImpl implements UserAdapter {
         this.planRepository = planRepository;
         this.subscriptionRepository = subscriptionRepository;
         this.userFaceRepository = userFaceRepository;
+        this.userHistoryRepository = userHistoryRepository;
     }
 
     @Override
@@ -618,5 +619,21 @@ public class UserAdapterImpl implements UserAdapter {
     @Override
     public Optional<UserSchemaMappingEntity> findUserByMobileAndOrgId(String mobile, String orgId) {
         return userSchemaMapperRepository.findUserByMobileAndOrgId(mobile,orgId);
+    }
+
+    @Override
+    @Transactional
+    public void saveUserHistory(UserHistoryEntity userHistoryEntity) {
+        userHistoryRepository.save(userHistoryEntity);
+    }
+
+    @Override
+    public void deleteUserFace(String userId) {
+        userFaceRepository.deleteByUserId(userId);
+    }
+
+    @Override
+    public List<UserHistoryEntity> getUserHistoryLog(String userId) {
+        return userHistoryRepository.findByUserId(userId);
     }
 }

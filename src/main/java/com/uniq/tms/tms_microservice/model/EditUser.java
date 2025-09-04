@@ -6,6 +6,7 @@ public class EditUser {
 
     private List<String> userId;
     private Boolean active;
+    private String comments;
 
     public List<String> getUserId() {
         return userId;
@@ -21,5 +22,17 @@ public class EditUser {
 
     public void setActive(Boolean active) {
         this.active = active;
+    }
+
+    public Boolean getActive() {
+        return active;
+    }
+
+    public String getComments() {
+        return comments;
+    }
+
+    public void setComments(String comments) {
+        this.comments = comments;
     }
 }
