@@ -614,4 +614,9 @@ public class UserAdapterImpl implements UserAdapter {
     public UserSchemaMappingEntity update(UserSchemaMappingEntity mapping) {
         return userSchemaMapperRepository.save(mapping);
     }
+
+    @Override
+    public Optional<UserSchemaMappingEntity> findUserByMobileAndOrgId(String mobile, String orgId) {
+        return userSchemaMapperRepository.findUserByMobileAndOrgId(mobile,orgId);
+    }
 }
