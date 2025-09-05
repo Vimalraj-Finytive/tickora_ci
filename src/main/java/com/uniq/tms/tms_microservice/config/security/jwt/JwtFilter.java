@@ -103,9 +103,9 @@ public class JwtFilter extends OncePerRequestFilter {
                         return;
                     }
                 } else if (rolePrivilegeHelper.roleHasPrivilege(role, mobileKey)) {
-                    user = secondaryDetailsRepository.findUserByMobile(subject);
+                    user = userRepository.findByMobileNumber(subject);
                     log.info("mobile user from repo:{}", user);
-                    if (!user.isActive()){
+                    if (user != null && !user.isActive()){
                         log.info("Your account is deactivated.");
                         sendErrorResponse(response, HttpServletResponse.SC_FORBIDDEN, "Your account has been Inactivated.");
                         return;

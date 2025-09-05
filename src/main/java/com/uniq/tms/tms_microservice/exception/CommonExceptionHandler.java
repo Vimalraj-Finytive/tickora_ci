@@ -29,4 +29,11 @@ public class CommonExceptionHandler {
     public static class SchemaNotFoundException extends RuntimeException{
         public SchemaNotFoundException(String message){super(message);}
     }
+
+    public static class ConflictException extends RuntimeException {
+        public ConflictException(String message) {
+            super(message);
+        }
+    }
+
 }

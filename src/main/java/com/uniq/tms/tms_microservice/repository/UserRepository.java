@@ -69,7 +69,7 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
 
     @Modifying
     @Transactional
-    @Query("UPDATE UserEntity u SET u.active = false WHERE u.userId = :userId AND u.organizationId = :orgId")
+    @Query("UPDATE UserEntity u SET u.active = false, u.isRegisterUser = false WHERE u.userId = :userId AND u.organizationId = :orgId")
     void deactivateUserById(String userId, String orgId);
 
     @Query("SELECT new com.uniq.tms.tms_microservice.dto.UserNameSuggestionDto(u.userId, u.userName) " +

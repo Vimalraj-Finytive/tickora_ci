@@ -109,4 +109,15 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(response, HttpStatus.UNSUPPORTED_MEDIA_TYPE);
     }
 
+    @ExceptionHandler(CommonExceptionHandler.ConflictException.class)
+    public ResponseEntity<ApiResponse> handleConflictException(CommonExceptionHandler.ConflictException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new ApiResponse(409, ex.getMessage(), null));
+    }
+
+    @ExceptionHandler(CommonExceptionHandler.InternalServerException.class)
+    public ResponseEntity<ApiResponse> handleInternalServerException(CommonExceptionHandler.InternalServerException ex) {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ApiResponse(500, ex.getMessage(), null));
+    }
 }

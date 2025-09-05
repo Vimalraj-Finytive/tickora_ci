@@ -8,6 +8,7 @@ import com.uniq.tms.tms_microservice.dto.OrgSetupValidationResponse;
 import com.uniq.tms.tms_microservice.entity.*;
 import com.uniq.tms.tms_microservice.enums.CountryEnum;
 import com.uniq.tms.tms_microservice.exception.CommonExceptionHandler;
+import com.uniq.tms.tms_microservice.helper.ExceptionHelper;
 import com.uniq.tms.tms_microservice.mapper.UserEntityMapper;
 import com.uniq.tms.tms_microservice.model.Organization;
 import com.uniq.tms.tms_microservice.model.OrganizationType;
@@ -23,6 +24,7 @@ import liquibase.resource.ClassLoaderResourceAccessor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import javax.sql.DataSource;
@@ -40,16 +42,18 @@ public class OrganizationServiceImpl implements OrganizationService {
     private final WorkScheduleAdapter workScheduleAdapter;
     private final IdGenerationService idGenerationService;
     private final DataSource dataSource;
+    private final ExceptionHelper exceptionHelper;
 
     @Autowired
     private UserService userService;
 
-    public OrganizationServiceImpl(UserEntityMapper userEntityMapper, UserAdapter userAdapter, WorkScheduleAdapter workScheduleAdapter, IdGenerationService idGenerationService, DataSource dataSource) {
+    public OrganizationServiceImpl(UserEntityMapper userEntityMapper, UserAdapter userAdapter, WorkScheduleAdapter workScheduleAdapter, IdGenerationService idGenerationService, DataSource dataSource, ExceptionHelper exceptionHelper) {
         this.userEntityMapper = userEntityMapper;
         this.userAdapter = userAdapter;
         this.workScheduleAdapter = workScheduleAdapter;
         this.idGenerationService = idGenerationService;
         this.dataSource = dataSource;
+        this.exceptionHelper = exceptionHelper;
     }
 
     /**
@@ -101,23 +105,39 @@ public class OrganizationServiceImpl implements OrganizationService {
                     orgId,
                     schemaName
             );
-            userAdapter.create(mapping);
+
+            try {
+                userAdapter.create(mapping);
+            } catch (org.hibernate.exception.ConstraintViolationException e) {
+                log.error("Constraint violation: {}", e.getMessage());
+                dropSchema(schemaName);
+                String userMessage = exceptionHelper.getUserFriendlyConstraintMessage(e);
+                throw new CommonExceptionHandler.ConflictException(userMessage);
+
+            } catch (DataIntegrityViolationException e) {
+                log.error("Data integrity violation: {}", e.getMessage());
+                dropSchema(schemaName);
+                String userMessage = exceptionHelper.extractConstraintMessage(e);
+                throw new CommonExceptionHandler.ConflictException(userMessage);
+            }
 
             log.info("Organization + Tenant setup completed for OrgId: {}", orgId);
             return orgModel;
 
+        } catch (CommonExceptionHandler.ConflictException ex) {
+            throw ex;
         } catch (Exception e) {
             log.error("Organization creation failed. Dropping schema {}. Cause: {}", schemaName, e.getMessage(), e);
             dropSchema(schemaName);
             throw new CommonExceptionHandler.InternalServerException(
-                    "Failed to create organization or SuperAdmin user: " + e.getMessage()
+                    "Failed to create organization or SuperAdmin user"
             );
         } finally {
             TenantContext.clear();
         }
     }
 
-    private OrganizationEntity saveOrganizationPublic(OrganizationEntity entity) {
+        private OrganizationEntity saveOrganizationPublic(OrganizationEntity entity) {
         try {
             return userAdapter.create(entity);
         } catch (Exception e) {

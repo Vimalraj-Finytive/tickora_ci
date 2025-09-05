@@ -20,6 +20,7 @@ import com.uniq.tms.tms_microservice.entity.UserGroupEntity;
 import com.uniq.tms.tms_microservice.entity.WorkScheduleEntity;
 import com.uniq.tms.tms_microservice.exception.CommonExceptionHandler;
 import com.uniq.tms.tms_microservice.helper.EmailHelper;
+import com.uniq.tms.tms_microservice.helper.ExceptionHelper;
 import com.uniq.tms.tms_microservice.helper.RolePrivilegeHelper;
 import com.uniq.tms.tms_microservice.mapper.LocationEntityMapper;
 import com.uniq.tms.tms_microservice.mapper.UserDtoMapper;
@@ -39,6 +40,7 @@ import jakarta.annotation.Nullable;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Validator;
 import org.apache.commons.io.FilenameUtils;
+import org.hibernate.exception.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -101,6 +103,7 @@ public class UserServiceImpl implements UserService {
     private final SecondaryDetailsRepository secondaryDetailsRepository;
     private final UserFaceRepository userFaceRepository;
     private final RolePrivilegeHelper rolePrivilegeHelper;
+    private final ExceptionHelper exceptionHelper;
 
     public UserServiceImpl(Validator validator, UserAdapter userAdapter, TimesheetAdapter timesheetAdapter,
                            UserEntityMapper userEntityMapper, OrganizationRepository organizationRepository,
@@ -109,7 +112,7 @@ public class UserServiceImpl implements UserService {
                            @Nullable RedisTemplate<String, Object> redisTemplate, LocationEntityMapper locationEntityMapper,
                            CacheLoaderService cacheLoaderService, ApplicationEventPublisher publisher, WorkScheduleAdapter workScheduleAdapter,
                            CacheKeyUtil cacheKeyUtil, TeamRepository teamRepository, CacheKeyConfig cacheKeyConfig, CacheReloadHandlerRegistry cacheReloadHandlerRegistry,
-                           OrganizationTypeRepository organizationTypeRepository, IdGenerationService idGenerationService, SecondaryDetailsRepository secondaryDetailsRepository, UserFaceRepository userFaceRepository, RolePrivilegeHelper rolePrivilegeHelper) {
+                           OrganizationTypeRepository organizationTypeRepository, IdGenerationService idGenerationService, SecondaryDetailsRepository secondaryDetailsRepository, UserFaceRepository userFaceRepository, RolePrivilegeHelper rolePrivilegeHelper, ExceptionHelper exceptionHelper) {
         this.validator = validator;
         this.userAdapter = userAdapter;
         this.timesheetAdapter = timesheetAdapter;
@@ -134,6 +137,7 @@ public class UserServiceImpl implements UserService {
         this.secondaryDetailsRepository = secondaryDetailsRepository;
         this.userFaceRepository = userFaceRepository;
         this.rolePrivilegeHelper = rolePrivilegeHelper;
+        this.exceptionHelper = exceptionHelper;
     }
 
     private static final Logger log = LoggerFactory.getLogger(UserServiceImpl.class);
@@ -791,14 +795,28 @@ public class UserServiceImpl implements UserService {
 
         if (savedUserEntity != null) {
             log.info("Creating user mapping for all saved users");
+
             UserSchemaMappingEntity mappings = userEntityMapper.toSchema(
                     savedUserEntity.getEmail(),
                     savedUserEntity.getMobileNumber(),
                     organizationId,
-                    TenantContext.getCurrentTenant());
+                    TenantContext.getCurrentTenant()
+            );
 
-            userAdapter.create(mappings);
+            try {
+                userAdapter.create(mappings);
+            } catch (org.hibernate.exception.ConstraintViolationException e) {
+                log.error("Constraint violation: {}", e.getMessage());
+                String userMessage = exceptionHelper.getUserFriendlyConstraintMessage(e);
+                throw new CommonExceptionHandler.ConflictException(userMessage);
+
+            } catch (DataIntegrityViolationException e) {
+                log.error("Data integrity violation: {}", e.getMessage());
+                String userMessage = exceptionHelper.extractConstraintMessage(e);
+                throw new CommonExceptionHandler.ConflictException(userMessage);
+            }
         }
+
         if (saveSecondaryUser != null) {
             log.info("Creating user mapping for all saved secondary users");
             UserSchemaMappingEntity secondaryMappings = userEntityMapper.toSchema(
@@ -807,8 +825,18 @@ public class UserServiceImpl implements UserService {
                     organizationId,
                     TenantContext.getCurrentTenant()
             );
+            try {
+                userAdapter.create(secondaryMappings);
+            } catch (ConstraintViolationException e) {
+                log.error("Constraint violation: {}", e.getMessage());
+                String userMessage = exceptionHelper.getUserFriendlyConstraintMessage(e);
+                throw new CommonExceptionHandler.ConflictException(userMessage);
 
-            userAdapter.create(secondaryMappings);
+            } catch (DataIntegrityViolationException e) {
+                log.error("Data integrity violation: {}", e.getMessage());
+                String userMessage = exceptionHelper.extractConstraintMessage(e);
+                throw new CommonExceptionHandler.ConflictException(userMessage);
+            }
         }
         if (!isBlank(userDto.getLocationId())) {
             log.info("Adding user to location: {}", userDto.getLocationId());
@@ -841,7 +869,7 @@ public class UserServiceImpl implements UserService {
                 userGroupEntities.add(userGroup);
             }
             for (UserGroupEntity userGroup : userGroupEntities) {
-                userAdapter.saveUserGroup(userGroup); // called individually
+                userAdapter.saveUserGroup(userGroup);
             }
             groupIds = userGroupEntities.stream()
                     .map(userGroup -> userGroup.getGroup().getGroupId())
@@ -930,7 +958,6 @@ public class UserServiceImpl implements UserService {
                     "User with this email already exists."
             );
         }
-
         return true;
     }
 
