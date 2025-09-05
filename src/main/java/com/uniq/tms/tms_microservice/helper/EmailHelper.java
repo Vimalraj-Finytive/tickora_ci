@@ -1,5 +1,9 @@
 package com.uniq.tms.tms_microservice.helper;
 
+import com.uniq.tms.tms_microservice.entity.RoleEntity;
+import com.uniq.tms.tms_microservice.enums.PrivilegeConstants;
+import com.uniq.tms.tms_microservice.repository.RoleRepository;
+import com.uniq.tms.tms_microservice.service.CacheLoaderService;
 import com.uniq.tms.tms_microservice.service.impl.EmailService;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -10,14 +14,28 @@ public class EmailHelper {
 
     private final Logger log = LogManager.getLogger(EmailHelper.class);
     private final EmailService emailService;
+    private final RoleRepository roleRepository;
+    private final CacheLoaderService cacheLoaderService;
+    private final RolePrivilegeHelper rolePrivilegeHelper;
 
-    public EmailHelper(EmailService emailService) {
+    public EmailHelper(EmailService emailService, RoleRepository roleRepository, CacheLoaderService cacheLoaderService, RolePrivilegeHelper rolePrivilegeHelper) {
         this.emailService = emailService;
+        this.roleRepository = roleRepository;
+        this.cacheLoaderService = cacheLoaderService;
+        this.rolePrivilegeHelper = rolePrivilegeHelper;
     }
 
-    public void sendAccountCreationEmail(String toEmail, String userName, String Password, boolean isNewUser) {
+    public void sendAccountCreationEmail(String toEmail, String userName, String Password, boolean isNewUser, Long roleId) {
+        RoleEntity role = roleRepository.findById(roleId)
+                .orElseThrow(() -> new RuntimeException("Role not found with ID: " + roleId));
+        String roleName = role.getName();
+        String emailLoginKey = cacheLoaderService.getPrivilegeKey(PrivilegeConstants.LOGIN_VIA_EMAIL);
+        String mobileLoginKey = cacheLoaderService.getPrivilegeKey(PrivilegeConstants.LOGIN_VIA_MOBILE);
+        boolean emailLogin = rolePrivilegeHelper.roleHasPrivilege(roleName, emailLoginKey);
+        boolean mobileLogin = rolePrivilegeHelper.roleHasPrivilege(roleName, mobileLoginKey);
+        log.info("Role name: {}, emailLogin: {}, mobileLogin: {}", roleName, emailLogin, mobileLogin);
         String emailSubject = "Account Created Successfully";
-        String emailType = "account_creation";
+        String emailType = emailLogin ? "account_creation" : mobileLogin ? "mobile_login" : "default";
         emailService.sendEmail(toEmail, emailSubject, userName, Password,isNewUser, emailType);
     }
 

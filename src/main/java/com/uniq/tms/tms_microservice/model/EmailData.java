@@ -5,16 +5,17 @@ public class EmailData {
     private String userName;
     private String generatedPass;
     private boolean isNewUser;
+    private Long roleId;
 
     // Constructor
-    public EmailData(String email, String userName, String generatedPass, boolean isNewUser) {
+    public EmailData(String email, String userName, String generatedPass, boolean isNewUser, Long roleId) {
         this.email = email;
         this.userName = userName;
         this.generatedPass = generatedPass;
         this.isNewUser = isNewUser;
+        this.roleId = roleId;
     }
 
-    // Getters and Setters
     public String getEmail() {
         return email;
     }
@@ -45,5 +46,17 @@ public class EmailData {
 
     public void setRegisterUser(boolean isNewUser) {
         this.isNewUser = isNewUser;
+    }
+
+    public void setNewUser(boolean newUser) {
+        isNewUser = newUser;
+    }
+
+    public Long getRoleId() {
+        return roleId;
+    }
+
+    public void setRoleId(Long roleId) {
+        this.roleId = roleId;
     }
 }

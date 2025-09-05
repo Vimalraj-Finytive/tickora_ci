@@ -14,21 +14,26 @@ public class OtpFallbackCache {
 
     private static final Logger log = LogManager.getLogger(OtpFallbackCache.class);
 
+    private static final long OTP_TTL_DAYS = 90;
+
     private final Map<String, OtpEntry> otpMap = new ConcurrentHashMap<>();
     private final Map<String, CountEntry> otpCountMap = new ConcurrentHashMap<>();
     private final ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
 
-    public void saveOtp(String key, String otp, long ttlMinutes){
-        otpMap.put(key, new OtpEntry(otp, Instant.now().plus(ttlMinutes, ChronoUnit.MINUTES).toEpochMilli()));
-        scheduledExecutorService.schedule(()-> {
+    /** Save OTP for 90 days */
+    public void saveOtp(String key, String otp) {
+        long expireTime = Instant.now().plus(OTP_TTL_DAYS, ChronoUnit.DAYS).toEpochMilli();
+        otpMap.put(key, new OtpEntry(otp, expireTime));
+        scheduledExecutorService.schedule(() -> {
             OtpEntry otpEntry = otpMap.get(key);
-            if(otpEntry != null && Instant.now().toEpochMilli() >= otpEntry.expireTime){
+            if (otpEntry != null && Instant.now().toEpochMilli() >= otpEntry.expireTime) {
                 otpMap.remove(key);
-                log.info("OTP expired and removed for key: {}" , key);
+                log.info("OTP expired and removed for key: {}", key);
             }
-        },ttlMinutes, TimeUnit.MINUTES);
+        }, OTP_TTL_DAYS, TimeUnit.DAYS);
     }
 
+    /** Get OTP if still valid */
     public String getOtp(String key) {
         OtpEntry otpEntry = otpMap.get(key);
         if (otpEntry != null && System.currentTimeMillis() <= otpEntry.expireTime) {
@@ -38,18 +43,21 @@ public class OtpFallbackCache {
         return null;
     }
 
-    public void incrementCount(String key, long secondsUntilMidnight) {
+    /** Increment OTP request count, expires after 90 days */
+    public void incrementCount(String key) {
+        long expireTime = Instant.now().plus(OTP_TTL_DAYS, ChronoUnit.DAYS).toEpochMilli();
         otpCountMap.merge(key,
-                new CountEntry(1, Instant.now().plus(secondsUntilMidnight, ChronoUnit.SECONDS).toEpochMilli()),
+                new CountEntry(1, expireTime),
                 (oldVal, newVal) -> {
-            if (Instant.now().toEpochMilli() > oldVal.expireTime) {
-                return newVal;
-            }
-            oldVal.count++;
-            return oldVal;
-        });
+                    if (Instant.now().toEpochMilli() > oldVal.expireTime) {
+                        return newVal; // expired → reset count
+                    }
+                    oldVal.count++;
+                    return oldVal;
+                });
     }
 
+    /** Get current OTP request count */
     public Integer getCount(String key) {
         CountEntry entry = otpCountMap.get(key);
         if (entry == null) return null;
@@ -60,18 +68,21 @@ public class OtpFallbackCache {
         return entry.count;
     }
 
+    /** Manually clear OTP */
     public void clearOtp(String otpKey) {
         otpMap.remove(otpKey);
     }
 
+    /** Debugging - get all OTPs */
     public Map<String, String> getAllEntries() {
         return otpMap.entrySet().stream()
                 .collect(Collectors.toMap(
                         Map.Entry::getKey,
-                        e-> e.getValue().otp + " Expires: " + Instant.ofEpochMilli(e.getValue().expireTime) + ")"
+                        e -> e.getValue().otp + " Expires: " + Instant.ofEpochMilli(e.getValue().expireTime)
                 ));
     }
 
+    /** Debugging - get all OTP counts */
     public Map<String, String> getAllOtpCounts() {
         return otpCountMap.entrySet().stream()
                 .collect(Collectors.toMap(
@@ -81,23 +92,25 @@ public class OtpFallbackCache {
                 ));
     }
 
+    /** Count entry structure */
     private static class CountEntry {
-            int count;
-            long expireTime;
-            CountEntry(int count, long expireTime) {
-                this.count = count;
-                this.expireTime = expireTime;
-            }
-        }
-
-    private static class OtpEntry{
-        String otp;
+        int count;
         long expireTime;
 
-        OtpEntry(String otp, long expireTime){
-            this.otp = otp;
+        CountEntry(int count, long expireTime) {
+            this.count = count;
             this.expireTime = expireTime;
         }
     }
 
+    /** OTP entry structure */
+    private static class OtpEntry {
+        String otp;
+        long expireTime;
+
+        OtpEntry(String otp, long expireTime) {
+            this.otp = otp;
+            this.expireTime = expireTime;
+        }
+    }
 }

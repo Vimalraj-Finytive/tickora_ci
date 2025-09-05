@@ -514,7 +514,7 @@ public class UserServiceImpl implements UserService {
                     userEntity = createUserEntity(userDto, orgId, defaultPass);
                     userEntities.add(userEntity);
                     successList.add(username);
-                    emailRequests.add(new EmailData(email, userDto.getUserName(), defaultPass, userDto.isRegisterUser()));
+                    emailRequests.add(new EmailData(email, userDto.getUserName(), defaultPass, userDto.isRegisterUser(), userDto.getRoleId()));
 
                     uploadedCount++;
 
@@ -709,7 +709,7 @@ public class UserServiceImpl implements UserService {
 
         for (EmailData emailData : emailRequests) {
             try {
-                emailHelper.sendAccountCreationEmail(emailData.getEmail(), emailData.getUserName(), emailData.getGeneratedPass(), emailData.isNewUser());
+                emailHelper.sendAccountCreationEmail(emailData.getEmail(), emailData.getUserName(), emailData.getGeneratedPass(), emailData.isNewUser(),emailData.getRoleId());
                 successCount++;
             } catch (Exception e) {
                 log.error("Failed to send email to {}", emailData.getEmail(), e);
@@ -882,7 +882,7 @@ public class UserServiceImpl implements UserService {
 
         boolean isNewUser = savedUserEntity.isDefaultPassword();
         emailHelper.sendAccountCreationEmail(
-                userMiddleware.getEmail(), userMiddleware.getUserName(), defaultPassword, isNewUser
+                userMiddleware.getEmail(), userMiddleware.getUserName(), defaultPassword, isNewUser,userMiddleware.getRoleId()
         );
         if (isRedisEnabled) {
             CacheEventPublisherUtil.syncReloadThenPublish(
@@ -2225,7 +2225,7 @@ public class UserServiceImpl implements UserService {
             SubscriptionEntity saveSubscription = userAdapter.saveSubscription(subscriptionEntity);
 
             emailHelper.sendAccountCreationEmail(
-                    savedUser.getEmail(), savedUser.getUserName(), defaultPassword, true
+                    savedUser.getEmail(), savedUser.getUserName(), defaultPassword, true,savedUser.getRole().getRoleId()
             );
 
             log.info("SuperAdmin created successfully in schema.users for org {}", organizationId);

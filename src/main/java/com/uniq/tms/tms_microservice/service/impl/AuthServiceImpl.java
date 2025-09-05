@@ -90,8 +90,8 @@ public class AuthServiceImpl implements AuthService {
     @Value("${otp.ttl.minutes}")
     private long otpTtlMinutes;
 
-    @Value("${otp.max.daily.attempts}")
-    private int maxDailyAttempts;
+    @Value("${otp.max.attempts}")
+    private int maxAttempts;
 
     @Value("#{'${otp.test.mobiles}'.split(',')}")
     private List<String> testMobiles;
@@ -249,7 +249,7 @@ public class AuthServiceImpl implements AuthService {
         log.info("Generated OTP:{}", generatedOtp);
         Integer currentCount = otpFallbackCache.getCount(otpCountKey);
         if (!(testMobiles.contains(mobile) && testOtp.equals(generatedOtp))) {
-            if (currentCount != null && currentCount >= maxDailyAttempts) {
+            if (currentCount != null && currentCount >= maxAttempts) {
                 return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                         .body(new ApiResponse(429, "Daily OTP limit reached, Try again Tomorrow.", response));
             }
@@ -261,8 +261,8 @@ public class AuthServiceImpl implements AuthService {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ApiResponse(500, "Failed to send OTP: " + otpSendResponse, null));
         }
-        otpFallbackCache.saveOtp(otpKey, generatedOtp, otpTtlMinutes);
-        otpFallbackCache.incrementCount(otpCountKey, secondsUntilMidnight);
+        otpFallbackCache.saveOtp(otpKey, generatedOtp);
+        otpFallbackCache.incrementCount(otpCountKey);
         log.info("Generated OTP for {}: {}", mobile, generatedOtp);
         return ResponseEntity.ok(new ApiResponse(200, "OTP sent successfully", dataList));
     }

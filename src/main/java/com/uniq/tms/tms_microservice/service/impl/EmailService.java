@@ -60,26 +60,10 @@ public class EmailService {
 
             String htmlContent = templateEngine.process("email-template", context);
 
-            UserEntity user = userAdapter.findByEmail(to).orElse(null);
-            if (user == null) throw new RuntimeException("User not found with email: " + to);
-
-            RoleEntity role = roleRepository.findById(user.getRole().getRoleId())
-                    .orElseThrow(() -> new RuntimeException("Role not found with ID: " + user.getRole().getRoleId()));
-            String roleName = role.getName();
-
-            String emailLoginKey = cacheLoaderService.getPrivilegeKey(PrivilegeConstants.LOGIN_VIA_EMAIL);
-            String mobileLoginKey = cacheLoaderService.getPrivilegeKey(PrivilegeConstants.LOGIN_VIA_MOBILE);
-            boolean emailLogin = rolePrivilegeHelper.roleHasPrivilege(roleName, emailLoginKey);
-            boolean mobileLogin = rolePrivilegeHelper.roleHasPrivilege(roleName, mobileLoginKey);
-
-            log.info("Role name: {}, emailLogin: {}, mobileLogin: {}", roleName, emailLogin, mobileLogin);
-
-            String bodyContent = emailLogin ? htmlContent : "Use your mobile number and OTP to login!";
-
             Map<String, String> payload = new HashMap<>();
             payload.put("to", to);
             payload.put("subject", subject);
-            payload.put("body", bodyContent);
+            payload.put("body", htmlContent);
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);

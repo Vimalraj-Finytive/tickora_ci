@@ -210,7 +210,9 @@ public class JwtFilter extends OncePerRequestFilter {
             "/tms/organization/orgType",
             "/tms/organization/validate",
             "/tms/organization/create",
-            "/tms/sendOTP"
+            "/tms/sendOTP",
+            "/tms/debug/otpsCount",
+            "/tms/debug/otps"
             );
 
     private boolean isWhiteListed(String path){
