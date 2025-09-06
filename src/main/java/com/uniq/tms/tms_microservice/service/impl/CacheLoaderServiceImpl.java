@@ -126,8 +126,7 @@ public class CacheLoaderServiceImpl implements CacheLoaderService {
                 roleWiseUserMap.put(role.name(), new ArrayList<>(mergedUserMap.values()));
             }
 
-            // Cache only non-empty data
-            if (redisTemplate != null && !roleWiseUserMap.isEmpty()) {
+            if (redisTemplate != null) {
                 try {
                     redisTemplate.delete(redisKey);
                     Map<String, Object> redisHashData = new HashMap<>();
@@ -140,12 +139,10 @@ public class CacheLoaderServiceImpl implements CacheLoaderService {
                     log.error("Redis cache update failed for members of orgId {}. Error: {}", orgId, redisEx.getMessage(), redisEx);
                 }
             } else {
-                log.warn("RedisTemplate is null or roleWiseUserMap is empty. Skipping cache write for key: {}", redisKey);
+                log.warn("RedisTemplate is null. Skipping cache write for key: {}", redisKey);
             }
-
             return CompletableFuture.completedFuture(roleWiseUserMap);
-
-        } catch (Exception e) {
+        }catch (Exception e) {
             log.error("Error during loadAllUsers for orgId={}", orgId, e);
             throw new RuntimeException("Failed to cache member data", e);
         }

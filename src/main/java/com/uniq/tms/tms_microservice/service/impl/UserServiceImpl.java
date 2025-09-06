@@ -306,7 +306,13 @@ public class UserServiceImpl implements UserService {
             log.info("Fetched {} group entries: {}", groupMap.size(), groupMap);
 
             log.info("Fetching work schedule map for orgId: {}", orgId);
-            Map<String, String> workScheduleMap = workScheduleAdapter.getAllSchedules(orgId);
+            Map<String, String> workScheduleMap = workScheduleAdapter.getAllSchedules(orgId)
+                    .entrySet()
+                    .stream()
+                    .collect(Collectors.toMap(
+                            e -> e.getKey().toLowerCase(),
+                            Map.Entry::getValue
+                    ));
             log.info("Fetched {} work schedules: {}", workScheduleMap.size(), workScheduleMap);
 
             UserEntity userEntity = new UserEntity();
@@ -344,7 +350,7 @@ public class UserServiceImpl implements UserService {
                     String secEmail = row[8].trim();
                     String relation = row[9].trim();
                     String groupName = row[10].trim();
-                    String workSchedule = row[11].trim();
+                    String workSchedule = row[11].trim().toLowerCase();
 
                     Long roleId = roleMap.get(roleName.toLowerCase());
                     log.info("RL ID:{}", roleId);
@@ -400,13 +406,16 @@ public class UserServiceImpl implements UserService {
                     }
 
                     if (!isBlank(workSchedule)) {
-                        String workScheduleId = workScheduleMap.get(workSchedule.trim());
+                        String workScheduleId = workScheduleMap.get(workSchedule.trim().toLowerCase());
                         if (isBlank(workScheduleId)) {
                             skippedRows.add(Map.of(
                                     "rowNumber", rowNumber,
                                     "data", Arrays.asList(row),
                                     "reason", "WorkSchedule not found" + workScheduleId
                             ));
+                            skippedCount++;
+                            rowNumber++;
+                            continue;
                         }
                     }
 
@@ -591,7 +600,7 @@ public class UserServiceImpl implements UserService {
                     .toList();
             log.info("Saving all user groups");
             userAdapter.saveAllUserGroups(groupEntities);
-            log.info("Saved all user groups");
+            log.info("Saving all user groups");
             log.info("Save all user locations");
             userAdapter.saveUserLocation(userLocationEntities);
             log.info("Sending emails to all users");

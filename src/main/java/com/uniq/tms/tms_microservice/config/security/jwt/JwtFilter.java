@@ -71,7 +71,7 @@ public class JwtFilter extends OncePerRequestFilter {
         }
 
         String jwtToken = extractTokenFromRequest(request);
-        String tenant = extractSchemaFromToken(jwtToken);
+        String tenant = extractSchemaFromToken(jwtToken, response);
 
         if (jwtToken != null) {
             log.info("Tenant:{}", tenant);
@@ -140,21 +140,22 @@ public class JwtFilter extends OncePerRequestFilter {
         chain.doFilter(request, response);
     }
 
-    private String extractSchemaFromToken(String jwtToken) {
+    private String extractSchemaFromToken(String jwtToken, HttpServletResponse response) throws IOException {
         try {
             Claims claims = jwtUtil.extractAllClaims(jwtToken);
             String schema = claims.get("userSchema", String.class);
             if (schema == null || schema.isBlank()) {
-                log.warn("Schema not found in token, defaulting to 'public'");
-                return "public";
+                log.warn("JWT does not contain orgSchema. Unauthorized access!");
+                sendErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, "Organization schema is missing in token");
+                return null;
             }
             return schema;
         } catch (Exception e) {
-            log.error("Failed to extract schema from token, defaulting to 'public'", e);
-            return "public";
+            log.error("Failed to extract schema from token. Unauthorized!", e);
+            sendErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, "Invalid or expired token");
+            return null;
         }
     }
-
 
     public String extractTokenFromRequest(HttpServletRequest request) {
         String authHeader = request.getHeader("Authorization");
@@ -212,7 +213,8 @@ public class JwtFilter extends OncePerRequestFilter {
             "/tms/organization/create",
             "/tms/sendOTP",
             "/tms/debug/otpsCount",
-            "/tms/debug/otps"
+            "/tms/debug/otps",
+            "/tms/organization/getDropDowns"
             );
 
     private boolean isWhiteListed(String path){
