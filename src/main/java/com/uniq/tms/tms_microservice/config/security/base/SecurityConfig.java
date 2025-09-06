@@ -31,28 +31,20 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
-                                "/",
-                                "/index.html",
-                                "/*.js",
-                                "/*.css",
-                                "/*.html",
-                                "/assets/**",
-                                "/browser/**",
-                                "/favicon.ico",
-                                "/**/*.js",
-                                "/**/*.css",
-                                "/**/*.png",
-                                "/**/*.jpg",
-                                "/**/*.svg",
-                                "/**/*.woff2",
-                                "/**/*.ttf",
-                                "/**/*.map",
-                                "/tms/loginByEmail"
+                                "/", "/index.html", "/favicon.ico",
+                                "/assets/**", "/browser/**",
+                                "/**/*.js", "/**/*.css", "/**/*.png", "/**/*.svg", "/**/*.woff2"
                         ).permitAll()
-                        .requestMatchers("/**").permitAll()
-                        .anyRequest().authenticated()
+                        .requestMatchers("/tms/loginByEmail",
+                                "/tms/loginByMobile",
+                                "/tms/reset-password",
+                                "/tms/validate-email",
+                                "/tms/organization/**",
+                                "/tms/sendOTP",
+                                "/tms/debug/**").permitAll()
+                        .requestMatchers("/tms/**").authenticated()
+                        .anyRequest().permitAll()
                 )
-
                 .exceptionHandling(exception -> exception
                         .accessDeniedHandler((request, response, accessDeniedException) -> {
                             response.setStatus(HttpStatus.OK.value());
