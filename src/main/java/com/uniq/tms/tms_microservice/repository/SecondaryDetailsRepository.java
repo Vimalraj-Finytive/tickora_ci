@@ -34,5 +34,4 @@ public interface SecondaryDetailsRepository extends JpaRepository<SecondaryDetai
 
     @Query(value = "SELECT email FROM secondary_details", nativeQuery = true)
     List<String > findAllEmail(@Param("orgId") String orgId);
-
 }

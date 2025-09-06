@@ -13,9 +13,33 @@ public interface OrgUserSequenceRepository extends JpaRepository<OrgUserSequence
 
     @Modifying
     @Transactional
-    @Query("UPDATE OrgUserSequenceEntity s SET s.lastNumber = s.lastNumber + 1 WHERE s.orgId = :orgId")
+    @Query("UPDATE OrgUserSequenceEntity s SET s.lastUserId = s.lastUserId + 1 WHERE s.orgId = :orgId")
     int incrementSequence(@Param("orgId") String orgId);
 
-    @Query("SELECT s.lastNumber FROM OrgUserSequenceEntity s WHERE s.orgId = :orgId")
-    Integer getLastNumber(@Param("orgId") String orgId);
+    @Query("SELECT s.lastUserId FROM OrgUserSequenceEntity s WHERE s.orgId = :orgId")
+    Integer getLastUserId(@Param("orgId") String orgId);
+
+    @Modifying
+    @Transactional
+    @Query("UPDATE OrgUserSequenceEntity s SET s.lastSecondaryUserId = s.lastSecondaryUserId + 1 WHERE s.orgId = :orgId")
+    int incrementSecondaryUserSequence(@Param("orgId") String orgId);
+
+    @Query("SELECT s.lastSecondaryUserId FROM OrgUserSequenceEntity s WHERE s.orgId = :orgId")
+    Integer getLastSecondaryUserId(@Param("orgId") String orgId);
+
+    @Modifying
+    @Transactional
+    @Query("UPDATE OrgUserSequenceEntity s SET s.lastSubscriptionId = s.lastSubscriptionId + 1 WHERE s.orgId = :orgId")
+    int incrementSubscriptionSequence(@Param("orgId") String orgId);
+
+    @Query("SELECT s.lastSubscriptionId FROM OrgUserSequenceEntity s WHERE s.orgId = :orgId")
+    Integer getLastSubscription(@Param("orgId") String orgId);
+
+    @Modifying
+    @Query("UPDATE OrgUserSequenceEntity s SET s.lastSubscriptionId = :lastId WHERE s.orgId = :orgId")
+    void updateLastSubscriptionId(@Param("orgId") String orgId, @Param("lastId") int lastId);
+
+    @Modifying
+    @Query("UPDATE OrgUserSequenceEntity s SET s.lastSecondaryUserId = :lastId WHERE s.orgId = :orgId")
+    void updateLastSecondaryId(@Param("orgId") String orgId, @Param("lastId") int lastId);
 }

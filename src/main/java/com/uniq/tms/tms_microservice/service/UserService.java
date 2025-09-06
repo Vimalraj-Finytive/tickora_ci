@@ -19,7 +19,7 @@ public interface UserService {
     ApiResponse createUser(UserDto userDto,SecondaryDetailsDto secondaryDetailsDto, String organizationId);
     User updateUser(CreateUserDto updates, String orgId, String userId);
     List<UserResponseDto> getUsers(String orgId, String role);
-    User deleteUser(String orgId, String userId);
+    User deleteUser(String orgId, DeactivateUserRequestDto requestDto, String userNameFromToken);
     AddGroup createGroup(AddGroup groupMiddleware, String orgId);
     void deleteMember(Long groupId, String memberId, String orgId);
     void deleteGroup(Long groupId, String orgId);
@@ -32,7 +32,7 @@ public interface UserService {
     UserGroup createUserGroup(UserGroup userGroupMiddleware, String orgId);
     ApiResponse updateGroupDetails(AddGroupDto addGroupDto, Long groupId, String orgId);
     List<UserNameSuggestionDto> searchUsernames(String keywords);
-    UserProfileResponse getUserProfile(String orgId, String userId);
+    UserProfileResponseDto getUserProfile(String orgId, String userId);
     List<UserNameSuggestionDto> getGroupUsers(List<Long> groupIds, String orgId, String loggedInUserId, String role);
     Location addLocation(LocationDto locationDto, String orgId);
     List<LocationDto> getUserLocation(String userId);
@@ -41,4 +41,10 @@ public interface UserService {
     RolePrivilege addRolwisePrivileges(RolePrivilege rolePrivilegeModel, String orgId);
     ApiResponse updateLocation(String orgId, LocationList location);
     void deleteLocation(LocationListDto locationIds, String orgId);
+    String findGroupName(Long requestedGroupId);
+    List<UserResponseDto> getInactiveUsers(String orgId, String role);
+    List<EditUserDto> updateIsActive(EditUser editUser, String orgId, String userNameFromToken);
+    ApiResponse createSuperAdminUser(Organization organization, String orgId, String schemaName);
+    ApiResponse<UserValidationDto> validateUser(String userId);
+    ApiResponse<List<UserHistoryResponseDto>> getUserHistoryLog(String userId);
 }

@@ -1,8 +1,8 @@
 package com.uniq.tms.tms_microservice.entity;
 
 import jakarta.persistence.*;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "privilege")
@@ -16,15 +16,15 @@ public class PrivilegeEntity {
     private String name;
     @Column(name = "Constant_name")
     private String staticName;
-    @ManyToMany(mappedBy = "privilegeEntities", fetch = FetchType.LAZY)
-    private Set<RoleEntity> roles= new HashSet<>();
+    @OneToMany(mappedBy = "privilege", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<RolePrivilegeMapEntity> roleMappings = new ArrayList<>();
 
-    public Set<RoleEntity> getRoles() {
-        return roles;
+    public List<RolePrivilegeMapEntity> getRoleMappings() {
+        return roleMappings;
     }
 
-    public void setRoles(Set<RoleEntity> roles) {
-        this.roles = roles;
+    public void setRoleMappings(List<RolePrivilegeMapEntity> roleMappings) {
+        this.roleMappings = roleMappings;
     }
 
     public Long getPrivilegeId() {
@@ -50,4 +50,5 @@ public class PrivilegeEntity {
     public void setStaticName(String staticName) {
         this.staticName = staticName;
     }
+
 }

@@ -5,7 +5,7 @@ import com.uniq.tms.tms_microservice.dto.ApiResponse;
 import com.uniq.tms.tms_microservice.dto.WorkScheduleDto;
 import com.uniq.tms.tms_microservice.dto.WorkScheduleTypeDto;
 import com.uniq.tms.tms_microservice.facade.AuthFacade;
-import com.uniq.tms.tms_microservice.util.AuthUtil;
+import com.uniq.tms.tms_microservice.helper.AuthHelper;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.http.HttpStatus;
@@ -18,17 +18,17 @@ public class WorkScheduleController {
 
     private static final Logger log = LogManager.getLogger(WorkScheduleController.class);
     private final AuthFacade authFacade;
-    private final AuthUtil authUtil;
+    private final AuthHelper authHelper;
 
-    public WorkScheduleController(AuthFacade authFacade, AuthUtil authUtil){
+    public WorkScheduleController(AuthFacade authFacade, AuthHelper authHelper){
         this.authFacade = authFacade;
-        this.authUtil = authUtil;
+        this.authHelper = authHelper;
     }
 
     @GetMapping
     public ResponseEntity<ApiResponse> getWorkSchedule(@RequestHeader ("Authorization") String authHeader) {
         try {
-            String orgId = authUtil.getOrgId();
+            String orgId = authHelper.getOrgId();
             if(orgId == null){
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ApiResponse(401,"Unauthorized - Invalid Organization",null));
             }
@@ -43,7 +43,7 @@ public class WorkScheduleController {
     @PostMapping("/create")
     public ResponseEntity<ApiResponse> createWorkschedule(@RequestHeader("Authorization") String token, @RequestBody WorkScheduleDto workScheduleDto){
         try {
-            String orgId = authUtil.getOrgId();
+            String orgId = authHelper.getOrgId();
             if(orgId == null){
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ApiResponse(401,"Unauthorized - Invalid Organization",null));
             }
@@ -62,7 +62,7 @@ public class WorkScheduleController {
     @PatchMapping("/update")
     public ResponseEntity<ApiResponse> updateWorkSchedule(@RequestHeader("Authorization") String token, @RequestBody WorkScheduleDto dto) {
         try {
-            String orgId = authUtil.getOrgId();
+            String orgId = authHelper.getOrgId();
             if (orgId == null) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                         .body(new ApiResponse(401, "Unauthorized - Invalid Organization", false));

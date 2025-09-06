@@ -1,7 +1,7 @@
 package com.uniq.tms.tms_microservice.repository;
 
 import com.uniq.tms.tms_microservice.dto.GroupDto;
-import com.uniq.tms.tms_microservice.dto.GroupsData;
+import com.uniq.tms.tms_microservice.projection.GroupsData;
 import com.uniq.tms.tms_microservice.entity.GroupEntity;
 import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -16,7 +16,7 @@ import java.util.Optional;
 public interface TeamRepository extends JpaRepository<GroupEntity, Long> {
 
     @Query("SELECT g FROM GroupEntity g WHERE g.groupName = :groupName AND g.organizationEntity.id = :orgId")
-    Optional<GroupEntity> findBygroupNameAndOrganizationId(@Param("groupName") String teamName, @Param("orgId") String orgId);
+    Optional<GroupEntity> findByGroupNameAndOrganizationId(@Param("groupName") String teamName, @Param("orgId") String orgId);
     @Query(value = """
     WITH group_base AS (
         SELECT
@@ -25,7 +25,7 @@ public interface TeamRepository extends JpaRepository<GroupEntity, Long> {
             g.location_id,
             g.work_schedule_id,
             g.organization_id
-        FROM group_table g
+        FROM org_groups g
         WHERE g.organization_id = :orgId
     ),
     user_group_details AS (
@@ -112,7 +112,7 @@ public interface TeamRepository extends JpaRepository<GroupEntity, Long> {
             g.group_id AS groupId,
             g.group_name AS groupName
         FROM
-            group_table g
+            org_groups g
         JOIN
             user_group ug ON g.group_id = ug.group_id
         WHERE
@@ -128,7 +128,7 @@ public interface TeamRepository extends JpaRepository<GroupEntity, Long> {
     @Modifying(clearAutomatically = true)
     @Transactional
     @Query(value = """
-        DELETE FROM group_table
+        DELETE FROM org_groups
         WHERE group_id = :groupId
         AND organization_id = :orgId
         """, nativeQuery = true)
@@ -139,7 +139,7 @@ public interface TeamRepository extends JpaRepository<GroupEntity, Long> {
             g.group_id AS groupId,
             g.group_name AS groupName
         FROM 
-            group_table g
+            org_groups g
         WHERE 
             g.organization_id = :orgId
     """, nativeQuery = true)
@@ -147,7 +147,7 @@ public interface TeamRepository extends JpaRepository<GroupEntity, Long> {
 
     Optional<GroupEntity> findByGroupId(Long groupId);
 
-    @Query(value = "SELECT group_name, group_id FROM group_table WHERE organization_id = :orgId", nativeQuery = true)
+    @Query(value = "SELECT group_name, group_id FROM org_groups WHERE organization_id = :orgId", nativeQuery = true)
     List<Object[]> findGroupNameIdMappings(@Param("orgId") String orgId);
 
     List<GroupEntity> findAllByOrganizationEntity_OrganizationId(String orgId);
@@ -160,4 +160,7 @@ public interface TeamRepository extends JpaRepository<GroupEntity, Long> {
     @Transactional
     @Query("UPDATE GroupEntity g SET g.workSchedule.scheduleId = :newId WHERE g.workSchedule.scheduleId = :oldId")
     void updateGroupWorkSchedule(@Param("oldId") String oldId, @Param("newId") String newId);
+
+    @Query("SELECT g.groupName FROM GroupEntity g WHERE g.id = :groupId")
+    String findGroupNameByGroupId(@Param("groupId") Long groupId);
 }

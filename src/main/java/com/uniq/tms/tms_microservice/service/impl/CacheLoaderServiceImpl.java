@@ -4,15 +4,20 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.uniq.tms.tms_microservice.dto.*;
 import com.uniq.tms.tms_microservice.entity.*;
+import com.uniq.tms.tms_microservice.enums.PrivilegeConstants;
+import com.uniq.tms.tms_microservice.enums.UserRole;
 import com.uniq.tms.tms_microservice.mapper.LocationDtoMapper;
 import com.uniq.tms.tms_microservice.mapper.UserDtoMapper;
 import com.uniq.tms.tms_microservice.mapper.WorkScheduleDtoMapper;
 import com.uniq.tms.tms_microservice.model.Location;
 import com.uniq.tms.tms_microservice.model.UserResponse;
 import com.uniq.tms.tms_microservice.model.WorkSchedule;
+import com.uniq.tms.tms_microservice.projection.GroupsData;
+import com.uniq.tms.tms_microservice.projection.WorkScheduleData;
 import com.uniq.tms.tms_microservice.repository.*;
 import com.uniq.tms.tms_microservice.service.CacheLoaderService;
 import com.uniq.tms.tms_microservice.util.CacheKeyUtil;
+import com.uniq.tms.tms_microservice.util.TenantUtil;
 import com.uniq.tms.tms_microservice.util.TextUtil;
 import jakarta.annotation.Nullable;
 import jakarta.transaction.Transactional;
@@ -22,6 +27,7 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -47,8 +53,9 @@ public class CacheLoaderServiceImpl implements CacheLoaderService {
     private final WorkScheduleDtoMapper workScheduleDtoMapper;
     private final WorkScheduleRepository workScheduleRepository;
     private final OrganizationTypeRepository organizationTypeRepository;
+    private final SecondaryDetailsRepository secondaryDetailsRepository;
 
-    public CacheLoaderServiceImpl(UserRepository userRepository, LocationRepository locationRepository, LocationDtoMapper locationDtoMapper, @Nullable RedisTemplate<String, Object> redisTemplate, RoleRepository roleRepository, PrivilegeRepository privilegeRepository, CacheKeyUtil cacheKeyUtil, OrganizationRepository organizationRepository, UserLocationRepository userLocationRepository, UserDtoMapper userDtoMapper, TeamRepository teamRepository, TextUtil textUtil, WorkScheduleDtoMapper workScheduleDtoMapper, WorkScheduleRepository workScheduleRepository, OrganizationTypeRepository organizationTypeRepository) {
+    public CacheLoaderServiceImpl(UserRepository userRepository, LocationRepository locationRepository, LocationDtoMapper locationDtoMapper, @Nullable RedisTemplate<String, Object> redisTemplate, RoleRepository roleRepository, PrivilegeRepository privilegeRepository, CacheKeyUtil cacheKeyUtil, OrganizationRepository organizationRepository, UserLocationRepository userLocationRepository, UserDtoMapper userDtoMapper, TeamRepository teamRepository, TextUtil textUtil, WorkScheduleDtoMapper workScheduleDtoMapper, WorkScheduleRepository workScheduleRepository, OrganizationTypeRepository organizationTypeRepository, SecondaryDetailsRepository secondaryDetailsRepository) {
         this.userRepository = userRepository;
         this.locationRepository = locationRepository;
         this.locationDtoMapper = locationDtoMapper;
@@ -64,6 +71,7 @@ public class CacheLoaderServiceImpl implements CacheLoaderService {
         this.workScheduleDtoMapper = workScheduleDtoMapper;
         this.workScheduleRepository = workScheduleRepository;
         this.organizationTypeRepository = organizationTypeRepository;
+        this.secondaryDetailsRepository = secondaryDetailsRepository;
     }
 
     LocalDateTime now = LocalDateTime.now();
@@ -73,18 +81,21 @@ public class CacheLoaderServiceImpl implements CacheLoaderService {
      * @param orgId
      * @return All user list based on logged user hierarchy Level and organization and caches in redis cache key
      */
-    public CompletableFuture<Map<String, List<UserResponseDto>>> loadAllUsers(String orgId) {
+    public CompletableFuture<Map<String, List<UserResponseDto>>> loadAllUsers(String orgId, String schema) {
         try {
-            String redisKey = cacheKeyUtil.getMemberKey(orgId); // e.g., members:org:1
+            log.info("Loading all users into cache | tenant: {}", schema);
+            String redisKey = cacheKeyUtil.getMemberKey(orgId, schema);
             Map<String, List<UserResponseDto>> roleWiseUserMap = new HashMap<>();
 
-            for (UserRole role : List.of(UserRole.values())) {
-                int hierarchyLevel = UserRole.getLevel(String.valueOf(role));
+            // Iterate over all roles
+            for (UserRole role : UserRole.values()) {
+                int hierarchyLevel = UserRole.getLevel(role.name());
 
+                // Fetch from DB
                 List<UserResponse> users = userRepository.findAllUsers(orgId, hierarchyLevel);
+
                 if (users.isEmpty()) {
                     log.warn("No users found for orgId={} and role={}", orgId, role);
-                    roleWiseUserMap.put(String.valueOf(role), Collections.emptyList());
                     continue;
                 }
 
@@ -93,15 +104,17 @@ public class CacheLoaderServiceImpl implements CacheLoaderService {
                         .map(userDtoMapper::toDto)
                         .toList();
 
-                // Merge duplicates
-                Map<String, UserResponseDto> userMap = new LinkedHashMap<>();
+                // Merge duplicates based on userId
+                Map<String, UserResponseDto> mergedUserMap = new LinkedHashMap<>();
                 for (UserResponseDto user : usersDto) {
-                    userMap.compute(user.getUserId(), (id, existing) -> {
+                    mergedUserMap.compute(user.getUserId(), (id, existing) -> {
                         if (existing == null) return user;
 
+                        // Merge group names
                         if (!existing.getGroupName().contains(user.getGroupName().get(0))) {
                             existing.getGroupName().add(user.getGroupName().get(0));
                         }
+                        // Merge location names
                         if (!existing.getLocationName().contains(user.getLocationName().get(0))) {
                             existing.getLocationName().add(user.getLocationName().get(0));
                         }
@@ -109,13 +122,12 @@ public class CacheLoaderServiceImpl implements CacheLoaderService {
                     });
                 }
 
-                // Add merged list for current role
-                roleWiseUserMap.put(String.valueOf(role), new ArrayList<>(userMap.values()));
+                // Save merged users for current role
+                roleWiseUserMap.put(role.name(), new ArrayList<>(mergedUserMap.values()));
             }
 
-            // Final Step: Store everything in a single Redis Hash
-            try {
-                if (redisTemplate != null) {
+            if (redisTemplate != null) {
+                try {
                     redisTemplate.delete(redisKey);
                     Map<String, Object> redisHashData = new HashMap<>();
                     for (Map.Entry<String, List<UserResponseDto>> entry : roleWiseUserMap.entrySet()) {
@@ -123,17 +135,15 @@ public class CacheLoaderServiceImpl implements CacheLoaderService {
                     }
                     redisTemplate.opsForHash().putAll(redisKey, redisHashData);
                     log.info("Loaded {} role views into cache for orgId {}", redisHashData.size(), orgId);
-                } else {
-                    log.warn("RedisTemplate is null, skipping cache operations for key: {}", redisKey);
+                } catch (Exception redisEx) {
+                    log.error("Redis cache update failed for members of orgId {}. Error: {}", orgId, redisEx.getMessage(), redisEx);
                 }
-            } catch (Exception redisEx) {
-                log.error("Redis cache update failed for members: {}", redisEx.getMessage(), redisEx);
+            } else {
+                log.warn("RedisTemplate is null. Skipping cache write for key: {}", redisKey);
             }
-
             return CompletableFuture.completedFuture(roleWiseUserMap);
-
-        } catch (Exception e) {
-            log.error("Error during loadAllRoleUsers for orgId={}", orgId, e);
+        }catch (Exception e) {
+            log.error("Error during loadAllUsers for orgId={}", orgId, e);
             throw new RuntimeException("Failed to cache member data", e);
         }
     }
@@ -143,8 +153,10 @@ public class CacheLoaderServiceImpl implements CacheLoaderService {
      * @param orgId
      * @return location based on organization from db and cache it redis cache using keys
      */
-    public CompletableFuture<List<Location>> loadLocationTable(String orgId) {
-        String redisKey = cacheKeyUtil.getLocationKey(orgId);
+    public CompletableFuture<List<Location>> loadLocationTable(String orgId, String schema) {
+
+        log.info("Current location tenant:{}", schema);
+        String redisKey = cacheKeyUtil.getLocationKey(orgId,schema);
 
         try{
             List<Location> locations = locationRepository.findByOrgId(orgId).stream()
@@ -179,19 +191,19 @@ public class CacheLoaderServiceImpl implements CacheLoaderService {
      * @param
      * @return roles from db and cache it redis cache using keys
      */
-    public void loadAllRolesToCache() {
+    public void loadAllRolesToCache(String orgId, String schema) {
+
        List<RoleEntity> roles = roleRepository.findAllWithPrivileges();
 
         Map<String, Set<String>> rolePrivileges = new HashMap<>();
         for (RoleEntity role : roles) {
-            Set<String> privileges = role.getPrivilegeEntities()
-                    .stream()
-                    .map(PrivilegeEntity::getName)
+            Set<String> privileges = role.getPrivilegeMappings().stream()
+                    .map(mapping -> mapping.getPrivilege().getName())
                     .collect(Collectors.toSet());
             rolePrivileges.put(role.getName(), privileges);
         }
 
-        String redisKey = cacheKeyUtil.getRoleKey();
+        String redisKey = cacheKeyUtil.getRoleKey(schema);
         if (redisTemplate != null) {
             rolePrivileges.forEach((role, privileges) -> {
                 redisTemplate.opsForValue().set(redisKey + role.toLowerCase(), privileges);
@@ -202,14 +214,21 @@ public class CacheLoaderServiceImpl implements CacheLoaderService {
         }
     }
 
+    private final Map<String, Map<PrivilegeConstants, String>> schemaPrivilegeMap = new HashMap<>();
     public String getPrivilegeKey(PrivilegeConstants constant) {
-        if (privilegeMap.isEmpty()){
-            loadPrivilegesFromDB();
+        String schema = TenantUtil.getCurrentTenant();
+        if (schema == null) {
+            log.error("Schema is null in TenantContext! Cannot fetch privilege key for {}", constant);
+            return null;
+        }
+        schemaPrivilegeMap.putIfAbsent(schema, new HashMap<>());
+        if (schemaPrivilegeMap.get(schema).isEmpty()){
+            loadPrivilegesFromDB(schema);
         }
         return privilegeMap.get(constant);
     }
 
-    public void loadPrivilegesFromDB() {
+    public void loadPrivilegesFromDB(String schema) {
         List<PrivilegeEntity> privileges = privilegeRepository.findAll();
         log.info("Loading privileges from DB: {}", privileges.size());
 
@@ -224,6 +243,7 @@ public class CacheLoaderServiceImpl implements CacheLoaderService {
                     );
         }
 
+        schemaPrivilegeMap.put(schema, privilegeMap);
         // Log all mapped privileges
         privilegeMap.forEach((key, value) ->
                 log.info("Privilege constant: {}, Privilege name: {}", key, value));
@@ -234,27 +254,27 @@ public class CacheLoaderServiceImpl implements CacheLoaderService {
      * @param orgId
      * @return user profile of all the user with in the organization and cache it in redis cache key.
      */
-    public CompletableFuture<Map<String, UserProfileResponse>> loadUsersProfile(String orgId) {
+
+    public CompletableFuture<Map<String, UserProfileResponseDto>> loadUsersProfile(String orgId, String schema) {
+
+        log.info("Current User profile tenant:{}", schema);
         List<UserEntity> users = userRepository.findAllActiveUsersByOrganizationId(orgId);
-        Map<String, UserProfileResponse> userProfileMap = new HashMap<>();
+        Map<String, UserProfileResponseDto> userProfileMap = new HashMap<>();
 
         if (users.isEmpty()) {
             log.warn("No active users found for orgId: {}", orgId);
             return CompletableFuture.completedFuture(userProfileMap);
         }
 
+        // Fetch organization + type
         OrganizationEntity org = organizationRepository.findByOrganizationId(orgId).orElse(null);
-        log.info("Org:{}", org);
+        Optional<OrganizationTypeEntity> organizationType =
+                (org != null && org.getOrgType() != null)
+                        ? organizationTypeRepository.findById(org.getOrgType())
+                        : Optional.empty();
 
-        Optional<OrganizationTypeEntity> organizationType = Optional.empty();
-        if (org != null && org.getOrgType() != null) {
-            organizationType = organizationTypeRepository.findById(org.getOrgType());
-        }
         for (UserEntity user : users) {
             String userId = user.getUserId();
-
-            // Fetch groups
-            List<UserGroupEntity> userGroups = userRepository.findUserByOrganizationIdAndUserId(orgId, userId);
 
             // Fetch locations
             List<UserLocationEntity> userLocations = userLocationRepository.findByUser_UserId(userId);
@@ -268,11 +288,30 @@ public class CacheLoaderServiceImpl implements CacheLoaderService {
                     .map(ul -> userDtoMapper.toDto(ul.getLocation()))
                     .toList();
 
+            // Fetch groups
+            List<UserGroupEntity> userGroups = userRepository.findUserByOrganizationIdAndUserId(orgId, userId);
             List<UserGroupProfileDto> groupDtos = userGroups.isEmpty()
                     ? Collections.emptyList()
                     : userGroups.stream().map(userDtoMapper::toGroupsDto).toList();
 
-            UserProfileResponse profile = new UserProfileResponse(
+            // Parent details if student
+            AtomicReference<List<ParentDto>> parentDto = new AtomicReference<>(Collections.emptyList());
+
+            if (UserRole.STUDENT.name().equalsIgnoreCase(user.getRole().getName())) {
+                userRepository.findByUserId(userId).ifPresent(sp -> {
+                    secondaryDetailsRepository.findByUserId(sp.getUserId()).ifPresent(parentEntity -> {
+                        parentDto.set(List.of(new ParentDto(
+                                parentEntity.getId(),
+                                parentEntity.getUserName(),
+                                parentEntity.getEmail(),
+                                parentEntity.getMobile()
+                        )));
+                    });
+                });
+            }
+
+            // Build profile
+            UserProfileResponseDto profile = new UserProfileResponseDto(
                     userId,
                     user.getUserName(),
                     user.getEmail(),
@@ -283,7 +322,8 @@ public class CacheLoaderServiceImpl implements CacheLoaderService {
                     groupDtos,
                     org != null ? org.getOrgName() : null,
                     (user.getWorkSchedule() != null ? user.getWorkSchedule().getScheduleName() : "-"),
-                    organizationType.map(OrganizationTypeEntity::getOrgTypeName).orElse("-")
+                    organizationType.map(OrganizationTypeEntity::getOrgTypeName).orElse("-"),
+                    parentDto.get()
             );
 
             userProfileMap.put(userId, profile);
@@ -292,7 +332,7 @@ public class CacheLoaderServiceImpl implements CacheLoaderService {
         // Cache all profiles
         try {
             if (redisTemplate != null) {
-                String redisKey = cacheKeyUtil.getprofileKey(orgId);
+                String redisKey = cacheKeyUtil.getProfileKey(orgId, schema);
                 redisTemplate.opsForHash().putAll(redisKey, userProfileMap);
                 log.info("Cached {} profiles under key: {}", userProfileMap.size(), redisKey);
             } else {
@@ -310,7 +350,9 @@ public class CacheLoaderServiceImpl implements CacheLoaderService {
      * @param orgId
      * @return group based on organization from db and cache it redis cache using keys
      */
-    public CompletableFuture<List<GroupResponseDto>> loadGroupsCache(String orgId) {
+    public CompletableFuture<List<GroupResponseDto>> loadGroupsCache(String orgId, String schema) {
+
+        log.info("Current Group tenant:{}", schema);
         List<GroupsData> groupRows = teamRepository.getGroupData(orgId);
 
         Map<Long, GroupResponseDto> groupMap = new HashMap<>();
@@ -352,8 +394,8 @@ public class CacheLoaderServiceImpl implements CacheLoaderService {
             groupMap.put(groupId, new GroupResponseDto(groupId, row.getGroupName(), row.getLocation(), row.getWorkSchedule(), enrichedMembers));
         }
 
-        String orgGroupKey = cacheKeyUtil.getAllGroupsKey(orgId);
-        String supervisedMapKey = cacheKeyUtil.getSupervisedGroupsKey(orgId);
+        String orgGroupKey = cacheKeyUtil.getAllGroupsKey(orgId,schema);
+        String supervisedMapKey = cacheKeyUtil.getSupervisedGroupsKey(orgId,schema);
 
         if (redisTemplate != null) {
             redisTemplate.delete(orgGroupKey);
@@ -379,7 +421,9 @@ public class CacheLoaderServiceImpl implements CacheLoaderService {
      * @return workSchedule based on organization from db and cache it redis cache using keys
      */
     @Transactional
-    public CompletableFuture<Map<String, List<WorkScheduleDto>>> loadWorkSchedule(String orgId) {
+    public CompletableFuture<Map<String, List<WorkScheduleDto>>> loadWorkSchedule(String orgId, String schema) {
+
+        log.info("Current WS tenant:{}", schema);
         List<WorkScheduleData> rawSchedules = workScheduleRepository.findAllWithChildrenByOrgId(orgId);
         ObjectMapper mapper = new ObjectMapper();
 
@@ -435,7 +479,7 @@ public class CacheLoaderServiceImpl implements CacheLoaderService {
         userWorkScheduleMap.put(orgId, workScheduleDtos);
 
         // Redis Caching
-        String redisKey = cacheKeyUtil.getWorkSchedule(orgId);
+        String redisKey = cacheKeyUtil.getWorkSchedule(orgId,schema);
         try {
             if (redisTemplate != null) {
                 redisTemplate.delete(redisKey);
@@ -453,4 +497,70 @@ public class CacheLoaderServiceImpl implements CacheLoaderService {
         return CompletableFuture.completedFuture(userWorkScheduleMap);
     }
 
+    public CompletableFuture<Map<String, List<UserResponseDto>>> loadAllInactiveUsers(String orgId, String schema) {
+
+        log.info("Current Inactive User tenant:{}", schema);
+        try {
+            String redisKey = cacheKeyUtil.getInactiveMemberKey(orgId,schema);
+            Map<String, List<UserResponseDto>> roleWiseUserMap = new HashMap<>();
+
+            for (UserRole role : List.of(UserRole.values())) {
+                int hierarchyLevel = UserRole.getLevel(String.valueOf(role));
+
+                List<UserResponse> users = userRepository.findAllInActiveUsers(orgId, hierarchyLevel);
+                if (users.isEmpty()) {
+                    log.warn("No Inactive users found for orgId={} and role={}", orgId, role);
+                    roleWiseUserMap.put(String.valueOf(role), Collections.emptyList());
+                    continue;
+                }
+
+                // Convert to DTO
+                List<UserResponseDto> usersDto = users.stream()
+                        .map(userDtoMapper::toDto)
+                        .toList();
+
+                // Merge duplicates
+                Map<String, UserResponseDto> userMap = new LinkedHashMap<>();
+                for (UserResponseDto user : usersDto) {
+                    userMap.compute(user.getUserId(), (id, existing) -> {
+                        if (existing == null) return user;
+
+                        if (!existing.getGroupName().contains(user.getGroupName().get(0))) {
+                            existing.getGroupName().add(user.getGroupName().get(0));
+                        }
+                        if (!existing.getLocationName().contains(user.getLocationName().get(0))) {
+                            existing.getLocationName().add(user.getLocationName().get(0));
+                        }
+                        return existing;
+                    });
+                }
+
+                // Add merged list for current role
+                roleWiseUserMap.put(String.valueOf(role), new ArrayList<>(userMap.values()));
+            }
+
+            // Final Step: Store everything in a single Redis Hash
+            try {
+                if (redisTemplate != null) {
+                    redisTemplate.delete(redisKey);
+                    Map<String, Object> redisHashData = new HashMap<>();
+                    for (Map.Entry<String, List<UserResponseDto>> entry : roleWiseUserMap.entrySet()) {
+                        redisHashData.put(entry.getKey().toLowerCase(), entry.getValue());
+                    }
+                    redisTemplate.opsForHash().putAll(redisKey, redisHashData);
+                    log.info("Loaded {} role views into cache for Inactive user for orgId {}", redisHashData.size(), orgId);
+                } else {
+                    log.warn("RedisTemplate is null, skipping cache operations for Inactive User key: {}", redisKey);
+                }
+            } catch (Exception redisEx) {
+                log.error("Redis cache update failed for members: {}", redisEx.getMessage(), redisEx);
+            }
+
+            return CompletableFuture.completedFuture(roleWiseUserMap);
+
+        } catch (Exception e) {
+            log.error("Error during loadAllRoleUsers for orgId={}", orgId, e);
+            throw new RuntimeException("Failed to cache member data", e);
+        }
+    }
 }

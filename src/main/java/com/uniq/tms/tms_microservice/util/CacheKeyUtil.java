@@ -1,17 +1,9 @@
 package com.uniq.tms.tms_microservice.util;
 
-import com.uniq.tms.tms_microservice.entity.PrivilegeEntity;
-import com.uniq.tms.tms_microservice.entity.RoleEntity;
-import com.uniq.tms.tms_microservice.repository.RoleRepository;
-import jakarta.annotation.Nullable;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
-import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 @Component
 public class CacheKeyUtil {
@@ -28,74 +20,48 @@ public class CacheKeyUtil {
     private String groups;
     @Value("${cache.keys.workSchedule}")
     private String workSchedule;
+    @Value("${cache.keys.inactiveUsers}")
+    private String inactiveUsers;
+    @Value("${cache.keys.otpCount}")
+    private String otpCount;
+    @Value("${cache.keys.otpKey}")
+    private String otpKey;
 
     private static final Logger log = LogManager.getLogger(CacheKeyUtil.class);
 
-    private final RedisTemplate<String, Object> redisTemplate;
-    private final RoleRepository roleRepository;
-
-    public CacheKeyUtil(@Nullable RedisTemplate<String, Object> redisTemplate, RoleRepository roleRepository) {
-        this.redisTemplate = redisTemplate;
-        this.roleRepository = roleRepository;
+    public String getLocationKey(String orgId, String schema){
+        return location + ":" + schema + ":" + orgId;
     }
 
-    public boolean roleHasPrivilege(String roleName, String privilegeKey) {
-        if (privilegeKey == null || privilegeKey.trim().isEmpty()) {
-            log.warn("Privilege key is null or empty. Skipping privilege check.");
-            return false;
-        }
-
-        String redisKey = roleprivilege + roleName.toLowerCase();
-        Set<String> privileges = null;
-
-        if (redisTemplate != null) {
-            privileges = (Set<String>) redisTemplate.opsForValue().get(redisKey);
-        }
-
-        if (privileges != null) {
-            return privileges.contains(privilegeKey);
-        }
-
-        log.warn("Privilege cache miss for role '{}'. Falling back to DB.", roleName);
-        Optional<RoleEntity> roleOpt = roleRepository.findByNameWithPrivileges(roleName);
-        if (roleOpt.isEmpty()) {
-            return false;
-        }
-
-        privileges = roleOpt.get().getPrivilegeEntities().stream()
-                .map(PrivilegeEntity::getName)
-                .collect(Collectors.toSet());
-
-        if (redisTemplate != null) {
-            redisTemplate.opsForValue().set(redisKey, privileges);
-            log.info("Repopulated Redis cache for role '{}'", roleName);
-        }
-
-        log.info("Privilege for key:{}", privileges.contains(privilegeKey));
-        return privileges.contains(privilegeKey);
+    public String getProfileKey(String orgId, String schema){
+        return userProfile + ":" + schema + ":" + orgId;
     }
 
-    public String getLocationKey(String orgId){
-        return location +":orgId:" + orgId;
+    public String getMemberKey(String orgId, String schema){
+        return users + ":" + schema + ":" + orgId;
     }
 
-    public String getprofileKey(String orgId){
-        return userProfile +":orgId:" + orgId;
+    public String getAllGroupsKey(String orgId, String schema){ return groups + ":" + schema + ":" + orgId; }
+
+    public String getSupervisedGroupsKey(String orgId, String schema){ return groups+ ":supervised:" + schema + ":" + orgId;}
+
+    public String getRoleKey(String schema) {
+        return schema + ":"+ roleprivilege;
     }
 
-    public String getMemberKey(String orgId){
-        return users +":orgId:" + orgId;
+    public String getWorkSchedule(String orgId, String schema){
+        return workSchedule + ":" + schema + ":" + orgId;
     }
 
-    public String getAllGroupsKey(String orgId){ return groups +":orgId:" + orgId; }
-
-    public String getSupervisedGroupsKey(String orgId){ return groups+ "supervised:" +":orgId:" + orgId;}
-
-    public String getRoleKey() {
-        return roleprivilege;
+    public String getInactiveMemberKey(String orgId, String schema){
+        return inactiveUsers + ":" +  schema + ":" + orgId;
     }
 
-    public String getWorkSchedule(String orgId){
-        return workSchedule +":orgId:" + orgId;
+    public String getOtpCountKey(String orgId, String schema, String userId) {
+        return otpCount + ":" + schema + ":" + orgId + ":" + userId;
+    }
+
+    public String getOtpKey(String orgId, String schema, String mobile) {
+        return otpKey + ":" + schema + ":" + orgId + ":" + mobile;
     }
 }

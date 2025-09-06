@@ -4,11 +4,17 @@ import com.uniq.tms.tms_microservice.adapter.TimesheetAdapter;
 import com.uniq.tms.tms_microservice.adapter.WorkScheduleAdapter;
 import com.uniq.tms.tms_microservice.dto.*;
 import com.uniq.tms.tms_microservice.entity.*;
+import com.uniq.tms.tms_microservice.enums.LogFrom;
+import com.uniq.tms.tms_microservice.enums.LogType;
+import com.uniq.tms.tms_microservice.enums.TimesheetStatusEnum;
+import com.uniq.tms.tms_microservice.projection.UserDashboard;
+import com.uniq.tms.tms_microservice.repository.LocationRepository;
 import com.uniq.tms.tms_microservice.repository.TimesheetHistoryRepository;
 import com.uniq.tms.tms_microservice.repository.TimesheetRepository;
 import com.uniq.tms.tms_microservice.repository.TimesheetStatusRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import java.sql.Date;
 import java.sql.Time;
@@ -33,13 +39,18 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
     private final TimesheetHistoryRepository timesheetHistoryRepository;
     private final WorkScheduleAdapter workScheduleAdapter;
     private final TimesheetStatusRepository timesheetStatusRepository;
+    private final LocationRepository locationRepository;
 
-    public TimesheetAdapterImpl(TimesheetRepository timesheetRepository, TimesheetHistoryRepository timesheetHistoryRepository, WorkScheduleAdapter workScheduleAdapter, TimesheetStatusRepository timesheetStatusRepository) {
+    public TimesheetAdapterImpl(TimesheetRepository timesheetRepository, TimesheetHistoryRepository timesheetHistoryRepository, WorkScheduleAdapter workScheduleAdapter, TimesheetStatusRepository timesheetStatusRepository, LocationRepository locationRepository) {
         this.timesheetRepository = timesheetRepository;
         this.timesheetHistoryRepository = timesheetHistoryRepository;
         this.workScheduleAdapter = workScheduleAdapter;
         this.timesheetStatusRepository = timesheetStatusRepository;
+        this.locationRepository = locationRepository;
     }
+
+    @Value("${timesheet.extra.worked.seconds}")
+    private int extraWorkedSeconds;
 
     private static final Logger log = LoggerFactory.getLogger(TimesheetAdapterImpl.class);
 
@@ -47,28 +58,20 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
     public List<UserTimesheetResponseDto> filterTimesheetsForAllUsers(LocalDate startDate, LocalDate endDate, List<String> userIds, String orgId) {
         String[] userIdArray = userIds.toArray(new String[0]);
 
-        List<Object[]> resultList = timesheetRepository.fetchTimesheetsWithHistory(startDate, endDate, userIdArray, orgId);
+        List<Object[]> resultList = timesheetRepository.fetchTimesheetsWithHistory(startDate, endDate, userIdArray, orgId, extraWorkedSeconds);
 
         Map<String, TimesheetDto> timesheetMap = new LinkedHashMap<>();
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Kolkata"))
+;
 
         Map<String, List<TimesheetDto>> userTimesheetListMap = new HashMap<>();
 
         for (Object[] row : resultList) {
-            log.info("---- Row Start ----");
-            for (int i = 0; i < row.length; i++) {
-                log.info("Column {}: {}", i, row[i]);
-            }
-            log.info("---- Row End ----");
-
             if (row[1] == null) continue;
-
             String userId = toString(row[1]);
             LocalDate date = toLocalDate(row[0]);
             if (date == null) continue;
-
             String compositeKey = userId + "-" + date;
-
             TimesheetDto dto = timesheetMap.computeIfAbsent(compositeKey, key -> {
                 TimesheetDto newDto = new TimesheetDto();
                 newDto.setId(toLong(row[7]));
@@ -107,7 +110,7 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
                     System.err.println("Invalid LogType: " + row[19]);
                 }
 
-                historyDto.setLocationId(toLong(row[20]));
+                historyDto.setLocationName((String) row[20]);
 
                 try {
                     historyDto.setLogFrom(row[21] != null ? LogFrom.valueOf(row[21].toString()) : null);
@@ -158,15 +161,18 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
                 Set<DayOfWeek> userWorkingDays = userWorkingDaysMap.getOrDefault(t.getUserId(), Collections.emptySet());
                 DayOfWeek currentDay = t.getDate().getDayOfWeek();
                 log.info("Current Day:{}", currentDay);
-
+                LocalDate timesheetDate = t.getDate();
+                log.info("Current currentDay:{}", currentDay);
+                LocalDate todayDate = LocalDate.now(ZoneId.of("Asia/Kolkata"));
+                log.info("Current todayDate:{}", todayDate);
                 if (!userWorkingDays.contains(currentDay)) {
                     holiday++;
                     if (t.getStatus() == null) t.setStatus(TimesheetStatusEnum.HOLIDAY.getLabel());
                 } else if (t.getStatus() == null) {
-                    if (endDate.equals(LocalDate.now())) {
+                    if (timesheetDate.isEqual(todayDate)) {
                         notMarked++;
                         t.setStatus(TimesheetStatusEnum.NOT_MARKED.getLabel());
-                    } else {
+                    } else if (timesheetDate.isBefore(todayDate)) {
                         absent++;
                         t.setStatus(TimesheetStatusEnum.ABSENT.getLabel());
                     }
@@ -389,10 +395,11 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
     public List<UserTimesheetDto> fetchUserTimesheetsWithHistory(LocalDate startDate, LocalDate endDate, List<String> userIds, String orgId) {
         String[] userIdArray = userIds.toArray(new String[0]);
 
-        List<Object[]> resultList = timesheetRepository.fetchUserTimesheetsWithHistory(startDate, endDate, userIdArray, orgId);
+        List<Object[]> resultList = timesheetRepository.fetchUserTimesheetsWithHistory(startDate, endDate, userIdArray, orgId, extraWorkedSeconds);
 
         Map<String, UserTimesheetDto> timesheetMap = new LinkedHashMap<>();
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Kolkata"))
+;
 
         WorkScheduleEntity schedule = workScheduleAdapter.findDefaultActiveSchedule(orgId);
         if (schedule == null) {
@@ -401,24 +408,13 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
         Map<String, List<UserTimesheetDto>> userTimesheetListMap = new HashMap<>();
 
         for (Object[] row : resultList) {
-
-            log.info("---- Row Start ----");
-            for (int i = 0; i < row.length; i++) {
-                log.info("Column {}: {}", i, row[i]);
-            }
-            log.info("---- Row End ----");
-
             if (row[1] == null) continue;
-
             String userId = toString(row[1]);
             LocalDate date = toLocalDate(row[0]);
             if (date == null) continue;
-
             String compositeKey = userId + "-" + date;
-
             UserTimesheetDto dto = timesheetMap.computeIfAbsent(compositeKey, key -> {
                 UserTimesheetDto newDto = new UserTimesheetDto();
-
                 newDto.setDate(date);
                 newDto.setUserId(userId);
                 newDto.setUserName((String) row[2]);
@@ -448,7 +444,7 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
                     System.err.println("Invalid LogType: " + row[19]);
                 }
 
-                historyDto.setLocationId(toLong(row[20]));
+                historyDto.setLocationName( (String) (row[20]));
 
                 try {
                     historyDto.setLogFrom(row[21] != null ? LogFrom.valueOf(row[21].toString()) : null);
@@ -500,9 +496,14 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
 
             int present = 0, absent = 0, holiday = 0, notMarked = 0, paidLeave = 0, halfDay = 0, permission = 0;
             for (UserTimesheetDto t : timesheets) {
+
                 DayOfWeek currentDay = t.getDate().getDayOfWeek();
                 log.info("Current Day:{}", currentDay);
                 Set<DayOfWeek> userWorkingDays = userWorkingDaysMap.getOrDefault(t.getUserId(), Collections.emptySet());
+                LocalDate timesheetDate = t.getDate();
+                log.info("Current currentDay:{}", currentDay);
+                LocalDate todayDate = LocalDate.now(ZoneId.of("Asia/Kolkata"));
+                log.info("Current todayDate:{}", todayDate);
 
                 if (!userWorkingDays.contains(currentDay)) {
                     // It's a rest day for the user
@@ -511,10 +512,10 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
                         t.setStatus(TimesheetStatusEnum.HOLIDAY.getLabel());
                     }
                 } else if (t.getStatus() == null) {
-                    if (t.getDate().equals(LocalDate.now())) {
+                    if (timesheetDate.isEqual(todayDate)) {
                         notMarked++;
                         t.setStatus(TimesheetStatusEnum.NOT_MARKED.getLabel());
-                    } else {
+                    } else if (timesheetDate.isBefore(todayDate)) {
                         absent++;
                         t.setStatus(TimesheetStatusEnum.ABSENT.getLabel());
                     }
@@ -561,5 +562,20 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
     @Override
     public Optional<TimesheetStatusEntity> findByStatusName(String label) {
         return timesheetStatusRepository.findByStatusName(label);
+    }
+
+    @Override
+    public List<TimesheetEntity> findUserByStatusId(List<String> statusId, LocalDate startDate, LocalDate endDate) {
+        return timesheetRepository.findUserByStatusStatusIdIn(statusId, startDate, endDate);
+    }
+
+    @Override
+    public LocationEntity getDefaultLocation(String orgId) {
+        return locationRepository.findDefaultLocationById(orgId);
+    }
+
+    @Override
+    public List<LogType> getUserLatestLogType(String userId) {
+        return timesheetHistoryRepository.findLatestLogTypesByUserIdForToday(userId);
     }
 }

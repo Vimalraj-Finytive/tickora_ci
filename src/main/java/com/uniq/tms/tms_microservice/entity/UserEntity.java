@@ -189,4 +189,11 @@ public class UserEntity {
     public void setWorkSchedule(WorkScheduleEntity workSchedule) {
         this.workSchedule = workSchedule;
     }
+
+    @Override
+    public String toString(){
+        return "UserEntity{ " + "userId='" + userId + '\'' +
+                ", name='" + userName + '\''+
+                '}';
+    }
 }

@@ -1,8 +1,8 @@
 package com.uniq.tms.tms_microservice.entity;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import com.uniq.tms.tms_microservice.dto.LogFrom;
-import com.uniq.tms.tms_microservice.dto.LogType;
+import com.uniq.tms.tms_microservice.enums.LogFrom;
+import com.uniq.tms.tms_microservice.enums.LogType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;

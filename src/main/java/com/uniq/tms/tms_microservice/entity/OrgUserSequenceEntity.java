@@ -13,10 +13,18 @@ public class OrgUserSequenceEntity {
     @Column(name = "org_id", nullable = false)
     private String orgId;
 
-    @Column(name = "last_number", nullable = false)
-    private Integer lastNumber;
+    @Column(name = "last_user_id", nullable = false)
+    private Integer lastUserId;
 
-    // Getters and setters
+    @Column(name = "last_secondary_user_id")
+    private Integer lastSecondaryUserId;
+
+    @Column(name = "last_subscription_id")
+    private Integer lastSubscriptionId;
+
+    @Column(name = "last_payment_id")
+    private Integer lastPaymentId;
+
     public String getOrgId() {
         return orgId;
     }
@@ -25,11 +33,35 @@ public class OrgUserSequenceEntity {
         this.orgId = orgId;
     }
 
-    public Integer getLastNumber() {
-        return lastNumber;
+    public Integer getLastUserId() {
+        return lastUserId;
     }
 
-    public void setLastNumber(Integer lastNumber) {
-        this.lastNumber = lastNumber;
+    public void setLastUserId(Integer lastUserId) {
+        this.lastUserId = lastUserId;
+    }
+
+    public Integer getLastSecondaryUserId() {
+        return lastSecondaryUserId;
+    }
+
+    public void setLastSecondaryUserId(Integer lastSecondaryUserId) {
+        this.lastSecondaryUserId = lastSecondaryUserId;
+    }
+
+    public Integer getLastSubscriptionId() {
+        return lastSubscriptionId;
+    }
+
+    public void setLastSubscriptionId(Integer lastSubscriptionId) {
+        this.lastSubscriptionId = lastSubscriptionId;
+    }
+
+    public Integer getLastPaymentId() {
+        return lastPaymentId;
+    }
+
+    public void setLastPaymentId(Integer lastPaymentId) {
+        this.lastPaymentId = lastPaymentId;
     }
 }

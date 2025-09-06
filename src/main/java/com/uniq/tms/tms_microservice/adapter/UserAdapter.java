@@ -87,8 +87,6 @@ public interface UserAdapter {
     List<UserGroupEntity> findUserGroupByUserId(String userId);
     void deleteUserGroupByUserId(String userId, Set<Long> toDelete);
     void updateUserGroupByUserId(List<UserGroupEntity> newEntities);
-    boolean findByLocation(String name, String orgId);
-    List<UserEntity> findByRoleId(List<Long> roleIds, String orgId);
     List<LocationEntity> updateMultipleLocations(List<LocationEntity> updatedEntities);
     void deleteLocation(List<Long> locationIds, String orgId);
     Optional<LocationEntity> findAllDefaultLocationById(List<Long> locationIds, String orgId);
@@ -112,4 +110,20 @@ public interface UserAdapter {
     void deleteAllUserLocations(List<UserLocationEntity> userLocationsToDelete);
     List<UserGroupEntity> findUserByOrganizationIdAndUserId(String orgId, String userId);
     List<UserLocationEntity> findByUser_UserId(String userId);
+    List<GroupEntity> findGroupLocationByLocationId(List<Long> locationIds);
+    UserSchemaMappingEntity create(UserSchemaMappingEntity userSchemaMappingEntity);
+    UserSchemaMappingEntity findUserByEmail(String email);
+    UserSchemaMappingEntity findUserByMobile(String mobile);
+    String findByPlan();
+    SubscriptionEntity saveSubscription(SubscriptionEntity subscriptionEntity);
+    void saveAllMappings(List<UserSchemaMappingEntity> mappings);
+    void saveAllSecondaryMappings(List<UserSchemaMappingEntity> secondaryMappings);
+    void saveUserFace(UserFaceEntity userFaceEntity);
+    Optional<UserFaceEntity> findUserEmbeddingsById(String userId);
+    Optional<LocationEntity> findLocationByLocationId(Long locationId);
+    UserSchemaMappingEntity update(UserSchemaMappingEntity mapping);
+    Optional<UserSchemaMappingEntity> findUserByMobileAndOrgId(String mobile, String orgId);
+    void saveUserHistory(UserHistoryEntity userHistoryEntity);
+    void deleteUserFace(String userId);
+    List<UserHistoryEntity> getUserHistoryLog(String userId);
 }

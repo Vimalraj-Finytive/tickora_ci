@@ -1,21 +1,16 @@
 package com.uniq.tms.tms_microservice.config.security.jwt;
 
 import com.uniq.tms.tms_microservice.adapter.AuthAdapter;
-import com.uniq.tms.tms_microservice.entity.BlacklistedTokenEntity;
-import com.uniq.tms.tms_microservice.entity.OrganizationEntity;
-import com.uniq.tms.tms_microservice.entity.RoleEntity;
-import com.uniq.tms.tms_microservice.entity.UserEntity;
-import com.uniq.tms.tms_microservice.repository.BlacklistedTokenRepository;
-import com.uniq.tms.tms_microservice.repository.OrganizationRepository;
-import com.uniq.tms.tms_microservice.repository.RoleRepository;
-import com.uniq.tms.tms_microservice.repository.UserRepository;
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.ExpiredJwtException;
-import io.jsonwebtoken.JwtException;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
+import com.uniq.tms.tms_microservice.adapter.UserAdapter;
+import com.uniq.tms.tms_microservice.enums.PrivilegeConstants;
+import com.uniq.tms.tms_microservice.entity.*;
+import com.uniq.tms.tms_microservice.helper.RolePrivilegeHelper;
+import com.uniq.tms.tms_microservice.repository.*;
+import com.uniq.tms.tms_microservice.service.CacheLoaderService;
+import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
-import io.jsonwebtoken.security.SignatureException;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import org.apache.logging.log4j.LogManager;
@@ -24,11 +19,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Component;
 import javax.crypto.SecretKey;
 import java.time.LocalDateTime;
-import java.util.Base64;
-import java.util.Date;
-import java.util.List;
-import java.util.Objects;
-import java.util.function.Supplier;
+import java.util.*;
 import org.apache.logging.log4j.Logger;
 
 @Component
@@ -39,52 +30,70 @@ public class JwtUtil {
 
     private static final Logger log  = LogManager.getLogger(JwtUtil.class);
 
-
     private final BlacklistedTokenRepository blacklistedTokenRepository;
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final OrganizationRepository organizationRepository;
     private final AuthAdapter authAdapter;
+    private final CacheLoaderService cacheLoaderService;
+    private final SecondaryDetailsRepository secondaryDetailsRepository;
+    private final UserAdapter userAdapter;
+    private final RolePrivilegeHelper rolePrivilegeHelper;
 
     private static final long INACTIVITY_TIMEOUT = 90L * 24 * 60 * 60 * 1000;
 
-    public JwtUtil(BlacklistedTokenRepository blacklistedTokenRepository, UserRepository userRepository, RoleRepository roleRepository, OrganizationRepository organizationRepository, AuthAdapter authAdapter) {
+    public JwtUtil(BlacklistedTokenRepository blacklistedTokenRepository, UserRepository userRepository, RoleRepository roleRepository, OrganizationRepository organizationRepository, AuthAdapter authAdapter, CacheLoaderService cacheLoaderService, SecondaryDetailsRepository secondaryDetailsRepository, UserAdapter userAdapter, RolePrivilegeHelper rolePrivilegeHelper) {
         this.blacklistedTokenRepository = blacklistedTokenRepository;
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.organizationRepository = organizationRepository;
         this.authAdapter = authAdapter;
+        this.cacheLoaderService = cacheLoaderService;
+        this.secondaryDetailsRepository = secondaryDetailsRepository;
+        this.userAdapter = userAdapter;
+        this.rolePrivilegeHelper = rolePrivilegeHelper;
     }
+
+    @PersistenceContext
+    private EntityManager entityManager;
+
     public SecretKey getSecretKey() {
         byte[] keyBytes = Base64.getDecoder().decode(secretKeyBase64);
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
+    public String generateToken(String loginInput, long l, HttpServletRequest request, boolean hasEmailLoginPrivilege, String currentTenant) {
+        log.info("generating token for: {}", loginInput);
+        UserEntity loggedInUser = null;
+        UserEntity studentUser = null;
+        String parentUserId = null;
 
-    public String generateToken(String loginInput, long l,  HttpServletRequest request) {
-        log.info("generating token for: " + loginInput);
-        // List of Suppliers returning UserEntity
-        log.info("checking User by logged input: {}");
-        List<Supplier<UserEntity>> users = List.of(
-                () -> loginInput.contains("@") ? userRepository.findByEmail(loginInput) : null,
-                () -> loginInput.matches("\\d{10}") ? authAdapter.findByMobileNumber(loginInput) : null,
-                () -> authAdapter.findStudentIdByMobile(loginInput)
-        );
+        log.info("has email login privilege: {}", hasEmailLoginPrivilege);
+        if (hasEmailLoginPrivilege) {
+            loggedInUser = userRepository.findByEmail(loginInput);
 
-        // Use Stream to get the first non-null user
-        UserEntity user = users.stream()
-                .map(Supplier::get)
-                .filter(Objects::nonNull)
-                .findFirst()
-                .orElseThrow(() -> new UsernameNotFoundException("User not found for input: " + loginInput));
+        } else {
+            loggedInUser = authAdapter.findByMobileNumber(loginInput);
+            if (loggedInUser == null) {
+                loggedInUser = authAdapter.findStudentIdByMobile(loginInput);
+                if (loggedInUser != null) {
+                    Optional<SecondaryDetailsEntity> parentEntity = authAdapter.findParentByMobile(loginInput);
+                    parentUserId = parentEntity.map(SecondaryDetailsEntity::getId).orElse(null);
+                }
+            }
+        }
 
-        log.info("user found: {}", user.getEmail());
-        Long roleId = user.getRole().getRoleId();
-        log.info("Fetching role id for logged user: {}", roleId);
-        RoleEntity role = roleRepository.findById(roleId)
-                .orElseThrow(() -> new RuntimeException("Role not found"));
-        log.info("role: {} not found for the given roleId", role);
-        String orgId = user.getOrganizationId();
+        if (loggedInUser == null) {
+            throw new UsernameNotFoundException("User not found for input: " + loginInput);
+        }
+
+        RoleEntity role = null;
+        if (loggedInUser.getRole() != null) {
+            role = roleRepository.findById(loggedInUser.getRole().getRoleId())
+                    .orElseThrow(() -> new RuntimeException("Role not found"));
+        }
+
+        String orgId = loggedInUser.getOrganizationId();
 
         OrganizationEntity organization = organizationRepository.findByOrganizationId(orgId)
                 .orElseThrow(() -> new RuntimeException("Organization not found"));
@@ -92,92 +101,93 @@ public class JwtUtil {
         long currentTime = System.currentTimeMillis();
         String userAgent = request.getHeader("User-Agent");
 
-        log.info("token generated for: " + loginInput);
-
-        return Jwts.builder()
+        JwtBuilder builder = Jwts.builder()
                 .setSubject(loginInput)
-                .claim("roles", "ROLE_" + role.getName())
-                .claim("orgId", user.getOrganizationId())
-                .claim("userId", user.getUserId())
+                .claim("orgId", orgId)
+                .claim("userId", loggedInUser.getUserId())
+                .claim("userSchema",currentTenant)
                 .claim("userAgent", userAgent)
                 .setIssuedAt(new Date(currentTime))
                 .setExpiration(new Date(currentTime + INACTIVITY_TIMEOUT))
-                .claim("lastActiveTime", currentTime)
-                .signWith(getSecretKey(), SignatureAlgorithm.HS256)
-                .compact();
-    }
+                .claim("lastActiveTime", currentTime);
 
-    public String getClientIp(HttpServletRequest request) {
-        String xfHeader = request.getHeader("X-Forwarded-For");
-        if (xfHeader != null && !xfHeader.isEmpty()) {
-            return xfHeader.split(",")[0].trim();
+        if (role != null) {
+            builder.claim("roles", "ROLE_" + role.getName());
         }
-        return request.getRemoteAddr(); // Fallback
+
+        if (parentUserId != null) {
+            builder.claim("parentUserId", parentUserId);
+        }
+
+        return builder.signWith(getSecretKey(), SignatureAlgorithm.HS256).compact();
     }
 
-    public Claims parseToken(String token, String requestUserAgent) {
-        log.info("parsing token: {}", token);
+    public void blacklistToken(String token) {
+        log.info("Blacklisting token: {}", token);
+        try {
+            Claims claims = extractAllClaims(token);
+            String subject = claims.getSubject();
+            UserEntity user = findUserFromClaims(subject, claims);
+            BlacklistedTokenEntity entity = new BlacklistedTokenEntity();
+            entity.setToken(token);
+            entity.setUser(user);
+            entity.setLoggedOutAt(LocalDateTime.now());
+            blacklistedTokenRepository.save(entity);
 
+        } catch (Exception e) {
+            log.error("Failed to blacklist token (might be already expired): {}", e.getMessage());
+            BlacklistedTokenEntity entity = new BlacklistedTokenEntity();
+            entity.setToken(token);
+            entity.setLoggedOutAt(LocalDateTime.now());
+            blacklistedTokenRepository.save(entity);
+        }
+    }
+
+    private UserEntity findUserFromClaims(String subject, Claims claims) {
+        String role = claims.get("roles", String.class);
+        if (role != null) {
+            role = role.replace("ROLE_", "");
+        }
+        String emailKey = cacheLoaderService.getPrivilegeKey(PrivilegeConstants.LOGIN_VIA_EMAIL);
+        String mobileKey = cacheLoaderService.getPrivilegeKey(PrivilegeConstants.LOGIN_VIA_MOBILE);
+        UserEntity user = null;
+        if (rolePrivilegeHelper.roleHasPrivilege(role, emailKey)) {
+            user = userRepository.findByEmail(subject);
+        }
+        else if (rolePrivilegeHelper.roleHasPrivilege(role, mobileKey)) {
+            user = userRepository.findByMobileNumber(subject);
+            if (user == null) {
+                user = secondaryDetailsRepository.findUserByMobile(subject);
+            }
+        }
+        return user;
+    }
+
+    public Claims parseAndValidateToken(String token, String requestUserAgent) {
         if (isTokenBlacklisted(token)) {
             throw new SecurityException("Token is blacklisted");
         }
-        try {
-            Claims claims = extractAllClaims(token);
-            long lastActiveTime = claims.get("lastActiveTime", Long.class);
-            long currentTime = System.currentTimeMillis();
 
-            if (currentTime - lastActiveTime > INACTIVITY_TIMEOUT) {
-                log.warn("token has expired due to inactivity: {}", token);
-                throw new SecurityException("Token has expired due to inactivity");
-            }
-            log.info("claims useragent {}", requestUserAgent);
-            String tokenUserAgent = claims.get("userAgent", String.class);
+        Claims claims = extractAllClaims(token);
 
-            if (!requestUserAgent.equals(tokenUserAgent)) {
-                log.info("user agent mismatch: {}", token);
-                throw new SecurityException("Token mismatch: Possible token theft or misuse detected");
-            }
-            claims.put("lastActiveTime", currentTime);
-            return claims;
-        } catch (ExpiredJwtException e) {
-            log.info("token has expired: {} ", token, e);
-            throw new SecurityException("Token has expired", e);
+        long lastActiveTime = claims.get("lastActiveTime", Long.class);
+        long currentTime = System.currentTimeMillis();
+
+        if (currentTime - lastActiveTime > INACTIVITY_TIMEOUT) {
+            throw new SecurityException("Token expired due to inactivity");
         }
-        catch (Exception e) {
-            log.info("invalid token: {}", token, e);
-            throw new SecurityException("Invalid Token", e);
+
+        String tokenUserAgent = claims.get("userAgent", String.class);
+        if (!requestUserAgent.equals(tokenUserAgent)) {
+            throw new SecurityException("User agent mismatch - possible token theft");
         }
+        return claims;
     }
 
     public boolean isTokenBlacklisted(String token) {
-        log.info("checking if token is blacklisted: {}", token);
-        boolean isBlacklisted = blacklistedTokenRepository.existsByToken(token);
-        log.info("token backlist status is: {}", isBlacklisted ? "blacklisted" : "not blacklisted");
-        return isBlacklisted;
+        return blacklistedTokenRepository.existsByToken(token);
     }
 
-    public void blacklistToken(String token,  String requestUserAgent) {
-        log.info("blacklisting token: {}", token);
-        try {
-            System.out.println("JWT_Util _________userAgent from the token: {}"+ requestUserAgent);
-            System.out.println("JWT_Util ________AuthHeader from the token: {}"+ token);
-
-            log.info("parsing token: {}", token);
-            Claims claims = parseToken(token, requestUserAgent);
-            String userEmail = claims.getSubject();
-            log.info("find user by token");
-            UserEntity userEntity = userRepository.findByEmail(userEmail);
-            BlacklistedTokenEntity blacklistedTokenEntity = new BlacklistedTokenEntity();
-            blacklistedTokenEntity.setToken(token);
-            blacklistedTokenEntity.setUser(userEntity);
-            blacklistedTokenEntity.setLoggedOutAt(LocalDateTime.now());
-            blacklistedTokenRepository.save(blacklistedTokenEntity);
-            log.info("token blacklisted: {}", token);
-        } catch (Exception e) {
-            log.info("error blacklisting token: {}", e);
-            throw new RuntimeException("Error blacklisting token", e);
-        }
-    }
 
     public String extractJwtFromCookies(HttpServletRequest request) {
         if (request.getCookies() != null) {
@@ -199,60 +209,6 @@ public class JwtUtil {
                 .build()
                 .parseClaimsJws(token)
                 .getBody();
-    }
-
-    public String extractOrgIdFromToken(String token) {
-        log.info("extracting orgId from token: {}", token);
-        Claims claims = extractAllClaims(token);
-
-        if (claims.containsKey("orgId")) {
-            Object orgId = claims.get("orgId");
-            log.info("orgId: {} found in JWT claims", orgId);
-            return (orgId instanceof String) ? ((String) orgId) : null;
-        }
-        log.info("orgId not found in JWT claims");
-        throw new IllegalStateException("Organization ID not found in JWT claims!");
-    }
-
-    public String extractUsername(String token) {
-        log.info("extracting username from token: {}", token);
-        return extractClaim(token, Claims::getSubject);
-    }
-    public <T> T extractClaim(String token, java.util.function.Function<Claims, T> claimsResolver) {
-        final Claims claims = extractAllClaims(token);
-        return claimsResolver.apply(claims);
-    }
-
-    public String extractJwt(String authHeader) {
-        log.info("extracting jwt from header: {}", authHeader);
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            log.info("invalid authorization header: {}", authHeader);
-            throw new RuntimeException("Invalid Authorization header");
-        }
-        return authHeader.substring(7);
-    }
-
-    public String extractRoleFromToken(String jwt) {
-        log.info("extracting role from token: {}", jwt);
-        try {
-            Claims claims = Jwts.parserBuilder()
-                    .setSigningKey(getSecretKey())
-                    .build()
-                    .parseClaimsJws(jwt)
-                    .getBody();
-            log.info("role found in JWT claims");
-            return claims.get("roles", String.class);
-        } catch (SignatureException e) {
-            log.info("Invalid JWT signature: {}", e.getMessage());
-            throw new RuntimeException("Invalid JWT token", e);
-        }
-    }
-
-    public String extractUserIdFromToken(String token) {
-        log.info("extracting userId from token: {}", token);
-        Claims claims = extractAllClaims(token);
-        log.info("userId: {} found in JWT claims", claims.get("userId"));
-        return claims.get("userId", String.class);
     }
 
     public boolean validateToken(String token) {

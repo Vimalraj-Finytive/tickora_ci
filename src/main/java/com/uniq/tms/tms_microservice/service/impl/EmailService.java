@@ -1,12 +1,12 @@
 package com.uniq.tms.tms_microservice.service.impl;
 
 import com.uniq.tms.tms_microservice.adapter.UserAdapter;
-import com.uniq.tms.tms_microservice.dto.PrivilegeConstants;
+import com.uniq.tms.tms_microservice.enums.PrivilegeConstants;
 import com.uniq.tms.tms_microservice.entity.RoleEntity;
 import com.uniq.tms.tms_microservice.entity.UserEntity;
+import com.uniq.tms.tms_microservice.helper.RolePrivilegeHelper;
 import com.uniq.tms.tms_microservice.repository.RoleRepository;
 import com.uniq.tms.tms_microservice.service.CacheLoaderService;
-import com.uniq.tms.tms_microservice.util.CacheKeyUtil;
 import jakarta.annotation.Nullable;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -29,9 +29,9 @@ public class EmailService {
     private final TemplateEngine templateEngine;
     private final UserAdapter userAdapter;
     private final CacheLoaderService cacheLoaderService;
-    private final CacheKeyUtil cacheKeyUtil;
     private final RoleRepository roleRepository;
     private final RestTemplate restTemplate;
+    private final RolePrivilegeHelper rolePrivilegeHelper;
 
     @Value("${external.mail.service.url}")
     private String mailServiceUrl;
@@ -39,15 +39,14 @@ public class EmailService {
     public EmailService(TemplateEngine templateEngine,
                         UserAdapter userAdapter,
                         CacheLoaderService cacheLoaderService,
-                        CacheKeyUtil cacheKeyUtil,
                         RoleRepository roleRepository,
-                        @Nullable RestTemplate restTemplate) {
+                        @Nullable RestTemplate restTemplate, RolePrivilegeHelper rolePrivilegeHelper) {
         this.templateEngine = templateEngine;
         this.userAdapter = userAdapter;
         this.cacheLoaderService = cacheLoaderService;
-        this.cacheKeyUtil = cacheKeyUtil;
         this.roleRepository = roleRepository;
         this.restTemplate = restTemplate;
+        this.rolePrivilegeHelper = rolePrivilegeHelper;
     }
 
     public void sendEmail(String to, String subject, String username, String password, boolean isNewUser, String emailType) {
@@ -61,29 +60,11 @@ public class EmailService {
 
             String htmlContent = templateEngine.process("email-template", context);
 
-            UserEntity user = userAdapter.findByEmail(to).orElse(null);
-            if (user == null) throw new RuntimeException("User not found with email: " + to);
-
-            RoleEntity role = roleRepository.findById(user.getRole().getRoleId())
-                    .orElseThrow(() -> new RuntimeException("Role not found with ID: " + user.getRole().getRoleId()));
-            String roleName = role.getName();
-
-            String emailLoginKey = cacheLoaderService.getPrivilegeKey(PrivilegeConstants.LOGIN_VIA_EMAIL);
-            String mobileLoginKey = cacheLoaderService.getPrivilegeKey(PrivilegeConstants.LOGIN_VIA_MOBILE);
-            boolean emailLogin = cacheKeyUtil.roleHasPrivilege(roleName, emailLoginKey);
-            boolean mobileLogin = cacheKeyUtil.roleHasPrivilege(roleName, mobileLoginKey);
-
-            log.info("Role name: {}, emailLogin: {}, mobileLogin: {}", roleName, emailLogin, mobileLogin);
-
-            String bodyContent = emailLogin ? htmlContent : "Use your mobile number and OTP to login!";
-
-            // Prepare payload
             Map<String, String> payload = new HashMap<>();
             payload.put("to", to);
             payload.put("subject", subject);
-            payload.put("body", bodyContent);
+            payload.put("body", htmlContent);
 
-            // Make POST request
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
             HttpEntity<Map<String, String>> request = new HttpEntity<>(payload, headers);
@@ -107,7 +88,6 @@ public class EmailService {
 
             String htmlContent = templateEngine.process("email-template", context);
 
-            // Prepare payload
             Map<String, String> payload = new HashMap<>();
             payload.put("to", toEmail);
             payload.put("subject", subject);

@@ -18,11 +18,9 @@ public class WeeklyWorkScheduleEntity {
     @Column(name = "start_day", nullable = false)
     private DayOfWeekEnum startDay;
 
-
     @Enumerated(EnumType.STRING)
     @Column(name = "end_day", nullable = false)
     private DayOfWeekEnum endDay;
-
 
     @OneToOne
     @JoinColumn(name = "work_schedule_id", nullable = false, unique = true)

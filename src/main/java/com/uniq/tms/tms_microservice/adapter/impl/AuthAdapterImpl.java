@@ -1,11 +1,13 @@
 package com.uniq.tms.tms_microservice.adapter.impl;
 
 import com.uniq.tms.tms_microservice.adapter.AuthAdapter;
+import com.uniq.tms.tms_microservice.entity.SecondaryDetailsEntity;
 import com.uniq.tms.tms_microservice.entity.UserEntity;
 import com.uniq.tms.tms_microservice.repository.SecondaryDetailsRepository;
 import com.uniq.tms.tms_microservice.repository.UserRepository;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
+import java.util.Optional;
 
 @Component
 @ConditionalOnProperty(name = "database.type", havingValue = "postgres")
@@ -36,5 +38,10 @@ public class AuthAdapterImpl implements AuthAdapter {
     @Override
     public UserEntity findByMobileNumber(String mobile) {
         return userRepository.findByMobileNumber(mobile);
+    }
+
+    @Override
+    public Optional<SecondaryDetailsEntity> findParentByMobile(String loginInput) {
+        return secondaryDetailsRepository.findByMobile(loginInput);
     }
 }

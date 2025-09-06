@@ -3,7 +3,6 @@ package com.uniq.tms.tms_microservice.listener;
 import com.uniq.tms.tms_microservice.config.security.cache.CacheDependencyConfig;
 import com.uniq.tms.tms_microservice.config.security.cache.CacheReloadHandlerRegistry;
 import com.uniq.tms.tms_microservice.event.*;
-import com.uniq.tms.tms_microservice.service.CacheLoaderService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.event.EventListener;
@@ -15,12 +14,10 @@ public class CacheReloadEventListener {
 
     private static final Logger log = LoggerFactory.getLogger(CacheReloadEventListener.class);
 
-    private final CacheLoaderService cacheLoaderService;
     private final CacheDependencyConfig cacheDependencyConfig;
     private final CacheReloadHandlerRegistry cacheReloadHandlerRegistry;
 
-    public CacheReloadEventListener(CacheLoaderService cacheLoaderService, CacheDependencyConfig cacheDependencyConfig, CacheReloadHandlerRegistry cacheReloadHandlerRegistry) {
-        this.cacheLoaderService = cacheLoaderService;
+    public CacheReloadEventListener(CacheDependencyConfig cacheDependencyConfig, CacheReloadHandlerRegistry cacheReloadHandlerRegistry) {
         this.cacheDependencyConfig = cacheDependencyConfig;
         this.cacheReloadHandlerRegistry = cacheReloadHandlerRegistry;
     }
@@ -30,11 +27,11 @@ public class CacheReloadEventListener {
         log.info("Received CacheReloadEvent. Reloading cache...");
         String cacheName = event.getCacheName();
         String orgId = event.getOrgId();
-
+        String schema = event.getSchema();
         List<String> dependents = cacheDependencyConfig.getDependent(cacheName);
         log.info("Dependents of cachename: {} are : {}", cacheName, dependents);
         for (String dependent : dependents) {
             log.info("Reloading dependent cache: {}", dependent);
-            cacheReloadHandlerRegistry.reload(dependent, orgId);
+            cacheReloadHandlerRegistry.reload(dependent, orgId,schema);
         }    }
 }

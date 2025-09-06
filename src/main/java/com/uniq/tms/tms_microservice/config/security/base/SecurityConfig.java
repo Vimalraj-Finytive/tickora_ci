@@ -5,6 +5,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -27,31 +28,23 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .csrf(csrf -> csrf.disable())
+                .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
-                                "/",
-                                "/index.html",
-                                "/*.js",
-                                "/*.css",
-                                "/*.html",
-                                "/assets/**",
-                                "/browser/**",
-                                "/favicon.ico",
-                                "/**/*.js",
-                                "/**/*.css",
-                                "/**/*.png",
-                                "/**/*.jpg",
-                                "/**/*.svg",
-                                "/**/*.woff2",
-                                "/**/*.ttf",
-                                "/**/*.map",
-                                "/tms/loginByEmail"
+                                "/", "/index.html", "/favicon.ico",
+                                "/assets/**", "/browser/**",
+                                "/**/*.js", "/**/*.css", "/**/*.png", "/**/*.svg", "/**/*.woff2"
                         ).permitAll()
-                        .requestMatchers("/**").permitAll()
-                        .anyRequest().authenticated()
+                        .requestMatchers("/tms/loginByEmail",
+                                "/tms/loginByMobile",
+                                "/tms/reset-password",
+                                "/tms/validate-email",
+                                "/tms/organization/**",
+                                "/tms/sendOTP",
+                                "/tms/debug/**").permitAll()
+                        .requestMatchers("/tms/**").authenticated()
+                        .anyRequest().permitAll()
                 )
-
                 .exceptionHandling(exception -> exception
                         .accessDeniedHandler((request, response, accessDeniedException) -> {
                             response.setStatus(HttpStatus.OK.value());
