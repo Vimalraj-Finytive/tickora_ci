@@ -65,6 +65,12 @@ public class JwtFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         String path = request.getRequestURI();
+
+        if (!path.startsWith("/tms/")) {
+            chain.doFilter(request, response);
+            return;
+        }
+
         if (isWhiteListed(path)) {
             chain.doFilter(request, response);
             return;
@@ -200,28 +206,13 @@ public class JwtFilter extends OncePerRequestFilter {
         response.flushBuffer();
     }
     private static final List<String> WHITELISTED_PATHS = List.of(
-            "/login",
-            "/",
-            "/favicon.ico",
-            "/assets/**",
-            "/browser/**",
-            "/webjars/**",
-            "/index.html",
-            "/*.js",
-            "/*.css",
-            "/*.ico",
-            "/*.png",
-            "/*.svg",
-            "/tms/loginByEmail",
-            "/tms/loginByMobile",
-            "/tms/reset-password",
-            "/tms/validate-email",
-            "/tms/organization/orgType",
-            "/tms/organization/validate",
-            "/tms/organization/create",
-            "/tms/sendOTP",
-            "/tms/debug/otpsCount",
-            "/tms/debug/otps",
+
+            // Public APIs
+            "/login", "/tms/loginByEmail", "/tms/loginByMobile",
+            "/tms/reset-password", "/tms/validate-email",
+            "/tms/organization/orgType", "/tms/organization/validate",
+            "/tms/organization/create", "/tms/sendOTP",
+            "/tms/debug/otpsCount", "/tms/debug/otps",
             "/tms/organization/getDropDowns"
     );
 
