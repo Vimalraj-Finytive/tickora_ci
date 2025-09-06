@@ -6,12 +6,9 @@ import com.uniq.tms.tms_microservice.entity.OrganizationEntity;
 import com.uniq.tms.tms_microservice.entity.UserLocationEntity;
 import com.uniq.tms.tms_microservice.model.Location;
 import com.uniq.tms.tms_microservice.model.UserLocation;
-import org.mapstruct.AfterMapping;
-import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
-import org.mapstruct.MappingTarget;
+import org.mapstruct.*;
 
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface LocationEntityMapper {
     @Mapping(target = "organizationEntity", ignore = true)
     LocationEntity toEntity(Location location);

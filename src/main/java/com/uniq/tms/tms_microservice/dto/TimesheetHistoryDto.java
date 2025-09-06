@@ -2,6 +2,9 @@ package com.uniq.tms.tms_microservice.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.uniq.tms.tms_microservice.enums.LogFrom;
+import com.uniq.tms.tms_microservice.enums.LogType;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -9,6 +12,8 @@ import java.time.LocalTime;
 public class TimesheetHistoryDto {
 
     private Long timesheetHistoryId;
+    private String locationName;
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private Long locationId;
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "HH:mm:ss")
     private LocalTime logTime;
@@ -21,12 +26,12 @@ public class TimesheetHistoryDto {
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private LocalDate date;
 
-    public Long getLocationId() {
-        return locationId;
+    public String getLocationName() {
+        return locationName;
     }
 
-    public void setLocationId(Long locationId) {
-        this.locationId = locationId;
+    public void setLocationName(String locationName) {
+        this.locationName = locationName;
     }
 
     public String getUserId() {
@@ -82,5 +87,13 @@ public class TimesheetHistoryDto {
 
     public void setTimesheetHistoryId(Long timesheetHistoryId) {
         this.timesheetHistoryId = timesheetHistoryId;
+    }
+
+    public Long getLocationId() {
+        return locationId;
+    }
+
+    public void setLocationId(Long locationId) {
+        this.locationId = locationId;
     }
 }

@@ -8,7 +8,8 @@ import com.uniq.tms.tms_microservice.config.security.cache.CacheReloadHandlerReg
 import com.uniq.tms.tms_microservice.dto.*;
 import com.uniq.tms.tms_microservice.entity.*;
 import com.uniq.tms.tms_microservice.entity.WorkScheduleEntity;
-import com.uniq.tms.tms_microservice.enums.IdGenerationType;
+import com.uniq.tms.tms_microservice.enums.IdGenerationTypeEnum;
+import com.uniq.tms.tms_microservice.enums.UserRole;
 import com.uniq.tms.tms_microservice.enums.WorkScheduleTypeEnum;
 import com.uniq.tms.tms_microservice.mapper.WorkScheduleEntityMapper;
 import com.uniq.tms.tms_microservice.model.WorkSchedule;
@@ -18,6 +19,7 @@ import com.uniq.tms.tms_microservice.service.IdGenerationService;
 import com.uniq.tms.tms_microservice.service.WorkScheduleService;
 import com.uniq.tms.tms_microservice.util.CacheEventPublisherUtil;
 import com.uniq.tms.tms_microservice.util.CacheKeyUtil;
+import com.uniq.tms.tms_microservice.util.TenantUtil;
 import jakarta.annotation.Nullable;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -73,7 +75,8 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
 
     @Override
     public List<WorkScheduleDto> getAllWorkSchedules(String orgId) {
-        String redisKey = cacheKeyUtil.getWorkSchedule(orgId);
+        String schema = TenantUtil.getCurrentTenant();
+        String redisKey = cacheKeyUtil.getWorkSchedule(orgId,schema);
         ObjectMapper mapper = new ObjectMapper();
 
         try {
@@ -97,7 +100,7 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
 
             // Cache miss, load from DB and repopulate cache
             log.info("Cache miss for workSchedule, loading from DB...");
-            Map<String, List<WorkScheduleDto>> loadedMap = cacheLoaderService.loadWorkSchedule(orgId).get();
+            Map<String, List<WorkScheduleDto>> loadedMap = cacheLoaderService.loadWorkSchedule(orgId,schema).get();
             List<WorkScheduleDto> response = loadedMap.get(orgId);
 
             if (response != null && !response.isEmpty()) {
@@ -126,6 +129,7 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
     @Override
     @Transactional
     public ApiResponse createWorkSchedule(WorkSchedule model, String orgId) {
+        String schema = TenantUtil.getCurrentTenant();
         if (workScheduleAdapter.findByWorkschedule(model.getScheduleName(), orgId)) {
             return new ApiResponse(403, "WorkSchedule Name already exists", false);
         }
@@ -142,7 +146,7 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
 
         WorkScheduleEntity entity = workScheduleEntityMapper.toEntity(model);
         entity.setOrganizationEntity(organizationEntity);
-        entity.setScheduleId(idGenerationService.generateNextId(IdGenerationType.WORK_SCHEDULE));
+        entity.setScheduleId(idGenerationService.generateNextId(IdGenerationTypeEnum.WORK_SCHEDULE));
         entity.setType(typeEntity);
         entity.setActive(true);
 
@@ -173,6 +177,7 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
                     publisher,
                     cacheKeyConfig.getWorkSchedule(),
                     orgId,
+                    schema,
                     cacheReloadHandlerRegistry
             );
             log.info("WorkScheduleCacheReloadEvent published after WorkSchedule Added");
@@ -185,14 +190,14 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
 
     private void saveWeeklySchedule(WeeklyScheduleDto dto, WorkScheduleEntity parent) {
         WeeklyWorkScheduleEntity entity = workScheduleEntityMapper.toWeeklyEntity(dto);
-        entity.setWeeklyWorkScheduleId(idGenerationService.generateNextId(IdGenerationType.WEEKLY_WORK));
+        entity.setWeeklyWorkScheduleId(idGenerationService.generateNextId(IdGenerationTypeEnum.WEEKLY_WORK));
         entity.setWorkScheduleEntity(parent);
         workScheduleAdapter.save(entity);
     }
 
     private void saveFlexibleSchedule(List<FlexibleScheduleDto> flexibleSchedule, WorkScheduleEntity parent) {
         List<FlexibleWorkScheduleEntity> entities = workScheduleEntityMapper.toFlexibleEntity(flexibleSchedule);
-        List<java.lang.String> ids = idGenerationService.generateNextId(IdGenerationType.FLEXIBLE_WORK, entities.size());
+        List<java.lang.String> ids = idGenerationService.generateNextId(IdGenerationTypeEnum.FLEXIBLE_WORK, entities.size());
 
         for (int i = 0; i < entities.size(); i++) {
             FlexibleWorkScheduleEntity entity = entities.get(i);
@@ -205,7 +210,7 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
     private void saveFixedSchedule(List<FixedScheduleDto> dtos, WorkScheduleEntity parent) {
         List<FixedWorkScheduleEntity> entities = workScheduleEntityMapper.toEntity(dtos);
 
-        List<String> ids = idGenerationService.generateNextId(IdGenerationType.FIXED_WORK, entities.size());
+        List<String> ids = idGenerationService.generateNextId(IdGenerationTypeEnum.FIXED_WORK, entities.size());
 
         for (int i = 0; i < entities.size(); i++) {
             FixedWorkScheduleEntity entity = entities.get(i);
@@ -218,7 +223,7 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
     @Override
     public ApiResponse addType(WorkScheduleTypeDto type) {
         WorkScheduleTypeEntity entity = new WorkScheduleTypeEntity();
-        java.lang.String generatedId = idGenerationService.generateNextId(IdGenerationType.WORK_SCHEDULE_TYPE);
+        java.lang.String generatedId = idGenerationService.generateNextId(IdGenerationTypeEnum.WORK_SCHEDULE_TYPE);
         entity.setTypeId(generatedId);
         entity.setType(WorkScheduleTypeEnum.valueOf(type.getType()));
         workScheduleAdapter.addType(entity);
@@ -228,7 +233,7 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
     @Override
     @Transactional
     public void updateWorkSchedule(WorkSchedule model, String orgId) {
-
+        String schema = TenantUtil.getCurrentTenant();
         if ((workScheduleAdapter.findByScheduleName(model.getScheduleId(), model.getScheduleName(), orgId)))
         {
             throw new DataIntegrityViolationException("WorkScheduleName already exists in this organization");
@@ -252,6 +257,12 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
             entity.setType(typeEntity);
             entity.setScheduleId(model.getScheduleId());
             entity.setActive(true);
+            if (entity.getFixedWorkSchedules() == null) {
+                entity.setFixedWorkSchedules(new ArrayList<>());
+            }
+            if (entity.getFlexibleWorkSchedules() == null) {
+                entity.setFlexibleWorkSchedules(new ArrayList<>());
+            }
             boolean shouldAssignToSuperAdmin = model.isDefault() || workScheduleAdapter.countByOrgId(orgId) == 0;
             WorkScheduleEntity savedEntity = workScheduleAdapter.saveWorkSchedule(entity);
             if (shouldAssignToSuperAdmin) {
@@ -276,6 +287,7 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
                     publisher,
                     cacheKeyConfig.getWorkSchedule(),
                     orgId,
+                    schema,
                     cacheReloadHandlerRegistry
             );
             log.info("WorkScheduleCacheReloadEvent published after WorkSchedule Updated");
@@ -287,6 +299,7 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
     @Override
     @Transactional
     public void deleteWorkSchedule(String orgId, String scheduleId) {
+        String schema = TenantUtil.getCurrentTenant();
         WorkScheduleEntity workSchedule = workScheduleAdapter.findByScheduleId(scheduleId, orgId);
 
         // 1. Validate organization ownership
@@ -317,6 +330,7 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
                     publisher,
                     cacheKeyConfig.getWorkSchedule(),
                     orgId,
+                    schema,
                     cacheReloadHandlerRegistry
             );
             log.info("WorkSchedule deleted and references updated. Cache reloaded.");

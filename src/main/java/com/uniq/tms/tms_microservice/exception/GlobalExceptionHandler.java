@@ -7,9 +7,12 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.server.ResponseStatusException;
 import java.nio.file.AccessDeniedException;
 import java.util.HashMap;
@@ -72,7 +75,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse> handleGlobalException(Exception ex) {
-        ApiResponse response = new ApiResponse(500, "An unexpected error occurred", null);
+        ApiResponse response = new ApiResponse(500, "An unexpected error occurred", ex);
         return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
@@ -88,5 +91,33 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(response, HttpStatus.CONFLICT);
     }
 
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiResponse> handleMaxSizeException(MaxUploadSizeExceededException ex) {
+        ApiResponse response = new ApiResponse(400, "File too large!", null);
+        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+    }
 
+    @ExceptionHandler(MissingServletRequestPartException.class)
+    public ResponseEntity<ApiResponse> handleMissingPart(MissingServletRequestPartException ex) {
+        ApiResponse response = new ApiResponse(400, "Required part '" + ex.getRequestPartName() + "' is not present.", null);
+        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<ApiResponse> handleMediaType(HttpMediaTypeNotSupportedException ex) {
+        ApiResponse response = new ApiResponse(415, "Content-Type is not supported. Use multipart/form-data for file upload.", null);
+        return new ResponseEntity<>(response, HttpStatus.UNSUPPORTED_MEDIA_TYPE);
+    }
+
+    @ExceptionHandler(CommonExceptionHandler.ConflictException.class)
+    public ResponseEntity<ApiResponse> handleConflictException(CommonExceptionHandler.ConflictException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new ApiResponse(409, ex.getMessage(), null));
+    }
+
+    @ExceptionHandler(CommonExceptionHandler.InternalServerException.class)
+    public ResponseEntity<ApiResponse> handleInternalServerException(CommonExceptionHandler.InternalServerException ex) {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ApiResponse(500, ex.getMessage(), null));
+    }
 }

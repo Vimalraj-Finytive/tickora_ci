@@ -13,6 +13,7 @@ public class CacheKeyConfig {
     private String userprofile;
     private String roleprivilege;
     private String workSchedule;
+    private String inactiveUsers;
 
     public String getLocation() {
         return location;
@@ -60,5 +61,13 @@ public class CacheKeyConfig {
 
     public void setWorkSchedule(String workSchedule) {
         this.workSchedule = workSchedule;
+    }
+
+    public String getInactiveUsers() {
+        return inactiveUsers;
+    }
+
+    public void setInactiveUsers(String inactiveUsers) {
+        this.inactiveUsers = inactiveUsers;
     }
 }

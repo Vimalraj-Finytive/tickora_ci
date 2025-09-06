@@ -33,8 +33,13 @@ public class UserAdapterImpl implements UserAdapter {
     private final UserLocationRepository userLocationRepository;
     private final OrganizationRepository organizationRepository;
     private final OrganizationTypeRepository organizationTypeRepository;
+    private final UserSchemaMapperRepository userSchemaMapperRepository;
+    private final PlanRepository planRepository;
+    private final SubscriptionRepository subscriptionRepository;
+    private final UserFaceRepository userFaceRepository;
+    private final UserHistoryRepository userHistoryRepository;
 
-    public UserAdapterImpl(RoleRepository roleRepository, TeamRepository teamRepository, LocationRepository locationRepository, UserRepository userRepository, UserGroupRepository userGroupRepository, SecondaryDetailsRepository secondaryDetailsRepository, LocationEntityMapper locationEntityMapper, PrivilegeRepository privilegeRepository, UserLocationRepository userLocationRepository, OrganizationRepository organizationRepository, OrganizationTypeRepository organizationTypeRepository) {
+    public UserAdapterImpl(RoleRepository roleRepository, TeamRepository teamRepository, LocationRepository locationRepository, UserRepository userRepository, UserGroupRepository userGroupRepository, SecondaryDetailsRepository secondaryDetailsRepository, LocationEntityMapper locationEntityMapper, PrivilegeRepository privilegeRepository, UserLocationRepository userLocationRepository, OrganizationRepository organizationRepository, OrganizationTypeRepository organizationTypeRepository, UserSchemaMapperRepository userSchemaMapperRepository, PlanRepository planRepository, SubscriptionRepository subscriptionRepository, UserFaceRepository userFaceRepository, UserHistoryRepository userHistoryRepository) {
         this.roleRepository = roleRepository;
         this.teamRepository = teamRepository;
         this.locationRepository = locationRepository;
@@ -46,6 +51,11 @@ public class UserAdapterImpl implements UserAdapter {
         this.userLocationRepository = userLocationRepository;
         this.organizationRepository = organizationRepository;
         this.organizationTypeRepository = organizationTypeRepository;
+        this.userSchemaMapperRepository = userSchemaMapperRepository;
+        this.planRepository = planRepository;
+        this.subscriptionRepository = subscriptionRepository;
+        this.userFaceRepository = userFaceRepository;
+        this.userHistoryRepository = userHistoryRepository;
     }
 
     @Override
@@ -106,7 +116,7 @@ public class UserAdapterImpl implements UserAdapter {
 
     @Override
     public boolean findByGroup(String teamName, String orgId) {
-        return teamRepository.findBygroupNameAndOrganizationId(teamName, orgId).isPresent();
+        return teamRepository.findByGroupNameAndOrganizationId(teamName, orgId).isPresent();
     }
 
     @Override
@@ -432,16 +442,6 @@ public class UserAdapterImpl implements UserAdapter {
     }
 
     @Override
-    public boolean findByLocation(String name, String orgId) {
-        return locationRepository.findByNameAndOrganizationId(name, orgId).isPresent();
-    }
-
-    @Override
-    public List<UserEntity> findByRoleId(List<Long> roleIds, String orgId){
-        return roleRepository.findByIdIn(roleIds, orgId);
-    }
-
-    @Override
     public List<LocationEntity> updateMultipleLocations(List<LocationEntity> updatedEntities) {
         return locationRepository.saveAll(updatedEntities);
     }
@@ -491,6 +491,7 @@ public class UserAdapterImpl implements UserAdapter {
         teamRepository.updateGroupWorkSchedule(scheduleId, scheduleId1);
     }
 
+    @Override
     public OrganizationEntity create(OrganizationEntity entity){
         return organizationRepository.save(entity);
     }
@@ -532,7 +533,7 @@ public class UserAdapterImpl implements UserAdapter {
 
     @Override
     public OrganizationTypeEntity findOrgType(String orgType) {
-        return organizationTypeRepository.findByorgType(orgType);
+        return organizationTypeRepository.findByOrgType(orgType);
     }
 
     @Override
@@ -553,5 +554,86 @@ public class UserAdapterImpl implements UserAdapter {
     @Override
     public List<UserLocationEntity> findByUser_UserId(String userId) {
         return userLocationRepository.findByUser_UserId(userId);
+    }
+
+    @Override
+    public List<GroupEntity> findGroupLocationByLocationId(List<Long> locationIds) {
+        return teamRepository.findByLocationEntity_LocationIdIn(locationIds);
+    }
+
+    @Override
+    public UserSchemaMappingEntity create(UserSchemaMappingEntity entity) {
+        return userSchemaMapperRepository.save(entity);
+    }
+
+    @Override
+    public UserSchemaMappingEntity findUserByEmail(String email){
+        return userSchemaMapperRepository.findUserByEmail(email);
+    }
+
+    @Override
+    public UserSchemaMappingEntity findUserByMobile(String mobile) {
+        return userSchemaMapperRepository.findUserByMobile(mobile);
+    }
+
+    @Override
+    public String findByPlan() {
+        return planRepository.findByIsDefault();
+    }
+
+    @Override
+    public SubscriptionEntity saveSubscription(SubscriptionEntity subscriptionEntity) {
+        return subscriptionRepository.save(subscriptionEntity);
+    }
+
+    @Override
+    public void saveAllMappings(List<UserSchemaMappingEntity> mappings) {
+        userSchemaMapperRepository.saveAll(mappings);
+    }
+
+    @Override
+    public void saveAllSecondaryMappings(List<UserSchemaMappingEntity> secondaryMappings) {
+        userSchemaMapperRepository.saveAll(secondaryMappings);
+    }
+
+    @Override
+    public void saveUserFace(UserFaceEntity userFaceEntity) {
+        userFaceRepository.save(userFaceEntity);
+    }
+
+    @Override
+    public Optional<UserFaceEntity> findUserEmbeddingsById(String userId) {
+        return userFaceRepository.findByUserId(userId);
+    }
+
+    @Override
+    public Optional<LocationEntity> findLocationByLocationId(Long locationId) {
+        return locationRepository.findById(locationId);
+    }
+
+    @Override
+    public UserSchemaMappingEntity update(UserSchemaMappingEntity mapping) {
+        return userSchemaMapperRepository.save(mapping);
+    }
+
+    @Override
+    public Optional<UserSchemaMappingEntity> findUserByMobileAndOrgId(String mobile, String orgId) {
+        return userSchemaMapperRepository.findUserByMobileAndOrgId(mobile,orgId);
+    }
+
+    @Override
+    @Transactional
+    public void saveUserHistory(UserHistoryEntity userHistoryEntity) {
+        userHistoryRepository.save(userHistoryEntity);
+    }
+
+    @Override
+    public void deleteUserFace(String userId) {
+        userFaceRepository.deleteByUserId(userId);
+    }
+
+    @Override
+    public List<UserHistoryEntity> getUserHistoryLog(String userId) {
+        return userHistoryRepository.findByUserId(userId);
     }
 }

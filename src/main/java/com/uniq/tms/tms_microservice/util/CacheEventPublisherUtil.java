@@ -13,11 +13,12 @@ public class CacheEventPublisherUtil {
     public static void syncReloadThenPublish(ApplicationEventPublisher publisher,
                                              String cacheName,
                                              String orgId,
+                                             String schema,
                                              CacheReloadHandlerRegistry registry) {
-        log.info("Reloading primary cache synchronously: {}", cacheName);
-        registry.reload(cacheName, orgId);
+        log.info("Reloading primary cache synchronously: {} : {}", cacheName, schema);
+        registry.reload(cacheName, orgId, schema);
 
-        log.info("Publishing CacheReloadEvent for dependents of {}...", cacheName);
-        publisher.publishEvent(new CacheReloadEvent(cacheName, orgId));
+        log.info("Publishing CacheReloadEvent for dependents of {}...{}", cacheName, schema);
+        publisher.publishEvent(new CacheReloadEvent(cacheName, orgId, schema));
     }
 }

@@ -2,9 +2,8 @@ package com.uniq.tms.tms_microservice.entity;
 
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
-import java.util.HashSet;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 @Entity
 @Table(name = "role")
@@ -21,24 +20,23 @@ public class RoleEntity {
     @Column(name = "hierarchy_level")
     private Integer hierarchyLevel;
 
-    @ManyToOne
-    @JoinColumn(name = "organization_id")
-    private OrganizationEntity organizationEntity;
-
     @OneToMany(mappedBy = "role", cascade = CascadeType.ALL)
     @JsonManagedReference
     private List<UserEntity> users;
 
-    @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(name = "role_privilege_map", joinColumns = @JoinColumn(name = "role_id"), inverseJoinColumns = @JoinColumn(name = "privilege_id"))
-    private Set<PrivilegeEntity> privilegeEntities = new HashSet<>();
+    @OneToMany(mappedBy = "role", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<RolePrivilegeMapEntity> privilegeMappings = new ArrayList<>();
 
-    public Set<PrivilegeEntity> getPrivilegeEntities() {
-        return privilegeEntities;
+    public List<RolePrivilegeMapEntity> getPrivilegeMappings() {
+        return privilegeMappings;
     }
 
-    public void setPrivilegeEntities(Set<PrivilegeEntity> privilegeEntities) {
-        this.privilegeEntities = privilegeEntities;
+    public void setPrivilegeMappings(List<RolePrivilegeMapEntity> privilegeMappings) {
+        this.privilegeMappings = privilegeMappings;
+    }
+
+    public void setHierarchyLevel(Integer hierarchyLevel) {
+        this.hierarchyLevel = hierarchyLevel;
     }
 
     public int getHierarchyLevel() {
@@ -65,14 +63,6 @@ public class RoleEntity {
         this.name = name;
     }
 
-    public OrganizationEntity getOrganizationEntity() {
-        return organizationEntity;
-    }
-
-    public void setOrganizationEntity(OrganizationEntity organizationEntity) {
-        this.organizationEntity = organizationEntity;
-    }
-
     public List<UserEntity> getUsers() {
         return users;
     }
@@ -90,7 +80,6 @@ public class RoleEntity {
     public RoleEntity(Long roleId, String name, OrganizationEntity organizationEntity, List<UserEntity> users) {
         this.roleId = roleId;
         this.name = name;
-        this.organizationEntity = organizationEntity;
         this.users = users;
     }
 }

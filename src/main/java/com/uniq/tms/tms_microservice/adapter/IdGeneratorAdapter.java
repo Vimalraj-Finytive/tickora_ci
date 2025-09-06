@@ -1,7 +1,7 @@
 package com.uniq.tms.tms_microservice.adapter;
 
-import com.uniq.tms.tms_microservice.enums.IdGenerationType;
+import com.uniq.tms.tms_microservice.enums.IdGenerationTypeEnum;
 
 public interface IdGeneratorAdapter {
-    String findMaxIdByPrefix(IdGenerationType type, String prefix);
+    String findMaxIdByPrefix(IdGenerationTypeEnum type, String prefix);
 }

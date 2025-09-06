@@ -1,6 +1,6 @@
 package com.uniq.tms.tms_microservice.repository;
 
-import com.uniq.tms.tms_microservice.dto.LogType;
+import com.uniq.tms.tms_microservice.enums.LogType;
 import com.uniq.tms.tms_microservice.entity.TimesheetEntity;
 import com.uniq.tms.tms_microservice.entity.TimesheetHistoryEntity;
 import jakarta.transaction.Transactional;
@@ -29,4 +29,15 @@ public interface TimesheetHistoryRepository extends JpaRepository<TimesheetHisto
     void updateTimesheetHistory(@Param("timesheetId") Long timesheetId,
                                @Param("logType") LogType logType,
                                @Param("logTime") LocalTime logTime);
+
+    @Query("""
+    SELECT th.logType
+    FROM TimesheetHistoryEntity th
+    JOIN th.timesheet t
+    WHERE t.userId = :userId
+      AND t.date = CURRENT_DATE
+    ORDER BY th.loggedTimestamp DESC
+""")
+    List<LogType> findLatestLogTypesByUserIdForToday(@Param("userId") String userId);
+
 }

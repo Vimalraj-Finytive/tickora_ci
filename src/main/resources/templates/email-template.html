@@ -24,8 +24,9 @@
 </head>
 <body>
 <h3 style="color: #3f3c3c;">Hi [[${username}]],</h3>
+<p>Welcome to the <strong>Tickora</strong> platform!</p>
 
-<!-- Account Creation -->
+<!-- Account Creation - Email Login Privilege User Email Content-->
 <div th:if="${emailType == 'account_creation'}">
     <p>Your account has been successfully created on the <strong>Tickora</strong> platform.</p>
     <p><b>Default Password:</b> <span style="color:#007bff;">[[${password}]]</span></p>
@@ -53,6 +54,31 @@
         </a>
     </p>
     <h4>Welcome Aboard!<br>&mdash; The Tickora Team</h4>
+</div>
+
+<!-- Account Creation -  Mobile Login Privilege User Email Content -->
+<div th:if="${emailType == 'mobile_login'}">
+    <p>
+        Your account has been successfully created. You can now log in using your
+        <strong>registered mobile number</strong> and a <strong>OTP</strong>.
+    </p>
+
+    <h4>How to log in:</h4>
+    <ol>
+        <li>Open the <strong>Tickora</strong> mobile app.</li>
+        <li>Enter your <strong>registered mobile number</strong>.</li>
+        <li>You'll receive a <strong>one-time OTP</strong> on your mobile.</li>
+        <li>Enter the OTP in the app to log in.</li>
+    </ol>
+
+    <p><strong style="color: red;">Notes:</strong></p>
+    <ul>
+        <li>The OTP is <strong>usable only once</strong>.</li>
+        <li>The OTP is valid for <strong>3 months</strong>.</li>
+        <li>Do <strong>not log out</strong> of the app unnecessarily — logging out will require generating a new OTP.</li>
+    </ul>
+
+    <h4>Welcome Aboard!<br>- The Tickora Team</h4>
 </div>
 
 <!-- Forgot Password -->

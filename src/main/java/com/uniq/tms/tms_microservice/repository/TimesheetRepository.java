@@ -1,7 +1,7 @@
 package com.uniq.tms.tms_microservice.repository;
 
 import com.uniq.tms.tms_microservice.dto.UserAttendanceDto;
-import com.uniq.tms.tms_microservice.dto.UserDashboard;
+import com.uniq.tms.tms_microservice.projection.UserDashboard;
 import com.uniq.tms.tms_microservice.entity.TimesheetEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -29,7 +29,7 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
             ug.user_id,
             STRING_AGG(g.group_name, ', ') AS group_name
         FROM user_group ug
-        JOIN group_table g ON ug.group_id = g.group_id
+        JOIN org_groups g ON ug.group_id = g.group_id
         GROUP BY ug.user_id
     ),
     
@@ -47,7 +47,7 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
         SELECT
             gs.work_date,
             TO_CHAR(gs.work_date, 'FMDay') AS day_name,
-            EXTRACT(DOW FROM gs.work_date)::INT AS day_num,
+            CAST(EXTRACT(DOW FROM gs.work_date) AS INT) AS day_num,
             u.user_id,
             u.user_name,
             u.role_id,
@@ -131,8 +131,8 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
         ws.work_schedule_name AS work_schedule,
         ug.group_name,
         t.id AS timesheet_id,
-        t.first_clock_in::TIME AS first_clock_in,
-        t.last_clock_out::TIME AS last_clock_out,
+        CAST(t.first_clock_in AS TIME) AS first_clock_in,
+        CAST(t.last_clock_out AS TIME) AS last_clock_out,
         COALESCE(CAST(t.tracked_hours AS TEXT), '00:00:00') AS tracked_hours,
         COALESCE(CAST(t.regular_hours AS TEXT), '00:00:00') AS regular_hours,
         t.status_id,
@@ -162,6 +162,8 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
                           AND th2.log_type = 'CLOCK_OUT'
                           AND th2.log_from = 'SYSTEM_GENERATED'
                     ) THEN 'Failed Clock Out'
+                    WHEN (EXTRACT(EPOCH FROM (t.last_clock_out - t.first_clock_in))) >= COALESCE(wsd.expected_seconds, 0) + :extraWorkedSeconds
+                    THEN 'OverTime'
                     WHEN (EXTRACT(EPOCH FROM (t.last_clock_out - t.first_clock_in))) >= COALESCE(wsd.expected_seconds, 0)
                     THEN 'Sufficient Hours'
                     ELSE 'Less Worked Hours'
@@ -172,7 +174,7 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
         th.id AS history_id,
         th.log_time,
         th.log_type,
-        th.location_id,
+        COALESCE(l.name, 'Unknown Location') AS location_name,
         th.log_from,
         th.logged_timestamp
     
@@ -186,15 +188,16 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
     LEFT JOIN work_schedule_type wst ON ws.work_schedule_type = wst.type_id
     LEFT JOIN WorkScheduleDuration wsd ON ws.work_schedule_id = wsd.work_schedule_id
     LEFT JOIN timesheet_history th ON t.id = th.timesheet_id
+    LEFT JOIN location l ON th.location_id = l.location_id
     LEFT JOIN UserGroups ug ON udm.user_id = ug.user_id
-    
     ORDER BY udm.user_id, udm.work_date, th.logged_timestamp
     """, nativeQuery = true)
         List<Object[]> fetchTimesheetsWithHistory(
                 @Param("startDate") LocalDate startDate,
                 @Param("endDate") LocalDate endDate,
                 @Param("userIds") String[] userIds,
-                @Param("orgId") String orgId
+                @Param("orgId") String orgId,
+                @Param("extraWorkedSeconds") int extraWorkedSeconds
         );
 
     List<TimesheetEntity> findActiveTimesheetsByDate(LocalDate today);
@@ -218,7 +221,7 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
             ug.user_id,
             STRING_AGG(g.group_name, ', ') AS group_name
         FROM user_group ug
-        JOIN group_table g ON ug.group_id = g.group_id
+        JOIN org_groups g ON ug.group_id = g.group_id
         GROUP BY ug.user_id
     ),
     
@@ -236,7 +239,7 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
         SELECT
             gs.work_date,
             TO_CHAR(gs.work_date, 'FMDay') AS day_name,
-            EXTRACT(DOW FROM gs.work_date)::INT AS day_num,
+            CAST(EXTRACT(DOW FROM gs.work_date) AS INT) AS day_num,
             u.user_id,
             u.user_name,
             u.role_id,
@@ -320,8 +323,8 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
         ws.work_schedule_name AS work_schedule,
         ug.group_name,
         t.id AS timesheet_id,
-        t.first_clock_in::TIME AS first_clock_in,
-        t.last_clock_out::TIME AS last_clock_out,
+        CAST(t.first_clock_in AS TIME) AS first_clock_in,
+        CAST(t.last_clock_out AS TIME) AS last_clock_out,
         COALESCE(CAST(t.tracked_hours AS TEXT), '00:00:00') AS tracked_hours,
         COALESCE(CAST(t.regular_hours AS TEXT), '00:00:00') AS regular_hours,
         t.status_id,
@@ -351,6 +354,8 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
                           AND th2.log_type = 'CLOCK_OUT'
                           AND th2.log_from = 'SYSTEM_GENERATED'
                     ) THEN 'Failed Clock Out'
+                    WHEN (EXTRACT(EPOCH FROM (t.last_clock_out - t.first_clock_in))) >= COALESCE(wsd.expected_seconds, 0) + :extraWorkedSeconds
+                    THEN 'OverTime'
                     WHEN (EXTRACT(EPOCH FROM (t.last_clock_out - t.first_clock_in))) >= COALESCE(wsd.expected_seconds, 0)
                     THEN 'Sufficient Hours'
                     ELSE 'Less Worked Hours'
@@ -361,7 +366,7 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
         th.id AS history_id,
         th.log_time,
         th.log_type,
-        th.location_id,
+        COALESCE(l.name, 'Unknown Location') AS location_name,
         th.log_from,
         th.logged_timestamp
     
@@ -375,15 +380,16 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
     LEFT JOIN work_schedule_type wst ON ws.work_schedule_type = wst.type_id
     LEFT JOIN WorkScheduleDuration wsd ON ws.work_schedule_id = wsd.work_schedule_id
     LEFT JOIN timesheet_history th ON t.id = th.timesheet_id
+    LEFT JOIN location l ON th.location_id = l.location_id
     LEFT JOIN UserGroups ug ON udm.user_id = ug.user_id
-    
     ORDER BY udm.user_id, udm.work_date, th.logged_timestamp
     """, nativeQuery = true)
     List<Object[]> fetchUserTimesheetsWithHistory(
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate,
             @Param("userIds") String[] userIds,
-            @Param("orgId") String orgId
+            @Param("orgId") String orgId,
+            @Param("extraWorkedSeconds") int extraWorkedSeconds
     );
 
     @Query(value = """
@@ -392,11 +398,12 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
         d.log_date AS logDate,
         t.status_id AS statusId
     FROM (
-        SELECT generate_series(:fromDate, :toDate, interval '1 day')::date AS log_date
+        SELECT CAST(generate_series(:fromDate, :toDate, interval '1 day') AS date) AS log_date
     ) d
     JOIN users u ON u.active = true
     LEFT JOIN timesheet t ON u.user_id = t.user_id AND t.date = d.log_date
     WHERE u.organization_id = :orgId
+      AND u.user_id IN (:userIds)
     """, nativeQuery = true)
     List<UserDashboard> getDashboard(
             @Param("userIds") List<String> userIds,
@@ -404,4 +411,9 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
             @Param("toDate") LocalDate toDate,
             @Param("orgId") String orgId
     );
+
+    @Query("SELECT t FROM TimesheetEntity t WHERE t.status.statusId IN :statusIds AND t.date BETWEEN :startDate AND :endDate")
+    List<TimesheetEntity> findUserByStatusStatusIdIn(@Param("statusIds") List<String> statusIds,
+                                                   @Param("startDate") LocalDate startDate,
+                                                   @Param("endDate") LocalDate endDate);
 }

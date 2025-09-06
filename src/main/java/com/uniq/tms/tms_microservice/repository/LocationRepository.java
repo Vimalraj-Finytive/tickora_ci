@@ -16,9 +16,6 @@ public interface LocationRepository extends JpaRepository<LocationEntity, Long> 
     @Query(value = "SELECT name, location_id FROM location WHERE organization_id = :orgId", nativeQuery = true)
     List<Object[]> findLocationNameIdMappings(@Param("orgId") String orgId);
 
-    @Query("SELECT l FROM LocationEntity l WHERE l.name = :name AND l.organizationEntity.organizationId = :orgId")
-    Optional<LocationEntity> findByNameAndOrganizationId(String name, String orgId);
-
     @Query("SELECT l FROM LocationEntity l WHERE l.organizationEntity.organizationId = :orgId")
     List<LocationEntity> findByOrgId(@Param("orgId") String orgId);
 

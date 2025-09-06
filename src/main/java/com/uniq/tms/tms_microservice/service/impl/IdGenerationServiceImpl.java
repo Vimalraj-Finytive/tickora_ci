@@ -2,7 +2,7 @@ package com.uniq.tms.tms_microservice.service.impl;
 
 import com.uniq.tms.tms_microservice.adapter.IdGeneratorAdapter;
 import com.uniq.tms.tms_microservice.entity.OrgUserSequenceEntity;
-import com.uniq.tms.tms_microservice.enums.IdGenerationType;
+import com.uniq.tms.tms_microservice.enums.IdGenerationTypeEnum;
 import com.uniq.tms.tms_microservice.repository.OrgUserSequenceRepository;
 import com.uniq.tms.tms_microservice.repository.OrganizationRepository;
 import com.uniq.tms.tms_microservice.service.IdGenerationService;
@@ -36,21 +36,21 @@ public class IdGenerationServiceImpl implements IdGenerationService {
         if (updated == 0) {
             OrgUserSequenceEntity sequence = new OrgUserSequenceEntity();
             sequence.setOrgId(orgId);
-            sequence.setLastNumber(1);
+            sequence.setLastUserId(1);
             orgUserSequenceRepository.save(sequence);
-            return orgId.replaceAll("\\d","") + IdGenerationType.USER.getPrefix() + String.format("%05d", 1);
+            return orgId.replaceAll("\\d","") + IdGenerationTypeEnum.USER.getPrefix() + String.format("%05d", 1);
         }
-        Integer latestNumber = orgUserSequenceRepository.getLastNumber(orgId);
-        return orgId.replaceAll("\\d","") + IdGenerationType.USER.getPrefix() + String.format("%05d", latestNumber);
+        Integer latestNumber = orgUserSequenceRepository.getLastUserId(orgId);
+        return orgId.replaceAll("\\d","") + IdGenerationTypeEnum.USER.getPrefix() + String.format("%05d", latestNumber);
     }
 
     @Override
-    public String generateNextId(IdGenerationType type) {
+    public String generateNextId(IdGenerationTypeEnum type) {
         return generateNextId(type, 1).get(0);
     }
 
     @Override
-    public List<String> generateNextId(IdGenerationType type, int count) {
+    public List<String> generateNextId(IdGenerationTypeEnum type, int count) {
         log.info("Generating {} IDs for type: {}", count, type);
         String prefix = type.getPrefix();
         String maxId = idGeneratorAdapter.findMaxIdByPrefix(type, prefix);
@@ -109,4 +109,54 @@ public class IdGenerationServiceImpl implements IdGenerationService {
         return suffix.toString();
     }
 
+    @Override
+    @Transactional
+    public String generateNextSecondaryUserId(String organizationId) {
+        if (organizationId == null || organizationId.isBlank()) {
+            throw new IllegalArgumentException("organizationId cannot be null or blank");
+        }
+        log.info("OrganizationId: {}", organizationId);
+        int updated = orgUserSequenceRepository.incrementSecondaryUserSequence(organizationId);
+        log.info("Increment number:{}", updated);
+            if (updated == 0) {
+                OrgUserSequenceEntity sequence = new OrgUserSequenceEntity();
+                sequence.setOrgId(organizationId);
+                sequence.setLastSecondaryUserId(1);
+                orgUserSequenceRepository.save(sequence);
+                return organizationId.replaceAll("\\d","") + IdGenerationTypeEnum.SECONDARY_USER.getPrefix() + String.format("%05d", 1);
+            }
+            log.info("Call repo to get last sequence");
+            Integer latestNumber = orgUserSequenceRepository.getLastSecondaryUserId(organizationId);
+        if (latestNumber == null) {
+            orgUserSequenceRepository.updateLastSecondaryId(organizationId, 1);
+            latestNumber = 1;
+        }
+            log.info("latestNumber:{}", latestNumber);
+            return organizationId.replaceAll("\\d","") + IdGenerationTypeEnum.SECONDARY_USER.getPrefix() + String.format("%05d", latestNumber);
+    }
+
+    @Override
+    public String generateNextSubscriptionId(String organizationId) {
+        if (organizationId == null || organizationId.isBlank()) {
+            throw new IllegalArgumentException("organizationId cannot be null or blank");
+        }
+        log.info("OrganizationId: {}", organizationId);
+        int updated = orgUserSequenceRepository.incrementSubscriptionSequence(organizationId);
+        log.info("Increment number:{}", updated);
+        if (updated == 0) {
+            OrgUserSequenceEntity sequence = new OrgUserSequenceEntity();
+            sequence.setOrgId(organizationId);
+            sequence.setLastSubscriptionId(1);
+            orgUserSequenceRepository.save(sequence);
+            return organizationId.replaceAll("\\d","") + IdGenerationTypeEnum.SUBSCRIPTION.getPrefix() + String.format("%03d", 1);
+        }
+        log.info("Call repo to get last sequence of subscription Id");
+        Integer latestNumber = orgUserSequenceRepository.getLastSubscription(organizationId);
+        log.info("latestNumber:{}", latestNumber);
+        if (latestNumber == null) {
+            orgUserSequenceRepository.updateLastSubscriptionId(organizationId, 1);
+            latestNumber = 1;
+        }
+        return organizationId.replaceAll("\\d","") + IdGenerationTypeEnum.SUBSCRIPTION.getPrefix() + String.format("%03d", latestNumber);
+    }
 }

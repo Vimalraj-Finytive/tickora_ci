@@ -1,29 +1,24 @@
 package com.uniq.tms.tms_microservice.controller;
 
 import com.uniq.tms.tms_microservice.constant.UserConstant;
-import com.uniq.tms.tms_microservice.dto.ApiResponse;
-import com.uniq.tms.tms_microservice.dto.OrgSetupValidationResponse;
-import com.uniq.tms.tms_microservice.dto.OrganizationDto;
-import com.uniq.tms.tms_microservice.dto.OrganizationTypeDto;
+import com.uniq.tms.tms_microservice.dto.*;
 import com.uniq.tms.tms_microservice.facade.AuthFacade;
-import com.uniq.tms.tms_microservice.util.AuthUtil;
-import lombok.extern.slf4j.Slf4j;
+import com.uniq.tms.tms_microservice.helper.AuthHelper;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
-@Slf4j
 @RestController
 @RequestMapping(UserConstant.ORGANIZATION_URL)
 public class OrganizationController {
 
     private final AuthFacade authFacade;
-    private final AuthUtil authUtil;
+    private final AuthHelper authHelper;
 
-    public OrganizationController(AuthFacade authFacade, AuthFacade authFacade1, AuthUtil authUtil) {
+    public OrganizationController(AuthFacade authFacade, AuthFacade authFacade1, AuthHelper authHelper) {
         this.authFacade = authFacade1;
-        this.authUtil = authUtil;
+        this.authHelper = authHelper;
     }
 
     @PostMapping("/create")
@@ -47,7 +42,7 @@ public class OrganizationController {
     @GetMapping("/onBoard/validate")
     public ResponseEntity<ApiResponse<OrgSetupValidationResponse>> getOnBoardValidation(
             @RequestHeader("Authorization") String token) {
-        String orgId = authUtil.getOrgId();
+        String orgId = authHelper.getOrgId();
         if (orgId == null || orgId.isBlank()) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized - Invalid Organization");
         }
@@ -60,6 +55,12 @@ public class OrganizationController {
             @RequestHeader("Authorization") String token) {
 
         ApiResponse<OrganizationTypeDto> response = authFacade.getUserOrgType();
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
+
+    @GetMapping("/getDropDowns")
+    public ResponseEntity<ApiResponse<OrganizationDropdownDto>> getDropDowns(){
+        ApiResponse<OrganizationDropdownDto> response = authFacade.getDropDowns();
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 }

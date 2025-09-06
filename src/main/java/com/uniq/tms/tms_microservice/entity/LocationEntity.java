@@ -126,4 +126,11 @@ public class LocationEntity {
     public void setDefault(boolean aDefault) {
         isDefault = aDefault;
     }
+
+    @Override
+    public String toString(){
+        return "UserLocationEntity{ " + "locationId='" +  locationId + '\'' +
+                ", name='" + name + '\''+
+                '}';
+    }
 }

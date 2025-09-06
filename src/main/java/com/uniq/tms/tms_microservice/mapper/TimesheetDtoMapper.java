@@ -5,6 +5,7 @@ import com.uniq.tms.tms_microservice.entity.TimesheetEntity;
 import com.uniq.tms.tms_microservice.entity.TimesheetStatusEntity;
 import com.uniq.tms.tms_microservice.model.TimesheetHistory;
 import com.uniq.tms.tms_microservice.model.TimesheetStatus;
+import com.uniq.tms.tms_microservice.projection.UserDashboard;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;

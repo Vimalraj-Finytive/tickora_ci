@@ -4,22 +4,15 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.uniq.tms.tms_microservice.constant.UserConstant;
 import com.uniq.tms.tms_microservice.dto.*;
 import com.uniq.tms.tms_microservice.facade.AuthFacade;
-import com.uniq.tms.tms_microservice.util.AuthUtil;
+import com.uniq.tms.tms_microservice.helper.AuthHelper;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import java.time.LocalDate;
 import java.util.List;
@@ -29,22 +22,22 @@ import java.util.List;
 public class UserController {
 
     private final AuthFacade authFacade;
-    private final AuthUtil authUtil;
+    private final AuthHelper authHelper;
     
-    public UserController(AuthFacade authFacade, AuthUtil authUtil) {
+    public UserController(AuthFacade authFacade, AuthHelper authHelper) {
         this.authFacade = authFacade;
-        this.authUtil = authUtil;
+        this.authHelper = authHelper;
     }
 
     @GetMapping("/role")
     public ResponseEntity<ApiResponse> getAllRole(@RequestHeader(value = "Authorization", required = false) String authHeader) {
         Logger logger = LoggerFactory.getLogger(getClass());
         try {
-            String orgId = authUtil.getOrgId();
+            String orgId = authHelper.getOrgId();
             if (orgId == null) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ApiResponse(401, "Unauthorized - Invalid Organization", null));
             }
-            String role = authUtil.getRole();
+            String role = authHelper.getRole();
             return ResponseEntity.ok(authFacade.getAllRole(orgId, role));
         } catch (RuntimeException e) {
             logger.error("JWT Processing Error: " + e.getMessage());
@@ -56,7 +49,7 @@ public class UserController {
     public ResponseEntity<ApiResponse> getAllGroup(@RequestHeader(value = "Authorization", required = false) String authHeader) {
         String orgId;
         try {
-            orgId = authUtil.getOrgId();
+            orgId = authHelper.getOrgId();
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new ApiResponse(403, "Unauthorized", false));
         }
@@ -69,7 +62,7 @@ public class UserController {
         Logger logger = LoggerFactory.getLogger(getClass());
         logger.info("Received Authorization Header: {}", authHeader);
         try {
-            String orgId = authUtil.getOrgId();
+            String orgId = authHelper.getOrgId();
             if (orgId == null) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ApiResponse(401, "Unauthorized - Invalid Organization", null));
             }
@@ -80,16 +73,29 @@ public class UserController {
         }
     }
 
-    @PostMapping("/createBulkUser")
-    public ResponseEntity<ApiResponse> createBulkUser(
-            @RequestParam("file") MultipartFile file,
-            @RequestHeader("Authorization") String token
-            ) {
+    @PostMapping(
+            value = "/createBulkUser",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse> createBulkUser(@RequestParam(value = "file") MultipartFile file) {
+        Logger logger = LoggerFactory.getLogger(getClass());
+        logger.info("Received file: {}", file.getOriginalFilename());
+        logger.info("Request received... checking file param");
+        logger.info("File name: {}", file != null ? file.getOriginalFilename() : "null");
+        if (file.isEmpty()) {
+            return new ResponseEntity<>(
+                    new ApiResponse(400, "No file uploaded", null),
+                    HttpStatus.BAD_REQUEST
+            );
+        }
+
         try {
             ApiResponse response = authFacade.createBulkUser(file);
-            return new ResponseEntity<>(response, HttpStatus.OK);
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
-            return new ResponseEntity<>(new ApiResponse(500, e.getMessage(), null), HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>(
+                    new ApiResponse(500, e.getMessage(), null),
+                    HttpStatus.INTERNAL_SERVER_ERROR
+            );
         }
     }
 
@@ -133,9 +139,9 @@ public class UserController {
         return ResponseEntity.ok(response);
     }
 
-    @DeleteMapping("/deleteUser")
-    public ResponseEntity<ApiResponse> deleteUser(@RequestHeader("Authorization") String token, @RequestParam String userId) {
-        ApiResponse response = authFacade.deleteUser( userId);
+    @PostMapping("/deleteUser")
+    public ResponseEntity<ApiResponse> deleteUser(@RequestHeader("Authorization") String token, @Valid @RequestBody DeactivateUserRequestDto requestDto) {
+        ApiResponse response = authFacade.deleteUser( requestDto);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
@@ -258,4 +264,26 @@ public class UserController {
         authFacade.deleteLocation( locationIds);
         return ResponseEntity.noContent().build();
     }
+
+    @GetMapping("/getInactiveUsers")
+    public ResponseEntity<ApiResponse> getInactiveUsers(@RequestHeader("Authorization") String token) {
+        ApiResponse response = authFacade.getInactiveUsers();
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
+
+    @PatchMapping("/activateUser")
+    public ResponseEntity<ApiResponse> updateIsActive(@RequestHeader("Authorization") String token , @RequestBody EditUserDto editUserDto){
+        ApiResponse response = authFacade.updateIsActive(editUserDto);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
+
+    @PostMapping("/userHistoryLog")
+    public ResponseEntity<ApiResponse<List<UserHistoryResponseDto>>> getUserHistoryLog(
+            @RequestHeader("Authorization") String token,
+            @RequestBody UserValidationRequestDto requestDto) {
+
+        ApiResponse<List<UserHistoryResponseDto>> response = authFacade.getUserHistoryLog(requestDto.getUserId());
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
+
 }

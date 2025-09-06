@@ -1,16 +1,19 @@
 package com.uniq.tms.tms_microservice.mapper;
 
 import com.uniq.tms.tms_microservice.dto.LocationDto;
+import com.uniq.tms.tms_microservice.dto.UserHistoryResponseDto;
+import com.uniq.tms.tms_microservice.dto.UserValidationDto;
 import com.uniq.tms.tms_microservice.entity.*;
 import com.uniq.tms.tms_microservice.model.*;
-import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
-import org.mapstruct.ReportingPolicy;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.mapstruct.*;
+import java.util.List;
 
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface UserEntityMapper {
 
-    @Mapping(target = "orgId", source = "organizationEntity.organizationId")
+    Logger log = LogManager.getLogger(UserEntityMapper.class);
     Role toMiddleware(RoleEntity entity);
 
     @Mapping(target = "orgId", source = "organizationEntity.organizationId")
@@ -74,4 +77,22 @@ public interface UserEntityMapper {
     Organization toModel(OrganizationEntity organizationEntity);
 
     OrganizationType toModel(OrganizationTypeEntity organizationType);
+
+    UserSchemaMappingEntity toSchema(String email, String mobile, String orgId, String schemaName);
+
+    UserValidationDto toDto(UserEntity user);
+
+    @Mapping(target = "userId", source = "userId")
+    @Mapping(target = "activeStatus", expression = "java(com.uniq.tms.tms_microservice.enums.UserStatusTypeEnum.INACTIVE.getValue())")
+    @Mapping(target = "comments", source = "comments")
+    @Mapping(target = "updatedAt", expression = "java(java.time.LocalDateTime.now())")
+    UserHistoryEntity toInactiveUserEntity(String userId, String comments);
+
+    @Mapping(target = "userId", source = "userId")
+    @Mapping(target = "activeStatus", expression = "java(com.uniq.tms.tms_microservice.enums.UserStatusTypeEnum.ACTIVE.getValue())")
+    @Mapping(target = "comments", source = "comments")
+    @Mapping(target = "updatedAt", expression = "java(java.time.LocalDateTime.now())")
+    UserHistoryEntity toActiveUserEntity(String userId, String comments);
+
+    List<UserHistoryResponseDto> toHistoryDto(List<UserHistoryEntity> responseDtos);
 }
