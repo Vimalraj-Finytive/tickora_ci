@@ -199,11 +199,19 @@ public class JwtFilter extends OncePerRequestFilter {
         response.getWriter().write(json);
         response.flushBuffer();
     }
-
     private static final List<String> WHITELISTED_PATHS = List.of(
             "/login",
             "/",
             "/favicon.ico",
+            "/assets/**",
+            "/browser/**",
+            "/webjars/**",
+            "/index.html",
+            "/*.js",
+            "/*.css",
+            "/*.ico",
+            "/*.png",
+            "/*.svg",
             "/tms/loginByEmail",
             "/tms/loginByMobile",
             "/tms/reset-password",
@@ -215,7 +223,7 @@ public class JwtFilter extends OncePerRequestFilter {
             "/tms/debug/otpsCount",
             "/tms/debug/otps",
             "/tms/organization/getDropDowns"
-            );
+    );
 
     private boolean isWhiteListed(String path){
         return WHITELISTED_PATHS.stream()
