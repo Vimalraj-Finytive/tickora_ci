@@ -77,7 +77,7 @@ public class JwtFilter extends OncePerRequestFilter {
         }
 
         String jwtToken = extractTokenFromRequest(request);
-        String tenant = extractSchemaFromToken(jwtToken, response);
+        String tenant = extractSchemaFromToken(jwtToken);
 
         if (jwtToken != null) {
             log.info("Tenant:{}", tenant);
@@ -146,20 +146,18 @@ public class JwtFilter extends OncePerRequestFilter {
         chain.doFilter(request, response);
     }
 
-    private String extractSchemaFromToken(String jwtToken, HttpServletResponse response) throws IOException {
+    private String extractSchemaFromToken(String jwtToken) {
         try {
             Claims claims = jwtUtil.extractAllClaims(jwtToken);
             String schema = claims.get("userSchema", String.class);
             if (schema == null || schema.isBlank()) {
-                log.warn("JWT does not contain orgSchema. Unauthorized access!");
-                sendErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, "Organization schema is missing in token");
-                return null;
+                log.warn("Schema not found in token, defaulting to 'public'");
+                return "public";
             }
             return schema;
         } catch (Exception e) {
-            log.error("Failed to extract schema from token. Unauthorized!", e);
-            sendErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, "Invalid or expired token");
-            return null;
+            log.error("Failed to extract schema from token, defaulting to 'public'", e);
+            return "public";
         }
     }
 
@@ -207,7 +205,6 @@ public class JwtFilter extends OncePerRequestFilter {
     }
     private static final List<String> WHITELISTED_PATHS = List.of(
 
-            // Public APIs
             "/login", "/tms/loginByEmail", "/tms/loginByMobile",
             "/tms/reset-password", "/tms/validate-email",
             "/tms/organization/orgType", "/tms/organization/validate",
