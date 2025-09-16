@@ -291,7 +291,7 @@ public class AuthFacade {
         return new ApiResponse(200, "User group type updated successfully.", true);
     }
 
-    public List<UserTimesheetResponseDto> getAllTimesheets( TimesheetReportDto request) {
+    public PaginationResponseDto  getAllTimesheets( TimesheetReportDto request) {
         String orgId = authHelper.getOrgId();
         String userIdFromToken = authHelper.getUserId();
         if (orgId == null) {
@@ -436,7 +436,7 @@ public class AuthFacade {
     }
 
     public FileExportResponseDto generateTimesheetFile( TimesheetReportDto request) throws IOException {
-        List<UserTimesheetResponseDto> timesheets = getAllTimesheets( request);
+        List<UserTimesheetResponseDto> timesheets = getAllTimesheets( request).getUserTimesheetResponseDtos();
         log.info("Requested Timesheet Date Range: {} to {}", request.getFromDate(), request.getToDate());
         log.info("Total timesheets fetched: {}", timesheets.size());
 
@@ -446,7 +446,7 @@ public class AuthFacade {
         LocalDate endDate = request.getToDate();
 
         if(request.getGroupId() != null && request.getGroupId().size() == 1){
-            Long requestedGroupId  = request.getGroupId().get(0);
+            Long requestedGroupId  = request.getGroupId().getFirst();
             String requestedGroupName = userService.findGroupName(requestedGroupId);
             log.info("Selected single Group name:{}", requestedGroupName);
             for (UserTimesheetResponseDto dto : timesheets){
@@ -732,4 +732,5 @@ public class AuthFacade {
     public ApiResponse<List<UserHistoryResponseDto>> getUserHistoryLog(String userId) {
         return userService.getUserHistoryLog(userId);
     }
+
 }

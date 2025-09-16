@@ -814,7 +814,7 @@ public class UserServiceImpl implements UserService {
 
             try {
                 userAdapter.create(mappings);
-            } catch (org.hibernate.exception.ConstraintViolationException e) {
+            } catch (ConstraintViolationException e) {
                 log.error("Constraint violation: {}", e.getMessage());
                 String userMessage = exceptionHelper.getUserFriendlyConstraintMessage(e);
                 throw new CommonExceptionHandler.ConflictException(userMessage);
@@ -1854,25 +1854,17 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public List<LocationDto> getUserLocation(String userId) {
-
-        UserEntity existingUser = userAdapter.findById(userId)
+        UserEntity user = userAdapter.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        List<UserLocationEntity> userLocation = userAdapter.findUserLocationByUserId(userId);
+        List<UserLocationEntity> userLocations = userAdapter.fetchLocationsForUser(userId);
 
-        if (userLocation.isEmpty()) {
-            throw new CommonExceptionHandler.NoUserLocationAssignedException(existingUser.getUserName());
+        if (userLocations.isEmpty()) {
+            throw new CommonExceptionHandler.NoUserLocationAssignedException(user.getUserName());
         }
 
-        List<Long> locationIds = userLocation.stream()
-                .map(userLocationEntity -> userLocationEntity.getLocation().getLocationId())
-                .distinct()
-                .toList();
-
-        List<LocationEntity> locations = userAdapter.findAllLocationById(locationIds);
-
-        return locations.stream()
-                .map(locationEntityMapper::tolocationDto)
+        return userLocations.stream()
+                .map(ul -> locationEntityMapper.tolocationDto(ul.getLocation()))
                 .toList();
     }
 
@@ -2011,11 +2003,12 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public void deleteLocation(LocationListDto locationDto, String orgId) {
         String schema = TenantUtil.getCurrentTenant();
         List<Long> locationIdList = locationDto.getLocationId();
 
-        boolean exist = locationRepository.existsBylocationIdInAndOrganizationEntity_OrganizationId(locationIdList, orgId);
+        boolean exist = locationRepository.existsByLocationIdInAndOrganizationEntity_OrganizationId(locationIdList, orgId);
         if (!exist) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Location not found or access denied");
         }
@@ -2056,13 +2049,13 @@ public class UserServiceImpl implements UserService {
                 userLocationsToDelete.add(userLoc);
                 continue;
             }
-
+            log.info("Find user allowed locations by userId");
             boolean hasDefaultLocation = userAdapter
                     .findUserLocationByUserId(userId)
                     .stream()
                     .map(loc -> loc.getLocation().getLocationId())
                     .anyMatch(id -> id.equals(defaultLocationId));
-
+            log.info("hasDefaultLocation : {} ", hasDefaultLocation);
             if (!hasDefaultLocation) {
                 UserLocationEntity newUserLoc = new UserLocationEntity();
                 newUserLoc.setUser(userLoc.getUser());
@@ -2248,21 +2241,41 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public ApiResponse<UserValidationDto> validateUser(String userId) {
-        Optional<UserEntity> userOptional = userAdapter.findById(userId);
-        if (userOptional.isPresent()) {
+        if (userId == null || userId.isBlank()) {
+            log.warn("Validation failed: userId is null or blank");
+            return new ApiResponse<>(400, "UserId must not be null or blank", null);
+        }
+
+        try {
+            Optional<UserEntity> userOptional = userAdapter.findById(userId);
+            if (userOptional.isEmpty()) {
+                log.info("No User found for userId: {}", userId);
+                return new ApiResponse<>(404, "User not found", null);
+            }
+
             UserEntity userEntity = userOptional.get();
             UserValidationDto dto = userEntityMapper.toDto(userEntity);
-            List<LocationDto> locations = getUserLocation(userId);
-            dto.setLocation(locations);
-            List<LogType> latestLog = timesheetAdapter.getUserLatestLogType(userId);
-            LogType currentLog = latestLog.getFirst();
-            if (currentLog == null){
-                throw new RuntimeException("User Timesheet Logs Not Found");
+
+            try {
+                List<LocationDto> locations = getUserLocation(userId);
+                if (locations == null || locations.isEmpty()) {
+                    log.warn("No locations found for userId: {}", userId);
+                    return new ApiResponse<>(404, "No locations assigned to this user", null);
+                }
+                log.info("User {} locations: {}", userId, locations);
+                dto.setLocation(locations);
+            } catch (Exception ex) {
+                log.error("Error fetching locations for userId {}: {}", userId, ex.getMessage(), ex);
+                return new ApiResponse<>(500, "Failed to fetch user locations", null);
             }
-            dto.setLogType(currentLog);
+
+            log.info("User {} validated successfully", userId);
             return new ApiResponse<>(200, "User validation returned successfully", dto);
+
+        } catch (Exception e) {
+            log.error("Unexpected error during user validation for userId {}: {}", userId, e.getMessage(), e);
+            return new ApiResponse<>(500, "Unexpected error during user validation", null);
         }
-        return new ApiResponse<>(404, "User not found", null);
     }
 
     @Override

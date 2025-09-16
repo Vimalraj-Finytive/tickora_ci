@@ -307,11 +307,12 @@ public class FaceServiceImpl implements FaceService {
                     return new ApiResponse<>(400, "Location ID and name are required for each timesheet log", null);
                 }
 
-                // Validate location in DB
                 Optional<LocationEntity> location = userAdapter.findLocationByLocationId(log.getLocationId());
-                LocationEntity locationEntity = location.get();
-                if (!locationEntity.getName().equals(log.getLocationName())) {
-                    return new ApiResponse<>(400, "Location name does not match ID for log: " + log.getTimesheetHistoryId(), null);
+                if (location.isPresent()){
+                    LocationEntity locationEntity = location.get();
+                    if (!locationEntity.getName().equals(log.getLocationName())) {
+                        return new ApiResponse<>(400, "Location name does not match ID for log: " + log.getTimesheetHistoryId(), null);
+                    }
                 }
             }
         }
@@ -359,6 +360,12 @@ public class FaceServiceImpl implements FaceService {
 
             if (!userClockStatusDto.isFaceMatch()) {
                 return new ApiResponse<>(400, "Face does not match", null);
+            }
+
+            if(userClockStatusDto.getUserId() != null){
+                faceDto.getTimesheetLogs()
+                        .forEach(log -> log.setUserId(userClockStatusDto.getUserId()));
+                log.info("User Id from clock status : {}", userClockStatusDto.getUserId());
             }
 
             log.info("Face matched successfully, saving timesheet history...");

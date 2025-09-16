@@ -154,6 +154,7 @@ public interface TeamRepository extends JpaRepository<GroupEntity, Long> {
 
     boolean existsByGroupIdAndOrganizationEntity_OrganizationId(Long groupId, String orgId);
 
+    @Transactional
     List<GroupEntity> findByLocationEntity_LocationIdIn(List<Long> defaultLocationId);
 
     @Modifying

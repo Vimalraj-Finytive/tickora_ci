@@ -55,14 +55,13 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
     private static final Logger log = LoggerFactory.getLogger(TimesheetAdapterImpl.class);
 
     @Override
-    public List<UserTimesheetResponseDto> filterTimesheetsForAllUsers(LocalDate startDate, LocalDate endDate, List<String> userIds, String orgId) {
+    public PaginationResponseDto  filterTimesheetsForAllUsers(LocalDate startDate, LocalDate endDate, List<String> userIds, String orgId, int pageIndex, int pageSize) {
         String[] userIdArray = userIds.toArray(new String[0]);
 
-        List<Object[]> resultList = timesheetRepository.fetchTimesheetsWithHistory(startDate, endDate, userIdArray, orgId, extraWorkedSeconds);
+        List<Object[]> resultList = timesheetRepository.fetchTimesheetsWithHistory(startDate, endDate, userIdArray, orgId, extraWorkedSeconds, pageIndex, pageSize);
 
         Map<String, TimesheetDto> timesheetMap = new LinkedHashMap<>();
-        LocalDate today = LocalDate.now(ZoneId.of("Asia/Kolkata"))
-;
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Kolkata"));
 
         Map<String, List<TimesheetDto>> userTimesheetListMap = new HashMap<>();
 
@@ -210,11 +209,27 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
             UserTimesheetResponseDto userResponse = new UserTimesheetResponseDto();
             userResponse.setSummary(userSummaryMap.get(userId));
             userResponse.setTimesheets(userTimesheetListMap.getOrDefault(userId, new ArrayList<>()));
-
             finalResponse.add(userResponse);
         }
 
-        return finalResponse;
+        long totalElements = userIds.size();
+        int totalPages = (int) Math.ceil((double) totalElements/pageSize);
+        boolean isLast = pageIndex >= totalPages - 1;
+
+        PaginationDto paginationDto = new PaginationDto();
+        paginationDto.setPageIndex(pageIndex);
+        paginationDto.setPageSize(pageSize);
+        paginationDto.setTotalPages(totalPages);
+        paginationDto.setTotalElements(totalElements);
+        paginationDto.setLast(isLast);
+
+        PaginationResponseDto response = new PaginationResponseDto();
+        response.setStatusCode(200);
+        response.setMessage("Success");
+        response.setUserTimesheetResponseDtos(finalResponse);
+        response.setPaginationDto(paginationDto);
+
+        return response;
     }
 
     private Long toLong(Object obj) {
@@ -578,4 +593,5 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
     public List<LogType> getUserLatestLogType(String userId) {
         return timesheetHistoryRepository.findLatestLogTypesByUserIdForToday(userId);
     }
+
 }

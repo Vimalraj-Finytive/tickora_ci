@@ -224,6 +224,7 @@ CREATE TABLE IF NOT EXISTS ${schemaName}.location (
     radius VARCHAR(255) NOT NULL,
     address VARCHAR(255) NOT NULL,
     is_default BOOLEAN NOT NULL DEFAULT FALSE,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
     CONSTRAINT fk_location_organization
         FOREIGN KEY (organization_id)
         REFERENCES public.organization(organization_id)
