@@ -1,14 +1,7 @@
 package com.uniq.tms.tms_microservice.controller;
 
 import com.uniq.tms.tms_microservice.constant.UserConstant;
-import com.uniq.tms.tms_microservice.dto.ApiResponse;
-import com.uniq.tms.tms_microservice.dto.DashboardDto;
-import com.uniq.tms.tms_microservice.dto.TimesheetDto;
-import com.uniq.tms.tms_microservice.dto.TimesheetHistoryDto;
-import com.uniq.tms.tms_microservice.dto.TimesheetReportDto;
-import com.uniq.tms.tms_microservice.dto.UserDashboardDto;
-import com.uniq.tms.tms_microservice.dto.UserTimesheetDto;
-import com.uniq.tms.tms_microservice.dto.UserTimesheetResponseDto;
+import com.uniq.tms.tms_microservice.dto.*;
 import com.uniq.tms.tms_microservice.facade.AuthFacade;
 import com.uniq.tms.tms_microservice.helper.AuthHelper;
 import org.springframework.http.HttpStatus;
@@ -30,10 +23,10 @@ public class  TimesheetController {
     }
 
     @PostMapping
-    public ResponseEntity<?> getAllTimesheets(@RequestHeader("Authorization") String token,
+    public ResponseEntity<PaginationResponseDto> getAllTimesheets(@RequestHeader("Authorization") String token,
                                                         @RequestBody TimesheetReportDto request) {
-        List<UserTimesheetResponseDto> timesheets = authFacade.getAllTimesheets(request);
-        return ResponseEntity.ok(new ApiResponse(200, "Success", timesheets));
+        PaginationResponseDto timesheets = authFacade.getAllTimesheets(request);
+        return ResponseEntity.ok(timesheets);
     }
 
     @PostMapping("/clockin")
@@ -88,4 +81,5 @@ public class  TimesheetController {
     public ResponseEntity<ApiResponse> addStatus(@RequestHeader("Authorization") String token){
         return ResponseEntity.ok(authFacade.getStatus());
     }
+
 }

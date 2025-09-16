@@ -13,24 +13,20 @@ import java.util.Optional;
 @Repository
 public interface LocationRepository extends JpaRepository<LocationEntity, Long> {
 
-    @Query(value = "SELECT name, location_id FROM location WHERE organization_id = :orgId", nativeQuery = true)
+    @Query(value = "SELECT name, location_id FROM location WHERE organization_id = :orgId AND is_active = true", nativeQuery = true)
     List<Object[]> findLocationNameIdMappings(@Param("orgId") String orgId);
 
-    @Query("SELECT l FROM LocationEntity l WHERE l.organizationEntity.organizationId = :orgId")
+    @Query("SELECT l FROM LocationEntity l WHERE l.organizationEntity.organizationId = :orgId AND l.active = true")
     List<LocationEntity> findByOrgId(@Param("orgId") String orgId);
 
-    boolean existsBylocationIdInAndOrganizationEntity_OrganizationId(List<Long> locationIds, String orgId);
+    boolean existsByLocationIdInAndOrganizationEntity_OrganizationId(List<Long> locationIds, String orgId);
 
     @Modifying(clearAutomatically = true)
     @Transactional
-    @Query(value = """
-        DELETE FROM location
-        WHERE location_id IN :locationId
-        AND organization_id = :orgId
-        """, nativeQuery = true)
+    @Query("UPDATE LocationEntity l SET l.active = false WHERE l.locationId IN :locationId AND l.organizationEntity.organizationId = :orgId")
     void deleteAllLocationById(@Param("locationId") List<Long> locationId, @Param("orgId") String orgId);
 
-    LocationEntity findByLocationIdAndOrganizationEntity_OrganizationId(Long locationId, String orgId);
+    LocationEntity findByLocationIdAndOrganizationEntity_OrganizationIdAndActiveTrue(Long locationId, String orgId);
 
     @Modifying
     @Transactional
@@ -52,5 +48,8 @@ public interface LocationRepository extends JpaRepository<LocationEntity, Long> 
     @Query("SELECT l FROM LocationEntity l WHERE l.organizationEntity.organizationId = :orgId AND l.isDefault = true")
     LocationEntity findDefaultLocationById(@Param("orgId") String orgId);
 
-    List<LocationEntity> findLocationByOrganizationEntity_OrganizationId(String orgId);
+    List<LocationEntity> findLocationByOrganizationEntity_OrganizationIdAndActiveTrue(String orgId);
+
+    List<LocationEntity> findByLocationIdInAndActiveTrue(List<Long> locationIds);
+
 }

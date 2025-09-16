@@ -1,6 +1,7 @@
 package com.uniq.tms.tms_microservice.repository;
 
 import com.uniq.tms.tms_microservice.dto.UserAttendanceDto;
+import com.uniq.tms.tms_microservice.dto.UserNameSuggestionDto;
 import com.uniq.tms.tms_microservice.projection.UserDashboard;
 import com.uniq.tms.tms_microservice.entity.TimesheetEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -22,6 +23,9 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
         FROM users
         WHERE active = TRUE
           AND (:userIds IS NULL OR user_id = ANY(CAST(:userIds AS VARCHAR[])))
+        ORDER BY user_id
+        LIMIT :pageLimit
+        OFFSET (:pageIndex * :pageLimit)
     ),
     
     UserGroups AS (
@@ -197,7 +201,9 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
                 @Param("endDate") LocalDate endDate,
                 @Param("userIds") String[] userIds,
                 @Param("orgId") String orgId,
-                @Param("extraWorkedSeconds") int extraWorkedSeconds
+                @Param("extraWorkedSeconds") int extraWorkedSeconds,
+                @Param("pageIndex") int pageIndex,
+                @Param("pageLimit") int pageLimit
         );
 
     List<TimesheetEntity> findActiveTimesheetsByDate(LocalDate today);
@@ -416,4 +422,5 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
     List<TimesheetEntity> findUserByStatusStatusIdIn(@Param("statusIds") List<String> statusIds,
                                                    @Param("startDate") LocalDate startDate,
                                                    @Param("endDate") LocalDate endDate);
+
 }
