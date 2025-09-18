@@ -54,7 +54,7 @@ public class ReportController {
             authFacade.generateTimesheetFileAsync(request, fileName, userIdFromToken, orgId, role, tenantId);
 
             return ResponseEntity.ok(
-                    new ApiResponse<>(200, "File generation started.", fileName)
+                    new ApiResponse<>(200, "File generated successfully.", fileName)
             );
 
         } catch (Exception e) {

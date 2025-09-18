@@ -631,7 +631,6 @@ public class AuthFacade {
         return userService.getUserHistoryLog(userId);
     }
 
-    @Async
     public CompletableFuture<FileExportResponseDto> generateTimesheetFileAsync(
             TimesheetReportDto request,
             String predefinedFileName,
