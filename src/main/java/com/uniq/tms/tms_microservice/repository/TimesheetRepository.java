@@ -1,7 +1,6 @@
 package com.uniq.tms.tms_microservice.repository;
 
 import com.uniq.tms.tms_microservice.dto.UserAttendanceDto;
-import com.uniq.tms.tms_microservice.dto.UserNameSuggestionDto;
 import com.uniq.tms.tms_microservice.projection.UserDashboard;
 import com.uniq.tms.tms_microservice.entity.TimesheetEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -24,8 +23,8 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
         WHERE active = TRUE
           AND (:userIds IS NULL OR user_id = ANY(CAST(:userIds AS VARCHAR[])))
         ORDER BY user_id
-        LIMIT :pageLimit
-        OFFSET (:pageIndex * :pageLimit)
+        LIMIT CASE WHEN :pageLimit > 0 THEN :pageLimit END
+        OFFSET CASE WHEN :pageLimit > 0 THEN (:pageIndex * :pageLimit) ELSE 0 END
     ),
     
     UserGroups AS (
