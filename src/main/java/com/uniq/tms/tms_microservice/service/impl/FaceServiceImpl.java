@@ -8,7 +8,6 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.uniq.tms.tms_microservice.adapter.UserAdapter;
 import com.uniq.tms.tms_microservice.dto.*;
 import com.uniq.tms.tms_microservice.entity.LocationEntity;
-import com.uniq.tms.tms_microservice.entity.TimesheetHistoryEntity;
 import com.uniq.tms.tms_microservice.entity.UserEntity;
 import com.uniq.tms.tms_microservice.entity.UserFaceEntity;
 import com.uniq.tms.tms_microservice.enums.LogType;
@@ -27,12 +26,9 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
-
-import javax.swing.text.html.Option;
 import java.io.File;
 import java.io.IOException;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 public class FaceServiceImpl implements FaceService {
@@ -367,7 +363,8 @@ public class FaceServiceImpl implements FaceService {
                         .forEach(log -> log.setUserId(userClockStatusDto.getUserId()));
                 log.info("User Id from clock status : {}", userClockStatusDto.getUserId());
             }
-
+            log.info("Get User Detail.");
+            UserEntity user = userAdapter.getUserById(userClockStatusDto.getUserId());
             log.info("Face matched successfully, saving timesheet history...");
 
             if (faceDto.getTimesheetLogs() != null && !faceDto.getTimesheetLogs().isEmpty()) {
@@ -384,8 +381,11 @@ public class FaceServiceImpl implements FaceService {
 
                 LogType logType = faceDto.getTimesheetLogs().getFirst().getLogType();
                 String logTypeMessage = (logType == LogType.CLOCK_IN) ? "ClockIn Success" : "ClockOut Success";
+                Map<String, String> userResponse = new HashMap<>();
+                userResponse.put("userId:", userClockStatusDto.getUserId());
+                userResponse.put("userName:", user.getUserName());
 
-                return new ApiResponse<>(200, logTypeMessage, null);
+                return new ApiResponse<>(200, logTypeMessage, userResponse);
             }
 
             return new ApiResponse<>(200, "Clock operation successful", null);
