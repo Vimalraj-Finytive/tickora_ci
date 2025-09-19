@@ -60,6 +60,7 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
 
         List<Object[]> resultList = timesheetRepository.fetchTimesheetsWithHistory(startDate, endDate, userIdArray, orgId, extraWorkedSeconds, pageIndex, pageSize);
 
+        long userCount = resultList.size();
         Map<String, TimesheetDto> timesheetMap = new LinkedHashMap<>();
         LocalDate today = LocalDate.now(ZoneId.of("Asia/Kolkata"));
 
@@ -212,9 +213,17 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
             finalResponse.add(userResponse);
         }
 
+        int totalPages = 0;
+        boolean isLast = true;
         long totalElements = userIds.size();
-        int totalPages = (int) Math.ceil((double) totalElements/pageSize);
-        boolean isLast = pageIndex >= totalPages - 1;
+        if (pageSize > 0) {
+            totalPages = (int) Math.ceil((double) totalElements / pageSize);
+            isLast = pageIndex >= totalPages - 1;
+        } else {
+            totalPages = 1;
+            pageIndex = 0;
+            isLast = true;
+        }
 
         PaginationDto paginationDto = new PaginationDto();
         paginationDto.setPageIndex(pageIndex);

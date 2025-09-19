@@ -1,10 +1,17 @@
 package com.uniq.tms.tms_microservice.service.impl;
 
 import com.opencsv.CSVWriter;
+import com.uniq.tms.tms_microservice.dto.FileExportResponseDto;
 import com.uniq.tms.tms_microservice.dto.TimesheetDto;
+import com.uniq.tms.tms_microservice.dto.TimesheetReportDto;
 import com.uniq.tms.tms_microservice.dto.UserTimesheetResponseDto;
+import com.uniq.tms.tms_microservice.enums.Timeperiod;
 import com.uniq.tms.tms_microservice.service.ReportService;
+import com.uniq.tms.tms_microservice.service.TimesheetService;
+import com.uniq.tms.tms_microservice.service.UserService;
 import io.jsonwebtoken.io.IOException;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.apache.poi.ss.usermodel.BorderStyle;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
@@ -19,6 +26,7 @@ import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.ss.util.RegionUtil;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import java.io.BufferedReader;
@@ -26,6 +34,10 @@ import java.io.ByteArrayOutputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -36,12 +48,24 @@ import java.util.stream.Collectors;
 @Service
 public class ReportServiceImpl implements ReportService {
 
+    private final Logger log = LogManager.getLogger(ReportServiceImpl.class);
+
+    private final TimesheetService timesheetService;
+    private final UserService userService;
+
+    public ReportServiceImpl(TimesheetService timesheetService, UserService userService) {
+        this.timesheetService = timesheetService;
+        this.userService = userService;
+    }
+
+    @Value("${csv.download.dir}")
+    private String downloadDir;
+
     /**
      *
      * @param timesheet
      * @return timesheet report based on selected day timeperiod
      */
-    @Override
     public byte[] exportTimesheetDayCsv(List<UserTimesheetResponseDto> timesheet, String sheetName) {
         try (ByteArrayOutputStream out = new ByteArrayOutputStream();
              OutputStreamWriter outputStreamWriter = new OutputStreamWriter(out , StandardCharsets.UTF_8);
@@ -81,7 +105,6 @@ public class ReportServiceImpl implements ReportService {
         }
     }
 
-    @Override
     public byte[] exportTimesheetDayXlsx(List<UserTimesheetResponseDto> timesheet) {
             try (Workbook workbook = new XSSFWorkbook();
                  ByteArrayOutputStream out = new ByteArrayOutputStream()) {
@@ -156,7 +179,7 @@ public class ReportServiceImpl implements ReportService {
             }
         }
 
-    @Override
+
     public byte[] exportTimesheetWeekXlsx(List<UserTimesheetResponseDto> timesheets) {
 
         try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
@@ -330,7 +353,7 @@ public class ReportServiceImpl implements ReportService {
         // Extract date headers from the first user's timesheet
         List<TimesheetDto> firstUserTimesheets = timesheets.get(0).getTimesheets();
         List<String> dateHeaders = firstUserTimesheets.stream()
-                .map(t -> String.valueOf(t.getDate())) // assuming t.getDate() returns a String
+                .map(t -> String.valueOf(t.getDate()))
                 .toList();
 
         // Combine all headers
@@ -440,9 +463,81 @@ public class ReportServiceImpl implements ReportService {
         if (value == null) return "";
         boolean hasSpecial = value.contains(",") || value.contains("\"") || value.contains("\n");
         if (hasSpecial) {
-            value = value.replace("\"", "\"\""); // escape double quotes
+            value = value.replace("\"", "\"\"");
             return "\"" + value + "\"";
         }
         return value;
+    }
+
+    public FileExportResponseDto generateTimesheetFile(TimesheetReportDto request, String userIdFromToken, String orgId, String role, String fileName) {
+        List<UserTimesheetResponseDto> timesheets = timesheetService.getAllTimesheets(userIdFromToken,orgId,role,request).getUserTimesheetResponseDtos();
+        log.info("Requested Timesheet Date Range: {} to {}", request.getFromDate(), request.getToDate());
+        log.info("Total timesheets fetched: {}", timesheets.size());
+
+        String format = request.getFormat();
+        String timePeriod = request.getTimePeriod();
+        LocalDate startDate = request.getFromDate();
+        LocalDate endDate = request.getToDate();
+
+        if(request.getGroupId() != null && request.getGroupId().size() == 1){
+            Long requestedGroupId = request.getGroupId().getFirst();
+            String requestedGroupName = userService.findGroupName(requestedGroupId);
+            log.info("Selected single Group name:{}", requestedGroupName);
+            for (UserTimesheetResponseDto dto : timesheets){
+                if (dto.getTimesheets() != null){
+                    for (TimesheetDto timesheetDto : dto.getTimesheets()){
+                        timesheetDto.setGroupname(requestedGroupName);
+                    }
+                }
+            }
+        }
+
+        // Create directory
+        Path resourcePath = Paths.get(downloadDir);
+        if (!Files.exists(resourcePath)) {
+            try {
+                Files.createDirectories(resourcePath);
+            } catch (java.io.IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        // Use the predefined filename
+        Path filePath = resourcePath.resolve(fileName);
+
+        // Sheet name
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        String sheetName;
+        if ("DAY".equalsIgnoreCase(timePeriod)) {
+            sheetName = "Timesheet_" + startDate.format(formatter);
+        } else if ("WEEK".equalsIgnoreCase(timePeriod)) {
+            sheetName = "Timesheet_Weekly";
+        } else if ("MONTH".equalsIgnoreCase(timePeriod)) {
+            sheetName = "Timesheet_Monthly";
+        } else {
+            sheetName = "Timesheet_" + startDate.format(formatter) + "_to_" + endDate.format(formatter);
+        }
+
+        // Generate file content
+        byte[] data;
+        if (Timeperiod.DAY.name().equalsIgnoreCase(timePeriod)) {
+            data = "csv".equalsIgnoreCase(format) ?
+                    exportTimesheetDayCsv(timesheets, sheetName) :
+                    exportTimesheetDayXlsx(timesheets);
+        } else {
+            data = "csv".equalsIgnoreCase(format) ?
+                    exportTimesheetWeekCsv(timesheets) :
+                    exportTimesheetWeekXlsx(timesheets);
+        }
+
+        // Write to disk
+        try {
+            Files.write(filePath, data);
+        } catch (java.io.IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        // Return file info
+        return null;
     }
 }

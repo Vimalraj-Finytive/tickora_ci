@@ -89,15 +89,31 @@ public class TimesheetServiceImpl implements TimesheetService {
 
         List<UserEntity> targetUsers ;
 
-        if(keyword != null && !keyword.isBlank()){
+        if ((groupIds == null && roleIds == null && locationIds == null) && keyword != null && !keyword.isBlank()) {
+            log.info("Group, role is null");
             String normalizaedKeyword = normalizeKeyword(keyword);
             targetUsers = userAdapter.searchUsers(normalizaedKeyword);
-
             if(targetUsers.isEmpty()){
                 return TimesheetLogParserUtil.emptyPagination(pageIndex, pageSize);
             }
         }else{
             targetUsers = resolveTargetUsers(userIdFromToken, groupIds, userId, orgId, roleIds, locationIds, statusIds,startDate, endDate);
+        }
+
+        if ((groupIds != null || roleIds != null || locationIds != null) && keyword != null && !keyword.isBlank()) {
+            log.info("Group, role is not null");
+            String normalizedKeyword = normalizeKeyword(keyword);
+            targetUsers = targetUsers.stream()
+                    .filter(user ->
+                            user.getUserId().equalsIgnoreCase(normalizedKeyword) ||
+                                    user.getUserName().toLowerCase().contains(normalizedKeyword.toLowerCase()) ||
+                                    (user.getMobileNumber() != null && user.getMobileNumber().contains(normalizedKeyword))
+                    )
+                    .toList();
+
+            if (targetUsers.isEmpty()) {
+                return TimesheetLogParserUtil.emptyPagination(pageIndex, pageSize);
+            }
         }
 
         List<String> userIds = targetUsers.stream()
