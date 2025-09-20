@@ -13,6 +13,7 @@ import com.uniq.tms.tms_microservice.model.TimesheetHistory;
 import com.uniq.tms.tms_microservice.model.TimesheetStatus;
 import com.uniq.tms.tms_microservice.service.CacheLoaderService;
 import com.uniq.tms.tms_microservice.service.TimesheetService;
+import com.uniq.tms.tms_microservice.util.TimesheetLogParserUtil;
 import org.apache.logging.log4j.LogManager;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -52,7 +53,7 @@ public class TimesheetServiceImpl implements TimesheetService {
         this.rolePrivilegeHelper = rolePrivilegeHelper;
     }
 
-    public List<UserTimesheetResponseDto> getAllTimesheets(String userIdFromToken, String orgId, String role, TimesheetReportDto request) {
+    public PaginationResponseDto  getAllTimesheets(String userIdFromToken, String orgId, String role, TimesheetReportDto request) {
         LocalDate fromDate = request.getFromDate();
         LocalDate toDate = request.getToDate();
         String timePeriod = request.getTimePeriod();
@@ -64,41 +65,84 @@ public class TimesheetServiceImpl implements TimesheetService {
         List<Long> roleIds = request.getRoleId();
         List<Long> locationIds = request.getLocationId();
         List<String> statusIds = request.getStatusId();
+        int pageIndex = request.getPageIndex();
+        int pageSize = request.getPageSize();
+        String keyword = request.getKeyword();
 
         if (fromDate != null && !timePeriod.isEmpty()) {
             LocalDateRange range = calculateDateRange(fromDate, timePeriod);
             startDate = range.startDate();
             endDate = range.endDate();
             log.info("startDate: {}, endDate: {}", startDate, endDate);
-            if (endDate.isAfter(LocalDate.now(ZoneId.of("Asia/Kolkata"))
-)) {
-                endDate = LocalDate.now(ZoneId.of("Asia/Kolkata"))
-;
+            if (endDate.isAfter(LocalDate.now(ZoneId.of("Asia/Kolkata")))) {
+                endDate = LocalDate.now(ZoneId.of("Asia/Kolkata"));
                 log.info("endDate: {}", endDate);
             }
         } else if (fromDate != null && toDate != null) {
             startDate = fromDate;
             endDate = toDate;
-            if (endDate.isAfter(LocalDate.now(ZoneId.of("Asia/Kolkata"))
-)) {
-                endDate = LocalDate.now(ZoneId.of("Asia/Kolkata"))
-;
+            if (endDate.isAfter(LocalDate.now(ZoneId.of("Asia/Kolkata")))) {
+                endDate = LocalDate.now(ZoneId.of("Asia/Kolkata"));
                 log.info("endDate: {}", endDate);
             }
         }
 
-        List<UserEntity> targetUsers = resolveTargetUsers(userIdFromToken, groupIds, userId, orgId, roleIds, locationIds, statusIds,startDate, endDate);
+        List<UserEntity> targetUsers ;
+
+        if ((groupIds == null && roleIds == null && locationIds == null) && keyword != null && !keyword.isBlank()) {
+            log.info("Group, role is null");
+            String normalizaedKeyword = normalizeKeyword(keyword);
+            targetUsers = userAdapter.searchUsers(normalizaedKeyword);
+            if(targetUsers.isEmpty()){
+                return TimesheetLogParserUtil.emptyPagination(pageIndex, pageSize);
+            }
+        }else{
+            targetUsers = resolveTargetUsers(userIdFromToken, groupIds, userId, orgId, roleIds, locationIds, statusIds,startDate, endDate);
+        }
+
+        if ((groupIds != null || roleIds != null || locationIds != null) && keyword != null && !keyword.isBlank()) {
+            log.info("Group, role is not null");
+            String normalizedKeyword = normalizeKeyword(keyword);
+            targetUsers = targetUsers.stream()
+                    .filter(user ->
+                            user.getUserId().equalsIgnoreCase(normalizedKeyword) ||
+                                    user.getUserName().toLowerCase().contains(normalizedKeyword.toLowerCase()) ||
+                                    (user.getMobileNumber() != null && user.getMobileNumber().contains(normalizedKeyword))
+                    )
+                    .toList();
+
+            if (targetUsers.isEmpty()) {
+                return TimesheetLogParserUtil.emptyPagination(pageIndex, pageSize);
+            }
+        }
 
         List<String> userIds = targetUsers.stream()
                 .map(UserEntity::getUserId)
                 .toList();
 
-        List<UserTimesheetResponseDto> timesheetDtos = timesheetAdapter.filterTimesheetsForAllUsers(startDate, endDate, userIds, orgId);
+        PaginationResponseDto  timesheetDtos = timesheetAdapter.filterTimesheetsForAllUsers(startDate, endDate, userIds, orgId, pageIndex, pageSize);
         return timesheetDtos;
     }
 
+    private String normalizeKeyword(String keyword) {
+        if (keyword == null || keyword.isBlank()) {
+            return "";
+        }
+        String mobileNumber = keyword.replaceAll("[\\s\\-]", "");
+        if (mobileNumber.startsWith("+91")) {
+            mobileNumber = mobileNumber.substring(3);
+        } else if (mobileNumber.startsWith("+1")) {
+            mobileNumber = mobileNumber.substring(2);
+        } else if (mobileNumber.startsWith("+")) {
+            mobileNumber = mobileNumber.substring(1);
+        }
+        return mobileNumber.trim();
+    }
+
+
     private List<UserEntity> resolveTargetUsers(String userIdFromToken, List<Long> groupIds, List<String> userId, String orgId, List<Long> roleIds, List<Long> locationIds, List<String> statusId, LocalDate startDate, LocalDate endDate) {
 
+        log.info("userId : {} , userIdFromToken : {}", userId, userIdFromToken);
         UserEntity currentUser = userAdapter.getUserById(userIdFromToken);
         String roleName = currentUser.getRole().getName().toUpperCase();
         log.info("Role name: {}", roleName);
@@ -186,7 +230,8 @@ public class TimesheetServiceImpl implements TimesheetService {
         }
 
         if (canSeeOwn && canSeeGroup) {
-            if(userId != null && !userId.isEmpty() && userId.equals(userIdFromToken)){
+            if(userId != null && !userId.isEmpty() && userId.contains(userIdFromToken)){
+                log.info("Logged user timesheet");
                 return List.of(currentUser);
             }
             List<Long> supervisedGroupIds = userAdapter.findGroupIdsBySupervisorId(userIdFromToken);

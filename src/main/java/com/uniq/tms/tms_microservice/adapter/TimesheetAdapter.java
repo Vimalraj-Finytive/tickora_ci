@@ -1,10 +1,8 @@
 package com.uniq.tms.tms_microservice.adapter;
 
+import com.uniq.tms.tms_microservice.dto.*;
 import com.uniq.tms.tms_microservice.enums.LogType;
-import com.uniq.tms.tms_microservice.dto.UserAttendanceDto;
 import com.uniq.tms.tms_microservice.projection.UserDashboard;
-import com.uniq.tms.tms_microservice.dto.UserTimesheetDto;
-import com.uniq.tms.tms_microservice.dto.UserTimesheetResponseDto;
 import com.uniq.tms.tms_microservice.entity.LocationEntity;
 import com.uniq.tms.tms_microservice.entity.TimesheetEntity;
 import com.uniq.tms.tms_microservice.entity.TimesheetHistoryEntity;
@@ -16,7 +14,7 @@ import java.util.Optional;
 
 public interface TimesheetAdapter {
 
-    List<UserTimesheetResponseDto> filterTimesheetsForAllUsers(LocalDate startDate, LocalDate endDate, List<String> userIds, String orgId);
+    PaginationResponseDto  filterTimesheetsForAllUsers(LocalDate startDate, LocalDate endDate, List<String> userIds, String orgId,  int pageIndex, int pageSize);
     Optional<TimesheetEntity> findByUserIdAndDate(String userId, LocalDate date);
     TimesheetEntity saveTimesheet(TimesheetEntity timesheet);
     TimesheetHistoryEntity saveTimesheetHistory(TimesheetHistoryEntity history);

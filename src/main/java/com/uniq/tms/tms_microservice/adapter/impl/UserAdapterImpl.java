@@ -14,6 +14,8 @@ import com.uniq.tms.tms_microservice.dto.UserNameSuggestionDto;
 import com.uniq.tms.tms_microservice.entity.*;
 import com.uniq.tms.tms_microservice.repository.*;
 import jakarta.transaction.Transactional;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import java.util.*;
@@ -21,6 +23,8 @@ import java.util.*;
 @Component
 @ConditionalOnProperty(name = "database.type", havingValue = "postgres")
 public class UserAdapterImpl implements UserAdapter {
+
+    private static final Logger log = LogManager.getLogger(UserAdapterImpl.class);
 
     private final RoleRepository roleRepository;
     private final TeamRepository teamRepository;
@@ -274,7 +278,7 @@ public class UserAdapterImpl implements UserAdapter {
 
     @Override
     public LocationEntity findLocationById(Long locationId, String orgId) {
-        return locationRepository.findByLocationIdAndOrganizationEntity_OrganizationId(locationId, orgId);
+        return locationRepository.findByLocationIdAndOrganizationEntity_OrganizationIdAndActiveTrue(locationId, orgId);
     }
 
     @Override
@@ -410,7 +414,7 @@ public class UserAdapterImpl implements UserAdapter {
 
     @Override
     public List<LocationEntity> findAllLocationById(List<Long> locationIds) {
-        return locationRepository.findAllById(locationIds);
+        return locationRepository.findByLocationIdInAndActiveTrue(locationIds);
     }
 
     @Override
@@ -518,7 +522,7 @@ public class UserAdapterImpl implements UserAdapter {
 
     @Override
     public List<LocationEntity> findLocation(String orgId) {
-        return locationRepository.findLocationByOrganizationEntity_OrganizationId(orgId);
+        return locationRepository.findLocationByOrganizationEntity_OrganizationIdAndActiveTrue(orgId);
     }
 
     @Override
@@ -542,8 +546,18 @@ public class UserAdapterImpl implements UserAdapter {
     }
 
     @Override
+    @Transactional
     public void deleteAllUserLocations(List<UserLocationEntity> userLocationsToDelete) {
+        log.info("Attempting to delete {} user-location mappings", userLocationsToDelete.size());
+
+        userLocationsToDelete.forEach(ul ->
+                log.info("Deleting mapping: userId={}, locationId={}",
+                        ul.getUser().getUserId(), ul.getLocation().getLocationId()));
+
         userLocationRepository.deleteAll(userLocationsToDelete);
+
+        log.info("DeleteAll executed. Flushing...");
+        userLocationRepository.flush();
     }
 
     @Override
@@ -635,5 +649,15 @@ public class UserAdapterImpl implements UserAdapter {
     @Override
     public List<UserHistoryEntity> getUserHistoryLog(String userId) {
         return userHistoryRepository.findByUserId(userId);
+    }
+
+    @Override
+    public List<UserLocationEntity> fetchLocationsForUser(String userId) {
+        return userLocationRepository.fetchLocationsForUser(userId);
+    }
+
+    @Override
+    public List<UserEntity> searchUsers(String keyword) {
+        return userRepository.searchUsers(keyword);
     }
 }

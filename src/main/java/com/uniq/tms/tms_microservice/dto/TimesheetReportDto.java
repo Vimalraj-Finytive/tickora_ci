@@ -26,6 +26,12 @@ public class TimesheetReportDto {
 
     private List<String> statusId;
 
+    private int pageIndex;
+
+    private int pageSize;
+
+    private String keyword;
+
     public LocalDate getFromDate() {
         return fromDate;
     }
@@ -96,5 +102,29 @@ public class TimesheetReportDto {
 
     public void setStatusId(List<String> statusId) {
         this.statusId = statusId;
+    }
+
+    public int getPageIndex() {
+        return pageIndex;
+    }
+
+    public void setPageIndex(int page) {
+        this.pageIndex = page;
+    }
+
+    public int getPageSize() {
+        return pageSize;
+    }
+
+    public void setPageSize(int size) {
+        this.pageSize = size;
+    }
+
+    public String getKeyword() {
+        return keyword;
+    }
+
+    public void setKeyword(String keyword) {
+        this.keyword = keyword;
     }
 }
