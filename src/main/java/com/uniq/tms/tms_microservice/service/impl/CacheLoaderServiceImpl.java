@@ -510,7 +510,7 @@ public class CacheLoaderServiceImpl implements CacheLoaderService {
                 List<UserResponse> users = userRepository.findAllInActiveUsers(orgId, hierarchyLevel);
                 if (users.isEmpty()) {
                     log.warn("No Inactive users found for orgId={} and role={}", orgId, role);
-                    roleWiseUserMap.put(String.valueOf(role), Collections.emptyList());
+                    roleWiseUserMap.put(String.valueOf(role), new ArrayList<>());
                     continue;
                 }
 
