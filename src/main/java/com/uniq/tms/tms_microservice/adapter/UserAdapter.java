@@ -126,4 +126,6 @@ public interface UserAdapter {
     void saveUserHistory(UserHistoryEntity userHistoryEntity);
     void deleteUserFace(String userId);
     List<UserHistoryEntity> getUserHistoryLog(String userId);
+    List<UserLocationEntity> fetchLocationsForUser(String userId);
+    List<UserEntity> searchUsers(String keyword);
 }

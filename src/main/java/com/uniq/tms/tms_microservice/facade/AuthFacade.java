@@ -1,8 +1,8 @@
 package com.uniq.tms.tms_microservice.facade;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.uniq.tms.tms_microservice.config.security.schema.TenantContext;
 import com.uniq.tms.tms_microservice.dto.*;
-import com.uniq.tms.tms_microservice.enums.Timeperiod;
 import com.uniq.tms.tms_microservice.helper.AuthHelper;
 import com.uniq.tms.tms_microservice.mapper.TimesheetDtoMapper;
 import com.uniq.tms.tms_microservice.mapper.UserDtoMapper;
@@ -22,17 +22,14 @@ import org.springframework.core.io.Resource;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 
 @Component
 public class AuthFacade {
@@ -291,7 +288,7 @@ public class AuthFacade {
         return new ApiResponse(200, "User group type updated successfully.", true);
     }
 
-    public List<UserTimesheetResponseDto> getAllTimesheets( TimesheetReportDto request) {
+    public PaginationResponseDto  getAllTimesheets( TimesheetReportDto request) {
         String orgId = authHelper.getOrgId();
         String userIdFromToken = authHelper.getUserId();
         if (orgId == null) {
@@ -417,105 +414,6 @@ public class AuthFacade {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized - Invalid Organization");
         }
         return timesheetService.getAllUserInfo(orgId, userIdFromToken, fromDate, toDate, userId, request.getGroupIds(), request.getType());
-    }
-
-    public byte[] exportTimesheetDayCsv(List<UserTimesheetResponseDto> timesheet, String sheetName) {
-        return reportService.exportTimesheetDayCsv(timesheet, sheetName);
-    }
-
-    public byte[] exportTimesheetDayXlsx(List<UserTimesheetResponseDto> timesheets) {
-        return reportService.exportTimesheetDayXlsx(timesheets);
-    }
-
-    public byte[] exportTimesheetWeekXlsx(List<UserTimesheetResponseDto> timesheets) {
-        return reportService.exportTimesheetWeekXlsx(timesheets);
-    }
-
-    public byte[] exportWeekCsv(List<UserTimesheetResponseDto> timesheets) {
-        return reportService.exportTimesheetWeekCsv(timesheets);
-    }
-
-    public FileExportResponseDto generateTimesheetFile( TimesheetReportDto request) throws IOException {
-        List<UserTimesheetResponseDto> timesheets = getAllTimesheets( request);
-        log.info("Requested Timesheet Date Range: {} to {}", request.getFromDate(), request.getToDate());
-        log.info("Total timesheets fetched: {}", timesheets.size());
-
-        String format = request.getFormat();
-        String timePeriod = request.getTimePeriod();
-        LocalDate startDate = request.getFromDate();
-        LocalDate endDate = request.getToDate();
-
-        if(request.getGroupId() != null && request.getGroupId().size() == 1){
-            Long requestedGroupId  = request.getGroupId().get(0);
-            String requestedGroupName = userService.findGroupName(requestedGroupId);
-            log.info("Selected single Group name:{}", requestedGroupName);
-            for (UserTimesheetResponseDto dto : timesheets){
-                if (dto.getTimesheets() != null){
-                    for (TimesheetDto timesheetDto : dto.getTimesheets()){
-                        timesheetDto.setGroupname(requestedGroupName);
-                    }
-                }
-            }
-        }
-        // 1. Build base filename
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-        String datePart = (timePeriod == null || timePeriod.trim().isEmpty()) ?
-                "Timesheet_" + startDate.format(formatter) + "_to_" + endDate.format(formatter) :
-                timePeriod.equalsIgnoreCase("DAY") ? "Timesheet_" + startDate.format(formatter) :
-                        timePeriod.equalsIgnoreCase("WEEK") ? "Timesheet_Weekly" :
-                                timePeriod.equalsIgnoreCase("MONTH") ? "Timesheet_Monthly" :
-                                        timePeriod.equalsIgnoreCase("YEAR") ? "Timesheet_Yearly" :
-                                                "Invalid or missing date range for time period";
-
-        String baseName = "timesheetReport_" + datePart;
-        String extension = "csv".equalsIgnoreCase(format) ? ".csv" : ".xlsx";
-
-        // 2. Create directory
-        Path resourcePath = Paths.get(downloadDir);
-        if (!Files.exists(resourcePath)) {
-            Files.createDirectories(resourcePath);
-        }
-
-        // 3. Avoid filename collisions
-        String fileName = baseName + extension;
-        Path filePath = resourcePath.resolve(fileName);
-        int counter = 1;
-        while (Files.exists(filePath)) {
-            fileName = baseName + "(" + counter + ")" + extension;
-            filePath = resourcePath.resolve(fileName);
-            counter++;
-        }
-
-        // Sheet name
-        String sheetName;
-        if ("DAY".equalsIgnoreCase(timePeriod)) {
-            sheetName = "Timesheet_" + startDate.format(formatter);
-        } else if ("WEEK".equalsIgnoreCase(timePeriod)) {
-            sheetName = "Timesheet_Weekly";
-        } else if ("MONTH".equalsIgnoreCase(timePeriod)) {
-            sheetName = "Timesheet_Monthly";
-        } else {
-            sheetName = "Timesheet_" + startDate.format(formatter) + "_to_" + endDate.format(formatter);
-        }
-
-
-        // 4. Generate file content
-        byte[] data;
-        if (Timeperiod.DAY.name().equalsIgnoreCase(timePeriod)) {
-            data = "csv".equalsIgnoreCase(format) ?
-                    exportTimesheetDayCsv(timesheets,sheetName) :
-                    exportTimesheetDayXlsx(timesheets);
-        } else {
-            data = "csv".equalsIgnoreCase(format) ?
-                    exportWeekCsv(timesheets) :
-                    exportTimesheetWeekXlsx(timesheets);
-        }
-
-        // 5. Write to disk
-        Files.write(filePath, data);
-
-        // 6. Return file info
-        return new FileExportResponseDto(filePath, fileName, format);
     }
 
     public ApiResponse getUserLocation() {
@@ -732,4 +630,31 @@ public class AuthFacade {
     public ApiResponse<List<UserHistoryResponseDto>> getUserHistoryLog(String userId) {
         return userService.getUserHistoryLog(userId);
     }
+
+    public CompletableFuture<FileExportResponseDto> generateTimesheetFileAsync(
+            TimesheetReportDto request,
+            String predefinedFileName,
+            String userId,
+            String orgId,
+            String role,
+            String schema) {
+
+        TenantContext.setCurrentTenant(schema.toLowerCase().replace("-", "_"));
+        try {
+            log.info("File generation started for user: {}, org: {}", userId, orgId);
+
+            FileExportResponseDto export = reportService.generateTimesheetFile(
+                    request, userId, orgId, role, predefinedFileName);
+
+            log.info("File Generation completed for file: {}", predefinedFileName);
+            return CompletableFuture.completedFuture(export);
+
+        } catch (Exception e) {
+            log.error("Error in async file generation for file: {}", predefinedFileName, e);
+            return CompletableFuture.failedFuture(e);
+        } finally {
+            TenantContext.clear();
+        }
+    }
+
 }

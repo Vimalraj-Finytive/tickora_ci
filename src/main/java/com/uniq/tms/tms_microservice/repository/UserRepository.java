@@ -44,8 +44,8 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
             "LEFT JOIN GroupEntity g ON ug.group.groupId = g.groupId " +
             "LEFT JOIN u.workSchedule w " +
             "JOIN RoleEntity r ON u.role = r " +
-            "JOIN UserLocationEntity ul ON ul.user.userId= u.userId " +
-            "JOIN LocationEntity l ON ul.location.locationId = l.locationId " +
+            "LEFT JOIN UserLocationEntity ul ON ul.user.userId= u.userId " +
+            "LEFT JOIN LocationEntity l ON ul.location.locationId = l.locationId " +
             "LEFT JOIN SecondaryDetailsEntity sd ON sd.user.userId = u.userId " +
             "WHERE u.organizationId = :orgId AND u.active = true AND r.hierarchyLevel > :hierarchyLevel")
     List<UserResponse> findAllUsers(@Param("orgId") String orgId, @Param("hierarchyLevel") int hierarchyLevel);
@@ -139,5 +139,13 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
             "LEFT JOIN SecondaryDetailsEntity sd ON sd.user.userId = u.userId " +
             "WHERE u.organizationId = :orgId AND u.active = false AND r.hierarchyLevel > :hierarchyLevel")
     List<UserResponse> findAllInActiveUsers(@Param("orgId") String orgId, @Param("hierarchyLevel") int hierarchyLevel);
+
+    @Query("""
+    SELECT u FROM UserEntity u
+    WHERE LOWER(u.userId) LIKE LOWER(CONCAT('%', :keyword, '%'))
+       OR LOWER(u.userName) LIKE LOWER(CONCAT('%', :keyword, '%'))
+       OR LOWER(u.mobileNumber) LIKE LOWER(CONCAT('%', :keyword, '%'))
+""")
+    List<UserEntity> searchUsers(@Param("keyword") String keyword);
 
 }

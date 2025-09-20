@@ -41,6 +41,9 @@ public class LocationEntity {
     @Column(name = "is_default", nullable = false)
     private boolean isDefault = false;
 
+    @Column(name = "is_active", nullable = false)
+    private boolean active = true;
+
     public LocationEntity() {}
 
     public LocationEntity(Long locationId) {
@@ -125,6 +128,14 @@ public class LocationEntity {
 
     public void setDefault(boolean aDefault) {
         isDefault = aDefault;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
     }
 
     @Override
