@@ -3,14 +3,20 @@ package com.uniq.tms.tms_microservice.adapter.impl;
 import com.uniq.tms.tms_microservice.adapter.WorkScheduleAdapter;
 import com.uniq.tms.tms_microservice.entity.*;
 import com.uniq.tms.tms_microservice.repository.*;
+import com.uniq.tms.tms_microservice.service.impl.WorkScheduleServiceImpl;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.stereotype.Component;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Component
 public class WorkScheduleAdapterImpl implements WorkScheduleAdapter {
+
+    private final Logger log = LogManager.getLogger(WorkScheduleServiceImpl.class);
 
     private final WorkScheduleRepository workScheduleRepository;
     private final FixedWorkScheduleRepository fixedWorkScheduleRepository;
@@ -136,5 +142,78 @@ public class WorkScheduleAdapterImpl implements WorkScheduleAdapter {
             workScheduleMap.put(((String) workSchedule[1]).toLowerCase(), (String) workSchedule[0]);
         }
         return workScheduleMap;
+    }
+
+    public Map<String, Set<DayOfWeek>> resolveWorkingDays(List<String> userIds) {
+        Map<String, Set<DayOfWeek>> userWorkingDaysMap = new HashMap<>();
+
+        if (userIds == null || userIds.isEmpty()) {
+            return userWorkingDaysMap;
+        }
+
+        // Fetch all schedules in a single query
+        List<WorkScheduleEntity> schedules = workScheduleRepository.findAllSchedulesWithUsers(userIds);
+
+        for (WorkScheduleEntity ws : schedules) {
+            Set<DayOfWeek> workingDays = new HashSet<>();
+
+            // FIXED
+            if (ws.getFixedWorkSchedules() != null) {
+                ws.getFixedWorkSchedules().forEach(fws -> {
+                    if (fws.getDay() != null) {
+                        workingDays.add(DayOfWeek.valueOf(fws.getDay().name()));
+                    }
+                });
+            }
+
+            // FLEXIBLE
+            if (ws.getFlexibleWorkSchedules() != null) {
+                ws.getFlexibleWorkSchedules().forEach(flws -> {
+                    if (flws.getDay() != null) {
+                        workingDays.add(DayOfWeek.valueOf(flws.getDay().name()));
+                    }
+                });
+            }
+
+            // WEEKLY_EXCEPTION
+            WeeklyWorkScheduleEntity weekly = ws.getWeeklyWorkSchedule();
+            if (weekly != null && weekly.getStartDay() != null && weekly.getEndDay() != null) {
+                DayOfWeek start = DayOfWeek.valueOf(weekly.getStartDay().name());
+                DayOfWeek end = DayOfWeek.valueOf(weekly.getEndDay().name());
+
+                EnumSet<DayOfWeek> range;
+                if (start.getValue() <= end.getValue()) {
+                    range = EnumSet.range(start, end);
+                } else {
+                    range = EnumSet.noneOf(DayOfWeek.class);
+                    range.addAll(EnumSet.range(start, DayOfWeek.SUNDAY));
+                    range.addAll(EnumSet.range(DayOfWeek.MONDAY, end));
+                }
+                workingDays.addAll(range);
+            }
+
+            // Map all users assigned to this work schedule
+            if (ws.getUsers() != null) {
+                ws.getUsers().forEach(user -> {
+                    userWorkingDaysMap.put(user.getUserId(), workingDays);
+                });
+            }
+        }
+
+        for (String userId : userIds) {
+            userWorkingDaysMap.putIfAbsent(userId, Collections.emptySet());
+        }
+
+        return userWorkingDaysMap;
+    }
+
+    @Override
+    public List<FixedWorkScheduleEntity> findFixedSchedulesByUserIds(List<String> pagedUserIds) {
+        return workScheduleRepository.findFixedSchedulesByUserIds(pagedUserIds);
+    }
+
+    @Override
+    public List<FlexibleWorkScheduleEntity> findFlexibleSchedulesByUserIds(List<String> pagedUserIds) {
+        return workScheduleRepository.findFlexibleSchedulesByUserIds(pagedUserIds);
     }
 }

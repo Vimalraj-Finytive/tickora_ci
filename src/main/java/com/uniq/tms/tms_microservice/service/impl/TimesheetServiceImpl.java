@@ -212,7 +212,7 @@ public class TimesheetServiceImpl implements TimesheetService {
             if (hasStatusFilter) {
                 List<TimesheetEntity> timesheetEntities = timesheetAdapter.findUserByStatusId(statusId, startDate, endDate);
                 Set<String> statusUserIds = timesheetEntities.stream()
-                        .map(TimesheetEntity::getUserId)
+                        .map(te -> te.getUser().getUserId())
                         .collect(Collectors.toSet());
 
                 if (statusUserIds.isEmpty()) {
@@ -287,7 +287,7 @@ public class TimesheetServiceImpl implements TimesheetService {
             if (hasStatusFilter) {
                 List<TimesheetEntity> timesheetEntities = timesheetAdapter.findUserByStatusId(statusId, startDate, endDate);
                 Set<String> statusUserIds = timesheetEntities.stream()
-                        .map(TimesheetEntity::getUserId)
+                        .map(te -> te.getUser().getUserId())
                         .collect(Collectors.toSet());
 
                 if (statusUserIds.isEmpty()) {
@@ -336,7 +336,7 @@ public class TimesheetServiceImpl implements TimesheetService {
             }
 
             TimesheetEntity timesheet = history.getTimesheet();
-            String userId = timesheet.getUserId();
+            String userId = timesheet.getUser().getUserId();
             LocalDate date = timesheet.getDate();
             if (userId == null) {
                 throw new IllegalArgumentException("User ID must not be null. Check mapping!");
@@ -350,7 +350,10 @@ public class TimesheetServiceImpl implements TimesheetService {
             timesheet = timesheetAdapter.findByUserIdAndDate(userId, date)
                     .orElseGet(() -> {
                         TimesheetEntity newTimesheet = new TimesheetEntity();
-                        newTimesheet.setUserId(userId);
+                        UserEntity user = userAdapter.findById(userId)
+                                .orElseThrow(() -> new IllegalStateException("User not found: " + userId));
+                        log.info("User : {}", user);
+                        newTimesheet.setUser(user);
                         newTimesheet.setDate(finalDate);
                         newTimesheet.setFirstClockIn(history.getLogType() == LogType.CLOCK_IN ? history.getLogTime() : null);
                         newTimesheet.setLastClockOut(history.getLogType() == LogType.CLOCK_OUT ? history.getLogTime() : null);
@@ -392,7 +395,10 @@ public class TimesheetServiceImpl implements TimesheetService {
         if (timesheet == null) {
             isNew = true;
             timesheet = new TimesheetEntity();
-            timesheet.setUserId(userId);
+            UserEntity user = userAdapter.findById(userId)
+                    .orElseThrow(() -> new IllegalStateException("User not found: " + userId));
+            log.info("User : {}", user);
+            timesheet.setUser(user);
             timesheet.setDate(date);
             timesheet.setCreatedAt(LocalDateTime.now());
             timesheet.setFirstClockIn(null);
@@ -516,7 +522,7 @@ public class TimesheetServiceImpl implements TimesheetService {
         LocationEntity location = timesheetAdapter.getDefaultLocation(orgId);
         for (TimesheetEntity entry : openClockIns) {
             if (entry.getFirstClockIn() != null && entry.getLastClockOut() == null) {
-                log.info("Auto clock-out for userId={}, setting lastClockOut to 23:59", entry.getUserId());
+                log.info("Auto clock-out for userId={}, setting lastClockOut to 23:59", entry.getUser().getUserId());
 
                 entry.setLastClockOut(LocalTime.of(23, 59));
                 calculateHours(entry);
@@ -534,7 +540,7 @@ public class TimesheetServiceImpl implements TimesheetService {
 
                 historyEntries.add(history);
 
-                log.info("Added SYSTEM_GENERATED CLOCK_OUT history for userId={}, date={}", entry.getUserId(), entry.getDate());
+                log.info("Added SYSTEM_GENERATED CLOCK_OUT history for userId={}, date={}", entry.getUser().getUserId(), entry.getDate());
             }
         }
 
@@ -780,7 +786,7 @@ public class TimesheetServiceImpl implements TimesheetService {
             }
 
             TimesheetEntity timesheet = history.getTimesheet();
-            String userId = timesheet.getUserId();
+            String userId = timesheet.getUser().getUserId();
             LocalDate date = timesheet.getDate();
 
             if (userId == null) {
@@ -788,7 +794,7 @@ public class TimesheetServiceImpl implements TimesheetService {
             }
 
             if (date == null) {
-                date = history.getLoggedTimestamp().toLocalDate();
+                date = LocalDate.now(ZoneId.of("Asia/Kolkata"));
             }
 
             LocalDate finalDate = date;
@@ -812,7 +818,10 @@ public class TimesheetServiceImpl implements TimesheetService {
 
             } else {
                 timesheet = new TimesheetEntity();
-                timesheet.setUserId(userId);
+                UserEntity user = userAdapter.findById(userId)
+                        .orElseThrow(() -> new IllegalStateException("User not found: " + userId));
+                log.info("User : {}", user);
+                timesheet.setUser(user);
                 timesheet.setDate(finalDate);
                 timesheet.setCreatedAt(LocalDateTime.now());
                 timesheet.setTrackedHours(LocalTime.of(0, 0));

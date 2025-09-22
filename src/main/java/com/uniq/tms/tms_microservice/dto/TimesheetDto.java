@@ -49,7 +49,7 @@ public class TimesheetDto {
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String statusId;
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
-    private String groupname;
+    private String groupName;
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private Boolean paidLeave;
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
@@ -59,7 +59,7 @@ public class TimesheetDto {
 
     public TimesheetDto(TimesheetEntity timesheetEntity, List<TimesheetHistoryDto> historyDtos, String workScheduleName) {
         this.id = timesheetEntity.getId();
-        this.userId = timesheetEntity.getUserId();
+        this.userId = timesheetEntity.getUser().getUserId();
         this.date = timesheetEntity.getDate();
         this.firstClockIn = timesheetEntity.getFirstClockIn();
         this.lastClockOut = timesheetEntity.getLastClockOut();
@@ -121,7 +121,10 @@ public class TimesheetDto {
     }
 
     public String getTrackedHoursDuration() {
-        return trackedHoursDuration;
+            if (trackedHours == null) return "00h 00m";
+            long hours = trackedHours.toHours();
+            long minutes = trackedHours.toMinutes() % 60;
+            return String.format("%02dh %02dm", hours, minutes);
     }
 
     public void setTrackedHoursDuration(String trackedHoursDuration) {
@@ -129,7 +132,10 @@ public class TimesheetDto {
     }
 
     public String getRegularHoursDuration() {
-        return regularHoursDuration;
+            if (regularHours == null) return "00h 00m";
+            long hours = regularHours.toHours();
+            long minutes = regularHours.toMinutes() % 60;
+            return String.format("%02dh %02dm", hours, minutes);
     }
 
     public void setRegularHoursDuration(String regularHoursDuration) {
@@ -264,12 +270,12 @@ public class TimesheetDto {
         this.statusId = statusId;
     }
 
-    public String getGroupname() {
-        return groupname;
+    public String getGroupName() {
+        return groupName;
     }
 
-    public void setGroupname(String groupname) {
-        this.groupname = groupname;
+    public void setGroupName(String groupName) {
+        this.groupName = groupName;
     }
 
     public Boolean getPaidLeave() {

@@ -8,7 +8,13 @@ public enum TimesheetStatusEnum {
     NOT_MARKED( "Not Marked"),
     HOLIDAY("Holiday"),
     HALF_DAY( "Half Day"),
-    PERMISSION("Permission");
+    PERMISSION("Permission"),
+    OVERTIME("OverTime"),
+    SUFFICIENT_HOURS("Sufficient Hours"),
+    LESS_WORKED_HOURS("Less Worked Hours"),
+    EXTRA_WORKED_DAY("Extra Worked Day"),
+    FAILED_CLOCK_OUT("Failed clock out"),
+    TIME_OFF("Time Off");
 
     private final String label;
 

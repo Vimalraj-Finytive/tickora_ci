@@ -1,7 +1,7 @@
 package com.uniq.tms.tms_microservice.repository;
 
 import com.uniq.tms.tms_microservice.dto.UserAttendanceDto;
-import com.uniq.tms.tms_microservice.projection.UserDashboard;
+import com.uniq.tms.tms_microservice.projection.*;
 import com.uniq.tms.tms_microservice.entity.TimesheetEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -14,201 +14,72 @@ import java.util.Optional;
 @Repository
 public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long> {
 
-    Optional<TimesheetEntity> findByUserIdAndDate(String userId, LocalDate date);
+    Optional<TimesheetEntity> findByUser_UserIdAndDate(String userId, LocalDate date);
 
-        @Query(value = """
-    WITH SelectedUsers AS (
-        SELECT *
-        FROM users
-        WHERE active = TRUE
-          AND (:userIds IS NULL OR user_id = ANY(CAST(:userIds AS VARCHAR[])))
-        ORDER BY user_id
-        LIMIT CASE WHEN :pageLimit > 0 THEN :pageLimit END
-        OFFSET CASE WHEN :pageLimit > 0 THEN (:pageIndex * :pageLimit) ELSE 0 END
-    ),
-    
-    UserGroups AS (
-        SELECT
-            ug.user_id,
-            STRING_AGG(g.group_name, ', ') AS group_name
-        FROM user_group ug
-        JOIN org_groups g ON ug.group_id = g.group_id
-        GROUP BY ug.user_id
-    ),
-    
-    DayNumbers AS (
-        SELECT 'Sunday' AS day_name, 0 AS day_num UNION ALL
-        SELECT 'Monday', 1 UNION ALL
-        SELECT 'Tuesday', 2 UNION ALL
-        SELECT 'Wednesday', 3 UNION ALL
-        SELECT 'Thursday', 4 UNION ALL
-        SELECT 'Friday', 5 UNION ALL
-        SELECT 'Saturday', 6
-    ),
-    
-    UserDateMatrix AS (
-        SELECT
-            gs.work_date,
-            TO_CHAR(gs.work_date, 'FMDay') AS day_name,
-            CAST(EXTRACT(DOW FROM gs.work_date) AS INT) AS day_num,
-            u.user_id,
-            u.user_name,
-            u.role_id,
-            u.mobile_number,
-            u.work_schedule_id
-        FROM SelectedUsers u
-        CROSS JOIN LATERAL (
-            SELECT generate_series(
-                GREATEST(COALESCE(:startDate, u.date_of_joining), u.date_of_joining),
-                COALESCE(:endDate, CURRENT_DATE),
-                INTERVAL '1 day'
-            ) AS work_date
-        ) gs
-    ),
-    
-    WorkScheduleDuration AS (
-        SELECT
-            ws.work_schedule_id,
-            wst.type_id,
-            wst.type,
-            CASE
-                WHEN wst.type = 'FIXED' THEN (
-                    SELECT SUM(EXTRACT(EPOCH FROM (fws.end_time - fws.start_time))) / COUNT(*)
-                    FROM fixed_work_schedule fws
-                    WHERE fws.work_schedule_id = ws.work_schedule_id
-                )
-                WHEN wst.type = 'FLEXIBLE' THEN (
-                    SELECT SUM(flws.duration * 3600) / COUNT(*)
-                    FROM flexible_work_schedule flws
-                    WHERE flws.work_schedule_id = ws.work_schedule_id
-                )
-                ELSE NULL
-            END AS expected_seconds
-        FROM work_schedule ws
-        JOIN work_schedule_type wst ON ws.work_schedule_type = wst.type_id
-    ),
-    
-    WorkDayType AS (
-        SELECT
-            udm.user_id,
-            udm.work_date,
-            CASE
-                WHEN wst.type = 'FIXED' AND EXISTS (
-                    SELECT 1 FROM fixed_work_schedule fws
-                    WHERE fws.work_schedule_id = ws.work_schedule_id
-                      AND fws.day ILIKE udm.day_name
-                ) THEN TRUE
-                WHEN wst.type = 'FLEXIBLE' AND EXISTS (
-                    SELECT 1 FROM flexible_work_schedule flws
-                    WHERE flws.work_schedule_id = ws.work_schedule_id
-                      AND flws.day ILIKE udm.day_name
-                ) THEN TRUE
-                WHEN wst.type = 'WEEKLY_EXCEPTION' AND EXISTS (
-                    SELECT 1
-                    FROM weekly_work_schedule wws
-                    JOIN DayNumbers sd ON wws.start_day = sd.day_name
-                    JOIN DayNumbers ed ON wws.end_day = ed.day_name
-                    WHERE wws.work_schedule_id = ws.work_schedule_id
-                      AND (
-                          (sd.day_num <= ed.day_num AND udm.day_num BETWEEN sd.day_num AND ed.day_num)
-                          OR
-                          (sd.day_num > ed.day_num AND (
-                              udm.day_num >= sd.day_num OR udm.day_num <= ed.day_num
-                          ))
-                      )
-                ) THEN TRUE
-                ELSE FALSE
-            END AS is_working_day
-        FROM UserDateMatrix udm
-        JOIN users u ON u.user_id = udm.user_id
-        JOIN work_schedule ws ON u.work_schedule_id = ws.work_schedule_id AND ws.organization_id = :orgId
-        JOIN work_schedule_type wst ON ws.work_schedule_type = wst.type_id
-    )
-    
-    SELECT
-        udm.work_date,
-        udm.user_id,
-        udm.user_name,
-        r.name AS role,
-        udm.mobile_number,
-        ws.work_schedule_name AS work_schedule,
-        ug.group_name,
-        t.id AS timesheet_id,
-        CAST(t.first_clock_in AS TIME) AS first_clock_in,
-        CAST(t.last_clock_out AS TIME) AS last_clock_out,
-        COALESCE(CAST(t.tracked_hours AS TEXT), '00:00:00') AS tracked_hours,
-        COALESCE(CAST(t.regular_hours AS TEXT), '00:00:00') AS regular_hours,
-        t.status_id,
-        ts.status_name AS status,
-    
-        -- Day Type
-        CASE WHEN wdt.is_working_day THEN 'Working Day' ELSE 'Holiday' END AS day_type,
-    
-        -- User Day Type
-        CASE
-            WHEN t.first_clock_in IS NULL AND NOT wdt.is_working_day THEN 'Holiday'
-            WHEN t.first_clock_in IS NULL THEN 'Time Off'
-            WHEN t.first_clock_in IS NOT NULL AND NOT wdt.is_working_day THEN 'Extra Worked Day'
-            ELSE 'Working Day'
-        END AS user_day_type,
-    
-        -- Work Status
-        CASE
-            WHEN t.first_clock_in IS NULL AND NOT wdt.is_working_day THEN 'Holiday'
-            WHEN t.date IS NULL THEN 'Time Off'
-            WHEN t.first_clock_in IS NOT NULL AND t.last_clock_out IS NULL THEN 'Present'
-            WHEN t.first_clock_in IS NOT NULL AND t.last_clock_out IS NOT NULL THEN
-                CASE
-                    WHEN EXISTS (
-                        SELECT 1 FROM timesheet_history th2
-                        WHERE th2.timesheet_id = t.id
-                          AND th2.log_type = 'CLOCK_OUT'
-                          AND th2.log_from = 'SYSTEM_GENERATED'
-                    ) THEN 'Failed Clock Out'
-                    WHEN (EXTRACT(EPOCH FROM (t.last_clock_out - t.first_clock_in))) >= COALESCE(wsd.expected_seconds, 0) + :extraWorkedSeconds
-                    THEN 'OverTime'
-                    WHEN (EXTRACT(EPOCH FROM (t.last_clock_out - t.first_clock_in))) >= COALESCE(wsd.expected_seconds, 0)
-                    THEN 'Sufficient Hours'
-                    ELSE 'Less Worked Hours'
-                END
-            ELSE 'Not Marked'
-        END AS work_status,
-    
-        th.id AS history_id,
-        th.log_time,
-        th.log_type,
-        COALESCE(l.name, 'Unknown Location') AS location_name,
-        th.log_from,
-        th.logged_timestamp
-    
-    FROM UserDateMatrix udm
-    LEFT JOIN WorkDayType wdt ON udm.user_id = wdt.user_id AND udm.work_date = wdt.work_date
-    LEFT JOIN timesheet t ON t.user_id = udm.user_id AND t.date = udm.work_date
+    // Main timesheets per user
+    @Query(value = """
+    SELECT 
+        t.id AS id,
+        t.date AS date,
+        u.user_id AS userId,
+        u.user_name AS userName,
+        u.mobile_number AS mobileNumber,
+        r.name AS roleName,
+        ws.work_schedule_name AS workScheduleName,
+        t.first_clock_in AS firstClockIn,
+        t.last_clock_out AS lastClockOut,
+        t.tracked_hours AS trackedHours,
+        t.regular_hours AS regularHours,
+        ts.status_name AS status
+    FROM timesheet t
+    JOIN users u ON t.user_id = u.user_id
+    LEFT JOIN role r ON u.role_id = r.role_id
+    LEFT JOIN work_schedule ws ON u.work_schedule_id = ws.work_schedule_id
     LEFT JOIN timesheet_status ts ON t.status_id = ts.status_id
-    LEFT JOIN role r ON udm.role_id = r.role_id
-    LEFT JOIN users u ON udm.user_id = u.user_id
-    LEFT JOIN work_schedule ws ON ws.work_schedule_id = u.work_schedule_id AND ws.organization_id = :orgId
-    LEFT JOIN work_schedule_type wst ON ws.work_schedule_type = wst.type_id
-    LEFT JOIN WorkScheduleDuration wsd ON ws.work_schedule_id = wsd.work_schedule_id
-    LEFT JOIN timesheet_history th ON t.id = th.timesheet_id
-    LEFT JOIN location l ON th.location_id = l.location_id
-    LEFT JOIN UserGroups ug ON udm.user_id = ug.user_id
-    ORDER BY udm.user_id, udm.work_date, th.logged_timestamp
+    WHERE t.date BETWEEN 
+          GREATEST(CAST(:startDate AS DATE), u.date_of_joining) 
+          AND COALESCE(:endDate, CURRENT_DATE)
+    AND (:userIds IS NULL OR u.user_id IN (:userIds))
+    ORDER BY date ASC
     """, nativeQuery = true)
-        List<Object[]> fetchTimesheetsWithHistory(
-                @Param("startDate") LocalDate startDate,
-                @Param("endDate") LocalDate endDate,
-                @Param("userIds") String[] userIds,
-                @Param("orgId") String orgId,
-                @Param("extraWorkedSeconds") int extraWorkedSeconds,
-                @Param("pageIndex") int pageIndex,
-                @Param("pageLimit") int pageLimit
-        );
+    List<TimesheetProjection> fetchMainTimesheets(
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate,
+            @Param("userIds") List<String> userIds
+    );
+
+    // Groups per user
+        @Query(value = """
+    SELECT u.user_id AS "userId",
+           STRING_AGG(DISTINCT g.group_name, ', ') AS "groupNames"
+    FROM users u
+    LEFT JOIN user_group ug ON u.user_id = ug.user_id
+    LEFT JOIN org_groups g ON ug.group_id = g.group_id
+    WHERE u.user_id IN (:userIds)
+    GROUP BY u.user_id
+    """, nativeQuery = true)
+    List<UserGroupProjection> fetchUserGroups(@Param("userIds") List<String> userIds);
+
+    // Timesheet history per user
+    @Query(value = """
+        SELECT th.timesheet_id AS timesheetId,
+               th.id AS timesheetHistoryId,
+               loc.name AS locationName,
+               th.log_time AS logTime,
+               th.log_type AS logType,
+               th.log_from AS logFrom,
+               th.logged_timestamp AS loggedTimestamp
+        FROM timesheet_history th
+        LEFT JOIN location loc ON th.location_id = loc.location_id
+        WHERE th.timesheet_id IN (:timesheetIds)
+        ORDER BY th.log_time
+        """, nativeQuery = true)
+    List<TimesheetHistoryProjection> fetchTimesheetHistory(@Param("timesheetIds") Long[] timesheetIds);
 
     List<TimesheetEntity> findActiveTimesheetsByDate(LocalDate today);
 
-    @Query("SELECT new com.uniq.tms.tms_microservice.dto.UserAttendanceDto(t.userId, t.date, t.status.statusName) " +
-            "FROM TimesheetEntity t WHERE t.userId IN :userIds AND t.date BETWEEN :from AND :to")
+    @Query("SELECT new com.uniq.tms.tms_microservice.dto.UserAttendanceDto(t.user.userId, t.date, t.status.statusName) " +
+            "FROM TimesheetEntity t WHERE t.user.userId IN :userIds AND t.date BETWEEN :from AND :to")
     List<UserAttendanceDto> findAttendanceForUsersInRange(@Param("userIds") List<String> userIds,
                                                           @Param("from") LocalDate from,
                                                           @Param("to") LocalDate to);
