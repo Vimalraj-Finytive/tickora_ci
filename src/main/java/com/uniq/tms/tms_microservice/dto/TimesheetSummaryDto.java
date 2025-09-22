@@ -5,7 +5,7 @@ public class TimesheetSummaryDto {
     private String userName;
     private String mobileNumber;
     private String role;
-    private String groupname;
+    private String groupName;
     private int presentCount;
     private int absentCount;
     private int notMarkedCount;
@@ -47,12 +47,12 @@ public class TimesheetSummaryDto {
         this.role = role;
     }
 
-    public String getGroupname() {
-        return groupname;
+    public String getGroupName() {
+        return groupName;
     }
 
-    public void setGroupname(String groupname) {
-        this.groupname = groupname;
+    public void setGroupName(String groupName) {
+        this.groupName = groupName;
     }
 
     public int getPresentCount() {

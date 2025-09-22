@@ -1729,7 +1729,7 @@ public class UserServiceImpl implements UserService {
 
         List<TimesheetEntity> latestLogs = timesheetAdapter.getLatestLogsByTimesheetIds(memberIds, orgId, date);
         Map<String, TimesheetEntity> latestLogsMap = latestLogs.stream()
-                .collect(Collectors.toMap(TimesheetEntity::getUserId, Function.identity()));
+                .collect(Collectors.toMap(te -> te.getUser().getUserId(), Function.identity()));
 
         List<Map<String, Object>> userDetailsList = groupUsers.stream()
                 .map(user -> {

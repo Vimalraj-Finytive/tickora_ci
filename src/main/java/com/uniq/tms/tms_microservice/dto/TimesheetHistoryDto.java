@@ -4,10 +4,8 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.uniq.tms.tms_microservice.enums.LogFrom;
 import com.uniq.tms.tms_microservice.enums.LogType;
-
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 
 public class TimesheetHistoryDto {
 
@@ -16,7 +14,7 @@ public class TimesheetHistoryDto {
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private Long locationId;
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "HH:mm:ss")
-    private LocalTime logTime;
+    private String logTime;
     private LogType logType;
     private LogFrom logFrom;
     @JsonFormat(shape = JsonFormat.Shape.STRING)
@@ -25,6 +23,18 @@ public class TimesheetHistoryDto {
     private String userId;
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private LocalDate date;
+
+    public TimesheetHistoryDto(Long timesheetHistoryId, String locationName, String logTime, LogType logType, LogFrom logFrom) {
+        this.timesheetHistoryId = timesheetHistoryId;
+        this.locationName = locationName;
+        this.logTime = logTime;
+        this.logType = logType;
+        this.logFrom = logFrom;
+    }
+
+    public TimesheetHistoryDto() {
+
+    }
 
     public String getLocationName() {
         return locationName;
@@ -50,11 +60,11 @@ public class TimesheetHistoryDto {
         this.date = date;
     }
 
-    public LocalTime getLogTime() {
+    public String getLogTime() {
         return logTime;
     }
 
-    public void setLogTime(LocalTime logTime) {
+    public void setLogTime(String logTime) {
         this.logTime = logTime;
     }
 

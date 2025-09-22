@@ -435,6 +435,7 @@ public class CacheLoaderServiceImpl implements CacheLoaderService {
             schedule.setScheduleId(raw.getWorkScheduleId());
             schedule.setScheduleName(raw.getWorkScheduleName());
             schedule.setDefault(raw.getIsDefault());
+            schedule.setDefault(raw.getIsDefault());
             schedule.setActive(raw.getIsActive());
             schedule.setType(raw.getWorkScheduleType());
             schedule.setOrgId(raw.getOrganizationId());

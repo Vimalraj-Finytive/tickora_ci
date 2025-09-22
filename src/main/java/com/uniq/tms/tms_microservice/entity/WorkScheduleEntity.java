@@ -3,6 +3,7 @@ package com.uniq.tms.tms_microservice.entity;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import java.util.List;
+import java.util.Set;
 
 @Entity
 @Table(name = "work_schedule")
@@ -30,10 +31,10 @@ public class WorkScheduleEntity {
     private OrganizationEntity organizationEntity;
 
     @OneToMany(mappedBy = "workScheduleEntity", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    private List<FixedWorkScheduleEntity> fixedWorkSchedules;
+    private Set<FixedWorkScheduleEntity> fixedWorkSchedules;
 
     @OneToMany(mappedBy = "workScheduleEntity", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    private List<FlexibleWorkScheduleEntity> flexibleWorkSchedules;
+    private Set<FlexibleWorkScheduleEntity> flexibleWorkSchedules;
 
     @OneToOne(mappedBy = "workScheduleEntity", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private WeeklyWorkScheduleEntity weeklyWorkSchedule;
@@ -90,19 +91,19 @@ public class WorkScheduleEntity {
         this.organizationEntity = organizationEntity;
     }
 
-    public List<FixedWorkScheduleEntity> getFixedWorkSchedules() {
+    public Set<FixedWorkScheduleEntity> getFixedWorkSchedules() {
         return fixedWorkSchedules;
     }
 
-    public void setFixedWorkSchedules(List<FixedWorkScheduleEntity> fixedWorkSchedules) {
+    public void setFixedWorkSchedules(Set<FixedWorkScheduleEntity> fixedWorkSchedules) {
         this.fixedWorkSchedules = fixedWorkSchedules;
     }
 
-    public List<FlexibleWorkScheduleEntity> getFlexibleWorkSchedules() {
+    public Set<FlexibleWorkScheduleEntity> getFlexibleWorkSchedules() {
         return flexibleWorkSchedules;
     }
 
-    public void setFlexibleWorkSchedules(List<FlexibleWorkScheduleEntity> flexibleWorkSchedules) {
+    public void setFlexibleWorkSchedules(Set<FlexibleWorkScheduleEntity> flexibleWorkSchedules) {
         this.flexibleWorkSchedules = flexibleWorkSchedules;
     }
 

@@ -34,6 +34,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -258,10 +259,10 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
             entity.setScheduleId(model.getScheduleId());
             entity.setActive(true);
             if (entity.getFixedWorkSchedules() == null) {
-                entity.setFixedWorkSchedules(new ArrayList<>());
+                entity.setFixedWorkSchedules(new HashSet<>());
             }
             if (entity.getFlexibleWorkSchedules() == null) {
-                entity.setFlexibleWorkSchedules(new ArrayList<>());
+                entity.setFlexibleWorkSchedules(new HashSet<>());
             }
             boolean shouldAssignToSuperAdmin = model.isDefault() || workScheduleAdapter.countByOrgId(orgId) == 0;
             WorkScheduleEntity savedEntity = workScheduleAdapter.saveWorkSchedule(entity);
