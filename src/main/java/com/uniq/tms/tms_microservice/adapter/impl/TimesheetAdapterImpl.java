@@ -176,7 +176,7 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
                     LocalDate today = LocalDate.now(ZoneId.of("Asia/Kolkata"));
                     boolean isWorkingDay = true;
                     Duration scheduledHours = getScheduledHoursForUser(dto.getUserId(), dto.getDate(), fixedMap, flexMap);
-                    setTimesheetStatusAndDayType(dto,isWorkingDay, dto.getDate(), today, extraWorkedSeconds,scheduledHours);
+                    setTimesheetStatusAndDayType(dto,isWorkingDay, dto.getDate(), today,scheduledHours);
                     return dto;
                 })
                 .collect(Collectors.groupingBy(TimesheetDto::getUserId));
@@ -211,7 +211,7 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
                 .stream()
                 .collect(Collectors.toMap(
                         UserGroupProjection::getUserId,
-                        UserGroupProjection::getGroupNames
+                        ug -> ug.getGroupNames() != null ? ug.getGroupNames() : "null"
                 ));
     }
 
@@ -249,17 +249,28 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
         Map<LocalDate, TimesheetDto> existingTimesheet = existingTimesheets.stream()
                         .collect(Collectors.toMap(TimesheetDto::getDate, Function.identity(),(a,b) -> a));
         log.info("Existing timesheet: {}", existingTimesheet);
-        List<TimesheetDto> completeList = startDate.datesUntil(endDate.plusDays(1))
-                        .map(date -> {
-                            TimesheetDto existing = existingTimesheet.get(date);
-                            if(existing != null){
-                                return  existing;
-                            }else{
-                                return createDefaultTimesheetForDate(user, date, LocalDate.now(ZoneId.of("Asia/Kolkata")),
-                                    workingDays, extraWorkedSeconds, userGroups, fixedMap, flexMap);
-                            }
-                        })
-                                .toList();
+        LocalDate effectiveStart = startDate.isBefore(user.getDate())
+                ? user.getDate()
+                : startDate;
+
+        List<TimesheetDto> completeList = effectiveStart.datesUntil(endDate.plusDays(1))
+                .map(date -> {
+                    TimesheetDto existing = existingTimesheet.get(date);
+                    if (existing != null) return existing;
+
+                    return createDefaultTimesheetForDate(
+                            user,
+                            date,
+                            LocalDate.now(ZoneId.of("Asia/Kolkata")),
+                            workingDays,
+                            extraWorkedSeconds,
+                            userGroups,
+                            fixedMap,
+                            flexMap
+                    );
+                })
+                .toList();
+
         log.info("Return default timesheet");
         return completeList;
     }
@@ -277,12 +288,6 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
             Map<String, Map<DayOfWeek, FixedWorkScheduleEntity>> fixedMap,
             Map<String, Map<DayOfWeek, FlexibleWorkScheduleEntity>> flexMap
     ) {
-        log.info("Creating default timesheet for user: {}, date: {}", user, date);
-        log.info("Working days: {}", workingDays);
-        log.info("User groups: {}", userGroups);
-        log.info("Fixed map: {}", fixedMap);
-        log.info("Flexible map: {}", flexMap);
-
             log.info("User projection is null");
             TimesheetDto timesheet = new TimesheetDto();
             boolean isWorkingDay = workingDays.contains(date.getDayOfWeek());
@@ -302,7 +307,7 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
             timesheet.setHistory(Collections.emptyList());
 
             Duration scheduledHours = getScheduledHoursForUser(user.getUserId(), date, fixedMap, flexMap);
-            setTimesheetStatusAndDayType(timesheet, isWorkingDay, date, today, extraWorkedSeconds, scheduledHours);
+            setTimesheetStatusAndDayType(timesheet, isWorkingDay, date, today, scheduledHours);
             return timesheet;
     }
 
@@ -328,10 +333,6 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
         return Duration.ZERO;
     }
 
-
-    /**
-     * Sets the appropriate status and day type for a timesheet based on SQL logic
-     */
     /**
      * Sets the appropriate status and day type for a timesheet
      */
@@ -340,7 +341,6 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
             boolean isWorkingDay,
             LocalDate date,
             LocalDate today,
-            int extraWorkedSeconds,
             Duration scheduledHours
     ) {
         //  DayType
@@ -448,15 +448,13 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
 
         if (hasSystemGeneratedClockOut) {
             log.info("System generated");
-            timesheet.setWorkStatus("Failed Clock Out");
+            timesheet.setWorkStatus(TimesheetStatusEnum.FAILED_CLOCK_OUT.getLabel());
             timesheet.setStatus(TimesheetStatusEnum.PRESENT.getLabel());
             return;
         }
         log.info("Scheduler Hours from WS : {}", scheduledHours);
         Duration worked = timesheet.getTrackedHours() != null ? timesheet.getTrackedHours() : Duration.ZERO;
-        Duration overtimeThreshold = scheduledHours.plusMinutes(30);
-
-        log.info("worked : {}, scheduled : {}, userid: {}, date:{}", worked, overtimeThreshold, timesheet.getUserId(), timesheet.getDate());
+        Duration overtimeThreshold = scheduledHours.plusMinutes(extraWorkedSeconds);
 
         if (worked.compareTo(overtimeThreshold) > 0) {
             timesheet.setWorkStatus("OverTime");

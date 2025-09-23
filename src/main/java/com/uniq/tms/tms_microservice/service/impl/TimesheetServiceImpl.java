@@ -140,180 +140,206 @@ public class TimesheetServiceImpl implements TimesheetService {
     }
 
 
-    private List<UserEntity> resolveTargetUsers(String userIdFromToken, List<Long> groupIds, List<String> userId, String orgId, List<Long> roleIds, List<Long> locationIds, List<String> statusId, LocalDate startDate, LocalDate endDate) {
-
+    private List<UserEntity> resolveTargetUsers(
+            String userIdFromToken,
+            List<Long> groupIds,
+            List<String> userId,
+            String orgId,
+            List<Long> roleIds,
+            List<Long> locationIds,
+            List<String> statusId,
+            LocalDate startDate,
+            LocalDate endDate
+    ) {
         log.info("userId : {} , userIdFromToken : {}", userId, userIdFromToken);
+
         UserEntity currentUser = userAdapter.getUserById(userIdFromToken);
         String roleName = currentUser.getRole().getName().toUpperCase();
         log.info("Role name: {}", roleName);
 
-        String canSeeOwnKey = cacheLoaderService.getPrivilegeKey(PrivilegeConstants.CAN_SEE_OWN_TIMESHEET);
-        boolean canSeeOwn = rolePrivilegeHelper.roleHasPrivilege(roleName, canSeeOwnKey);
-        String canSeeGroupKey = cacheLoaderService.getPrivilegeKey(PrivilegeConstants.CAN_SEE_GROUP_LEVEL_TIMESHEETS);
-        boolean canSeeGroup = rolePrivilegeHelper.roleHasPrivilege(roleName, canSeeGroupKey);
-        String canSeeAllKey = cacheLoaderService.getPrivilegeKey(PrivilegeConstants.CAN_SEE_ALL_TIMESHEETS);
-        boolean canSeeAll = rolePrivilegeHelper.roleHasPrivilege(roleName, canSeeAllKey);
+        // Privilege checks
+        boolean canSeeOwn = rolePrivilegeHelper.roleHasPrivilege(roleName,
+                cacheLoaderService.getPrivilegeKey(PrivilegeConstants.CAN_SEE_OWN_TIMESHEET));
+        boolean canSeeGroup = rolePrivilegeHelper.roleHasPrivilege(roleName,
+                cacheLoaderService.getPrivilegeKey(PrivilegeConstants.CAN_SEE_GROUP_LEVEL_TIMESHEETS));
+        boolean canSeeAll = rolePrivilegeHelper.roleHasPrivilege(roleName,
+                cacheLoaderService.getPrivilegeKey(PrivilegeConstants.CAN_SEE_ALL_TIMESHEETS));
 
         log.info("Privileges - Own: {}, Group: {}, All: {}", canSeeOwn, canSeeGroup, canSeeAll);
-        boolean hasGroupFilter = groupIds != null && !groupIds.isEmpty();
-        boolean hasRoleFilter = roleIds != null && !roleIds.isEmpty();
-        boolean hasLocationFilter = locationIds != null && !locationIds.isEmpty();
+
+
+        Set<String> userIdSet = userId != null ? new HashSet<>(userId) : Collections.emptySet();
+        Set<Long> roleIdSet = roleIds != null ? new HashSet<>(roleIds) : Collections.emptySet();
+        Set<Long> groupIdSet = groupIds != null ? new HashSet<>(groupIds) : Collections.emptySet();
+        Set<Long> locationIdSet = locationIds != null ? new HashSet<>(locationIds) : Collections.emptySet();
+
+        // Flags
+        boolean hasGroupFilter = !groupIdSet.isEmpty();
+        boolean hasRoleFilter = !roleIdSet.isEmpty();
+        boolean hasLocationFilter = !locationIdSet.isEmpty();
         boolean hasStatusFilter = statusId != null && !statusId.isEmpty();
 
+        // Own + Group + All
         if (canSeeOwn && canSeeGroup && canSeeAll) {
-            if(userId != null && !userId.isEmpty() && userId.contains(userIdFromToken)){
+            if (!userIdSet.isEmpty() && userIdSet.contains(userIdFromToken)) {
                 log.info("Logged user timesheet");
                 return List.of(currentUser);
             }
-            List<UserEntity> allUsers = userAdapter.getAllUsers(orgId, userIdFromToken, UserRole.SUPERADMIN.getHierarchyLevel());
-            Stream<UserEntity> filteredStream = allUsers.stream();
 
-            if(userId!=null && !userId.isEmpty()){
-                log.info("Heirarchy level user timesheet");
-                filteredStream = filteredStream
-                        .filter(user -> userId.contains(user.getUserId()));
-            }
-            if (hasLocationFilter) {
-                List<GroupEntity> groupLocations = userAdapter.findGroupLocationByLocationId(locationIds);
-                List<Long> locationGroupIds = groupLocations.stream()
-                        .map(loc -> loc.getGroupId())
-                        .toList();
+            List<UserEntity> allUsers = userAdapter.getAllUsers(orgId, userIdFromToken,
+                    UserRole.SUPERADMIN.getHierarchyLevel());
 
-                if (locationGroupIds.isEmpty()) {
-                    throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No users found for selected location(s)");
-                }
-                List<UserEntity> groupUsers = userAdapter.findUsersByGroupIds(locationGroupIds);
-
-                Set<String> groupUserIds = groupUsers.stream()
-                        .map(UserEntity::getUserId)
-                        .collect(Collectors.toSet());
-
-                filteredStream = filteredStream
-                        .filter(user -> groupUserIds.contains(user.getUserId()));
-            }
-            if (hasGroupFilter) {
-                List<UserEntity> groupUsers = userAdapter.findUsersByGroupIds(groupIds);
-                Set<String> groupUserIds = groupUsers.stream()
-                        .map(UserEntity::getUserId)
-                        .collect(Collectors.toSet());
-
-                if (groupUserIds.isEmpty()) {
-                    throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No users found in selected group(s)");
-                }
-
-                filteredStream = filteredStream
-                        .filter(user -> groupUserIds.contains(user.getUserId()));
-            }
-            if (hasRoleFilter) {
-                Set<Long> roleIdSet = new HashSet<>(roleIds);
-                filteredStream = filteredStream
-                        .filter(user -> roleIdSet.contains(user.getRole().getRoleId()));
-            }
-            if (hasStatusFilter) {
-                List<TimesheetEntity> timesheetEntities = timesheetAdapter.findUserByStatusId(statusId, startDate, endDate);
-                Set<String> statusUserIds = timesheetEntities.stream()
-                        .map(te -> te.getUser().getUserId())
-                        .collect(Collectors.toSet());
-
-                if (statusUserIds.isEmpty()) {
-                    throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No users found with selected status(s)");
-                }
-
-                filteredStream = filteredStream
-                        .filter(user -> statusUserIds.contains(user.getUserId()));
-            }
-            List<UserEntity> filteredUsers = filteredStream.toList();
-            if (filteredUsers.isEmpty()) {
-                throw new ResponseStatusException(HttpStatus.OK, "No users matched the applied filters");
-            }
-            return filteredUsers;
+            return applyFilters(allUsers, userIdSet, groupIdSet, locationIdSet, roleIdSet,
+                    statusId, startDate, endDate);
         }
 
+        // Own + Group
         if (canSeeOwn && canSeeGroup) {
-            if(userId != null && !userId.isEmpty() && userId.contains(userIdFromToken)){
+            if (!userIdSet.isEmpty() && userIdSet.contains(userIdFromToken)) {
                 log.info("Logged user timesheet");
                 return List.of(currentUser);
             }
+
             List<Long> supervisedGroupIds = userAdapter.findGroupIdsBySupervisorId(userIdFromToken);
             log.info("Supervised group ids: {}", supervisedGroupIds);
 
-            List<UserEntity> allSupervisedUsers = userAdapter.findMembersByGroupIds(supervisedGroupIds, userIdFromToken);
-            Stream<UserEntity> filteredStream = allSupervisedUsers.stream();
-            if (userId != null && !userId.isEmpty()) {
-                filteredStream = filteredStream
-                        .filter(user -> userId.contains(user.getUserId()));
-            }
-            if (hasLocationFilter) {
-                List<GroupEntity> groupLocations = userAdapter.findGroupLocationByLocationId(locationIds);
-                List<Long> locationGroupIds = groupLocations.stream()
-                        .map(GroupEntity::getGroupId)
-                        .filter(supervisedGroupIds::contains)
-                        .toList();
+            List<UserEntity> supervisedUsers = userAdapter.findMembersByGroupIds(supervisedGroupIds, userIdFromToken);
 
-                if (locationGroupIds.isEmpty()) {
-                    throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No users found for selected location(s)");
-                }
-                List<UserEntity> locationGroupUsers = userAdapter.findMembersByGroupIds(locationGroupIds, userIdFromToken);
-
-                Set<String> locationGroupUserIds = locationGroupUsers.stream()
-                        .map(UserEntity::getUserId)
-                        .collect(Collectors.toSet());
-
-                filteredStream = filteredStream
-                        .filter(user -> locationGroupUserIds.contains(user.getUserId()));
-            }
-            if (hasGroupFilter) {
-                List<Long> validGroupIds = groupIds.stream()
-                        .filter(supervisedGroupIds::contains)
-                        .toList();
-
-                if (validGroupIds.isEmpty()) {
-                    throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not supervise the selected group(s)");
-                }
-
-                List<UserEntity> groupFilteredUsers = userAdapter.findMembersByGroupIds(validGroupIds, userIdFromToken);
-                Set<String> groupUserIds = groupFilteredUsers.stream()
-                        .map(UserEntity::getUserId)
-                        .collect(Collectors.toSet());
-
-                filteredStream = filteredStream
-                        .filter(user -> groupUserIds.contains(user.getUserId()));
-            }
-            if (hasRoleFilter) {
-                Set<Long> roleIdSet = new HashSet<>(roleIds);
-                filteredStream = filteredStream
-                        .filter(user -> roleIdSet.contains(user.getRole().getRoleId()));
-            }
-            if (hasStatusFilter) {
-                List<TimesheetEntity> timesheetEntities = timesheetAdapter.findUserByStatusId(statusId, startDate, endDate);
-                Set<String> statusUserIds = timesheetEntities.stream()
-                        .map(te -> te.getUser().getUserId())
-                        .collect(Collectors.toSet());
-
-                if (statusUserIds.isEmpty()) {
-                    throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No users found with selected status(s)");
-                }
-
-                filteredStream = filteredStream
-                        .filter(user -> statusUserIds.contains(user.getUserId()));
-            }
-            List<UserEntity> filteredUsers = filteredStream.toList();
-            if (filteredUsers.isEmpty()) {
-                throw new ResponseStatusException(HttpStatus.OK, "No users matched the applied filters");
-            }
-            return filteredUsers;
+            return applyFilters(supervisedUsers, userIdSet, groupIdSet, locationIdSet, roleIdSet,
+                    statusId, startDate, endDate, supervisedGroupIds);
         }
 
+        //  Own only
         if (canSeeOwn) {
             if (hasGroupFilter) {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not supervise the selected group(s)");
             } else if (hasRoleFilter) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You don't have access to view the higher official timesheet.");
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                        "You don't have access to view the higher official timesheet.");
             }
             return List.of(currentUser);
         }
+
+        // No Access
         throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied based on role privileges.");
     }
+
+    /**
+     * Applies group, location, role, and status filters to the given users.
+     */
+    private List<UserEntity> applyFilters(
+            List<UserEntity> baseUsers,
+            Set<String> userIdSet,
+            Set<Long> groupIdSet,
+            Set<Long> locationIdSet,
+            Set<Long> roleIdSet,
+            List<String> statusId,
+            LocalDate startDate,
+            LocalDate endDate
+    ) {
+        return applyFilters(baseUsers, userIdSet, groupIdSet, locationIdSet, roleIdSet,
+                statusId, startDate, endDate, null);
+    }
+
+    private List<UserEntity> applyFilters(
+            List<UserEntity> baseUsers,
+            Set<String> userIdSet,
+            Set<Long> groupIdSet,
+            Set<Long> locationIdSet,
+            Set<Long> roleIdSet,
+            List<String> statusId,
+            LocalDate startDate,
+            LocalDate endDate,
+            List<Long> supervisedGroupIds
+    ) {
+        Stream<UserEntity> stream = baseUsers.stream();
+
+        // User filter
+        if (!userIdSet.isEmpty()) {
+            stream = stream.filter(user -> userIdSet.contains(user.getUserId()));
+        }
+
+        // Location filter
+        if (!locationIdSet.isEmpty()) {
+            List<GroupEntity> groupLocations = userAdapter.findGroupLocationByLocationId(new ArrayList<>(locationIdSet));
+            List<Long> locationGroupIds = groupLocations.stream()
+                    .map(GroupEntity::getGroupId)
+                    .toList();
+
+            if (supervisedGroupIds != null) {
+                locationGroupIds = locationGroupIds.stream()
+                        .filter(supervisedGroupIds::contains)
+                        .toList();
+            }
+
+            if (locationGroupIds.isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No users found for selected location(s)");
+            }
+
+            List<UserEntity> locationGroupUsers = supervisedGroupIds != null
+                    ? userAdapter.findMembersByGroupIds(locationGroupIds, null)
+                    : userAdapter.findUsersByGroupIds(locationGroupIds);
+
+            Set<String> locationUserIds = locationGroupUsers.stream()
+                    .map(UserEntity::getUserId)
+                    .collect(Collectors.toSet());
+
+            stream = stream.filter(user -> locationUserIds.contains(user.getUserId()));
+        }
+
+        // Group filter
+        if (!groupIdSet.isEmpty()) {
+            List<Long> validGroupIds = supervisedGroupIds != null
+                    ? groupIdSet.stream().filter(supervisedGroupIds::contains).toList()
+                    : new ArrayList<>(groupIdSet);
+
+            if (validGroupIds.isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not supervise the selected group(s)");
+            }
+
+            List<UserEntity> groupUsers = supervisedGroupIds != null
+                    ? userAdapter.findMembersByGroupIds(validGroupIds, null)
+                    : userAdapter.findUsersByGroupIds(validGroupIds);
+
+            Set<String> groupUserIds = groupUsers.stream()
+                    .map(UserEntity::getUserId)
+                    .collect(Collectors.toSet());
+
+            if (groupUserIds.isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No users found in selected group(s)");
+            }
+
+            stream = stream.filter(user -> groupUserIds.contains(user.getUserId()));
+        }
+
+        // Role filter
+        if (!roleIdSet.isEmpty()) {
+            stream = stream.filter(user -> roleIdSet.contains(user.getRole().getRoleId()));
+        }
+
+        // Status filter
+        if (statusId != null && !statusId.isEmpty()) {
+            List<TimesheetEntity> timesheetEntities =
+                    timesheetAdapter.findUserByStatusId(statusId, startDate, endDate);
+
+            Set<String> statusUserIds = timesheetEntities.stream()
+                    .map(te -> te.getUser().getUserId())
+                    .collect(Collectors.toSet());
+
+            if (statusUserIds.isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No users found with selected status(s)");
+            }
+
+            stream = stream.filter(user -> statusUserIds.contains(user.getUserId()));
+        }
+
+        List<UserEntity> result = stream.toList();
+        if (result.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.OK, "No users matched the applied filters");
+        }
+        return result;
+    }
+
 
     private LocalDateRange calculateDateRange(LocalDate date, String timePeriod) {
         return Timeperiod.fromString(timePeriod).calculateDateRange(date);
