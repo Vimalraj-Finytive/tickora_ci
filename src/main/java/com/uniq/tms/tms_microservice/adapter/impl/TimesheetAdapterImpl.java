@@ -127,7 +127,6 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
                     startDate,
                     endDate,
                     userWorkingDaysMap.getOrDefault(user.getUserId(), Collections.emptySet()),
-                    extraWorkedSeconds,
                     userGroups,
                     fixedMap,
                     flexMap
@@ -241,7 +240,6 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
             LocalDate startDate,
             LocalDate endDate,
             Set<DayOfWeek> workingDays,
-            int extraWorkedSeconds,
             Map<String, String> userGroups,
             Map<String, Map<DayOfWeek, FixedWorkScheduleEntity>> fixedMap,
             Map<String, Map<DayOfWeek, FlexibleWorkScheduleEntity>> flexMap
@@ -265,7 +263,6 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
                             date,
                             LocalDate.now(ZoneId.of("Asia/Kolkata")),
                             workingDays,
-                            extraWorkedSeconds,
                             userGroups,
                             fixedMap,
                             flexMap
@@ -285,7 +282,6 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
             LocalDate date,
             LocalDate today,
             Set<DayOfWeek> workingDays,
-            int extraWorkedSeconds,
             Map<String,String> userGroups,
             Map<String, Map<DayOfWeek, FixedWorkScheduleEntity>> fixedMap,
             Map<String, Map<DayOfWeek, FlexibleWorkScheduleEntity>> flexMap

@@ -204,9 +204,8 @@ public class TimesheetServiceImpl implements TimesheetService {
             log.info("Supervised group ids: {}", supervisedGroupIds);
 
             List<UserEntity> supervisedUsers = userAdapter.findMembersByGroupIds(supervisedGroupIds, userIdFromToken);
-
             return applyFilters(supervisedUsers, userIdSet, groupIdSet, locationIdSet, roleIdSet,
-                    statusId, startDate, endDate, supervisedGroupIds);
+                    statusId, startDate, endDate, supervisedGroupIds,userIdFromToken);
         }
 
         //  Own only
@@ -238,7 +237,7 @@ public class TimesheetServiceImpl implements TimesheetService {
             LocalDate endDate
     ) {
         return applyFilters(baseUsers, userIdSet, groupIdSet, locationIdSet, roleIdSet,
-                statusId, startDate, endDate, null);
+                statusId, startDate, endDate, null,null);
     }
 
     private List<UserEntity> applyFilters(
@@ -250,8 +249,10 @@ public class TimesheetServiceImpl implements TimesheetService {
             List<String> statusId,
             LocalDate startDate,
             LocalDate endDate,
-            List<Long> supervisedGroupIds
+            List<Long> supervisedGroupIds,
+            String userIdFromToken
     ) {
+
         Stream<UserEntity> stream = baseUsers.stream();
 
         // User filter
@@ -277,7 +278,7 @@ public class TimesheetServiceImpl implements TimesheetService {
             }
 
             List<UserEntity> locationGroupUsers = supervisedGroupIds != null
-                    ? userAdapter.findMembersByGroupIds(locationGroupIds, null)
+                    ? userAdapter.findMembersByGroupIds(locationGroupIds, userIdFromToken)
                     : userAdapter.findUsersByGroupIds(locationGroupIds);
 
             Set<String> locationUserIds = locationGroupUsers.stream()
@@ -293,14 +294,14 @@ public class TimesheetServiceImpl implements TimesheetService {
                     ? groupIdSet.stream().filter(supervisedGroupIds::contains).toList()
                     : new ArrayList<>(groupIdSet);
 
+            log.info("Valid groupIds : {}", validGroupIds);
             if (validGroupIds.isEmpty()) {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not supervise the selected group(s)");
             }
 
             List<UserEntity> groupUsers = supervisedGroupIds != null
-                    ? userAdapter.findMembersByGroupIds(validGroupIds, null)
+                    ? userAdapter.findMembersByGroupIds(validGroupIds, userIdFromToken)
                     : userAdapter.findUsersByGroupIds(validGroupIds);
-
             Set<String> groupUserIds = groupUsers.stream()
                     .map(UserEntity::getUserId)
                     .collect(Collectors.toSet());
