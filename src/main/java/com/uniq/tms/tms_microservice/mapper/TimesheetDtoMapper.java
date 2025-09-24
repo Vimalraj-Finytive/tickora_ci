@@ -5,6 +5,7 @@ import com.uniq.tms.tms_microservice.entity.TimesheetEntity;
 import com.uniq.tms.tms_microservice.entity.TimesheetStatusEntity;
 import com.uniq.tms.tms_microservice.model.TimesheetHistory;
 import com.uniq.tms.tms_microservice.model.TimesheetStatus;
+import com.uniq.tms.tms_microservice.projection.TimesheetProjection;
 import com.uniq.tms.tms_microservice.projection.UserDashboard;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -12,6 +13,7 @@ import org.mapstruct.Named;
 import org.mapstruct.ReportingPolicy;
 import java.time.Duration;
 import java.time.LocalTime;
+import java.util.List;
 
 @Mapper(componentModel = "spring",unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface TimesheetDtoMapper {
@@ -41,4 +43,16 @@ public interface TimesheetDtoMapper {
     TimesheetStatus toStatusModel(TimesheetStatusEntity entity);
 
     TimesheetStatusDto toStatusDto(TimesheetStatus timesheetStatus);
+
+    List<TimesheetDto> toDto(List<TimesheetProjection> timesheets);
+    TimesheetDto toDto(TimesheetProjection projection);
+
+    default Duration map(LocalTime localTime) {
+        if (localTime == null) {
+            return Duration.ZERO;
+        }
+        return Duration.ofHours(localTime.getHour())
+                .plusMinutes(localTime.getMinute())
+                .plusSeconds(localTime.getSecond());
+    }
 }

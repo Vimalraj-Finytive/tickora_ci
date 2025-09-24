@@ -88,7 +88,7 @@ public class ReportServiceImpl implements ReportService {
                                 String.valueOf(serialNumber++),
                                 dto.getUserName(),
                                 dto.getMobileNumber(),
-                                dto.getGroupname(),
+                                dto.getGroupName(),
                                 dto.getStatus(),
                                 dto.getFirstClockInTime(),
                                 dto.getLastClockOutTime(),
@@ -155,7 +155,7 @@ public class ReportServiceImpl implements ReportService {
                             createStyledCell(row, col++, String.valueOf(serialNumber++), dataCellStyle);
                             createStyledCell(row, col++, dto.getUserName(), dataCellStyle);
                             createStyledCell(row, col++, dto.getMobileNumber(), dataCellStyle);
-                            createStyledCell(row, col++, dto.getGroupname(), dataCellStyle);
+                            createStyledCell(row, col++, dto.getGroupName(), dataCellStyle);
                             createStyledCell(row, col++, dto.getStatus(), dataCellStyle);
                             createStyledCell(row, col++, String.valueOf(dto.getDate()), dataCellStyle);
                             createStyledCell(row, col++, String.valueOf(dto.getFirstClockInTime()), dataCellStyle);
@@ -255,7 +255,7 @@ public class ReportServiceImpl implements ReportService {
                 createStyledCell(statusRow, c, String.valueOf(serialNumber), dataCellStyle);
                 createStyledCell(statusRow, c + 1, user.getSummary().getUserName(), dataCellStyle);
                 createStyledCell(statusRow, c + 2, user.getSummary().getMobileNumber(), dataCellStyle);
-                createStyledCell(statusRow, c + 3, user.getSummary().getGroupname(), dataCellStyle);
+                createStyledCell(statusRow, c + 3, user.getSummary().getGroupName(), dataCellStyle);
                 createStyledCell(statusRow, c + 4, "STATUS", dataCellStyle);
 
                 // For other 3 rows, add labels in 5th column
@@ -376,7 +376,7 @@ public class ReportServiceImpl implements ReportService {
 
             String userName = user.getSummary().getUserName();
             String mobile = user.getSummary().getMobileNumber();
-            String group = user.getSummary().getGroupname();
+            String group = user.getSummary().getGroupName();
 
             // 4 Rows: STATUS, IN, OUT, WH
             String[] labels = {"STATUS", "IN", "OUT", "WH"};
@@ -486,7 +486,7 @@ public class ReportServiceImpl implements ReportService {
             for (UserTimesheetResponseDto dto : timesheets){
                 if (dto.getTimesheets() != null){
                     for (TimesheetDto timesheetDto : dto.getTimesheets()){
-                        timesheetDto.setGroupname(requestedGroupName);
+                        timesheetDto.setGroupName(requestedGroupName);
                     }
                 }
             }

@@ -18,7 +18,7 @@ public interface TimesheetHistoryRepository extends JpaRepository<TimesheetHisto
 
     @Query("""
     SELECT t FROM TimesheetEntity t
-    WHERE t.userId IN :userIds
+    WHERE t.user.userId IN :userIds
       AND t.date = :logDate
 """)
     List<TimesheetEntity> findLatestLogByTimesheet(@Param("userIds") List<String> userIds, @Param("logDate") LocalDate date);
@@ -29,15 +29,5 @@ public interface TimesheetHistoryRepository extends JpaRepository<TimesheetHisto
     void updateTimesheetHistory(@Param("timesheetId") Long timesheetId,
                                @Param("logType") LogType logType,
                                @Param("logTime") LocalTime logTime);
-
-    @Query("""
-    SELECT th.logType
-    FROM TimesheetHistoryEntity th
-    JOIN th.timesheet t
-    WHERE t.userId = :userId
-      AND t.date = CURRENT_DATE
-    ORDER BY th.loggedTimestamp DESC
-""")
-    List<LogType> findLatestLogTypesByUserIdForToday(@Param("userId") String userId);
 
 }

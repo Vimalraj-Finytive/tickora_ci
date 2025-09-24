@@ -1,9 +1,11 @@
 package com.uniq.tms.tms_microservice.adapter;
 
 import com.uniq.tms.tms_microservice.entity.*;
+import java.time.DayOfWeek;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 public interface WorkScheduleAdapter {
     WorkScheduleEntity findDefaultActiveSchedule(String orgId);
@@ -27,4 +29,7 @@ public interface WorkScheduleAdapter {
     List<WorkScheduleEntity> findAllScheduleById(String orgId);
     int countByOrgId(String orgId);
     Map<String, String> getAllSchedules(String orgId);
+    Map<String, Set<DayOfWeek>> resolveWorkingDays(List<String> userIds);
+    List<FixedWorkScheduleEntity> findFixedSchedulesByUserIds(List<String> pagedUserIds);
+    List<FlexibleWorkScheduleEntity> findFlexibleSchedulesByUserIds(List<String> pagedUserIds);
 }

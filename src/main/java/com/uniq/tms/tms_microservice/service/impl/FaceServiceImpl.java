@@ -382,8 +382,8 @@ public class FaceServiceImpl implements FaceService {
                 LogType logType = faceDto.getTimesheetLogs().getFirst().getLogType();
                 String logTypeMessage = (logType == LogType.CLOCK_IN) ? "ClockIn Success" : "ClockOut Success";
                 Map<String, String> userResponse = new HashMap<>();
-                userResponse.put("userId:", userClockStatusDto.getUserId());
-                userResponse.put("userName:", user.getUserName());
+                userResponse.put("userId", userClockStatusDto.getUserId());
+                userResponse.put("userName", user.getUserName());
 
                 return new ApiResponse<>(200, logTypeMessage, userResponse);
             }

@@ -12,8 +12,8 @@ public interface TimesheetEntityMapper {
 
     TimesheetHistory toMiddleware(TimesheetHistoryEntity entity);
 
-    @Mapping(target = "timesheet.userId", source = "userId")
-    @Mapping(target = "timesheet.date", source = "date")
+    @Mapping(target = "timesheet.user.userId", source = "userId")
+    @Mapping(target = "timesheet.user.dateOfJoining", source = "date")
     TimesheetHistoryEntity toEntity(TimesheetHistoryDto timesheetHistory);
 
     TimesheetHistoryDto toDto(TimesheetHistory timesheetHistory);
