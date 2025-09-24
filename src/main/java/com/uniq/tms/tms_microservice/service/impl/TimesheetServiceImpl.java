@@ -65,8 +65,8 @@ public class TimesheetServiceImpl implements TimesheetService {
         List<Long> roleIds = request.getRoleId();
         List<Long> locationIds = request.getLocationId();
         List<String> statusIds = request.getStatusId();
-        int pageIndex = request.getPageIndex();
-        int pageSize = request.getPageSize();
+        Integer pageIndex = request.getPageIndex();
+        Integer pageSize = request.getPageSize();
         String keyword = request.getKeyword();
 
         if (fromDate != null && !timePeriod.isEmpty()) {

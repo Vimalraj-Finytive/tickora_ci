@@ -14,7 +14,7 @@ import java.util.Optional;
 
 public interface TimesheetAdapter {
 
-    PaginationResponseDto  filterTimesheetsForAllUsers(LocalDate startDate, LocalDate endDate, List<String> userIds, String orgId,  int pageIndex, int pageSize);
+    PaginationResponseDto  filterTimesheetsForAllUsers(LocalDate startDate, LocalDate endDate, List<String> userIds, String orgId,  Integer pageIndex, Integer pageSize);
     Optional<TimesheetEntity> findByUserIdAndDate(String userId, LocalDate date);
     TimesheetEntity saveTimesheet(TimesheetEntity timesheet);
     TimesheetHistoryEntity saveTimesheetHistory(TimesheetHistoryEntity history);

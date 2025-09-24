@@ -70,10 +70,13 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
             LocalDate endDate,
             List<String> userIds,
             String orgId,
-            int pageIndex,
-            int pageSize
+            Integer pageIndex,
+            Integer pageSize
     ) {
-        Pageable pageable = PageRequest.of(pageIndex, pageSize, Sort.by("userId").ascending());
+        Pageable pageable = (pageIndex != null && pageSize != null ) ?
+                PageRequest.of(pageIndex, pageSize, Sort.by("userId").ascending())
+                :Pageable.unpaged()
+                ;
         log.info("Get paginated users from DB");
 
         // Step 1: Fetch paginated users
@@ -141,7 +144,9 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
                 .filter(dto -> dto.getSummary() != null && dto.getTimesheets() != null && !dto.getTimesheets().isEmpty())
                 .toList();
 
-        PaginationDto pagination = buildPagination(pagedUser.getTotalElements(), pageIndex, pageSize);
+        int safePageIndex = pageIndex != null ? pageIndex : 0;
+        int safePageSize = pageSize != null ? pageSize : (int) pagedUser.getTotalElements();
+        PaginationDto pagination = buildPagination(pagedUser.getTotalElements(), safePageIndex, safePageSize);
         return createSuccessResponse(finalResponse, pagination);
     }
 
