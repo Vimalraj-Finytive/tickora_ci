@@ -151,7 +151,6 @@ public class WorkScheduleAdapterImpl implements WorkScheduleAdapter {
             return userWorkingDaysMap;
         }
 
-        // Fetch all schedules in a single query
         List<WorkScheduleEntity> schedules = workScheduleRepository.findAllSchedulesWithUsers(userIds);
 
         for (WorkScheduleEntity ws : schedules) {
