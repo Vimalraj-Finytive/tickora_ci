@@ -1,15 +1,10 @@
 package com.uniq.tms.tms_microservice.entity;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "users")
@@ -57,6 +52,9 @@ public class UserEntity {
     @ManyToOne
     @JoinColumn(name = "work_schedule_id")
     private WorkScheduleEntity workSchedule;
+
+    @OneToMany(mappedBy = "user")
+    private List<UserGroupEntity> userGroups;
 
     public UserEntity(String userId){
         this.userId = userId;
@@ -188,6 +186,14 @@ public class UserEntity {
 
     public void setWorkSchedule(WorkScheduleEntity workSchedule) {
         this.workSchedule = workSchedule;
+    }
+
+    public List<UserGroupEntity> getUserGroups() {
+        return userGroups;
+    }
+
+    public void setUserGroups(List<UserGroupEntity> userGroups) {
+        this.userGroups = userGroups;
     }
 
     @Override

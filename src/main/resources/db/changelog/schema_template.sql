@@ -517,3 +517,75 @@ CREATE TABLE user_history (
     comments TEXT,
     updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
+
+-- ===========================================================
+-- Indexes for timesheet queries (fetchMainTimesheets)
+-- ===========================================================
+
+--changeset system:create-timesheet-date-user-index
+CREATE INDEX IF NOT EXISTS idx_timesheet_date_user
+    ON ${schemaName}.timesheet (date, user_id);
+
+--changeset system:create-timesheet-status-index
+CREATE INDEX IF NOT EXISTS idx_timesheet_status
+    ON ${schemaName}.timesheet (status_id);
+
+--changeset system:create-users-doj-index
+CREATE INDEX IF NOT EXISTS idx_users_date_of_joining
+    ON ${schemaName}.users (date_of_joining);
+
+--changeset system:create-users-work-schedule-index
+CREATE INDEX IF NOT EXISTS idx_users_work_schedule
+    ON ${schemaName}.users (work_schedule_id);
+
+--changeset system:create-users-userid-index
+CREATE INDEX IF NOT EXISTS idx_users_userid
+    ON ${schemaName}.users (user_id);
+
+-- ===========================================================
+-- Indexes for user group queries (fetchUserGroups)
+-- ===========================================================
+
+--changeset system:create-user-group-userid-index
+CREATE INDEX IF NOT EXISTS idx_user_group_userid
+    ON ${schemaName}.user_group (user_id);
+
+--changeset system:create-org-groups-groupid-index
+CREATE INDEX IF NOT EXISTS idx_org_groups_groupid
+    ON ${schemaName}.org_groups (group_id);
+
+-- ===========================================================
+-- Indexes for timesheet history queries (fetchTimesheetHistory)
+-- ===========================================================
+
+--changeset system:create-timesheet-history-timesheetid-logtime
+CREATE INDEX IF NOT EXISTS idx_timesheet_history_timesheetid_logtime
+    ON ${schemaName}.timesheet_history (timesheet_id, log_time);
+
+--changeset system:create-timesheet-history-locationid
+CREATE INDEX IF NOT EXISTS idx_timesheet_history_locationid
+    ON ${schemaName}.timesheet_history (location_id);
+
+-- ===========================================================
+-- Indexes for WorkSchedule queries (findAllSchedulesWithUsers)
+-- ===========================================================
+
+--changeset system:create-work-schedule-is-active-index
+CREATE INDEX IF NOT EXISTS idx_work_schedule_is_active
+    ON ${schemaName}.work_schedule (is_active);
+
+--changeset system:create-work-schedule-id-index
+CREATE INDEX IF NOT EXISTS idx_work_schedule_id
+    ON ${schemaName}.work_schedule (work_schedule_id);
+
+--changeset system:create-fixed-work-schedule-work-schedule-id-index
+CREATE INDEX IF NOT EXISTS idx_fixed_work_schedule_ws_id
+    ON ${schemaName}.fixed_work_schedule (work_schedule_id);
+
+--changeset system:create-flexible-work-schedule-work-schedule-id-index
+CREATE INDEX IF NOT EXISTS idx_flexible_work_schedule_ws_id
+    ON ${schemaName}.flexible_work_schedule (work_schedule_id);
+
+--changeset system:create-weekly-work-schedule-work-schedule-id-index
+CREATE INDEX IF NOT EXISTS idx_weekly_work_schedule_ws_id
+    ON ${schemaName}.weekly_work_schedule (work_schedule_id);

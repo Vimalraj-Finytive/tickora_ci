@@ -4,7 +4,10 @@ import com.uniq.tms.tms_microservice.entity.UserEntity;
 import com.uniq.tms.tms_microservice.entity.UserGroupEntity;
 import com.uniq.tms.tms_microservice.model.UserResponse;
 import com.uniq.tms.tms_microservice.dto.UserNameSuggestionDto;
+import com.uniq.tms.tms_microservice.projection.TimesheetProjection;
 import jakarta.transaction.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -148,4 +151,39 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
 """)
     List<UserEntity> searchUsers(@Param("keyword") String keyword);
 
+    @Query("""
+    SELECT u.userId AS userId,
+           u.userName AS userName,
+           u.mobileNumber AS mobileNumber,
+           u.dateOfJoining AS date,
+           r.name AS roleName,
+           ws.scheduleName AS workScheduleName,
+           STRING_AGG(g.groupName, ',') AS groupNames
+    FROM UserEntity u
+    LEFT JOIN u.role r
+    LEFT JOIN u.workSchedule ws
+    LEFT JOIN UserGroupEntity ug ON ug.user.userId = u.userId
+    LEFT JOIN GroupEntity g ON g.id = ug.group.groupId
+    WHERE u.userId IN :userIds
+    GROUP BY u.userId, u.userName, u.mobileNumber, u.dateOfJoining, r.name, ws.scheduleName
+    """)
+    List<TimesheetProjection> findUsersByIds(@Param("userIds") List<String> userIds);
+
+    @Query("""
+    SELECT u.userId AS userId,
+           u.userName AS userName,
+           u.mobileNumber AS mobileNumber,
+           u.dateOfJoining AS date,
+           r.name AS roleName,
+           ws.scheduleName AS workScheduleName,
+           STRING_AGG(g.groupName, ',') AS groupNames
+    FROM UserEntity u
+    LEFT JOIN u.role r
+    LEFT JOIN u.workSchedule ws
+    LEFT JOIN UserGroupEntity ug ON ug.user.userId = u.userId
+    LEFT JOIN GroupEntity g ON g.id = ug.group.groupId
+    WHERE u.userId IN :userIds
+    GROUP BY u.userId, u.userName, u.mobileNumber, u.dateOfJoining, r.name, ws.scheduleName
+    """)
+    Page<TimesheetProjection> findUsersByUserIds(@Param("userIds") List<String> arrayOfUserIds, Pageable pageable);
 }

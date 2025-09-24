@@ -26,9 +26,9 @@ public class TimesheetReportDto {
 
     private List<String> statusId;
 
-    private int pageIndex;
+    private Integer pageIndex;
 
-    private int pageSize;
+    private Integer pageSize;
 
     private String keyword;
 
@@ -104,20 +104,20 @@ public class TimesheetReportDto {
         this.statusId = statusId;
     }
 
-    public int getPageIndex() {
+    public Integer getPageIndex() {
         return pageIndex;
     }
 
-    public void setPageIndex(int page) {
-        this.pageIndex = page;
+    public void setPageIndex(Integer pageIndex) {
+        this.pageIndex = pageIndex;
     }
 
-    public int getPageSize() {
+    public Integer getPageSize() {
         return pageSize;
     }
 
-    public void setPageSize(int size) {
-        this.pageSize = size;
+    public void setPageSize(Integer pageSize) {
+        this.pageSize = pageSize;
     }
 
     public String getKeyword() {
