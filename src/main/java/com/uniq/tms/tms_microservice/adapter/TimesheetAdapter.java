@@ -34,5 +34,5 @@ public interface TimesheetAdapter {
     Optional<TimesheetStatusEntity> findByStatusName(String label);
     List<TimesheetEntity> findUserByStatusId(List<String> statusId, LocalDate startDate, LocalDate endDate);
     LocationEntity getDefaultLocation(String orgId);
-    List<LogType> getUserLatestLogType(String userId);
+    List<String> findUserByStatusIdNotIn(LocalDate startDate, LocalDate endDate);
 }
