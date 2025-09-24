@@ -7,6 +7,7 @@ import com.uniq.tms.tms_microservice.entity.*;
 import com.uniq.tms.tms_microservice.enums.LogFrom;
 import com.uniq.tms.tms_microservice.enums.LogType;
 import com.uniq.tms.tms_microservice.enums.TimesheetStatusEnum;
+import com.uniq.tms.tms_microservice.enums.TimesheetWorkStatusEnum;
 import com.uniq.tms.tms_microservice.mapper.TimesheetDtoMapper;
 import com.uniq.tms.tms_microservice.projection.*;
 import com.uniq.tms.tms_microservice.repository.*;
@@ -245,14 +246,15 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
             Map<String, Map<DayOfWeek, FixedWorkScheduleEntity>> fixedMap,
             Map<String, Map<DayOfWeek, FlexibleWorkScheduleEntity>> flexMap
     ) {
-        log.info("Get user with defaults");
         Map<LocalDate, TimesheetDto> existingTimesheet = existingTimesheets.stream()
                         .collect(Collectors.toMap(TimesheetDto::getDate, Function.identity(),(a,b) -> a));
-        log.info("Existing timesheet: {}", existingTimesheet);
         LocalDate effectiveStart = startDate.isBefore(user.getDate())
                 ? user.getDate()
                 : startDate;
-
+        if (effectiveStart.isAfter(endDate)) {
+            log.info("User joined after requested range ({} > {}), returning empty timesheet list", effectiveStart, endDate);
+            return Collections.emptyList();
+        }
         List<TimesheetDto> completeList = effectiveStart.datesUntil(endDate.plusDays(1))
                 .map(date -> {
                     TimesheetDto existing = existingTimesheet.get(date);
@@ -384,7 +386,7 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
             if (TimesheetStatusEnum.PAID_LEAVE.getLabel().equals(timesheet.getStatus())
                     || TimesheetStatusEnum.PERMISSION.getLabel().equals(timesheet.getStatus())
                     || TimesheetStatusEnum.HALF_DAY.getLabel().equals(timesheet.getStatus())) {
-                timesheet.setUserDayType(TimesheetStatusEnum.TIME_OFF.getLabel());
+                timesheet.setUserDayType(TimesheetWorkStatusEnum.TIME_OFF.getLabel());
                 timesheet.setWorkStatus(TimesheetStatusEnum.NOT_MARKED.getLabel());
                 timesheet.setStatus(timesheet.getStatus());
             }
@@ -448,7 +450,7 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
 
         if (hasSystemGeneratedClockOut) {
             log.info("System generated");
-            timesheet.setWorkStatus(TimesheetStatusEnum.FAILED_CLOCK_OUT.getLabel());
+            timesheet.setWorkStatus(TimesheetWorkStatusEnum.FAILED_CLOCK_OUT.getLabel());
             timesheet.setStatus(TimesheetStatusEnum.PRESENT.getLabel());
             return;
         }
@@ -457,14 +459,14 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
         Duration overtimeThreshold = scheduledHours.plusMinutes(extraWorkedSeconds);
 
         if (worked.compareTo(overtimeThreshold) > 0) {
-            timesheet.setWorkStatus("OverTime");
-            timesheet.setStatus(TimesheetStatusEnum.OVERTIME.getLabel());
+            timesheet.setWorkStatus(TimesheetWorkStatusEnum.OVERTIME.getLabel());
+            timesheet.setStatus(TimesheetStatusEnum.PRESENT.getLabel());
         } else if (worked.compareTo(scheduledHours) >= 0) {
-            timesheet.setWorkStatus("Sufficient Hours");
+            timesheet.setWorkStatus(TimesheetWorkStatusEnum.SUFFICIENT_HOURS.getLabel());
             timesheet.setStatus(TimesheetStatusEnum.PRESENT.getLabel());
         } else {
-            timesheet.setWorkStatus("Less Worked Hours");
-            timesheet.setStatus(TimesheetStatusEnum.LESS_WORKED_HOURS.getLabel());
+            timesheet.setWorkStatus(TimesheetWorkStatusEnum.LESS_WORKED_HOURS.getLabel());
+            timesheet.setStatus(TimesheetStatusEnum.PRESENT.getLabel());
         }
     }
 
@@ -898,7 +900,7 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
 
     @Override
     public List<TimesheetEntity> findUserByStatusId(List<String> statusId, LocalDate startDate, LocalDate endDate) {
-        return timesheetRepository.findUserByStatusStatusIdIn(statusId, startDate, endDate);
+        return timesheetRepository.findUserByStatusIdIn(statusId, startDate, endDate);
     }
 
     @Override
@@ -907,8 +909,7 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
     }
 
     @Override
-    public List<LogType> getUserLatestLogType(String userId) {
-        return timesheetHistoryRepository.findLatestLogTypesByUserIdForToday(userId);
+    public List<String> findUserByStatusIdNotIn(LocalDate startDate, LocalDate endDate) {
+        return timesheetRepository.findUserByStatusIdNotIn(startDate,endDate);
     }
-
 }

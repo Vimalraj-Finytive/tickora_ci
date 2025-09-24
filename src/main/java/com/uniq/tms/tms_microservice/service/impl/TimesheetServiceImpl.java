@@ -319,18 +319,51 @@ public class TimesheetServiceImpl implements TimesheetService {
 
         // Status filter
         if (statusId != null && !statusId.isEmpty()) {
-            List<TimesheetEntity> timesheetEntities =
-                    timesheetAdapter.findUserByStatusId(statusId, startDate, endDate);
 
-            Set<String> statusUserIds = timesheetEntities.stream()
-                    .map(te -> te.getUser().getUserId())
-                    .collect(Collectors.toSet());
+            Set<String> specialStatusId = Set.of(ABSENT.getId(), NOT_MARKED.getId());
 
-            if (statusUserIds.isEmpty()) {
-                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No users found with selected status(s)");
+            List<String> trimmedStatusIds = statusId.stream()
+                    .map(String::trim)
+                    .collect(Collectors.toList());
+
+            LocalDate today = LocalDate.now(ZoneId.of("Asia/Kolkata"));
+            if (trimmedStatusIds.contains(NOT_MARKED.getId()) && !endDate.isEqual(today)) {
+                log.info("NOT_MARKED status can only be filtered for today's date. Ignoring it.");
+                trimmedStatusIds.remove(NOT_MARKED.getId());
             }
 
-            stream = stream.filter(user -> statusUserIds.contains(user.getUserId()));
+            if(trimmedStatusIds.contains(ABSENT.getId()) && endDate.isEqual(today)){
+                log.info("ABSENT status can only be filtered for past date. Ignoring it.");
+                trimmedStatusIds.remove(ABSENT.getId());
+            }
+
+            Set<String> specialStatus = trimmedStatusIds.stream()
+                    .filter(specialStatusId::contains)
+                    .collect(Collectors.toSet());
+
+            Set<String> normalStatus = trimmedStatusIds.stream()
+                    .filter(s -> !specialStatusId.contains(s))
+                    .collect(Collectors.toSet());
+
+            log.info("SpecialStatus : {}", specialStatus);
+            log.info("NormalStatus : {}", normalStatus);
+
+            Set<String> usersToInclude = new HashSet<>();
+
+            if (!normalStatus.isEmpty()) {
+                List<TimesheetEntity> normalTimesheets =
+                        timesheetAdapter.findUserByStatusId(new ArrayList<>(normalStatus), startDate, endDate);
+
+                normalTimesheets.forEach(te -> usersToInclude.add(te.getUser().getUserId()));
+            }
+
+            if (!specialStatus.isEmpty()) {
+                List<String> usersWithoutTimesheet = timesheetAdapter.findUserByStatusIdNotIn(startDate, endDate);
+                usersToInclude.addAll(usersWithoutTimesheet);
+            }
+
+            stream = baseUsers.stream()
+                    .filter(user -> usersToInclude.contains(user.getUserId()));
         }
 
         List<UserEntity> result = stream.toList();
@@ -340,8 +373,7 @@ public class TimesheetServiceImpl implements TimesheetService {
         return result;
     }
 
-
-    private LocalDateRange calculateDateRange(LocalDate date, String timePeriod) {
+        private LocalDateRange calculateDateRange(LocalDate date, String timePeriod) {
         return Timeperiod.fromString(timePeriod).calculateDateRange(date);
     }
 

@@ -289,8 +289,17 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
     );
 
     @Query("SELECT t FROM TimesheetEntity t WHERE t.status.statusId IN :statusIds AND t.date BETWEEN :startDate AND :endDate")
-    List<TimesheetEntity> findUserByStatusStatusIdIn(@Param("statusIds") List<String> statusIds,
+    List<TimesheetEntity> findUserByStatusIdIn(@Param("statusIds") List<String> statusIds,
                                                    @Param("startDate") LocalDate startDate,
                                                    @Param("endDate") LocalDate endDate);
+
+    @Query("SELECT u.userId FROM UserEntity u " +
+            "WHERE u.userId NOT IN (" +
+            "   SELECT t.user.userId FROM TimesheetEntity t " +
+            "   WHERE t.date BETWEEN :startDate AND :endDate" +
+            ") " +
+            "ORDER BY u.userId ASC")
+    List<String> findUserByStatusIdNotIn(@Param("startDate") LocalDate startDate,
+                                                     @Param("endDate") LocalDate endDate);
 
 }
