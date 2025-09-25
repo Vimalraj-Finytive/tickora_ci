@@ -58,6 +58,8 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
         this.userRepository = userRepository;
     }
 
+    @Value("${timesheet.extra.worked.minutes}")
+    private int extraWorkedMinutes;
     @Value("${timesheet.extra.worked.seconds}")
     private int extraWorkedSeconds;
 
@@ -73,6 +75,7 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
             Integer pageIndex,
             Integer pageSize
     ) {
+
         Pageable pageable = (pageIndex != null && pageSize != null ) ?
                 PageRequest.of(pageIndex, pageSize, Sort.by("userId").ascending())
                 :Pageable.unpaged()
@@ -80,20 +83,23 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
         log.info("Get paginated users from DB");
 
         // Step 1: Fetch paginated users
-        Page<TimesheetProjection> pagedUser = userRepository.findUsersByUserIds(userIds, pageable);
+        String[] arrayOfUserIds = userIds.toArray(new String[0]);
+        Page<TimesheetProjection> pagedUser = userRepository.findUsersByUserIds(arrayOfUserIds, pageable);
         List<String> pagedUserIds = pagedUser.stream()
                 .map(TimesheetProjection::getUserId)
                 .toList();
 
+        String[] userIdArrays = pagedUserIds.toArray(new String[0]);
+
         log.info("Fetched user Groups");
-        Map<String, String> userGroups = fetchUserGroupsMap(pagedUserIds);
+        Map<String, String> userGroups = fetchUserGroupsMap(userIdArrays);
 
         log.info("Fetch WorkSchedules for all users in date range");
         List<FixedWorkScheduleEntity> fixedSchedules = workScheduleAdapter
-                .findFixedSchedulesByUserIds(pagedUserIds);
+                .findFixedSchedulesByUserIds(userIdArrays);
 
         List<FlexibleWorkScheduleEntity> flexibleSchedules = workScheduleAdapter
-                .findFlexibleSchedulesByUserIds(pagedUserIds);
+                .findFlexibleSchedulesByUserIds(userIdArrays);
 
         // Step 2: Build maps
         Map<String, Map<DayOfWeek, FixedWorkScheduleEntity>> fixedMap = fixedSchedules.stream()
@@ -102,7 +108,10 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
                 )
                 .collect(Collectors.groupingBy(
                         Map.Entry::getKey,
-                        Collectors.toMap(e -> e.getValue().getKey(), e -> e.getValue().getValue())
+                        Collectors.toMap(
+                                e -> e.getValue().getKey(),
+                                e -> e.getValue().getValue(),
+                                (existing, replacement) ->existing)
                 ));
 
         Map<String, Map<DayOfWeek, FlexibleWorkScheduleEntity>> flexMap = flexibleSchedules.stream()
@@ -111,14 +120,18 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
                 )
                 .collect(Collectors.groupingBy(
                         Map.Entry::getKey,
-                        Collectors.toMap(e -> e.getValue().getKey(), e -> e.getValue().getValue())
+                        Collectors.toMap(
+                                e -> e.getValue().getKey(),
+                                e -> e.getValue().getValue(),
+                                (existing, replacement) ->existing)
+
                 ));
 
         log.info("Get all users timesheet");
-        Map<String, List<TimesheetDto>> userTimesheetMap = fetchAndMapTimesheets(startDate, endDate, pagedUserIds, userGroups, fixedMap, flexMap);
+        Map<String, List<TimesheetDto>> userTimesheetMap = fetchAndMapTimesheets(startDate, endDate, userIdArrays, userGroups, fixedMap, flexMap);
 
         log.info("Resolve user working days");
-        Map<String, Set<DayOfWeek>> userWorkingDaysMap = workScheduleAdapter.resolveWorkingDays(pagedUserIds);
+        Map<String, Set<DayOfWeek>> userWorkingDaysMap = workScheduleAdapter.resolveWorkingDays(userIdArrays);
 
 
         List<UserTimesheetResponseDto> finalResponse = new ArrayList<>();
@@ -157,7 +170,7 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
     private Map<String, List<TimesheetDto>> fetchAndMapTimesheets(
             LocalDate startDate,
             LocalDate endDate,
-            List<String> arrayOfUserIds,
+            String [] arrayOfUserIds,
             Map<String, String> userGroups,
             Map<String, Map<DayOfWeek, FixedWorkScheduleEntity>> fixedMap,
             Map<String, Map<DayOfWeek, FlexibleWorkScheduleEntity>> flexMap
@@ -210,7 +223,7 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
     /**
      * Fetches user groups and maps them by user ID
      */
-    private Map<String, String> fetchUserGroupsMap(List<String> arrayOfUserIds) {
+    private Map<String, String> fetchUserGroupsMap(String[] arrayOfUserIds) {
         log.info("Fetch user groups");
         return timesheetRepository.fetchUserGroups(arrayOfUserIds)
                 .stream()
@@ -457,7 +470,7 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
         }
         log.info("Scheduler Hours from WS : {}", scheduledHours);
         Duration worked = timesheet.getTrackedHours() != null ? timesheet.getTrackedHours() : Duration.ZERO;
-        Duration overtimeThreshold = scheduledHours.plusMinutes(extraWorkedSeconds);
+        Duration overtimeThreshold = scheduledHours.plusMinutes(extraWorkedMinutes);
 
         if (worked.compareTo(overtimeThreshold) > 0) {
             timesheet.setWorkStatus(TimesheetWorkStatusEnum.OVERTIME.getLabel());
