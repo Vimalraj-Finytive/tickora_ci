@@ -17,63 +17,27 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
     Optional<TimesheetEntity> findByUser_UserIdAndDate(String userId, LocalDate date);
 
     // Main timesheets per user
-    @Query(value = """
-    SELECT 
-        t.id AS id,
-        t.date AS date,
-        u.user_id AS userId,
-        u.user_name AS userName,
-        u.mobile_number AS mobileNumber,
-        r.name AS roleName,
-        ws.work_schedule_name AS workScheduleName,
-        t.first_clock_in AS firstClockIn,
-        t.last_clock_out AS lastClockOut,
-        t.tracked_hours AS trackedHours,
-        t.regular_hours AS regularHours,
-        ts.status_name AS status
-    FROM timesheet t
-    JOIN users u ON t.user_id = u.user_id
-    LEFT JOIN role r ON u.role_id = r.role_id
-    LEFT JOIN work_schedule ws ON u.work_schedule_id = ws.work_schedule_id
-    LEFT JOIN timesheet_status ts ON t.status_id = ts.status_id
-    WHERE t.date BETWEEN 
-          GREATEST(CAST(:startDate AS DATE), u.date_of_joining) 
-          AND COALESCE(:endDate, CURRENT_DATE)
-    AND (:userIds IS NULL OR u.user_id IN (:userIds))
-    ORDER BY date ASC
-    """, nativeQuery = true)
+    @Query(
+            value = "SELECT * FROM fetch_main_timesheets(:startDate, :endDate, :userIds)",
+            nativeQuery = true
+    )
     List<TimesheetProjection> fetchMainTimesheets(
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate,
-            @Param("userIds") List<String> userIds
+            @Param("userIds") String[] userIds
     );
 
     // Groups per user
-        @Query(value = """
-    SELECT u.user_id AS "userId",
-           STRING_AGG(DISTINCT g.group_name, ', ') AS "groupNames"
-    FROM users u
-    LEFT JOIN user_group ug ON u.user_id = ug.user_id
-    LEFT JOIN org_groups g ON ug.group_id = g.group_id
-    WHERE u.user_id IN (:userIds)
-    GROUP BY u.user_id
-    """, nativeQuery = true)
-    List<UserGroupProjection> fetchUserGroups(@Param("userIds") List<String> userIds);
+        @Query(value =
+                "SELECT * FROM fetch_user_groups(:userIds)",
+                nativeQuery = true
+        )
+    List<UserGroupProjection> fetchUserGroups(@Param("userIds") String[] userIds);
 
     // Timesheet history per user
-    @Query(value = """
-        SELECT th.timesheet_id AS timesheetId,
-               th.id AS timesheetHistoryId,
-               loc.name AS locationName,
-               th.log_time AS logTime,
-               th.log_type AS logType,
-               th.log_from AS logFrom,
-               th.logged_timestamp AS loggedTimestamp
-        FROM timesheet_history th
-        LEFT JOIN location loc ON th.location_id = loc.location_id
-        WHERE th.timesheet_id IN (:timesheetIds)
-        ORDER BY th.log_time
-        """, nativeQuery = true)
+    @Query(value = "SELECT * FROM fetch_timesheet_history(:timesheetIds)",
+            nativeQuery = true
+    )
     List<TimesheetHistoryProjection> fetchTimesheetHistory(@Param("timesheetIds") Long[] timesheetIds);
 
     List<TimesheetEntity> findActiveTimesheetsByDate(LocalDate today);
