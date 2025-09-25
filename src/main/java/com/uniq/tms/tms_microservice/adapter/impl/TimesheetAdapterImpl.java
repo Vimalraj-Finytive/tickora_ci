@@ -83,7 +83,8 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
         log.info("Get paginated users from DB");
 
         // Step 1: Fetch paginated users
-        Page<TimesheetProjection> pagedUser = userRepository.findUsersByUserIds(userIds, pageable);
+        String[] arrayOfUserIds = userIds.toArray(new String[0]);
+        Page<TimesheetProjection> pagedUser = userRepository.findUsersByUserIds(arrayOfUserIds, pageable);
         List<String> pagedUserIds = pagedUser.stream()
                 .map(TimesheetProjection::getUserId)
                 .toList();
