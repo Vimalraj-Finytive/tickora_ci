@@ -387,6 +387,7 @@ public class TimesheetServiceImpl implements TimesheetService {
                 .map(timesheetEntityMapper::toDto)
                 .map(timesheetEntityMapper::toEntity)
                 .toList();
+
         List<TimesheetHistoryEntity> savedEntities = new ArrayList<>();
 
         for (TimesheetHistoryEntity history : timesheetEntities) {
@@ -397,48 +398,78 @@ public class TimesheetServiceImpl implements TimesheetService {
             TimesheetEntity timesheet = history.getTimesheet();
             String userId = timesheet.getUser().getUserId();
             LocalDate date = timesheet.getDate();
+
             if (userId == null) {
                 throw new IllegalArgumentException("User ID must not be null. Check mapping!");
             }
 
             if (date == null) {
-                date = history.getLoggedTimestamp().toLocalDate();
+                date = LocalDate.now(ZoneId.of("Asia/Kolkata"));
             }
 
             LocalDate finalDate = date;
-            timesheet = timesheetAdapter.findByUserIdAndDate(userId, date)
-                    .orElseGet(() -> {
-                        TimesheetEntity newTimesheet = new TimesheetEntity();
-                        UserEntity user = userAdapter.findById(userId)
-                                .orElseThrow(() -> new IllegalStateException("User not found: " + userId));
-                        log.info("User : {}", user);
-                        newTimesheet.setUser(user);
-                        newTimesheet.setDate(finalDate);
-                        newTimesheet.setFirstClockIn(history.getLogType() == LogType.CLOCK_IN ? history.getLogTime() : null);
-                        newTimesheet.setLastClockOut(history.getLogType() == LogType.CLOCK_OUT ? history.getLogTime() : null);
-                        newTimesheet.setCreatedAt(LocalDateTime.now());
-                        newTimesheet.setTrackedHours(LocalTime.of(0, 0));
-                        newTimesheet.setTotalBreakHours(LocalTime.of(0, 0));
-                        newTimesheet.setRegularHours(LocalTime.of(0, 0));
-                        TimesheetStatusEntity presentStatus = timesheetAdapter.findByStatusName(TimesheetStatusEnum.PRESENT.getLabel())
-                                .orElseThrow(() -> new IllegalStateException("Status Present Not Found"));
-                        log.info("PresentStatus:", presentStatus);
-                        newTimesheet.setStatus(presentStatus);
-                        return timesheetAdapter.saveTimesheet(newTimesheet);
-                    });
+
+            Optional<TimesheetEntity> existingTimesheetOpt = timesheetAdapter.findByUserIdAndDate(userId, date);
+
+            if (existingTimesheetOpt.isPresent()) {
+                timesheet = existingTimesheetOpt.get();
+
+                if (history.getLogType() == LogType.CLOCK_IN && timesheet.getLastClockOut() != null) {
+                    throw new IllegalStateException("User has already clocked out for today. Cannot clock in again.");
+                }
+
+                if (history.getLogType() == LogType.CLOCK_IN && timesheet.getFirstClockIn() != null) {
+                    throw new IllegalStateException("User has already clocked in for today.");
+                }
+
+                if (history.getLogType() == LogType.CLOCK_OUT && timesheet.getFirstClockIn() == null) {
+                    throw new IllegalStateException("User has not clocked in yet. Cannot clock out.");
+                }
+
+                if(history.getLogType() == LogType.CLOCK_OUT && timesheet.getLastClockOut() != null){
+                    throw new IllegalStateException("User has already Clocked out for a day, cannot clock out again.");
+                }
+
+            } else {
+                timesheet = new TimesheetEntity();
+                UserEntity user = userAdapter.findById(userId)
+                        .orElseThrow(() -> new IllegalStateException("User not found: " + userId));
+                log.info("User : {}", user);
+                timesheet.setUser(user);
+                timesheet.setDate(finalDate);
+                timesheet.setCreatedAt(LocalDateTime.now());
+                timesheet.setTrackedHours(LocalTime.of(0, 0));
+                timesheet.setTotalBreakHours(LocalTime.of(0, 0));
+                timesheet.setRegularHours(LocalTime.of(0, 0));
+
+                TimesheetStatusEntity presentStatus = timesheetAdapter.findByStatusName(TimesheetStatusEnum.PRESENT.getLabel())
+                        .orElseThrow(() -> new IllegalStateException("Status Present Not Found"));
+                timesheet.setStatus(presentStatus);
+
+                if (history.getLogType() == LogType.CLOCK_IN) {
+                    timesheet.setFirstClockIn(LocalTime.now(ZoneId.of("Asia/Kolkata")));
+                } else if (history.getLogType() == LogType.CLOCK_OUT) {
+                    throw new IllegalStateException("Cannot clock out before clocking in.");
+                }
+
+                timesheet = timesheetAdapter.saveTimesheet(timesheet);
+            }
 
             history.setTimesheet(timesheet);
+
+            history.setLogTime(LocalTime.now(ZoneId.of("Asia/Kolkata")));
+            history.setLoggedTimestamp(LocalDateTime.now());
             savedEntities.add(timesheetAdapter.saveTimesheetHistory(history));
 
-            if (history.getLogType() == LogType.CLOCK_IN) {
-                if (timesheet.getFirstClockIn() == null) {
-                    timesheet.setFirstClockIn(history.getLogTime());
-                }
-            } else if (history.getLogType() == LogType.CLOCK_OUT) {
-                timesheet.setLastClockOut(history.getLogTime());
+            if (history.getLogType() == LogType.CLOCK_IN && timesheet.getFirstClockIn() == null) {
+                timesheet.setFirstClockIn(LocalTime.now(ZoneId.of("Asia/Kolkata")));
+            } else if (history.getLogType() == LogType.CLOCK_OUT && timesheet.getLastClockOut() == null) {
+                timesheet.setLastClockOut(LocalTime.now(ZoneId.of("Asia/Kolkata")));
             }
+
             timesheetAdapter.saveTimesheet(timesheet);
         }
+
         timesheetAdapter.calculateTrackedAndBreakHours(savedEntities);
 
         return savedEntities.stream()
@@ -829,97 +860,4 @@ public class TimesheetServiceImpl implements TimesheetService {
                 .toList();
         return status;
     }
-
-    @Override
-    public List<TimesheetHistory> processTimesheet(List<TimesheetHistory> timesheetMiddlewareLogs) {
-        List<TimesheetHistoryEntity> timesheetEntities = timesheetMiddlewareLogs.stream()
-                .map(timesheetEntityMapper::toDto)
-                .map(timesheetEntityMapper::toEntity)
-                .toList();
-
-        List<TimesheetHistoryEntity> savedEntities = new ArrayList<>();
-
-        for (TimesheetHistoryEntity history : timesheetEntities) {
-            if (history.getTimesheet() == null) {
-                throw new IllegalArgumentException("Timesheet must not be null in TimesheetHistoryEntity.");
-            }
-
-            TimesheetEntity timesheet = history.getTimesheet();
-            String userId = timesheet.getUser().getUserId();
-            LocalDate date = timesheet.getDate();
-
-            if (userId == null) {
-                throw new IllegalArgumentException("User ID must not be null. Check mapping!");
-            }
-
-            if (date == null) {
-                date = LocalDate.now(ZoneId.of("Asia/Kolkata"));
-            }
-
-            LocalDate finalDate = date;
-
-            Optional<TimesheetEntity> existingTimesheetOpt = timesheetAdapter.findByUserIdAndDate(userId, date);
-
-            if (existingTimesheetOpt.isPresent()) {
-                timesheet = existingTimesheetOpt.get();
-
-                if (history.getLogType() == LogType.CLOCK_IN && timesheet.getLastClockOut() != null) {
-                    throw new IllegalStateException("User has already clocked out for today. Cannot clock in again.");
-                }
-
-                if (history.getLogType() == LogType.CLOCK_IN && timesheet.getFirstClockIn() != null) {
-                    throw new IllegalStateException("User has already clocked in for today.");
-                }
-
-                if (history.getLogType() == LogType.CLOCK_OUT && timesheet.getFirstClockIn() == null) {
-                    throw new IllegalStateException("User has not clocked in yet. Cannot clock out.");
-                }
-
-            } else {
-                timesheet = new TimesheetEntity();
-                UserEntity user = userAdapter.findById(userId)
-                        .orElseThrow(() -> new IllegalStateException("User not found: " + userId));
-                log.info("User : {}", user);
-                timesheet.setUser(user);
-                timesheet.setDate(finalDate);
-                timesheet.setCreatedAt(LocalDateTime.now());
-                timesheet.setTrackedHours(LocalTime.of(0, 0));
-                timesheet.setTotalBreakHours(LocalTime.of(0, 0));
-                timesheet.setRegularHours(LocalTime.of(0, 0));
-
-                TimesheetStatusEntity presentStatus = timesheetAdapter.findByStatusName(TimesheetStatusEnum.PRESENT.getLabel())
-                        .orElseThrow(() -> new IllegalStateException("Status Present Not Found"));
-                timesheet.setStatus(presentStatus);
-
-                if (history.getLogType() == LogType.CLOCK_IN) {
-                    timesheet.setFirstClockIn(LocalTime.now(ZoneId.of("Asia/Kolkata")));
-                } else if (history.getLogType() == LogType.CLOCK_OUT) {
-                    throw new IllegalStateException("Cannot clock out before clocking in.");
-                }
-
-                timesheet = timesheetAdapter.saveTimesheet(timesheet);
-            }
-
-            history.setTimesheet(timesheet);
-
-            history.setLogTime(LocalTime.now(ZoneId.of("Asia/Kolkata")));
-            history.setLoggedTimestamp(LocalDateTime.now());
-            savedEntities.add(timesheetAdapter.saveTimesheetHistory(history));
-
-            if (history.getLogType() == LogType.CLOCK_IN && timesheet.getFirstClockIn() == null) {
-                timesheet.setFirstClockIn(LocalTime.now(ZoneId.of("Asia/Kolkata")));
-            } else if (history.getLogType() == LogType.CLOCK_OUT && timesheet.getLastClockOut() == null) {
-                timesheet.setLastClockOut(LocalTime.now(ZoneId.of("Asia/Kolkata")));
-            }
-
-            timesheetAdapter.saveTimesheet(timesheet);
-        }
-
-        timesheetAdapter.calculateTrackedAndBreakHours(savedEntities);
-
-        return savedEntities.stream()
-                .map(timesheetEntityMapper::toMiddleware)
-                .toList();
-    }
-
 }

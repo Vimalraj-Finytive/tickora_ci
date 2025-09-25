@@ -245,7 +245,7 @@ public class FaceServiceImpl implements FaceService {
 
                 // Here, processTimesheet might throw IllegalStateException for double clock-in
                 try {
-                    timesheetService.processTimesheet(middlewareLogs);
+                    timesheetService.processTimesheetLogs(middlewareLogs);
                 } catch (IllegalStateException ex) {
                     log.warn("Timesheet validation failed: {}", ex.getMessage());
                     return new ApiResponse<>(400, ex.getMessage(), null);
@@ -373,7 +373,7 @@ public class FaceServiceImpl implements FaceService {
                                 .map(timesheetEntityMapper::toMiddleware)
                                 .toList();
                 try {
-                    timesheetService.processTimesheet(middlewareLogs);
+                    timesheetService.processTimesheetLogs(middlewareLogs);
                 } catch (IllegalStateException ex) {
                     log.warn("Timesheet validation failed: {}", ex.getMessage());
                     return new ApiResponse<>(400, ex.getMessage(), null);
