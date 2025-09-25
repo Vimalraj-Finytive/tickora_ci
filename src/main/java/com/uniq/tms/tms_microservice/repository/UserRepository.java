@@ -169,21 +169,26 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
     """)
     List<TimesheetProjection> findUsersByIds(@Param("userIds") List<String> userIds);
 
-    @Query("""
-    SELECT u.userId AS userId,
-           u.userName AS userName,
-           u.mobileNumber AS mobileNumber,
-           u.dateOfJoining AS date,
+    @Query(value = """
+    SELECT u.user_id AS userId,
+           u.user_name AS userName,
+           u.mobile_number AS mobileNumber,
+           u.date_of_joining AS date,
            r.name AS roleName,
-           ws.scheduleName AS workScheduleName,
-           STRING_AGG(g.groupName, ',') AS groupNames
-    FROM UserEntity u
-    LEFT JOIN u.role r
-    LEFT JOIN u.workSchedule ws
-    LEFT JOIN UserGroupEntity ug ON ug.user.userId = u.userId
-    LEFT JOIN GroupEntity g ON g.id = ug.group.groupId
-    WHERE u.userId IN :userIds
-    GROUP BY u.userId, u.userName, u.mobileNumber, u.dateOfJoining, r.name, ws.scheduleName
-    """)
-    Page<TimesheetProjection> findUsersByUserIds(@Param("userIds") List<String> arrayOfUserIds, Pageable pageable);
+           ws.work_schedule_name AS workScheduleName,
+           STRING_AGG(g.group_name, ',') AS groupNames
+    FROM users u
+    LEFT JOIN role r ON u.role_id = r.role_id
+    LEFT JOIN work_schedule ws ON u.work_schedule_id = ws.work_schedule_id
+    LEFT JOIN user_group ug ON ug.user_id = u.user_id
+    LEFT JOIN org_groups g ON g.group_id = ug.group_id
+    WHERE u.user_id = ANY(:userIds)
+      AND u.active = true
+    GROUP BY u.user_id, u.user_name, u.mobile_number, u.date_of_joining, r.name, ws.work_schedule_name
+    """, nativeQuery = true)
+    Page<TimesheetProjection> findUsersByUserIds(
+            @Param("userIds") String[] userIds,
+            Pageable pageable
+    );
+
 }

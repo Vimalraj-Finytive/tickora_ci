@@ -7,11 +7,8 @@ import com.uniq.tms.tms_microservice.service.impl.WorkScheduleServiceImpl;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.stereotype.Component;
-
 import java.time.DayOfWeek;
-import java.time.LocalDate;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Component
 public class WorkScheduleAdapterImpl implements WorkScheduleAdapter {
@@ -144,10 +141,10 @@ public class WorkScheduleAdapterImpl implements WorkScheduleAdapter {
         return workScheduleMap;
     }
 
-    public Map<String, Set<DayOfWeek>> resolveWorkingDays(List<String> userIds) {
+    public Map<String, Set<DayOfWeek>> resolveWorkingDays(String[] userIds) {
         Map<String, Set<DayOfWeek>> userWorkingDaysMap = new HashMap<>();
 
-        if (userIds == null || userIds.isEmpty()) {
+        if (userIds == null) {
             return userWorkingDaysMap;
         }
 
@@ -207,12 +204,12 @@ public class WorkScheduleAdapterImpl implements WorkScheduleAdapter {
     }
 
     @Override
-    public List<FixedWorkScheduleEntity> findFixedSchedulesByUserIds(List<String> pagedUserIds) {
+    public List<FixedWorkScheduleEntity> findFixedSchedulesByUserIds(String[] pagedUserIds) {
         return workScheduleRepository.findFixedSchedulesByUserIds(pagedUserIds);
     }
 
     @Override
-    public List<FlexibleWorkScheduleEntity> findFlexibleSchedulesByUserIds(List<String> pagedUserIds) {
+    public List<FlexibleWorkScheduleEntity> findFlexibleSchedulesByUserIds(String[] pagedUserIds) {
         return workScheduleRepository.findFlexibleSchedulesByUserIds(pagedUserIds);
     }
 }
