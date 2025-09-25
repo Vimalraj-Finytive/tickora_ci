@@ -10,6 +10,8 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -115,20 +117,29 @@ public interface WorkScheduleRepository extends JpaRepository<WorkScheduleEntity
     @Query(value = "SELECT work_schedule_id, work_schedule_name FROM work_schedule WHERE organization_id = :orgId", nativeQuery = true)
     List<Object[]> findSchedule(@Param("orgId") String orgId);
 
-    @Query(value = "SELECT * FROM fetch_work_schedules_with_users(:userIds)",
-            nativeQuery = true
-    )
-    List<WorkScheduleEntity> findAllSchedulesWithUsers(@Param("userIds") String[] userIds);
+    @Query("SELECT ws FROM WorkScheduleEntity ws " +
+            "LEFT JOIN FETCH ws.users u " +
+            "LEFT JOIN FETCH ws.fixedWorkSchedules fws " +
+            "LEFT JOIN FETCH ws.flexibleWorkSchedules flws " +
+            "LEFT JOIN FETCH ws.weeklyWorkSchedule wws " +
+            "WHERE u.userId IN :userIds AND ws.isActive = true")
+    List<WorkScheduleEntity> findAllSchedulesWithUsers(@Param("userIds") List<String> userIds);
 
-    @Query(value = "SELECT * FROM fetch_fixed_schedules_by_user_ids(:userIds)",
-            nativeQuery = true
-    )
-    List<FixedWorkScheduleEntity> findFixedSchedulesByUserIds(@Param("userIds") String[] userIds);
+    @Query("""
+    SELECT f
+    FROM FixedWorkScheduleEntity f
+    JOIN f.workScheduleEntity w
+    JOIN UserEntity u ON u.workSchedule.id = w.id
+    WHERE u.userId IN :userIds
+""")
+    List<FixedWorkScheduleEntity> findFixedSchedulesByUserIds(@Param("userIds") List<String> userIds);
 
-
-    @Query(value = "SELECT * FROM fetch_flexible_schedules_by_user_ids(:userIds)",
-            nativeQuery = true
-    )
-    List<FlexibleWorkScheduleEntity> findFlexibleSchedulesByUserIds(@Param("userIds") String[] userIds);
-
+    @Query("""
+    SELECT f
+    FROM FlexibleWorkScheduleEntity f
+    JOIN f.workScheduleEntity w
+    JOIN UserEntity u ON u.workSchedule.id = w.id
+    WHERE u.userId IN :userIds
+""")
+    List<FlexibleWorkScheduleEntity> findFlexibleSchedulesByUserIds(@Param("userIds") List<String> userIds);
 }
