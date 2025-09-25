@@ -29,7 +29,7 @@ public interface WorkScheduleAdapter {
     List<WorkScheduleEntity> findAllScheduleById(String orgId);
     int countByOrgId(String orgId);
     Map<String, String> getAllSchedules(String orgId);
-    Map<String, Set<DayOfWeek>> resolveWorkingDays(String[] userIds);
-    List<FixedWorkScheduleEntity> findFixedSchedulesByUserIds(String[] pagedUserIds);
-    List<FlexibleWorkScheduleEntity> findFlexibleSchedulesByUserIds(String[]  pagedUserIds);
+    Map<String, Set<DayOfWeek>> resolveWorkingDays(List<String> userIds);
+    List<FixedWorkScheduleEntity> findFixedSchedulesByUserIds(List<String> pagedUserIds);
+    List<FlexibleWorkScheduleEntity> findFlexibleSchedulesByUserIds(List<String> pagedUserIds);
 }
