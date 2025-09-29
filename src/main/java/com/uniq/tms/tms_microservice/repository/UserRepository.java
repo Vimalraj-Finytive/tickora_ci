@@ -191,4 +191,24 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
             Pageable pageable
     );
 
+    @Query(value = """
+    SELECT u.user_id AS userId,
+           u.user_name AS userName,
+           u.mobile_number AS mobileNumber,
+           u.date_of_joining AS date,
+           r.name AS roleName,
+           ws.work_schedule_name AS workScheduleName,
+           STRING_AGG(g.group_name, ',') AS groupNames
+    FROM users u
+    LEFT JOIN role r ON u.role_id = r.role_id
+    LEFT JOIN work_schedule ws ON u.work_schedule_id = ws.work_schedule_id
+    LEFT JOIN user_group ug ON ug.user_id = u.user_id
+    LEFT JOIN org_groups g ON g.group_id = ug.group_id
+    WHERE u.user_id = ANY(:userIds)
+      AND u.active = true
+    GROUP BY u.user_id, u.user_name, u.mobile_number, u.date_of_joining, r.name, ws.work_schedule_name
+    """, nativeQuery = true)
+    List<TimesheetProjection> findUsersByUserIds(
+            @Param("userIds") String[] userIds);
+
 }

@@ -5,7 +5,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.uniq.tms.tms_microservice.enums.LogFrom;
 import com.uniq.tms.tms_microservice.enums.LogType;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 public class TimesheetHistoryDto {
 
@@ -17,8 +16,6 @@ public class TimesheetHistoryDto {
     private String logTime;
     private LogType logType;
     private LogFrom logFrom;
-    @JsonFormat(shape = JsonFormat.Shape.STRING)
-    private LocalDateTime loggedTimestamp;
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String userId;
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
@@ -82,13 +79,6 @@ public class TimesheetHistoryDto {
 
     public void setLogFrom(LogFrom logFrom) {
         this.logFrom = logFrom;
-    }
-    public LocalDateTime getLoggedTimestamp() {
-        return loggedTimestamp;
-    }
-
-    public void setLoggedTimestamp(LocalDateTime loggedTimestamp) {
-        this.loggedTimestamp = loggedTimestamp;
     }
 
     public Long getTimesheetHistoryId() {
