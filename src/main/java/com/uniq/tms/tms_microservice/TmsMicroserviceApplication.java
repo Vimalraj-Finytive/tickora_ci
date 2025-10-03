@@ -1,6 +1,6 @@
 package com.uniq.tms.tms_microservice;
 
-import com.uniq.tms.tms_microservice.config.security.cache.CacheDependencyConfig;
+import com.uniq.tms.tms_microservice.shared.security.cache.CacheDependencyConfig;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;

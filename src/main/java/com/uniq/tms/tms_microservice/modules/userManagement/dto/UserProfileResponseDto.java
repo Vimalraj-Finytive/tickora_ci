@@ -1,0 +1,116 @@
+package com.uniq.tms.tms_microservice.modules.userManagement.dto;
+
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.uniq.tms.tms_microservice.modules.locationManagement.dto.LocationDto;
+
+import java.time.LocalDate;
+import java.util.List;
+
+public class UserProfileResponseDto {
+
+    private String userId;
+    private String userName;
+    private String email;
+    private String mobileNumber;
+    private String roleName;
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    private LocalDate dateOfJoining;
+    private List<LocationDto> location;
+    private List<UserGroupProfileDto> groupDtos;
+    private String organizationName;
+    private String workSchedule;
+    private String orgType;
+    private List<ParentDto> parent;
+
+    public UserProfileResponseDto(){}
+
+    public UserProfileResponseDto(String userId, String userName, String email, String mobileNumber, String roleName, LocalDate dateOfJoining, List<LocationDto> location, List<UserGroupProfileDto> groupDtos, String organizationName, String workSchedule, String orgType, List<ParentDto> parent) {
+        this.userId = userId;
+        this.userName = userName;
+        this.email = email;
+        this.mobileNumber = mobileNumber;
+        this.roleName = roleName;
+        this.dateOfJoining = dateOfJoining;
+        this.location = location;
+        this.groupDtos = groupDtos;
+        this.organizationName = organizationName;
+        this.workSchedule = workSchedule;
+        this.orgType = orgType;
+        this.parent = parent;
+    }
+
+    public LocalDate getDateOfJoining() {
+        return dateOfJoining;
+    }
+    public void setDateOfJoining(LocalDate dateOfJoining) {
+        this.dateOfJoining = dateOfJoining;
+    }
+    public String getUserId() {
+        return userId;
+    }
+    public void setUserId(String userId) {
+        this.userId = userId;
+    }
+    public String getUserName() {
+        return userName;
+    }
+    public void setUserName(String userName) {
+        this.userName = userName;
+    }
+    public String getEmail() {
+        return email;
+    }
+    public void setEmail(String email) {
+        this.email = email;
+    }
+    public String getMobileNumber() {
+        return mobileNumber;
+    }
+    public void setMobileNumber(String mobileNumber) {
+        this.mobileNumber = mobileNumber;
+    }
+    public String getRoleName() {
+        return roleName;
+    }
+    public void setRoleName(String roleName) {
+        this.roleName = roleName;
+    }
+    public List<LocationDto> getLocation() {return location;}
+    public void setLocation(List<LocationDto> location) {this.location = location;}
+    public List<UserGroupProfileDto> getGroupDtos() {
+        return groupDtos;
+    }
+    public void setGroupDtos(List<UserGroupProfileDto> groupDtos) {
+        this.groupDtos = groupDtos;
+    }
+    public String getOrganizationName(){
+        return organizationName;
+    }
+    public void setOrganizationName(String organizationName){
+        this.organizationName = organizationName;
+    }
+
+    public String getWorkSchedule() {
+        return workSchedule;
+    }
+
+    public void setWorkSchedule(String workSchedule) {
+        this.workSchedule = workSchedule;
+    }
+
+    public String getOrgType() {
+        return orgType;
+    }
+
+    public void setOrgType(String orgType) {
+        this.orgType = orgType;
+    }
+
+    public List<ParentDto> getParent() {
+        return parent;
+    }
+
+    public void setParentDto(List<ParentDto> parent) {
+        this.parent = parent;
+    }
+}
