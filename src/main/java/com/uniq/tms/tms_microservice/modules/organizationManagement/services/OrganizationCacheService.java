@@ -1,0 +1,10 @@
+package com.uniq.tms.tms_microservice.modules.organizationManagement.services;
+
+import com.uniq.tms.tms_microservice.modules.userManagement.enums.PrivilegeConstants;
+
+public interface OrganizationCacheService {
+    void loadAllRolesToCache(String orgId, String schema);
+    void loadPrivilegesFromDB(String schema);
+    String getPrivilegeKey(PrivilegeConstants constant);
+
+}
