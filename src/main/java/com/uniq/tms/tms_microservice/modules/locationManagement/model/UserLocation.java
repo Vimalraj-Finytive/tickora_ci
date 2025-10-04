@@ -1,11 +1,15 @@
-package com.uniq.tms.tms_microservice.modules.userManagement.dto;
+package com.uniq.tms.tms_microservice.modules.locationManagement.model;
 
 import java.util.List;
 
-public class UserLocationDto {
-
-    private  String userId;
+public class UserLocation {
+    private String userId;
     private List<Long> locationId;
+
+    public UserLocation(List<Long> locationId, String userId) {
+        this.locationId = locationId;
+        this.userId = userId;
+    }
 
     public String getUserId() {
         return userId;

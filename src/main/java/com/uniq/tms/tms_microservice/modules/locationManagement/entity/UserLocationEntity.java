@@ -1,6 +1,6 @@
-package com.uniq.tms.tms_microservice.modules.userManagement.entity;
+package com.uniq.tms.tms_microservice.modules.locationManagement.entity;
 
-import com.uniq.tms.tms_microservice.modules.locationManagement.entity.LocationEntity;
+import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;

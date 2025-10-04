@@ -1,5 +1,6 @@
 package com.uniq.tms.tms_microservice.modules.locationManagement.controller;
 
+import com.uniq.tms.tms_microservice.modules.locationManagement.constant.LocationConstant;
 import com.uniq.tms.tms_microservice.modules.locationManagement.dto.LocationDto;
 import com.uniq.tms.tms_microservice.modules.locationManagement.dto.LocationListDto;
 import com.uniq.tms.tms_microservice.modules.locationManagement.facade.LocationFacade;
@@ -12,7 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping
+@RequestMapping(LocationConstant.LOCATION_URL)
 public class LocationController {
 
     private final LocationFacade locationFacade;
@@ -23,7 +24,7 @@ public class LocationController {
         this.authHelper = authHelper;
     }
 
-    @GetMapping("/location")
+    @GetMapping
     public ResponseEntity<ApiResponse> getAllLocation(@RequestHeader(value = "Authorization", required = false) String authHeader) {
         Logger logger = LoggerFactory.getLogger(getClass());
         logger.info("Received Authorization Header: {}", authHeader);

@@ -3,9 +3,9 @@ package com.uniq.tms.tms_microservice.modules.locationManagement.mapper;
 import com.uniq.tms.tms_microservice.modules.locationManagement.dto.LocationDto;
 import com.uniq.tms.tms_microservice.modules.locationManagement.entity.LocationEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.OrganizationEntity;
-import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserLocationEntity;
+import com.uniq.tms.tms_microservice.modules.locationManagement.entity.UserLocationEntity;
 import com.uniq.tms.tms_microservice.modules.locationManagement.model.Location;
-import com.uniq.tms.tms_microservice.modules.userManagement.model.UserLocation;
+import com.uniq.tms.tms_microservice.modules.locationManagement.model.UserLocation;
 import org.mapstruct.*;
 
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)

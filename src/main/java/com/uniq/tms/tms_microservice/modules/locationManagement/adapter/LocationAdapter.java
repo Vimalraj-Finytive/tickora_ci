@@ -3,7 +3,8 @@ package com.uniq.tms.tms_microservice.modules.locationManagement.adapter;
 import com.uniq.tms.tms_microservice.modules.locationManagement.entity.LocationEntity;
 import com.uniq.tms.tms_microservice.modules.locationManagement.model.Location;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.GroupEntity;
-import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserLocationEntity;
+import com.uniq.tms.tms_microservice.modules.locationManagement.entity.UserLocationEntity;
+import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -32,4 +33,7 @@ public interface LocationAdapter {
     List<UserLocationEntity> findByUser_UserId(String userId);
     List<GroupEntity> findGroupLocationByLocationId(List<Long> locationIds);
     Optional<LocationEntity> findLocationByLocationId(Long locationId);
+    List<UserLocationEntity> findUserLocationsByLocationId(List<Long> locationIds);
+    List<UserEntity> findUsersByIdsAndLocationIds(List<String> list, List<Long> locationIds);
+    List<UserEntity> findMembersByLocationIds(List<Long> locationIds, String userIdFromToken);
 }

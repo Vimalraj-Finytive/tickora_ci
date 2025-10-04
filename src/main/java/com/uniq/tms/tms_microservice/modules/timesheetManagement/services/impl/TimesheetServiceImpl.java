@@ -2,7 +2,6 @@ package com.uniq.tms.tms_microservice.modules.timesheetManagement.services.impl;
 
 import com.uniq.tms.tms_microservice.modules.locationManagement.adapter.LocationAdapter;
 import com.uniq.tms.tms_microservice.modules.locationManagement.entity.LocationEntity;
-import com.uniq.tms.tms_microservice.modules.locationManagement.services.LocationService;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.services.OrganizationCacheService;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.adapter.TimesheetAdapter;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.dto.*;
@@ -14,8 +13,7 @@ import com.uniq.tms.tms_microservice.modules.timesheetManagement.enums.LogType;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.enums.Timeperiod;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.enums.TimesheetStatusEnum;
 import com.uniq.tms.tms_microservice.modules.userManagement.adapter.UserAdapter;
-import com.uniq.tms.tms_microservice.modules.userManagement.entity.GroupEntity;
-import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserLocationEntity;
+import com.uniq.tms.tms_microservice.modules.locationManagement.entity.UserLocationEntity;
 import com.uniq.tms.tms_microservice.modules.userManagement.enums.PrivilegeConstants;
 import com.uniq.tms.tms_microservice.modules.userManagement.enums.RoleName;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.adapter.WorkScheduleAdapter;
@@ -215,7 +213,7 @@ public class TimesheetServiceImpl implements TimesheetService {
 
             if(hasUserFilter || hasLocationFilter || hasRoleFilter || hasGroupFilter || hasStatusFilter) {
                 return applyFilters(allUsers, userIdSet, groupIdSet, locationIdSet, roleIdSet,
-                        statusId, startDate, endDate);
+                        statusId, startDate, endDate, userIdFromToken);
             }
 
             return allUsers;
@@ -266,10 +264,11 @@ public class TimesheetServiceImpl implements TimesheetService {
             Set<Long> roleIdSet,
             List<String> statusId,
             LocalDate startDate,
-            LocalDate endDate
+            LocalDate endDate,
+            String userIdFromToken
     ) {
         return applyFilters(baseUsers, userIdSet, groupIdSet, locationIdSet, roleIdSet,
-                statusId, startDate, endDate, null,null);
+                statusId, startDate, endDate, null,userIdFromToken);
     }
 
     private List<UserEntity> applyFilters(
@@ -294,29 +293,31 @@ public class TimesheetServiceImpl implements TimesheetService {
 
         // Location filter
         if (!locationIdSet.isEmpty()) {
-            List<UserLocationEntity> userLocations = userAdapter.findUserLocationsByLocationId(new ArrayList<>(locationIdSet));
-            List<Long> usersLocationIds = userLocations.stream()
+            List<UserLocationEntity> userLocations = locationAdapter.findUserLocationsByLocationId(new ArrayList<>(locationIdSet));
+            List<Long> locationIds = userLocations.stream()
                     .map(UserLocationEntity::getLocation)
                     .map(LocationEntity::getLocationId)
                     .toList();
 
-            if (supervisedGroupIds != null) {
-                usersLocationIds = usersLocationIds.stream()
-                        .filter(supervisedGroupIds::contains)
-                        .toList();
-            }
-
-            if (usersLocationIds.isEmpty()) {
+            if (locationIds.isEmpty()) {
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No users found for selected location(s)");
             }
 
-            List<UserEntity> locationGroupUsers = supervisedGroupIds != null
-                    ? userAdapter.findMembersByGroupIds(usersLocationIds, userIdFromToken)
-                    : userAdapter.findUsersByGroupIds(usersLocationIds);
+            log.info("Supervised groupIds : {}", supervisedGroupIds);
+            List<UserEntity> userLocation = supervisedGroupIds != null
+                    ? locationAdapter.findUsersByIdsAndLocationIds(baseUsers.stream().map(UserEntity::getUserId).toList(), locationIds)
+                    : locationAdapter.findMembersByLocationIds(locationIds, userIdFromToken);
 
-            Set<String> locationUserIds = locationGroupUsers.stream()
+            log.info("location Group User : {}", userLocation.stream()
+                    .map(UserEntity::getUserId)
+                    .toList());
+
+            Set<String> locationUserIds = userLocation.stream()
                     .map(UserEntity::getUserId)
                     .collect(Collectors.toSet());
+
+            log.info("location User Ids: {}", locationUserIds.stream()
+                    .collect(Collectors.toSet()));
 
             stream = stream.filter(user -> locationUserIds.contains(user.getUserId()));
         }
