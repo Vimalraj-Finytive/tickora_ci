@@ -4,10 +4,7 @@ import com.uniq.tms.tms_microservice.modules.locationManagement.entity.LocationE
 import com.uniq.tms.tms_microservice.modules.locationManagement.repository.LocationRepository;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.adapter.TimesheetAdapter;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.dto.*;
-import com.uniq.tms.tms_microservice.modules.timesheetManagement.entity.UserFaceEntity;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.repository.TimesheetStatusRepository;
-import com.uniq.tms.tms_microservice.modules.userManagement.repository.UserFaceRepository;
-import com.uniq.tms.tms_microservice.modules.workScheduleManagement.adapter.WorkScheduleAdapter;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.enums.LogFrom;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.enums.LogType;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.enums.TimesheetStatusEnum;
@@ -55,24 +52,22 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
 
     private final TimesheetRepository timesheetRepository;
     private final TimesheetHistoryRepository timesheetHistoryRepository;
-    private final WorkScheduleAdapter workScheduleAdapter;
     private final TimesheetStatusRepository timesheetStatusRepository;
     private final LocationRepository locationRepository;
     private final TimesheetDtoMapper timesheetDtoMapper;
     private final UserRepository userRepository;
     private final TimesheetHelper timesheetHelper;
-    private final UserFaceRepository userFaceRepository;
 
-    public TimesheetAdapterImpl(TimesheetRepository timesheetRepository, TimesheetHistoryRepository timesheetHistoryRepository, WorkScheduleAdapter workScheduleAdapter, TimesheetStatusRepository timesheetStatusRepository, LocationRepository locationRepository, TimesheetDtoMapper timesheetDtoMapper, UserRepository userRepository, TimesheetHelper timesheetHelper, UserFaceRepository userFaceRepository) {
+    public TimesheetAdapterImpl(TimesheetRepository timesheetRepository, TimesheetHistoryRepository timesheetHistoryRepository,
+                                TimesheetStatusRepository timesheetStatusRepository, LocationRepository locationRepository,
+                                TimesheetDtoMapper timesheetDtoMapper, UserRepository userRepository, TimesheetHelper timesheetHelper) {
         this.timesheetRepository = timesheetRepository;
         this.timesheetHistoryRepository = timesheetHistoryRepository;
-        this.workScheduleAdapter = workScheduleAdapter;
         this.timesheetStatusRepository = timesheetStatusRepository;
         this.locationRepository = locationRepository;
         this.timesheetDtoMapper = timesheetDtoMapper;
         this.userRepository = userRepository;
         this.timesheetHelper = timesheetHelper;
-        this.userFaceRepository = userFaceRepository;
     }
 
     @Value("${timesheet.extra.worked.minutes}")
@@ -972,13 +967,4 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
         return timesheetRepository.findUserByStatusIdNotIn(startDate,endDate);
     }
 
-    @Override
-    public void saveUserFace(UserFaceEntity userFaceEntity) {
-        userFaceRepository.save(userFaceEntity);
-    }
-
-    @Override
-    public Optional<UserFaceEntity> findUserEmbeddingsById(String userId) {
-        return userFaceRepository.findByUserId(userId);
-    }
 }

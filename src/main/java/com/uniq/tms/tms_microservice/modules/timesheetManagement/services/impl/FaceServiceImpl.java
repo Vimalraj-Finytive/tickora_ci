@@ -6,8 +6,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.uniq.tms.tms_microservice.modules.locationManagement.adapter.LocationAdapter;
+import com.uniq.tms.tms_microservice.modules.timesheetManagement.adapter.FaceAdapter;
 import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
-import com.uniq.tms.tms_microservice.modules.timesheetManagement.adapter.TimesheetAdapter;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.dto.*;
 import com.uniq.tms.tms_microservice.modules.userManagement.adapter.UserAdapter;
 import com.uniq.tms.tms_microservice.modules.locationManagement.entity.LocationEntity;
@@ -44,16 +44,18 @@ public class FaceServiceImpl implements FaceService {
     private final UserFaceEntityMapper userFaceEntityMapper;
     private final TimesheetService timesheetService;
     private final TimesheetEntityMapper timesheetEntityMapper;
-    private final TimesheetAdapter timesheetAdapter;
+    private final FaceAdapter faceAdapter;
     private final LocationAdapter locationAdapter;
 
-    public FaceServiceImpl(UserAdapter userAdapter, RestTemplate restTemplate, UserFaceEntityMapper userFaceEntityMapper, TimesheetService timesheetService, TimesheetEntityMapper timesheetEntityMapper, TimesheetAdapter timesheetAdapter, LocationAdapter locationAdapter) {
+    public FaceServiceImpl(UserAdapter userAdapter, RestTemplate restTemplate, UserFaceEntityMapper userFaceEntityMapper,
+                           TimesheetService timesheetService, TimesheetEntityMapper timesheetEntityMapper,
+                           FaceAdapter faceAdapter, LocationAdapter locationAdapter) {
         this.userAdapter = userAdapter;
         this.restTemplate = restTemplate;
         this.userFaceEntityMapper = userFaceEntityMapper;
         this.timesheetService = timesheetService;
         this.timesheetEntityMapper = timesheetEntityMapper;
-        this.timesheetAdapter = timesheetAdapter;
+        this.faceAdapter = faceAdapter;
         this.locationAdapter = locationAdapter;
     }
 
@@ -115,7 +117,7 @@ public class FaceServiceImpl implements FaceService {
                 UserFaceEntity userFaceEntity = userFaceEntityMapper.toEntity(userEmbeddingDto);
 
                 log.info("Saving user face entity for userId: {}", userFaceEntity.getUserId());
-                timesheetAdapter.saveUserFace(userFaceEntity);
+                faceAdapter.saveUserFace(userFaceEntity);
 
                 userEntity.setRegisterUser(true);
                 userAdapter.saveUser(userEntity);
@@ -208,7 +210,7 @@ public class FaceServiceImpl implements FaceService {
             convertFile = File.createTempFile("face_", "_" + registerDto.getFaceImage().getOriginalFilename());
             registerDto.getFaceImage().transferTo(convertFile);
 
-            UserFaceEntity userFace = timesheetAdapter.findUserEmbeddingsById(registerDto.getUserId())
+            UserFaceEntity userFace = faceAdapter.findUserEmbeddingsById(registerDto.getUserId())
                     .orElseThrow(() -> new RuntimeException("User Face Not Found"));
 
             HttpHeaders headers = new HttpHeaders();

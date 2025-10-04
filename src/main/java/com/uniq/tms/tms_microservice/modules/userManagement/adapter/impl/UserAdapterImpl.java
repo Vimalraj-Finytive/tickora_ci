@@ -1,13 +1,11 @@
 package com.uniq.tms.tms_microservice.modules.userManagement.adapter.impl;
 
-import com.uniq.tms.tms_microservice.modules.locationManagement.repository.LocationRepository;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.SubscriptionEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.*;
 import com.uniq.tms.tms_microservice.modules.userManagement.adapter.UserAdapter;
 import com.uniq.tms.tms_microservice.modules.userManagement.dto.GroupDto;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.*;
 import com.uniq.tms.tms_microservice.modules.userManagement.repository.*;
-import com.uniq.tms.tms_microservice.modules.locationManagement.mapper.LocationEntityMapper;
 import com.uniq.tms.tms_microservice.modules.userManagement.model.UserResponse;
 import com.uniq.tms.tms_microservice.modules.userManagement.dto.UserNameSuggestionDto;
 import jakarta.transaction.Transactional;
@@ -23,35 +21,24 @@ public class UserAdapterImpl implements UserAdapter {
 
     private static final Logger log = LogManager.getLogger(UserAdapterImpl.class);
 
-    private final RoleRepository roleRepository;
     private final GroupRepository groupRepository;
-    private final LocationRepository locationRepository;
     private final UserRepository userRepository;
     private final UserGroupRepository userGroupRepository;
     private final SecondaryDetailsRepository secondaryDetailsRepository;
-    private final LocationEntityMapper locationEntityMapper;
-    private final PrivilegeRepository privilegeRepository;
-    private final UserLocationRepository userLocationRepository;
-    private final OrganizationRepository organizationRepository;
-    private final OrganizationTypeRepository organizationTypeRepository;
     private final UserSchemaMapperRepository userSchemaMapperRepository;
     private final PlanRepository planRepository;
     private final SubscriptionRepository subscriptionRepository;
     private final UserFaceRepository userFaceRepository;
     private final UserHistoryRepository userHistoryRepository;
 
-    public UserAdapterImpl(RoleRepository roleRepository, GroupRepository groupRepository, LocationRepository locationRepository, UserRepository userRepository, UserGroupRepository userGroupRepository, SecondaryDetailsRepository secondaryDetailsRepository, LocationEntityMapper locationEntityMapper, PrivilegeRepository privilegeRepository, UserLocationRepository userLocationRepository, OrganizationRepository organizationRepository, OrganizationTypeRepository organizationTypeRepository, UserSchemaMapperRepository userSchemaMapperRepository, PlanRepository planRepository, SubscriptionRepository subscriptionRepository, UserFaceRepository userFaceRepository, UserHistoryRepository userHistoryRepository) {
-        this.roleRepository = roleRepository;
+    public UserAdapterImpl(GroupRepository groupRepository, UserRepository userRepository, UserGroupRepository userGroupRepository,
+                           SecondaryDetailsRepository secondaryDetailsRepository, UserSchemaMapperRepository userSchemaMapperRepository, PlanRepository planRepository,
+                           SubscriptionRepository subscriptionRepository, UserFaceRepository userFaceRepository,
+                           UserHistoryRepository userHistoryRepository) {
         this.groupRepository = groupRepository;
-        this.locationRepository = locationRepository;
         this.userRepository = userRepository;
         this.userGroupRepository = userGroupRepository;
         this.secondaryDetailsRepository = secondaryDetailsRepository;
-        this.locationEntityMapper = locationEntityMapper;
-        this.privilegeRepository = privilegeRepository;
-        this.userLocationRepository = userLocationRepository;
-        this.organizationRepository = organizationRepository;
-        this.organizationTypeRepository = organizationTypeRepository;
         this.userSchemaMapperRepository = userSchemaMapperRepository;
         this.planRepository = planRepository;
         this.subscriptionRepository = subscriptionRepository;
@@ -196,7 +183,6 @@ public class UserAdapterImpl implements UserAdapter {
     public List<UserEntity> findMembersByGroupIds(
             List<Long> filteredGroupIds, String userIdFromToken) {
         return userGroupRepository.findMembersByGroupIds(filteredGroupIds, userIdFromToken);
-
     }
 
     public SecondaryDetailsEntity saveSecondaryDetails(SecondaryDetailsEntity secondaryDetails) {
@@ -445,21 +431,6 @@ public class UserAdapterImpl implements UserAdapter {
     @Override
     public List<UserEntity> findUserByOrgIdAndRoleId(String orgId, int roleId) {
         return userRepository.findUserByOrganizationIdAndRole_RoleId(orgId, roleId);
-    }
-
-    @Override
-    public List<UserEntity> findUsersByLocationIds(List<Long> userIds) {
-        return userLocationRepository.findUserByLocationId(userIds);
-    }
-    @Override
-    public List<UserEntity> findMembersByLocationIds(
-            List<Long> filteredUsersIds, String userIdFromToken) {
-        return userLocationRepository.findMembersByLocationIds(filteredUsersIds, userIdFromToken);
-
-    }
-    @Override
-    public List<UserLocationEntity> findUserLocationsByLocationId(List<Long> locationIds) {
-        return userLocationRepository.findByLocation_LocationIdIn(locationIds);
     }
 
 }

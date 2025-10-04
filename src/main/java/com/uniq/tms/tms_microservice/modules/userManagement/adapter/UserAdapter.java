@@ -85,7 +85,4 @@ public interface UserAdapter {
     void updateUserWorkSchedule(String scheduleId, String scheduleId1);
     void updateGroupWorkSchedule(String scheduleId, String scheduleId1);
     List<UserEntity> findUserByOrgIdAndRoleId(String orgId, int roleId);
-    List<UserEntity> findUsersByLocationIds(List<Long> userIds);
-    List<UserEntity> findMembersByLocationIds(List<Long> filteredUsersIds, String userIdFromToken);
-    List<UserLocationEntity> findUserLocationsByLocationId(List<Long> locationIds);
 }

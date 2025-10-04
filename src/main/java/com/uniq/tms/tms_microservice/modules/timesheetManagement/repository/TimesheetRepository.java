@@ -19,7 +19,6 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
 
     Optional<TimesheetEntity> findByUser_UserIdAndDate(String userId, LocalDate date);
 
-    // Main timesheets per user
     @Query(
             value = "SELECT * FROM fetch_main_timesheets(:startDate, :endDate, :userIds)",
             nativeQuery = true
@@ -30,14 +29,12 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
             @Param("userIds") String[] userIds
     );
 
-    // Groups per user
         @Query(value =
                 "SELECT * FROM fetch_user_groups(:userIds)",
                 nativeQuery = true
         )
     List<UserGroupProjection> fetchUserGroups(@Param("userIds") String[] userIds);
 
-    // Timesheet history per user
     @Query(value = "SELECT * FROM fetch_timesheet_history(:timesheetIds)",
             nativeQuery = true
     )

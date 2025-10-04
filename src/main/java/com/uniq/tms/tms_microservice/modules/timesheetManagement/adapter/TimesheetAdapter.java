@@ -1,6 +1,5 @@
 package com.uniq.tms.tms_microservice.modules.timesheetManagement.adapter;
 
-import com.uniq.tms.tms_microservice.modules.timesheetManagement.entity.UserFaceEntity;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.enums.LogType;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.dto.PaginationResponseDto;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.dto.UserAttendanceDto;
@@ -38,6 +37,4 @@ public interface TimesheetAdapter {
     List<TimesheetEntity> findUserByStatusId(List<String> statusId, LocalDate startDate, LocalDate endDate);
     LocationEntity getDefaultLocation(String orgId);
     List<String> findUserByStatusIdNotIn(LocalDate startDate, LocalDate endDate);
-    void saveUserFace(UserFaceEntity userFaceEntity);
-    Optional<UserFaceEntity> findUserEmbeddingsById(String userId);
 }

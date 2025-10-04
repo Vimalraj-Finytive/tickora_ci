@@ -5,11 +5,6 @@ import com.uniq.tms.tms_microservice.modules.authenticationManagement.services.A
 import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
 import com.uniq.tms.tms_microservice.modules.userManagement.dto.ChangePasswordDto;
 import com.uniq.tms.tms_microservice.shared.helper.AuthHelper;
-import com.uniq.tms.tms_microservice.modules.workScheduleManagement.mapper.WorkScheduleDtoMapper;
-import com.uniq.tms.tms_microservice.modules.workScheduleManagement.dto.WorkScheduleDto;
-import com.uniq.tms.tms_microservice.modules.workScheduleManagement.dto.WorkScheduleTypeDto;
-import com.uniq.tms.tms_microservice.modules.workScheduleManagement.model.WorkSchedule;
-import com.uniq.tms.tms_microservice.modules.workScheduleManagement.services.WorkScheduleService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
@@ -17,11 +12,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
-import org.springframework.web.server.ResponseStatusException;
-import java.util.*;
 
 @Component
 public class AuthFacade {
@@ -53,8 +45,6 @@ public class AuthFacade {
         return authService.logoutUser(request, response);
     }
 
-
-
     public ResponseEntity<ApiResponse> validateEmail(EmailDto email) {
             ResponseEntity<ApiResponse> response = authService.forgotPassword(email.getEmail());
             return ResponseEntity.ok(response.getBody());
@@ -81,6 +71,5 @@ public class AuthFacade {
             return new ApiResponse<>(404,"User Schema not found for this organization",null);
         }
     }
-
 
 }

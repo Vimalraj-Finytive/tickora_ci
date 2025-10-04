@@ -24,7 +24,7 @@ import com.uniq.tms.tms_microservice.shared.util.TenantUtil;
 import com.uniq.tms.tms_microservice.modules.userManagement.adapter.UserAdapter;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.GroupEntity;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
-import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserLocationEntity;
+import com.uniq.tms.tms_microservice.modules.locationManagement.entity.UserLocationEntity;
 import com.uniq.tms.tms_microservice.modules.userManagement.enums.UserRole;
 import jakarta.annotation.Nullable;
 import org.apache.logging.log4j.LogManager;
@@ -37,7 +37,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
