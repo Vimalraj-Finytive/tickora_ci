@@ -8,6 +8,8 @@ import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.RoleE
 import com.uniq.tms.tms_microservice.modules.userManagement.enums.PrivilegeConstants;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.PrivilegeRepository;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.RoleRepository;
+import jakarta.annotation.Nullable;
+import jakarta.validation.constraints.Null;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -31,7 +33,7 @@ public class OrganizationCacheServiceImpl implements OrganizationCacheService {
     private final RoleRepository roleRepository;
     private final PrivilegeRepository privilegeRepository;
 
-    public OrganizationCacheServiceImpl(CacheKeyUtil cacheKeyUtil, RedisTemplate<String, Object> redisTemplate, RoleRepository roleRepository, PrivilegeRepository privilegeRepository) {
+    public OrganizationCacheServiceImpl(CacheKeyUtil cacheKeyUtil, @Nullable RedisTemplate<String, Object> redisTemplate, RoleRepository roleRepository, PrivilegeRepository privilegeRepository) {
         this.cacheKeyUtil = cacheKeyUtil;
         this.redisTemplate = redisTemplate;
         this.roleRepository = roleRepository;
