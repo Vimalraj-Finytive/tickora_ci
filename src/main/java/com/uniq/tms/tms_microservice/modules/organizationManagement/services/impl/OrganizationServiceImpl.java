@@ -3,11 +3,14 @@ package com.uniq.tms.tms_microservice.modules.organizationManagement.services.im
 import com.uniq.tms.tms_microservice.modules.locationManagement.adapter.LocationAdapter;
 import com.uniq.tms.tms_microservice.modules.locationManagement.entity.LocationEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.OrganizationAdapter;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.OrganizationSummaryDto;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.*;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.mapper.OrganizationEntityMapper;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.model.*;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.OrganizationRepository;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.OrganizationTypeRepository;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.services.OrganizationCacheService;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.services.SubscriptionService;
 import com.uniq.tms.tms_microservice.shared.security.cache.CacheKeyConfig;
 import com.uniq.tms.tms_microservice.shared.security.cache.CacheReloadHandlerRegistry;
 import com.uniq.tms.tms_microservice.shared.util.CacheEventPublisherUtil;
@@ -22,6 +25,7 @@ import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.OrgSetup
 import com.uniq.tms.tms_microservice.modules.organizationManagement.enums.CountryEnum;
 import com.uniq.tms.tms_microservice.shared.exception.CommonExceptionHandler;
 import com.uniq.tms.tms_microservice.shared.helper.ExceptionHelper;
+import com.uniq.tms.tms_microservice.modules.userManagement.mapper.UserEntityMapper;
 import com.uniq.tms.tms_microservice.modules.identityManagement.service.IdGenerationService;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.services.OrganizationService;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserSchemaMappingEntity;
@@ -65,13 +69,14 @@ public class OrganizationServiceImpl implements OrganizationService {
     private final CacheReloadHandlerRegistry cacheReloadHandlerRegistry;
     private final ApplicationEventPublisher publisher;
     private final LocationAdapter locationAdapter;
+    private final SubscriptionService subscriptionService;
 
     public OrganizationServiceImpl(OrganizationEntityMapper organizationEntityMapper, UserAdapter userAdapter, WorkScheduleAdapter workScheduleAdapter,
                                    IdGenerationService idGenerationService, DataSource dataSource, ExceptionHelper exceptionHelper,
                                    OrganizationRepository organizationRepository, OrganizationTypeRepository organizationTypeRepository,
                                    UserService userService, OrganizationAdapter organizationAdapter, CacheKeyConfig cacheKeyConfig,
                                    CacheReloadHandlerRegistry cacheReloadHandlerRegistry, ApplicationEventPublisher publisher,
-                                   LocationAdapter locationAdapter) {
+                                   LocationAdapter locationAdapter, SubscriptionService subscriptionService) {
         this.organizationEntityMapper = organizationEntityMapper;
         this.userAdapter = userAdapter;
         this.workScheduleAdapter = workScheduleAdapter;
@@ -86,6 +91,7 @@ public class OrganizationServiceImpl implements OrganizationService {
         this.cacheReloadHandlerRegistry = cacheReloadHandlerRegistry;
         this.publisher = publisher;
         this.locationAdapter = locationAdapter;
+        this.subscriptionService = subscriptionService;
     }
 
     @Value("${cache.redis.enabled}")
@@ -370,4 +376,44 @@ public class OrganizationServiceImpl implements OrganizationService {
         }
         return rolePrivilege;
     }
+
+    @Override
+    public OrganizationSummaryDto getOrgSummary(String orgId) {
+        try {
+            OrganizationSummaryDto dto = organizationAdapter.getOrgSummary(orgId)
+                    .stream()
+                    .findFirst()
+                    .orElseThrow(() -> new RuntimeException("Organization not found for id: " + orgId));
+
+            // Replace type id with type name
+            if (dto.getType() != null) {
+                String typeName = organizationAdapter.getOrgTypeNameById(dto.getType());
+                dto.setType(typeName);
+            }
+
+            // User counts
+            int total = userAdapter.countTotalMembers(orgId);
+            int active = userAdapter.countActiveMembers(orgId);
+            int inactive = userAdapter.countInactiveMembers(orgId);
+            int subscribed = (int) subscriptionService.getSubscribedUserCount(orgId);
+
+            OrganizationSummaryDto.Counts counts = new OrganizationSummaryDto.Counts();
+            counts.setTotalMembers(total);
+            counts.setActiveMembers(active);
+            counts.setInactiveMembers(inactive);
+            counts.setAddedUsers(total);
+            counts.setSubscriptionUserCount(subscribed);
+
+            counts.setAvailableSubscriptionSlots(Math.max(0, subscribed - total));
+
+            dto.setCounts(counts);
+            return dto;
+
+        } catch (Exception ex) {
+            log.info("Error in getOrgSummary for orgId:{}", orgId);
+            ex.printStackTrace();
+            throw new RuntimeException("Failed to fetch organization summary: " + ex.getMessage(), ex);
+        }
+    }
+
 }

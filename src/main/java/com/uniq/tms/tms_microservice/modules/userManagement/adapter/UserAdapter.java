@@ -1,5 +1,6 @@
 package com.uniq.tms.tms_microservice.modules.userManagement.adapter;
 
+import com.uniq.tms.tms_microservice.modules.locationManagement.entity.UserLocationEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.SubscriptionEntity;
 import com.uniq.tms.tms_microservice.modules.userManagement.dto.GroupDto;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.*;
@@ -85,4 +86,7 @@ public interface UserAdapter {
     void updateUserWorkSchedule(String scheduleId, String scheduleId1);
     void updateGroupWorkSchedule(String scheduleId, String scheduleId1);
     List<UserEntity> findUserByOrgIdAndRoleId(String orgId, int roleId);
+    int countTotalMembers(String orgId);
+    int countActiveMembers(String orgId);
+    int countInactiveMembers(String orgId);
 }

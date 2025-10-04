@@ -98,4 +98,10 @@ public class OrganizationFacade {
         RolePrivilegeDto dto = organizationDtoMapper.toDto(savePrivilege);
         return new ApiResponse(200, "Privilege added successfully", dto);
     }
+
+    public ApiResponse<OrganizationSummaryDto> getOrgSummary() {
+        String orgId = authHelper.getOrgId();
+        OrganizationSummaryDto response = organizationService.getOrgSummary(orgId);
+        return new ApiResponse<>(HttpStatus.OK.value(), "Organization Summary Fetched Successfully", response);
+    }
 }

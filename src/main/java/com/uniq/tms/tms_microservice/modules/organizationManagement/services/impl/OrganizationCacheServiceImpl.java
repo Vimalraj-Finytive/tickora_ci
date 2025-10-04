@@ -9,11 +9,11 @@ import com.uniq.tms.tms_microservice.modules.userManagement.enums.PrivilegeConst
 import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.PrivilegeRepository;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.RoleRepository;
 import jakarta.annotation.Nullable;
-import jakarta.validation.constraints.Null;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;

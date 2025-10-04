@@ -1,9 +1,11 @@
 package com.uniq.tms.tms_microservice.modules.organizationManagement.adapter;
 
+import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.OrganizationSummaryDto;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.OrganizationEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.OrganizationTypeEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.PrivilegeEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.RoleEntity;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -23,4 +25,6 @@ public interface OrganizationAdapter {
     OrganizationEntity create(OrganizationEntity entity);
     OrganizationTypeEntity findOrgType(String orgType);
     Optional<OrganizationEntity> findByOrgId(String orgId);
+    List<OrganizationSummaryDto> getOrgSummary(String orgId);
+    String getOrgTypeNameById(String type);
 }

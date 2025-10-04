@@ -97,5 +97,15 @@ public class OrganizationController {
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
+    @GetMapping("/summary")
+    public ResponseEntity<ApiResponse> getOrganizationSummary(
+            @RequestHeader("Authorization") String token) {
+        String orgId = authHelper.getOrgId();
+        if (orgId == null || orgId.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized - Invalid Organization");
+        }
+        return ResponseEntity.ok(organizationFacade.getOrgSummary());
+    }
+
 }
 

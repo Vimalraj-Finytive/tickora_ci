@@ -24,4 +24,7 @@ public interface OrganizationRepository extends JpaRepository<OrganizationEntity
     String findOrgTypeByOrganizationId(String orgId);
 
     boolean existsByOrganizationIdStartingWith(String s);
+
+    @Query("SELECT o FROM OrganizationEntity o WHERE o.organizationId = :orgId")
+    Optional<OrganizationEntity> findSummaryById(String orgId);
 }

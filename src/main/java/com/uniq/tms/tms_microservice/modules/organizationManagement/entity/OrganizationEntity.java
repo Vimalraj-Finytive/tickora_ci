@@ -4,6 +4,8 @@ import com.uniq.tms.tms_microservice.modules.userManagement.entity.GroupEntity;
 import com.uniq.tms.tms_microservice.modules.locationManagement.entity.LocationEntity;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.WorkScheduleEntity;
 import jakarta.persistence.*;
+
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -32,6 +34,17 @@ public class OrganizationEntity {
 
     @Column(name = "time_zone", nullable = false, length = 100)
     private String timeZone;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
 
     @OneToMany(mappedBy = "organizationEntity", cascade = {}, orphanRemoval = true)
     private List<LocationEntity> locations = new ArrayList<>();
@@ -121,4 +134,6 @@ public class OrganizationEntity {
     public void setTimeZone(String timeZone) {
         this.timeZone = timeZone;
     }
+
+
 }

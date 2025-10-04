@@ -1,10 +1,12 @@
 package com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.impl;
 
 import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.OrganizationAdapter;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.OrganizationSummaryDto;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.OrganizationEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.OrganizationTypeEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.PrivilegeEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.RoleEntity;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.mapper.OrganizationEntityMapper;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.OrganizationRepository;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.OrganizationTypeRepository;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.PrivilegeRepository;
@@ -22,12 +24,14 @@ public class OrganizationAdapterImpl implements OrganizationAdapter {
     private final OrganizationRepository organizationRepository;
     private final PrivilegeRepository privilegeRepository;
     private final OrganizationTypeRepository organizationTypeRepository;
+    private final OrganizationEntityMapper organizationEntityMapper;
 
-    public OrganizationAdapterImpl(RoleRepository roleRepository, OrganizationRepository organizationRepository, PrivilegeRepository privilegeRepository, OrganizationTypeRepository organizationTypeRepository) {
+    public OrganizationAdapterImpl(RoleRepository roleRepository, OrganizationRepository organizationRepository, PrivilegeRepository privilegeRepository, OrganizationTypeRepository organizationTypeRepository, OrganizationEntityMapper organizationEntityMapper) {
         this.roleRepository = roleRepository;
         this.organizationRepository = organizationRepository;
         this.privilegeRepository = privilegeRepository;
         this.organizationTypeRepository = organizationTypeRepository;
+        this.organizationEntityMapper = organizationEntityMapper;
     }
 
     @Override
@@ -105,5 +109,22 @@ public class OrganizationAdapterImpl implements OrganizationAdapter {
     public OrganizationTypeEntity findOrgType(String orgType) {
         return organizationTypeRepository.findByOrgType(orgType);
     }
+
+    @Override
+    public String getOrgTypeNameById(String typeId) {
+        return organizationTypeRepository.findById(typeId)
+                .map(OrganizationTypeEntity::getOrgTypeName)
+                .orElseThrow(() -> new RuntimeException("Organization type not found: " + typeId));
+    }
+
+    @Override
+    public List<OrganizationSummaryDto> getOrgSummary(String orgId) {
+        Optional<OrganizationEntity> organizationOpt = organizationRepository.findSummaryById(orgId);
+        List<OrganizationEntity> orgList = organizationOpt.map(List::of).orElse(List.of());
+        return organizationEntityMapper.toMiddleware(orgList);
+    }
+
+
+
 
 }
