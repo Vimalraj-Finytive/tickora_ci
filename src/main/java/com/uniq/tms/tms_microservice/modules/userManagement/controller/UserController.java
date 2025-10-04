@@ -6,6 +6,7 @@ import com.uniq.tms.tms_microservice.modules.userManagement.dto.*;
 import com.uniq.tms.tms_microservice.shared.helper.AuthHelper;
 import com.uniq.tms.tms_microservice.modules.userManagement.constant.UserConstant;
 import com.uniq.tms.tms_microservice.modules.userManagement.facade.UserFacade;
+import com.uniq.tms.tms_microservice.dto.DeactivateUserRequestDto;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,6 +16,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
 import java.time.LocalDate;
 import java.util.List;
 
@@ -76,7 +78,7 @@ public class UserController {
             throw new IllegalArgumentException("Request body or user details cannot be null.");
         }
         UserDto userDto = request.getUser();
-        ApiResponse  response = userFacade.createUser(userDto, request.getSecondaryDetails());
+        ApiResponse response = userFacade.createUser(userDto, request.getSecondaryDetails());
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
@@ -86,7 +88,7 @@ public class UserController {
             @RequestBody CreateUserDto updates,
             @RequestParam String userId) {
 
-        ApiResponse response = userFacade.updateUser( updates, userId);
+        ApiResponse response = userFacade.updateUser(updates, userId);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
@@ -97,31 +99,31 @@ public class UserController {
     }
 
     @GetMapping("/profile")
-    public ResponseEntity<ApiResponse> getUser(@RequestHeader("Authorization") String token, @RequestParam(required = false) String userId){
-        ApiResponse response = userFacade.getUserProfile( userId);
+    public ResponseEntity<ApiResponse> getUser(@RequestHeader("Authorization") String token, @RequestParam(required = false) String userId) {
+        ApiResponse response = userFacade.getUserProfile(userId);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
     @GetMapping("/search")
-    public ResponseEntity<ApiResponse<List<UserNameSuggestionDto>>> searchUsers(@RequestHeader("Authorization") String token,@RequestParam String keyword) {
+    public ResponseEntity<ApiResponse<List<UserNameSuggestionDto>>> searchUsers(@RequestHeader("Authorization") String token, @RequestParam String keyword) {
         ApiResponse response = userFacade.searchUsernames(keyword);
         return ResponseEntity.ok(response);
     }
 
     @PostMapping("/deleteUser")
     public ResponseEntity<ApiResponse> deleteUser(@RequestHeader("Authorization") String token, @Valid @RequestBody DeactivateUserRequestDto requestDto) {
-        ApiResponse response = userFacade.deleteUser( requestDto);
+        ApiResponse response = userFacade.deleteUsers(requestDto);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
     @PostMapping("/createGroup")
     public ResponseEntity<ApiResponse> createGroup(@RequestHeader("Authorization") String token, @RequestBody AddGroupDto addGroupDto) {
-        ApiResponse response = userFacade.createGroup( addGroupDto);
+        ApiResponse response = userFacade.createGroup(addGroupDto);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
     @PatchMapping("/editType")
-    public ResponseEntity<ApiResponse> updateUserGroupType(@RequestHeader("Authorization") String token, @RequestBody EditUserGroupDto editUserGroupDto){
+    public ResponseEntity<ApiResponse> updateUserGroupType(@RequestHeader("Authorization") String token, @RequestBody EditUserGroupDto editUserGroupDto) {
         ApiResponse response = userFacade.updateUserGroupType(editUserGroupDto);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
@@ -131,13 +133,13 @@ public class UserController {
             @RequestHeader("Authorization") String token,
             @RequestBody AddMemberDto addMemberDto) {
 
-        ApiResponse response = userFacade.addUserToGroup( addMemberDto);
+        ApiResponse response = userFacade.addUserToGroup(addMemberDto);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
     @PatchMapping("/updateGroup")
-    public ResponseEntity<ApiResponse> updateGroup(@RequestHeader("Authorization") String token, @RequestBody AddGroupDto addGroupDto, @RequestParam Long groupId){
-        ApiResponse response = userFacade.updateGroupDetails( addGroupDto,groupId);
+    public ResponseEntity<ApiResponse> updateGroup(@RequestHeader("Authorization") String token, @RequestBody AddGroupDto addGroupDto, @RequestParam Long groupId) {
+        ApiResponse response = userFacade.updateGroupDetails(addGroupDto, groupId);
 
         return ResponseEntity.status((response.getStatusCode())).body(response);
     }
@@ -152,19 +154,19 @@ public class UserController {
     public ResponseEntity<ApiResponse> deleteMember(@RequestHeader("Authorization") String token,
                                                     @RequestParam Long groupId,
                                                     @RequestParam String memberId) {
-        ApiResponse response = userFacade.deleteMember( groupId, memberId);
+        ApiResponse response = userFacade.deleteMember(groupId, memberId);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
     @DeleteMapping("/deleteGroup")
     public ResponseEntity<ApiResponse> deleteGroup(@RequestHeader("Authorization") String token, @RequestParam Long groupId) {
-        ApiResponse response = userFacade.deleteGroup( groupId);
+        ApiResponse response = userFacade.deleteGroup(groupId);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
     @GetMapping("/getMembers")
-        public ResponseEntity<ApiResponse> getMembers(@RequestHeader("Authorization") String token, @RequestParam(required = false) Long roleId) {
-        ApiResponse response = userFacade.getMembers( roleId);
+    public ResponseEntity<ApiResponse> getMembers(@RequestHeader("Authorization") String token, @RequestParam(required = false) Long roleId) {
+        ApiResponse response = userFacade.getMembers(roleId);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
@@ -176,8 +178,8 @@ public class UserController {
 
     @GetMapping("/getGroupMembers")
     public ResponseEntity<ApiResponse> getUserGroupMembers(@RequestHeader("Authorization") String token,
-                                                           @RequestParam Long groupId,@RequestParam(required = false) LocalDate date) {
-        ApiResponse response = userFacade.getUserGroupMembers( groupId, date);
+                                                           @RequestParam Long groupId, @RequestParam(required = false) LocalDate date) {
+        ApiResponse response = userFacade.getUserGroupMembers(groupId, date);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
@@ -186,15 +188,17 @@ public class UserController {
             @RequestHeader("Authorization") String token,
             @RequestParam(required = false) List<Long> groupIds) {
         try {
-            ApiResponse response = userFacade.getGroupUsers( groupIds);
+            ApiResponse response = userFacade.getGroupUsers(groupIds);
             return ResponseEntity.status(response.getStatusCode()).body(response);
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ApiResponse(403,"Error: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ApiResponse(403, "Error: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
         }
     }
 
     @GetMapping("/download-sample-file")
-    public ResponseEntity<Resource> downloadSampleFile() { return userFacade.downloadSampleFile(); }
+    public ResponseEntity<Resource> downloadSampleFile() {
+        return userFacade.downloadSampleFile();
+    }
 
     @GetMapping("/getInactiveUsers")
     public ResponseEntity<ApiResponse> getInactiveUsers(@RequestHeader("Authorization") String token) {
@@ -203,7 +207,7 @@ public class UserController {
     }
 
     @PatchMapping("/activateUser")
-    public ResponseEntity<ApiResponse> updateIsActive(@RequestHeader("Authorization") String token , @RequestBody EditUserDto editUserDto){
+    public ResponseEntity<ApiResponse> updateIsActive(@RequestHeader("Authorization") String token, @RequestBody EditUserDto editUserDto) {
         ApiResponse response = userFacade.updateIsActive(editUserDto);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
@@ -219,8 +223,23 @@ public class UserController {
 
     @PostMapping("/validation")
     public ResponseEntity<ApiResponse<UserValidationDto>> validateUser(@RequestHeader("Authorization") String token,
-                                                                       @RequestBody UserValidationDto request){
+                                                                       @RequestBody UserValidationDto request) {
         ApiResponse<UserValidationDto> response = userFacade.validateUser(request.getUserId());
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
+
+    @PostMapping("/bulk/role")
+    public ResponseEntity<ApiResponse> updateBulkUserRole(
+            @RequestHeader("Authorization") String token,
+            @RequestBody @Valid BulkRoleUpdate request) {
+        Iterable<BulkRoleUpdate> updatedUsers = userFacade.updateMultipleUserRoles((request.getUserIds()), request.getRoleId());
+        return ResponseEntity.ok(new ApiResponse(200, "Roles updated successfully", null));
+    }
+
+    @PostMapping("/bulk/workSchedule")
+    public ResponseEntity<ApiResponse> updateWorkSchedules(
+            @Valid @RequestBody BulkWorkScheduleUpdateRequestDto requestDto) {
+        ApiResponse response = userFacade.updateWorkSchedules(requestDto);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 

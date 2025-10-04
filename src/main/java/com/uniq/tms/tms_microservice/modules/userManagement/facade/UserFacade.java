@@ -1,12 +1,10 @@
 package com.uniq.tms.tms_microservice.modules.userManagement.facade;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.uniq.tms.tms_microservice.modules.userManagement.mapper.RoleMapper;
+import com.uniq.tms.tms_microservice.modules.userManagement.model.*;
 import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
 import com.uniq.tms.tms_microservice.modules.userManagement.dto.*;
-import com.uniq.tms.tms_microservice.modules.userManagement.model.AddGroup;
-import com.uniq.tms.tms_microservice.modules.userManagement.model.AddMember;
-import com.uniq.tms.tms_microservice.modules.userManagement.model.User;
-import com.uniq.tms.tms_microservice.modules.userManagement.model.UserGroup;
 import com.uniq.tms.tms_microservice.shared.helper.AuthHelper;
 import com.uniq.tms.tms_microservice.modules.userManagement.mapper.UserDtoMapper;
 import com.uniq.tms.tms_microservice.modules.userManagement.services.UserService;
@@ -23,15 +21,17 @@ import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Component
 public class UserFacade {
-
+    private final RoleMapper updateRole;
     private final AuthHelper authHelper;
     private final UserService userService;
     private final UserDtoMapper userDtoMapper;
 
-    public UserFacade(AuthHelper authHelper, UserService userService, UserDtoMapper userDtoMapper) {
+    public UserFacade(RoleMapper updateRole, AuthHelper authHelper, UserService userService, UserDtoMapper userDtoMapper) {
+        this.updateRole = updateRole;
         this.authHelper = authHelper;
         this.userService = userService;
         this.userDtoMapper = userDtoMapper;
@@ -67,14 +67,14 @@ public class UserFacade {
         return new ApiResponse(200, "Users fetched successfully", users);
     }
 
-    public ApiResponse deleteUser( DeactivateUserRequestDto requestDto) {
+    public ApiResponse deleteUsers(com.uniq.tms.tms_microservice.dto.DeactivateUserRequestDto requestDto) {
         String orgId = authHelper.getOrgId();
         String userNameFromToken = authHelper.getUsername();
         if (orgId == null) {
             return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
         }
-        User user = userService.deleteUser(orgId, requestDto, userNameFromToken);
-        return new ApiResponse(204, "User Deleted successfully", "No Content");
+        userService.deleteUsers(orgId, requestDto.getUserIds(), userNameFromToken, requestDto);
+        return new ApiResponse(200, "User Inactived successfully", "No Content");
     }
 
     public ApiResponse createGroup( AddGroupDto addGroupDto) {
@@ -298,5 +298,58 @@ public class UserFacade {
     public ApiResponse<List<UserHistoryResponseDto>> getUserHistoryLog(String userId) {
         return userService.getUserHistoryLog(userId);
     }
+    public Iterable<BulkRoleUpdate> updateMultipleUserRoles(List<String> userIds, Long roleId) {
+        List<UserBulkChangingModel> user= userService.updateMultipleUserRoles(userIds, roleId);
+        Iterable<BulkRoleUpdate> result=user.stream()
+                .map(updateRole::toDto).collect(Collectors.toList());
+        return result;
+    }
+    public ApiResponse updateWorkSchedules(BulkWorkScheduleUpdateRequestDto requestDto) {
+        String orgId = authHelper.getOrgId();
+        String userNameFromToken = authHelper.getUsername();
+
+        if (orgId == null) {
+            return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
+        }
+        List<BulkWorkScheduleUpdateResponseDto> results =
+                userService.updateWorkSchedules(requestDto,userNameFromToken,orgId); // orgID, dto, username
+
+        List<String> successUsers = results.stream()
+                .filter(BulkWorkScheduleUpdateResponseDto::isSuccess)
+                .map(BulkWorkScheduleUpdateResponseDto::getMemberId)
+                .collect(Collectors.toList());
+
+        List<String> failedUsers = results.stream()
+                .filter(r -> !r.isSuccess())
+                .map(BulkWorkScheduleUpdateResponseDto::getMessage) // <-- fixed here
+                .collect(Collectors.toList());
+
+        StringBuilder message = new StringBuilder();
+
+        if (!successUsers.isEmpty()) {
+            message.append("Bulk Work Schedule Update Completed. ");
+            message.append("Updated: ").append(String.join(", ", successUsers)).append(". ");
+        }
+
+        if (!failedUsers.isEmpty()) {
+            if (successUsers.isEmpty()) {
+                message.append(String.join(", ", failedUsers)).append(".");
+            } else {
+                message.append("Failed: ").append(String.join(", ", failedUsers)).append(".");
+            }
+        }
+
+        if (successUsers.isEmpty() && failedUsers.isEmpty()) {
+            message.append("No updates were made.");
+        }
+
+        int statusCode = 200;
+        if (failedUsers.size() == 1 && failedUsers.get(0).startsWith("Work Schedule not found")) {
+            statusCode = 404;
+        }
+
+        return new ApiResponse(statusCode, message.toString().trim(), null);
+    }
+
 
 }

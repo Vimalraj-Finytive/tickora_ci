@@ -11,4 +11,6 @@ public interface PlanRepository extends JpaRepository<PlanEntity, String> {
     @Query("SELECT p.planId FROM PlanEntity p WHERE p.isDefault = true")
     String findByIsDefault();
 
+
+
 }

@@ -213,5 +213,6 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
     long countByOrganizationId(String orgId);
     long countByOrganizationIdAndActiveTrue(String orgId);
     long countByOrganizationIdAndActiveFalse(String orgId);
+    List<UserEntity> findByUserIdIn(List<String> userId);
 
 }

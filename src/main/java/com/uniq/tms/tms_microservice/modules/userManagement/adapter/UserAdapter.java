@@ -1,6 +1,7 @@
 package com.uniq.tms.tms_microservice.modules.userManagement.adapter;
 
 import com.uniq.tms.tms_microservice.modules.locationManagement.entity.UserLocationEntity;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.RoleEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.SubscriptionEntity;
 import com.uniq.tms.tms_microservice.modules.userManagement.dto.GroupDto;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.*;
@@ -18,6 +19,7 @@ public interface UserAdapter {
     Optional<UserEntity> findByEmail(String email);
     void updatePassword(UserEntity user);
     Optional<UserEntity> findById(String userId);
+    Optional<RoleEntity> findById(Long roleId);
     void deactivateUserById(String userId, String orgId);
     void deleteUser(UserEntity user);
     GroupEntity saveGroup(GroupEntity entity);
@@ -89,4 +91,7 @@ public interface UserAdapter {
     int countTotalMembers(String orgId);
     int countActiveMembers(String orgId);
     int countInactiveMembers(String orgId);
+    List<UserEntity> findByUserId(List<String> userId);
+    UserEntity save(UserEntity user);
+
 }
