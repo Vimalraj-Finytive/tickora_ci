@@ -223,4 +223,6 @@ public class UserController {
         ApiResponse<UserValidationDto> response = userFacade.validateUser(request.getUserId());
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
+
+
 }

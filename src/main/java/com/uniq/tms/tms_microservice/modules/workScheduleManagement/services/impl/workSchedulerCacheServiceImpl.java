@@ -12,7 +12,7 @@ import com.uniq.tms.tms_microservice.modules.workScheduleManagement.model.WorkSc
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.projection.WorkScheduleData;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.repository.WorkScheduleRepository;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.services.WorkScheduleCacheService;
-import jakarta.annotation.Nullable;
+import io.micrometer.common.lang.Nullable;
 import jakarta.transaction.Transactional;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;

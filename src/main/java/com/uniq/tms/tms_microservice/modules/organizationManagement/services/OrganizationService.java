@@ -1,6 +1,7 @@
 package com.uniq.tms.tms_microservice.modules.organizationManagement.services;
 
 import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.OrgSetupValidationResponse;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.OrganizationSummaryDto;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.OrganizationTypeEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.model.*;
 import java.util.List;
@@ -15,4 +16,5 @@ public interface OrganizationService {
     List<Role> getAllRole(String orgId, String role);
     Privilege addPrivileges(Privilege privilegeModel, String orgId);
     RolePrivilege addRolwisePrivileges(RolePrivilege rolePrivilegeModel, String orgId);
+    OrganizationSummaryDto getOrgSummary(String orgId);
 }

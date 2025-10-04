@@ -210,5 +210,8 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
             @Param("userIds") String[] userIds);
 
     List<UserEntity> findUserByOrganizationIdAndRole_RoleId(String orgId, int roleId);
+    long countByOrganizationId(String orgId);
+    long countByOrganizationIdAndActiveTrue(String orgId);
+    long countByOrganizationIdAndActiveFalse(String orgId);
 
 }
