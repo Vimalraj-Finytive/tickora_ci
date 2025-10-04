@@ -12,6 +12,7 @@ import com.uniq.tms.tms_microservice.modules.workScheduleManagement.model.WorkSc
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.projection.WorkScheduleData;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.repository.WorkScheduleRepository;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.services.WorkScheduleCacheService;
+import jakarta.annotation.Nullable;
 import jakarta.transaction.Transactional;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -32,7 +33,7 @@ public class workSchedulerCacheServiceImpl implements WorkScheduleCacheService {
     private final RedisTemplate<String, Object> redisTemplate;
     private final CacheKeyUtil cacheKeyUtil;
 
-    public workSchedulerCacheServiceImpl(WorkScheduleDtoMapper workScheduleDtoMapper, WorkScheduleRepository workScheduleRepository, RedisTemplate<String, Object> redisTemplate, CacheKeyUtil cacheKeyUtil) {
+    public workSchedulerCacheServiceImpl(WorkScheduleDtoMapper workScheduleDtoMapper, WorkScheduleRepository workScheduleRepository, @Nullable RedisTemplate<String, Object> redisTemplate, CacheKeyUtil cacheKeyUtil) {
         this.workScheduleDtoMapper = workScheduleDtoMapper;
         this.workScheduleRepository = workScheduleRepository;
         this.redisTemplate = redisTemplate;
