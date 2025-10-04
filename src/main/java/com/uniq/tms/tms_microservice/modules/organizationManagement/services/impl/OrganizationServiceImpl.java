@@ -8,7 +8,6 @@ import com.uniq.tms.tms_microservice.modules.organizationManagement.mapper.Organ
 import com.uniq.tms.tms_microservice.modules.organizationManagement.model.*;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.OrganizationRepository;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.OrganizationTypeRepository;
-import com.uniq.tms.tms_microservice.modules.organizationManagement.services.OrganizationCacheService;
 import com.uniq.tms.tms_microservice.shared.security.cache.CacheKeyConfig;
 import com.uniq.tms.tms_microservice.shared.security.cache.CacheReloadHandlerRegistry;
 import com.uniq.tms.tms_microservice.shared.util.CacheEventPublisherUtil;
@@ -23,7 +22,6 @@ import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.OrgSetup
 import com.uniq.tms.tms_microservice.modules.organizationManagement.enums.CountryEnum;
 import com.uniq.tms.tms_microservice.shared.exception.CommonExceptionHandler;
 import com.uniq.tms.tms_microservice.shared.helper.ExceptionHelper;
-import com.uniq.tms.tms_microservice.modules.userManagement.mapper.UserEntityMapper;
 import com.uniq.tms.tms_microservice.modules.identityManagement.service.IdGenerationService;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.services.OrganizationService;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserSchemaMappingEntity;

@@ -69,7 +69,11 @@ public class AuthServiceImpl implements AuthService {
     private final TenantResolverHelper tenantResolverHelper;
     private final RolePrivilegeHelper rolePrivilegeHelper;
 
-    public AuthServiceImpl(NettyfishService nettyfishService, AuthAdapter authAdapter, UserAdapter userAdapter, JwtUtil jwtUtil, PasswordEncoder passwordEncoder, EmailHelper emailHelper, OrganizationCacheService organizationCacheService, CacheKeyUtil cacheKeyUtil, @Nullable StringRedisTemplate redisTemplate, OtpFallbackCache otpFallbackCache, TenantResolverHelper tenantResolverHelper, RolePrivilegeHelper rolePrivilegeHelper) {
+    public AuthServiceImpl(NettyfishService nettyfishService, AuthAdapter authAdapter, UserAdapter userAdapter,
+                           JwtUtil jwtUtil, PasswordEncoder passwordEncoder, EmailHelper emailHelper,
+                           OrganizationCacheService organizationCacheService, CacheKeyUtil cacheKeyUtil,
+                           @Nullable StringRedisTemplate redisTemplate, OtpFallbackCache otpFallbackCache,
+                           TenantResolverHelper tenantResolverHelper, RolePrivilegeHelper rolePrivilegeHelper) {
         this.nettyfishService = nettyfishService;
         this.authAdapter = authAdapter;
         this.userAdapter = userAdapter;

@@ -6,9 +6,10 @@ import com.uniq.tms.tms_microservice.modules.locationManagement.mapper.LocationE
 import com.uniq.tms.tms_microservice.modules.locationManagement.model.Location;
 import com.uniq.tms.tms_microservice.modules.locationManagement.repository.LocationRepository;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.GroupEntity;
-import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserLocationEntity;
+import com.uniq.tms.tms_microservice.modules.locationManagement.entity.UserLocationEntity;
+import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
 import com.uniq.tms.tms_microservice.modules.userManagement.repository.GroupRepository;
-import com.uniq.tms.tms_microservice.modules.userManagement.repository.UserLocationRepository;
+import com.uniq.tms.tms_microservice.modules.locationManagement.repository.UserLocationRepository;
 import jakarta.transaction.Transactional;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -161,4 +162,20 @@ public class LocationAdapterImpl implements LocationAdapter {
         return locationRepository.findByLocationIdAndOrganizationEntity_OrganizationIdAndActiveTrue(locationId, orgId);
     }
 
+
+    @Override
+    public List<UserEntity> findMembersByLocationIds(
+            List<Long> locationIds, String userIdFromToken) {
+        return userLocationRepository.findMembersByLocationIds(locationIds, userIdFromToken);
+
+    }
+    @Override
+    public List<UserLocationEntity> findUserLocationsByLocationId(List<Long> locationIds) {
+        return userLocationRepository.findByLocation_LocationIdIn(locationIds);
+    }
+
+    @Override
+    public List<UserEntity> findUsersByIdsAndLocationIds(List<String> userIds, List<Long> locationIds) {
+        return userLocationRepository.findUsersByIdsAndLocationIds(userIds, locationIds);
+    }
 }

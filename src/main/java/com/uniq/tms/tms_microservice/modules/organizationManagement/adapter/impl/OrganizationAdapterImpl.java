@@ -9,7 +9,6 @@ import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.O
 import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.OrganizationTypeRepository;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.PrivilegeRepository;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.RoleRepository;
-import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
 import org.springframework.stereotype.Component;
 import java.util.HashMap;
 import java.util.List;

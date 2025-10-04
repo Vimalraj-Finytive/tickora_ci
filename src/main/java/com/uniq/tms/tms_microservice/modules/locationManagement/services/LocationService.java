@@ -5,7 +5,6 @@ import com.uniq.tms.tms_microservice.modules.locationManagement.dto.LocationList
 import com.uniq.tms.tms_microservice.modules.locationManagement.model.Location;
 import com.uniq.tms.tms_microservice.modules.locationManagement.model.LocationList;
 import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
-
 import java.util.List;
 
 public interface LocationService {

@@ -4,7 +4,6 @@ import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.Organ
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.OrganizationTypeEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.PrivilegeEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.RoleEntity;
-import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;

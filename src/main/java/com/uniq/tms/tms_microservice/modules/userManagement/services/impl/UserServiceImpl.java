@@ -3,6 +3,7 @@ package com.uniq.tms.tms_microservice.modules.userManagement.services.impl;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.uniq.tms.tms_microservice.modules.locationManagement.adapter.LocationAdapter;
 import com.uniq.tms.tms_microservice.modules.locationManagement.dto.LocationDto;
+import com.uniq.tms.tms_microservice.modules.locationManagement.entity.UserLocationEntity;
 import com.uniq.tms.tms_microservice.modules.locationManagement.mapper.LocationDtoMapper;
 import com.uniq.tms.tms_microservice.modules.locationManagement.repository.LocationRepository;
 import com.uniq.tms.tms_microservice.modules.locationManagement.services.LocationService;
