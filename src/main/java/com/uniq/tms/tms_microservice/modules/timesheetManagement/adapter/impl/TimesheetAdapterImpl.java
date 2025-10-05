@@ -72,8 +72,6 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
 
     @Value("${timesheet.extra.worked.minutes}")
     private int extraWorkedMinutes;
-    @Value("${timesheet.extra.worked.seconds}")
-    private int extraWorkedSeconds;
 
     private static final Logger log = LoggerFactory.getLogger(TimesheetAdapterImpl.class);
 
