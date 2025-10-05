@@ -1,17 +1,22 @@
-package com.uniq.tms.tms_microservice.modules.userManagement.dto;
+package com.uniq.tms.tms_microservice.dto;
+
+import jakarta.validation.constraints.NotEmpty;
+
+import java.util.List;
 
 public class DeactivateUserRequestDto {
 
-    private String userId;
+    @NotEmpty(message="User Ids cannot be empty")
+    private List<String> userIds;
 
     private String comments;
 
-    public String getUserId() {
-        return userId;
+    public List<String> getUserIds() {
+        return userIds;
     }
 
-    public void setUserId(String userId) {
-        this.userId = userId;
+    public void setUserIds(List<String> userIds) {
+        this.userIds = userIds;
     }
 
     public String getComments() {

@@ -1,6 +1,7 @@
 package com.uniq.tms.tms_microservice.modules.organizationManagement.facade;
 
 import com.uniq.tms.tms_microservice.modules.authenticationManagement.services.AuthService;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.services.SubscriptionService;
 import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.*;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.mapper.OrganizationDtoMapper;
@@ -20,12 +21,14 @@ import java.util.List;
 public class OrganizationFacade {
 
     private final OrganizationService organizationService;
+    private final SubscriptionService subscriptionService;
     private final AuthHelper authHelper;
     private final AuthService authService;
     private final OrganizationDtoMapper organizationDtoMapper;
 
-    public OrganizationFacade(OrganizationService organizationService, AuthHelper authHelper, AuthService authService, OrganizationDtoMapper organizationDtoMapper) {
+    public OrganizationFacade(OrganizationService organizationService, SubscriptionService subscriptionService, AuthHelper authHelper, AuthService authService, OrganizationDtoMapper organizationDtoMapper) {
         this.organizationService = organizationService;
+        this.subscriptionService = subscriptionService;
         this.authHelper = authHelper;
         this.authService = authService;
         this.organizationDtoMapper = organizationDtoMapper;
@@ -102,6 +105,12 @@ public class OrganizationFacade {
     public ApiResponse<OrganizationSummaryDto> getOrgSummary() {
         String orgId = authHelper.getOrgId();
         OrganizationSummaryDto response = organizationService.getOrgSummary(orgId);
+        return new ApiResponse<>(HttpStatus.OK.value(), "Organization Summary Fetched Successfully", response);
+    }
+
+    public ApiResponse<SubscriptionDto> getActivePlan() {
+        String orgId = authHelper.getOrgId();
+        SubscriptionDto response = subscriptionService.getActivePlan(orgId);
         return new ApiResponse<>(HttpStatus.OK.value(), "Organization Summary Fetched Successfully", response);
     }
 }

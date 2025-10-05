@@ -11,6 +11,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import com.uniq.tms.tms_microservice.dto.DeactivateUserRequestDto;
 
 public interface UserService {
 
@@ -19,7 +20,7 @@ public interface UserService {
     ApiResponse createUser(UserDto userDto, SecondaryDetailsDto secondaryDetailsDto, String organizationId);
     User updateUser(CreateUserDto updates, String orgId, String userId);
     List<UserResponseDto> getUsers(String orgId, String role);
-    User deleteUser(String orgId, DeactivateUserRequestDto requestDto, String userNameFromToken);
+    void deleteUsers(String orgId, List<String>userIds, String userNameFromToken,DeactivateUserRequestDto requestDto );
     AddGroup createGroup(AddGroup groupMiddleware, String orgId);
     void deleteMember(Long groupId, String memberId, String orgId);
     void deleteGroup(Long groupId, String orgId);
@@ -41,4 +42,6 @@ public interface UserService {
     ApiResponse createSuperAdminUser(Organization organization, String orgId, String schemaName);
     ApiResponse<UserValidationDto> validateUser(String userId);
     ApiResponse<List<UserHistoryResponseDto>> getUserHistoryLog(String userId);
+    List<UserBulkChangingModel> updateMultipleUserRoles(List<String> userIds, Long roleId);
+    List<BulkWorkScheduleUpdateResponseDto> updateWorkSchedules(BulkWorkScheduleUpdateRequestDto requestDto, String userNameFromToken,String orgId);
 }

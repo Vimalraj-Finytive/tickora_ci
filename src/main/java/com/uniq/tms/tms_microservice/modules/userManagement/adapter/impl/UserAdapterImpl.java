@@ -2,6 +2,7 @@ package com.uniq.tms.tms_microservice.modules.userManagement.adapter.impl;
 
 import com.uniq.tms.tms_microservice.modules.locationManagement.repository.LocationRepository;
 import com.uniq.tms.tms_microservice.modules.locationManagement.repository.UserLocationRepository;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.RoleEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.SubscriptionEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.*;
 import com.uniq.tms.tms_microservice.modules.userManagement.adapter.UserAdapter;
@@ -90,6 +91,11 @@ public class UserAdapterImpl implements UserAdapter {
     @Override
     public Optional<UserEntity> findById(String userId) {
         return userRepository.findByUserId(userId);
+    }
+
+    @Override
+    public Optional<RoleEntity> findById(Long roleId) {
+        return roleRepository.findById(roleId);
     }
 
     public List<UserResponse> findByOrganizationId(String orgId, int hierarchyLevel){
@@ -463,5 +469,14 @@ public class UserAdapterImpl implements UserAdapter {
     public int countInactiveMembers(String orgId) {
         return (int) userRepository.countByOrganizationIdAndActiveFalse(orgId);
     }
+    @Override
+    public List<UserEntity> findByUserId(List<String> userId) {
+        return userRepository.findByUserIdIn(userId);
+    }
+    @Override
+    public UserEntity save(UserEntity user) {
+        return userRepository.save(user);
+    }
+
 
 }

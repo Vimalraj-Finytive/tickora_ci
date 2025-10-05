@@ -8,6 +8,7 @@ import com.uniq.tms.tms_microservice.modules.locationManagement.mapper.LocationD
 import com.uniq.tms.tms_microservice.modules.locationManagement.repository.LocationRepository;
 import com.uniq.tms.tms_microservice.modules.locationManagement.services.LocationService;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.mapper.OrganizationEntityMapper;
+import com.uniq.tms.tms_microservice.modules.userManagement.mapper.RoleMapper;
 import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.OrganizationAdapter;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.OrganizationEntity;
@@ -50,6 +51,7 @@ import com.uniq.tms.tms_microservice.modules.identityManagement.service.IdGenera
 import com.uniq.tms.tms_microservice.modules.userManagement.enums.UserRole;
 import com.uniq.tms.tms_microservice.modules.userManagement.repository.SecondaryDetailsRepository;
 import com.uniq.tms.tms_microservice.modules.userManagement.services.UserService;
+import com.uniq.tms.tms_microservice.dto.DeactivateUserRequestDto;
 import jakarta.annotation.Nullable;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Validator;
@@ -92,7 +94,7 @@ import static com.uniq.tms.tms_microservice.shared.util.TextUtil.isBlank;
 
 @Service
 public class UserServiceImpl implements UserService {
-
+    private final RoleMapper updateRole;
     private final Validator validator;
     private final UserAdapter userAdapter;
     private final TimesheetAdapter timesheetAdapter;
@@ -123,7 +125,7 @@ public class UserServiceImpl implements UserService {
     private final LocationAdapter locationAdapter;
     private final OrganizationEntityMapper organizationEntityMapper;
 
-    public UserServiceImpl(Validator validator, UserAdapter userAdapter, TimesheetAdapter timesheetAdapter,
+    public UserServiceImpl(RoleMapper updateRole, Validator validator, UserAdapter userAdapter, TimesheetAdapter timesheetAdapter,
                            UserEntityMapper userEntityMapper, OrganizationRepository organizationRepository,
                            RoleRepository roleRepository, LocationRepository locationRepository, EmailHelper emailHelper,
                            UserDtoMapper userDtoMapper, SecondaryDetailsMapper secondaryDetailsMapper,
@@ -132,6 +134,7 @@ public class UserServiceImpl implements UserService {
                            CacheKeyUtil cacheKeyUtil, GroupRepository groupRepository, CacheKeyConfig cacheKeyConfig, CacheReloadHandlerRegistry cacheReloadHandlerRegistry,
                            OrganizationTypeRepository organizationTypeRepository, IdGenerationService idGenerationService, SecondaryDetailsRepository secondaryDetailsRepository,
                            RolePrivilegeHelper rolePrivilegeHelper, ExceptionHelper exceptionHelper, OrganizationCacheService organizationCacheService, LocationDtoMapper locationDtoMapper, LocationService locationService, OrganizationAdapter organizationAdapter, LocationAdapter locationAdapter, OrganizationEntityMapper organizationEntityMapper) {
+        this.updateRole = updateRole;
         this.validator = validator;
         this.userAdapter = userAdapter;
         this.timesheetAdapter = timesheetAdapter;
@@ -1139,26 +1142,27 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public User deleteUser(String orgId, DeactivateUserRequestDto requestDto, String userNameFromToken) {
+    public void deleteUsers(String orgId,List<String> userIds, String userNameFromToken,DeactivateUserRequestDto requestDto) {
         String schema = TenantUtil.getCurrentTenant();
-        String userId = requestDto.getUserId();
-        UserEntity user = userAdapter.findById(userId)
-                .orElseThrow(() -> new UsernameNotFoundException("User ID not found."));
 
-        if (!user.getOrganizationId().equals(orgId)) {
-            throw new RuntimeException("Unauthorized");
+        for (String userId : userIds) {
+            UserEntity user = userAdapter.findById(userId)
+                    .orElseThrow(() -> new UsernameNotFoundException("User ID not found."));
+            if (!user.getOrganizationId().equals(orgId)) {
+                throw new RuntimeException("Unauthorized");
+            }
+
+            userAdapter.deactivateUserById(userId, orgId);
+            log.info("Deactivated user: {} in org: {}", userId, orgId);
+            String Comments = "Inactivated By " + userNameFromToken + "- " + requestDto.getComments();
+            UserHistoryEntity userHistoryEntity = userEntityMapper.toInactiveUserEntity(userId, Comments);
+            log.info("Save User History Log");
+            userAdapter.saveUserHistory(userHistoryEntity);
+            log.info("Saved User log History");
+            log.info("Deleting User Face");
+            userAdapter.deleteUserFace(userId);
+            log.info("User face deleted Successfully");
         }
-
-        userAdapter.deactivateUserById(userId, orgId);
-        log.info("Deactivated user: {} in org: {}", userId, orgId);
-        String Comments = "Inactivated By " + userNameFromToken + "- " + requestDto.getComments();
-        UserHistoryEntity userHistoryEntity = userEntityMapper.toInactiveUserEntity(userId,Comments);
-        log.info("Save User History Log");
-        userAdapter.saveUserHistory(userHistoryEntity);
-        log.info("Saved User log History");
-        log.info("Deleting User Face");
-        userAdapter.deleteUserFace(userId);
-        log.info("User face deleted Successfully");
         if (isRedisEnabled) {
             CacheEventPublisherUtil.syncReloadThenPublish(
                     publisher,
@@ -1171,9 +1175,7 @@ public class UserServiceImpl implements UserService {
         } else {
             log.info("Redis is not enabled or RedisTemplate is null. Skipping cache reload.");
         }
-        return userEntityMapper.toMiddleware(user);
     }
-
     @Override
     @Transactional
     public AddGroup createGroup(AddGroup groupMiddleware, String orgId) {
@@ -1979,4 +1981,86 @@ public class UserServiceImpl implements UserService {
             return ResponseEntity.status(500).build();
         }
     }
+    @Override
+    public List<UserBulkChangingModel> updateMultipleUserRoles(List<String> userIds, Long roleId) {
+        RoleEntity newRole = userAdapter.findById(roleId)
+                .orElseThrow(() -> new RuntimeException("Role not found: " + roleId));
+        List<UserEntity> users = userAdapter.findByUserId(userIds);
+        Set<String> foundIds = users.stream()
+                .map(UserEntity::getUserId)
+                .collect(Collectors.toSet());
+        List<String> missingIds = userIds.stream()
+                .filter(id -> !foundIds.contains(id))
+                .toList();
+        List<UserEntity> updatedUsers = new ArrayList<>();
+        for (UserEntity user : users) {
+            if (!UserRole.STUDENT.name().equalsIgnoreCase(user.getRole().getName())) {
+                user.setRole(newRole);
+                updatedUsers.add(user);
+            }
+        }
+        List<UserEntity> savedUsers = userAdapter.saveAllUsers(updatedUsers);
+        List<UserBulkChangingModel> result=savedUsers.stream()
+                .map(updateRole::toModel).collect(Collectors.toList());
+        if (!missingIds.isEmpty()) {
+            UserBulkChangingModel missingInfo = new UserBulkChangingModel();
+            missingInfo.setMessage("User(s) not found count: " + missingIds.size());
+            result.add(missingInfo);
+        }
+        return result;
+    }
+    @Override
+    public List<BulkWorkScheduleUpdateResponseDto> updateWorkSchedules(
+            BulkWorkScheduleUpdateRequestDto requestDto,
+            String userNameFromToken,
+            String orgId) {
+
+        String schema = TenantUtil.getCurrentTenant(); // For multi-tenant DB
+        List<BulkWorkScheduleUpdateResponseDto> results = new ArrayList<>();
+
+        WorkScheduleEntity workSchedule = null;
+
+// Check if workScheduleId is provided
+        if (requestDto.getWorkScheduleId() != null) {
+            workSchedule = workScheduleAdapter.findByScheduleId(requestDto.getWorkScheduleId(), orgId);
+
+            if (workSchedule == null) {
+                throw new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "WorkSchedule not found with ID: " + requestDto.getWorkScheduleId()
+                );
+            }
+        }
+
+        log.info("Starting bulk work schedule update for scheduleId {}", workSchedule.getScheduleId());
+
+        for (String memberId : requestDto.getMemberIds()) {
+            try {
+                UserEntity user = userAdapter.getUserById(memberId);
+
+                if (!user.getOrganizationId().equals(orgId)) {
+                    throw new RuntimeException("Unauthorized to update work schedule for user: " + memberId);
+                }
+
+
+                user.setWorkSchedule(workSchedule);
+                userAdapter.save(user);
+
+                results.add(new BulkWorkScheduleUpdateResponseDto(memberId, true, "Work schedule updated"));
+                log.info("Updated work schedule for user {} with scheduleId {}", memberId, workSchedule.getScheduleId());
+
+            } catch (Exception e) {
+                log.error("Failed to update work schedule for user {}: {}", memberId, e.getMessage());
+                results.add(new BulkWorkScheduleUpdateResponseDto(memberId, false, e.getMessage()));
+            }
+        }
+
+        long successCount = results.stream().filter(BulkWorkScheduleUpdateResponseDto::isSuccess).count();
+        long failedCount = results.size() - successCount;
+        log.info("Completed bulk work schedule update. Success count: {}, Failed count: {}", successCount, failedCount);
+
+        return results;
+    }
+
+
 }

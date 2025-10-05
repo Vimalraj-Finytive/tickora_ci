@@ -32,19 +32,17 @@ public class UserTimesheetDto {
     private String status;
     private String workScheduleName;
 
-    public UserTimesheetDto(TimesheetSummaryDto summary, List<TimesheetDto> timesheets) {
-        if (summary != null && timesheets != null && !timesheets.isEmpty()) {
-            this.userName = summary.getUserName();
-            this.date = timesheets.getFirst().getDate();
-            this.workStatus = timesheets.getFirst().getWorkStatus();
-            this.firstClockInTime = timesheets.getFirst().getFirstClockInTime();
-            this.lastClockOutTime = timesheets.getFirst().getLastClockOutTime();
-            this.trackedHoursDuration = timesheets.getFirst().getTrackedHoursDuration();
-            this.regularHoursDuration = timesheets.getFirst().getRegularHoursDuration();
-            this.history =timesheets.getFirst().getHistory();
-            this.status = timesheets.getFirst().getStatus();
-            this.workScheduleName = timesheets.getFirst().getWorkScheduleName();
-        }
+    public UserTimesheetDto(String userName, TimesheetDto t) {
+        this.userName = userName;
+        this.date = t.getDate();
+        this.workStatus = t.getWorkStatus();
+        this.firstClockInTime = t.getFirstClockInTime();
+        this.lastClockOutTime = t.getLastClockOutTime();
+        this.trackedHoursDuration = t.getTrackedHoursDuration();
+        this.regularHoursDuration = t.getRegularHoursDuration();
+        this.history = t.getHistory();
+        this.status = t.getStatus();
+        this.workScheduleName = t.getWorkScheduleName();
     }
 
     public UserTimesheetDto() {

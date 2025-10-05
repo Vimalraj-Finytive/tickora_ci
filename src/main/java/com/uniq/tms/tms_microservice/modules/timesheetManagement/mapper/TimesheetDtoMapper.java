@@ -10,12 +10,11 @@ import com.uniq.tms.tms_microservice.modules.timesheetManagement.model.Timesheet
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.model.TimesheetStatus;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.projection.TimesheetProjection;
 import com.uniq.tms.tms_microservice.modules.userManagement.projections.UserDashboard;
-import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
-import org.mapstruct.Named;
-import org.mapstruct.ReportingPolicy;
+import org.mapstruct.*;
+
 import java.time.Duration;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @Mapper(componentModel = "spring",unmappedTargetPolicy = ReportingPolicy.IGNORE)
@@ -47,8 +46,26 @@ public interface TimesheetDtoMapper {
 
     TimesheetStatusDto toStatusDto(TimesheetStatus timesheetStatus);
 
-    List<TimesheetDto> toDto(List<TimesheetProjection> timesheets);
+    @Named("defaultMapping")
+    @Mapping(target = "firstClockInTime", expression = "java(formatTime(projection.getFirstClockIn()))")
+    @Mapping(target = "lastClockOutTime", expression = "java(formatTime(projection.getLastClockOut()))")
     TimesheetDto toDto(TimesheetProjection projection);
+
+    @Named("timeOnlyMapping")
+    TimesheetDto toTimeDto(TimesheetProjection projection);
+
+    @IterableMapping(qualifiedByName = "defaultMapping")
+    List<TimesheetDto> toDto(List<TimesheetProjection> timesheets);
+
+    @IterableMapping(qualifiedByName = "timeOnlyMapping")
+    List<TimesheetDto> toTimeDto(List<TimesheetProjection> timesheets);
+
+
+    default String formatTime(LocalTime localTime) {
+        if (localTime == null) return "00:00";
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("hh:mm a");
+        return localTime.format(formatter);
+    }
 
     default Duration map(LocalTime localTime) {
         if (localTime == null) {
@@ -58,4 +75,5 @@ public interface TimesheetDtoMapper {
                 .plusMinutes(localTime.getMinute())
                 .plusSeconds(localTime.getSecond());
     }
+
 }
