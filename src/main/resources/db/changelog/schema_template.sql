@@ -519,6 +519,46 @@ CREATE TABLE user_history (
 );
 
 -- ===========================================================
+-- Table: calendar
+-- ===========================================================
+--changeset system:create-calendar-table
+CREATE TABLE IF NOT EXISTS calendar (
+    id VARCHAR(10) PRIMARY KEY,
+    name VARCHAR(255),
+    is_default BOOLEAN
+);
+
+-- ===========================================================
+-- Table: calendar_details
+-- ===========================================================
+--changeset system:create-calendar-details-table
+CREATE TABLE IF NOT EXISTS calendar_details (
+    id VARCHAR(10) PRIMARY KEY,
+    date DATE,
+    name VARCHAR(255),
+    year VARCHAR(10),
+    calendar_id VARCHAR(10) NOT NULL,
+    CONSTRAINT fk_calendar_details_calendar
+        FOREIGN KEY (calendar_id) REFERENCES calendar (id)
+        ON DELETE CASCADE
+);
+
+-- ===========================================================
+-- Table: public_holiday
+-- ===========================================================
+--changeset system:create-public-holiday-table
+CREATE TABLE IF NOT EXISTS public_holiday (
+    id VARCHAR(10) PRIMARY KEY,
+    date DATE,
+    name VARCHAR(255),
+    year VARCHAR(10),
+    country_id VARCHAR(10) NOT NULL,
+    CONSTRAINT fk_public_holiday_country
+        FOREIGN KEY (country_id) REFERENCES country (id)
+        ON DELETE CASCADE
+);
+
+-- ===========================================================
 -- Indexes for timesheet queries (fetchMainTimesheets)
 -- ===========================================================
 

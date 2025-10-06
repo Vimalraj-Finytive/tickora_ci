@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS public.user_schema_mapping (
     );
 
 --Table : Plan
-CREATE TABLE plan (
+CREATE TABLE IF NOT EXISTS public.plan (
     plan_id VARCHAR(10) PRIMARY KEY,
     plan_name VARCHAR(255) NOT NULL,
     price_per_user NUMERIC(10, 2) NOT NULL,
@@ -55,4 +55,18 @@ VALUES
 ('PL01', 'Basic plan', 0.00, 'basic','true'),
 ('PL02', 'Essential plan', 12.00, '3 month','false'),
 ('PL03', 'Standard plan', 11.00, '6 month','false'),
-('PL04', 'Premium plan', 9.00, 'yearly','false');
+('PL04', 'Premium plan', 9.00, 'yearly','false')
+ON CONFLICT (plan_id) DO NOTHING;
+
+--Table : country
+CREATE TABLE IF NOT EXISTS public.country (
+    id VARCHAR(10) PRIMARY KEY,
+    code VARCHAR(255) NOT NULL UNIQUE,
+    name VARCHAR(255) NOT NULL
+);
+
+--table : country - Default Countries
+INSERT INTO country(id, code, name)
+VALUES
+('CT001','IN','India')
+ON CONFLICT (id) DO NOTHING;
