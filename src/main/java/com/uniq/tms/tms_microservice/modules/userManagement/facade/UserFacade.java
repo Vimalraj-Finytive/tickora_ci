@@ -299,7 +299,8 @@ public class UserFacade {
         return userService.getUserHistoryLog(userId);
     }
     public Iterable<BulkRoleUpdate> updateMultipleUserRoles(List<String> userIds, Long roleId) {
-        List<UserBulkChangingModel> user= userService.updateMultipleUserRoles(userIds, roleId);
+        String orgId = authHelper.getOrgId();
+        List<UserBulkChangingModel> user= userService.updateMultipleUserRoles(userIds, roleId, orgId);
         Iterable<BulkRoleUpdate> result=user.stream()
                 .map(updateRole::toDto).collect(Collectors.toList());
         return result;

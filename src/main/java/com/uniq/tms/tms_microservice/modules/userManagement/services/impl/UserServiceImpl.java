@@ -1981,8 +1981,10 @@ public class UserServiceImpl implements UserService {
             return ResponseEntity.status(500).build();
         }
     }
+
     @Override
-    public List<UserBulkChangingModel> updateMultipleUserRoles(List<String> userIds, Long roleId) {
+    public List<UserBulkChangingModel> updateMultipleUserRoles(List<String> userIds, Long roleId, String orgId) {
+        String schema = TenantUtil.getCurrentTenant();
         RoleEntity newRole = userAdapter.findById(roleId)
                 .orElseThrow(() -> new RuntimeException("Role not found: " + roleId));
         List<UserEntity> users = userAdapter.findByUserId(userIds);
@@ -2007,20 +2009,30 @@ public class UserServiceImpl implements UserService {
             missingInfo.setMessage("User(s) not found count: " + missingIds.size());
             result.add(missingInfo);
         }
+        if (isRedisEnabled) {
+            CacheEventPublisherUtil.syncReloadThenPublish(
+                    publisher,
+                    cacheKeyConfig.getInactiveUsers(),
+                    orgId,
+                    schema,
+                    cacheReloadHandlerRegistry
+            );
+            log.info("UserCacheReloadEvent published after bulk role update");
+        } else {
+            log.info("Redis is not enabled or RedisTemplate is null. Skipping cache update bulk role reload.");
+        }
         return result;
     }
+
     @Override
     public List<BulkWorkScheduleUpdateResponseDto> updateWorkSchedules(
             BulkWorkScheduleUpdateRequestDto requestDto,
             String userNameFromToken,
-            String orgId) {
-
-        String schema = TenantUtil.getCurrentTenant(); // For multi-tenant DB
+            String orgId)
+    {
+        String schema = TenantUtil.getCurrentTenant();
         List<BulkWorkScheduleUpdateResponseDto> results = new ArrayList<>();
-
         WorkScheduleEntity workSchedule = null;
-
-// Check if workScheduleId is provided
         if (requestDto.getWorkScheduleId() != null) {
             workSchedule = workScheduleAdapter.findByScheduleId(requestDto.getWorkScheduleId(), orgId);
 
@@ -2031,9 +2043,7 @@ public class UserServiceImpl implements UserService {
                 );
             }
         }
-
         log.info("Starting bulk work schedule update for scheduleId {}", workSchedule.getScheduleId());
-
         for (String memberId : requestDto.getMemberIds()) {
             try {
                 UserEntity user = userAdapter.getUserById(memberId);
@@ -2041,11 +2051,8 @@ public class UserServiceImpl implements UserService {
                 if (!user.getOrganizationId().equals(orgId)) {
                     throw new RuntimeException("Unauthorized to update work schedule for user: " + memberId);
                 }
-
-
                 user.setWorkSchedule(workSchedule);
                 userAdapter.save(user);
-
                 results.add(new BulkWorkScheduleUpdateResponseDto(memberId, true, "Work schedule updated"));
                 log.info("Updated work schedule for user {} with scheduleId {}", memberId, workSchedule.getScheduleId());
 
@@ -2054,11 +2061,21 @@ public class UserServiceImpl implements UserService {
                 results.add(new BulkWorkScheduleUpdateResponseDto(memberId, false, e.getMessage()));
             }
         }
-
         long successCount = results.stream().filter(BulkWorkScheduleUpdateResponseDto::isSuccess).count();
         long failedCount = results.size() - successCount;
         log.info("Completed bulk work schedule update. Success count: {}, Failed count: {}", successCount, failedCount);
-
+        if (isRedisEnabled) {
+            CacheEventPublisherUtil.syncReloadThenPublish(
+                    publisher,
+                    cacheKeyConfig.getUsers(),
+                    orgId,
+                    schema,
+                    cacheReloadHandlerRegistry
+            );
+            log.info("UserCacheReloadEvent published after Bulk Ws update");
+        } else {
+            log.info("Redis is not enabled or RedisTemplate is null. Skipping cache update Bulk Ws reload.");
+        }
         return results;
     }
 

@@ -42,6 +42,6 @@ public interface UserService {
     ApiResponse createSuperAdminUser(Organization organization, String orgId, String schemaName);
     ApiResponse<UserValidationDto> validateUser(String userId);
     ApiResponse<List<UserHistoryResponseDto>> getUserHistoryLog(String userId);
-    List<UserBulkChangingModel> updateMultipleUserRoles(List<String> userIds, Long roleId);
+    List<UserBulkChangingModel> updateMultipleUserRoles(List<String> userIds, Long roleId, String orgId);
     List<BulkWorkScheduleUpdateResponseDto> updateWorkSchedules(BulkWorkScheduleUpdateRequestDto requestDto, String userNameFromToken,String orgId);
 }
