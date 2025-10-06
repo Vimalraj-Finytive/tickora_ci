@@ -695,7 +695,6 @@ public class TimesheetServiceImpl implements TimesheetService {
                 Set<String> roles = Set.of(RoleName.STAFF.getRoleName(), RoleName.ADMIN.getRoleName(), RoleName.MANAGER.getRoleName());
                 log.info("Roles: {}", roles);
                 filterUsers = userAdapter.getUsersByRoles(roles, orgId);
-                log.info("Filtered users: {}", filterUsers);
             } else if (type != null && !type.isBlank()) {
                 // Get all users for the given role
                 filterUsers = userAdapter.getUsersByRoles(Set.of(type), orgId);
