@@ -385,13 +385,13 @@ public class OrganizationServiceImpl implements OrganizationService {
                     .findFirst()
                     .orElseThrow(() -> new RuntimeException("Organization not found for id: " + orgId));
 
-            // Replace type id with type name
+
             if (dto.getType() != null) {
                 String typeName = organizationAdapter.getOrgTypeNameById(dto.getType());
                 dto.setType(typeName);
             }
 
-            // User counts
+
             int total = userAdapter.countTotalMembers(orgId);
             int active = userAdapter.countActiveMembers(orgId);
             int inactive = userAdapter.countInactiveMembers(orgId);

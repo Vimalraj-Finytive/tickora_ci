@@ -1,18 +1,36 @@
 package com.uniq.tms.tms_microservice.modules.organizationManagement.dto;
 
 public class SubscriptionDto {
-    private String currentPlan;
+    private String subscriptionId;
+    private String planName;
     private String start;
     private String activeUntil;
     private String status;
     private String nextInvoiceDate;
+    private String billingCycle;
 
-    public String getCurrentPlan() {
-        return currentPlan;
+    public String getSubscriptionId() {
+        return subscriptionId;
     }
 
-    public void setCurrentPlan(String currentPlan) {
-        this.currentPlan = currentPlan;
+    public void setSubscriptionId(String subscriptionId) {
+        this.subscriptionId = subscriptionId;
+    }
+
+    public String getBillingCycle() {
+        return billingCycle;
+    }
+
+    public void setBillingCycle(String billingCycle) {
+        this.billingCycle = billingCycle;
+    }
+
+    public String getPlanName() {
+        return planName;
+    }
+
+    public void setPlanName(String planName) {
+        this.planName = planName;
     }
 
     public String getStart() {

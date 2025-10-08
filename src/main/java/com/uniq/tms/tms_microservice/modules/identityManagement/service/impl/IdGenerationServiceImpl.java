@@ -159,4 +159,38 @@ public class IdGenerationServiceImpl implements IdGenerationService {
         }
         return organizationId.replaceAll("\\d","") + IdGenerationTypeEnum.SUBSCRIPTION.getPrefix() + String.format("%03d", latestNumber);
     }
+
+    @Override
+    public String generateNextPaymentID(String organizationId){
+            if (organizationId == null || organizationId.isBlank()) {
+                throw new IllegalArgumentException("organizationId cannot be null or blank");
+            }
+            log.info("Generating Payment ID for Organization: {}", organizationId);
+
+            int updated = orgUserSequenceRepository.incrementPaymentSequence(organizationId);
+            log.info("Increment result: {}", updated);
+
+
+            if (updated == 0) {
+                OrgUserSequenceEntity sequence = new OrgUserSequenceEntity();
+                sequence.setOrgId(organizationId);
+                sequence.setLastPaymentId(1);
+                orgUserSequenceRepository.save(sequence);
+
+                return organizationId.replaceAll("\\d", "")
+                        + IdGenerationTypeEnum.PAYMENT.getPrefix()
+                        + String.format("%04d", 1);
+            }
+
+            // Get latest number
+            Integer latestNumber = orgUserSequenceRepository.getLastPaymentId(organizationId);
+            if (latestNumber == null) {
+                orgUserSequenceRepository.updateLastPaymentId(organizationId, 1);
+                latestNumber = 1;
+            }
+
+            return organizationId.replaceAll("\\d", "")
+                    + IdGenerationTypeEnum.PAYMENT.getPrefix()
+                    + String.format("%04d", latestNumber);
+        }
 }

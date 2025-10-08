@@ -3,12 +3,21 @@ package com.uniq.tms.tms_microservice.modules.organizationManagement.model;
 import java.time.LocalDateTime;
 
 public class Subscription {
+    private String subscriptionId;
     private String planName;
     private LocalDateTime startDate;
     private LocalDateTime endDate;
     private String status;
     private String nextInvoiceAmount;
     private LocalDateTime nextInvoiceDate;
+
+    public String getSubscriptionId() {
+        return subscriptionId;
+    }
+
+    public void setSubscriptionId(String subscriptionId) {
+        this.subscriptionId = subscriptionId;
+    }
 
     public String getPlanName() {
         return planName;
