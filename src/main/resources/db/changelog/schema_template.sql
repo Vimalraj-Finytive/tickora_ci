@@ -492,6 +492,7 @@ CREATE TABLE subscription (
 CREATE TABLE payment (
     payment_id VARCHAR(20) PRIMARY KEY,
     subscription_id VARCHAR(20) NOT NULL,
+    order_id VARCHAR(30) NOT NULL,
     amount NUMERIC(10, 2) NOT NULL,
     billing_period VARCHAR(50) NOT NULL,
     payment_status VARCHAR(20) NOT NULL,

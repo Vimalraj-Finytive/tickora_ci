@@ -27,12 +27,13 @@ public class PaymentAdapterImpl implements PaymentAdapter {
     }
 
     @Override
-    public PaymentEntity createPayment(String orgId,String subId, String billingCycle, BigDecimal subscriptionAmount, Integer subscribedUserCount, String planId, String orgSchema) {
+    public PaymentEntity createPayment(String orgId,String subId,String orderId, String billingCycle, BigDecimal subscriptionAmount, Integer subscribedUserCount, String planId, String orgSchema) {
         try {
 
             PaymentEntity payment = new PaymentEntity();
             payment.setPaymentId(idGenerationService.generateNextPaymentID(orgId));
             payment.setSubscriptionId(subId);
+            payment.setOrderId(orderId);
             payment.setAmount(subscriptionAmount);
             payment.setBillingPeriod(billingCycle);
             payment.setPaymentStatus("COMPLETED");

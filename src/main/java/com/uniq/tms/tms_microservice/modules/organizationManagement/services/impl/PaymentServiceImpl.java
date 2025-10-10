@@ -60,8 +60,8 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     @Override
-    public PaymentEntity createPayment(String orgId,String subId, String billingCycle ,BigDecimal subscriptionAmount ,Integer subscribedUserCount, String planId, String orgSchema) {
-        return paymentAdapter.createPayment(orgId,subId,billingCycle,subscriptionAmount, subscribedUserCount,planId,orgSchema);
+    public PaymentEntity createPayment(String orgId,String subId,String orderId, String billingCycle ,BigDecimal subscriptionAmount ,Integer subscribedUserCount, String planId, String orgSchema) {
+        return paymentAdapter.createPayment(orgId,subId,orderId,billingCycle,subscriptionAmount, subscribedUserCount,planId,orgSchema);
     }
 
 

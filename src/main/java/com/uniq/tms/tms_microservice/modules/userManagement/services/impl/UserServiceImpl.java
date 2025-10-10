@@ -8,7 +8,6 @@ import com.uniq.tms.tms_microservice.modules.locationManagement.mapper.LocationD
 import com.uniq.tms.tms_microservice.modules.locationManagement.repository.LocationRepository;
 import com.uniq.tms.tms_microservice.modules.locationManagement.services.LocationService;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.mapper.OrganizationEntityMapper;
-import com.uniq.tms.tms_microservice.modules.userManagement.mapper.RoleMapper;
 import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.OrganizationAdapter;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.OrganizationEntity;
@@ -94,7 +93,7 @@ import static com.uniq.tms.tms_microservice.shared.util.TextUtil.isBlank;
 
 @Service
 public class UserServiceImpl implements UserService {
-    private final RoleMapper updateRole;
+
     private final Validator validator;
     private final UserAdapter userAdapter;
     private final TimesheetAdapter timesheetAdapter;
@@ -125,7 +124,7 @@ public class UserServiceImpl implements UserService {
     private final LocationAdapter locationAdapter;
     private final OrganizationEntityMapper organizationEntityMapper;
 
-    public UserServiceImpl(RoleMapper updateRole, Validator validator, UserAdapter userAdapter, TimesheetAdapter timesheetAdapter,
+    public UserServiceImpl( Validator validator, UserAdapter userAdapter, TimesheetAdapter timesheetAdapter,
                            UserEntityMapper userEntityMapper, OrganizationRepository organizationRepository,
                            RoleRepository roleRepository, LocationRepository locationRepository, EmailHelper emailHelper,
                            UserDtoMapper userDtoMapper, SecondaryDetailsMapper secondaryDetailsMapper,
@@ -134,7 +133,7 @@ public class UserServiceImpl implements UserService {
                            CacheKeyUtil cacheKeyUtil, GroupRepository groupRepository, CacheKeyConfig cacheKeyConfig, CacheReloadHandlerRegistry cacheReloadHandlerRegistry,
                            OrganizationTypeRepository organizationTypeRepository, IdGenerationService idGenerationService, SecondaryDetailsRepository secondaryDetailsRepository,
                            RolePrivilegeHelper rolePrivilegeHelper, ExceptionHelper exceptionHelper, OrganizationCacheService organizationCacheService, LocationDtoMapper locationDtoMapper, LocationService locationService, OrganizationAdapter organizationAdapter, LocationAdapter locationAdapter, OrganizationEntityMapper organizationEntityMapper) {
-        this.updateRole = updateRole;
+
         this.validator = validator;
         this.userAdapter = userAdapter;
         this.timesheetAdapter = timesheetAdapter;
@@ -1142,40 +1141,72 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public void deleteUsers(String orgId,List<String> userIds, String userNameFromToken,DeactivateUserRequestDto requestDto) {
+    @Transactional
+    public void deleteUsers(String orgId, List<String> userIds, String userNameFromToken, String comments) {
         String schema = TenantUtil.getCurrentTenant();
 
-        for (String userId : userIds) {
-            UserEntity user = userAdapter.findById(userId)
-                    .orElseThrow(() -> new UsernameNotFoundException("User ID not found."));
-            if (!user.getOrganizationId().equals(orgId)) {
-                throw new RuntimeException("Unauthorized");
-            }
+        List<UserEntity> users = userAdapter.findByUserId(userIds);
+        if (users.isEmpty()) {
+            throw new RuntimeException("No valid users found to delete.");
+        }
 
-            userAdapter.deactivateUserById(userId, orgId);
-            log.info("Deactivated user: {} in org: {}", userId, orgId);
-            String Comments = "Inactivated By " + userNameFromToken + "- " + requestDto.getComments();
-            UserHistoryEntity userHistoryEntity = userEntityMapper.toInactiveUserEntity(userId, Comments);
-            log.info("Save User History Log");
-            userAdapter.saveUserHistory(userHistoryEntity);
-            log.info("Saved User log History");
-            log.info("Deleting User Face");
-            userAdapter.deleteUserFace(userId);
-            log.info("User face deleted Successfully");
+        Set<String> foundUserIds = users.stream()
+                .map(UserEntity::getUserId)
+                .collect(Collectors.toSet());
+
+        List<String> missingUsers = userIds.stream()
+                .filter(id -> !foundUserIds.contains(id))
+                .toList();
+        if (!missingUsers.isEmpty()) {
+            throw new RuntimeException("User IDs not found: " + missingUsers);
         }
+
+        Optional<UserEntity> unauthorized = users.stream()
+                .filter(user -> !orgId.equals(user.getOrganizationId()))
+                .findFirst();
+        unauthorized.ifPresent(user -> {
+            throw new RuntimeException("Unauthorized to delete user: " + user.getUserId());
+        });
+
+        userAdapter.deactivateUsersByIds(userIds, orgId);
+
+        List<UserHistoryEntity> historyEntities = users.stream()
+                .map(user -> {
+                    String commentLog = "Inactivated By " + userNameFromToken + " - " + comments;
+                    return userEntityMapper.toInactiveUserEntity(user.getUserId(), commentLog);
+                })
+                .toList();
+
+        if (!historyEntities.isEmpty()) {
+            userAdapter.saveAllUserHistories(historyEntities);
+        }
+
+        users.parallelStream().forEach(user -> {
+            try {
+                userAdapter.deleteUserFace(user.getUserId());
+            } catch (Exception e) {
+                log.error("Failed to delete face for user {}: {}", user.getUserId(), e.getMessage());
+            }
+        });
+
         if (isRedisEnabled) {
-            CacheEventPublisherUtil.syncReloadThenPublish(
-                    publisher,
-                    cacheKeyConfig.getUsers(),
-                    orgId,
-                    schema,
-                    cacheReloadHandlerRegistry
-            );
-            log.info("Reloaded cache for active and inactive users for org: {}", orgId);
-        } else {
-            log.info("Redis is not enabled or RedisTemplate is null. Skipping cache reload.");
+            try {
+                CacheEventPublisherUtil.syncReloadThenPublish(
+                        publisher,
+                        cacheKeyConfig.getUsers(),
+                        orgId,
+                        schema,
+                        cacheReloadHandlerRegistry
+                );
+                log.info("Redis cache reloaded after user deletion");
+            } catch (Exception e) {
+                log.error("Redis reload failed: {}", e.getMessage());
+            }
         }
+
+        log.info("Deleted users successfully: {}", userIds);
     }
+
     @Override
     @Transactional
     public AddGroup createGroup(AddGroup groupMiddleware, String orgId) {
@@ -1594,7 +1625,9 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public void deleteMember(Long groupId, String memberId, String orgId) {
+    public void deleteMember(DeleteMemberModel model, String orgId) {
+        Long groupId=model.getGroupId();
+        List<String> memberId=model.getMemberId();
         String schema = TenantUtil.getCurrentTenant();
         userAdapter.deleteMember(groupId, memberId);
         if (isRedisEnabled) {
@@ -1612,14 +1645,15 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public void deleteGroup(Long groupId, String orgId) {
+    public void deleteGroups(GroupBulkDeleteModel model, String orgId) {
         String schema = TenantUtil.getCurrentTenant();
-        boolean exist = groupRepository.existsByGroupIdAndOrganizationEntity_OrganizationId(groupId, orgId);
-        if (!exist) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Group not found or access denied");
+        List<Long> groupIds = model.getGroupIds();
+        List<Long> existingGroupIds = groupRepository.findExistingGroupIds(groupIds, orgId);
+        if (existingGroupIds.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No valid groups found or access denied");
         }
-        userAdapter.deleteByGroupId(groupId);
-        userAdapter.deleteGroup(groupId, orgId);
+        userAdapter.deleteByGroupIds(existingGroupIds);
+        userAdapter.deleteGroups(existingGroupIds, orgId);
         if (isRedisEnabled) {
             CacheEventPublisherUtil.syncReloadThenPublish(
                     publisher,
@@ -1628,9 +1662,7 @@ public class UserServiceImpl implements UserService {
                     schema,
                     cacheReloadHandlerRegistry
             );
-            log.info("GroupCacheReloadEvent published after Group Deletion");
-        } else {
-            log.info("Redis is not enabled or RedisTemplate is null. Skipping cache delete group reload.");
+            log.info("GroupCacheReloadEvent published after multiple group deletions");
         }
     }
 
@@ -2003,7 +2035,7 @@ public class UserServiceImpl implements UserService {
         }
         List<UserEntity> savedUsers = userAdapter.saveAllUsers(updatedUsers);
         List<UserBulkChangingModel> result=savedUsers.stream()
-                .map(updateRole::toModel).collect(Collectors.toList());
+                .map(userDtoMapper::toModel).collect(Collectors.toList());
         if (!missingIds.isEmpty()) {
             UserBulkChangingModel missingInfo = new UserBulkChangingModel();
             missingInfo.setMessage("User(s) not found count: " + missingIds.size());
@@ -2025,17 +2057,18 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public List<BulkWorkScheduleUpdateResponseDto> updateWorkSchedules(
             BulkWorkScheduleUpdateRequestDto requestDto,
             String userNameFromToken,
-            String orgId)
-    {
+            String orgId) {
         String schema = TenantUtil.getCurrentTenant();
+
         List<BulkWorkScheduleUpdateResponseDto> results = new ArrayList<>();
+
         WorkScheduleEntity workSchedule = null;
         if (requestDto.getWorkScheduleId() != null) {
             workSchedule = workScheduleAdapter.findByScheduleId(requestDto.getWorkScheduleId(), orgId);
-
             if (workSchedule == null) {
                 throw new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
@@ -2043,40 +2076,223 @@ public class UserServiceImpl implements UserService {
                 );
             }
         }
-        log.info("Starting bulk work schedule update for scheduleId {}", workSchedule.getScheduleId());
+
+        log.info("Starting bulk work schedule update for scheduleId {}",
+                workSchedule != null ? workSchedule.getScheduleId() : "null");
+
+        Map<String, UserEntity> userMap = userAdapter.getUsersByIds(requestDto.getMemberIds(), orgId)
+                .stream()
+                .collect(Collectors.toMap(UserEntity::getUserId, Function.identity()));
+
+        List<UserEntity> usersToUpdate = new ArrayList<>();
+
         for (String memberId : requestDto.getMemberIds()) {
+            UserEntity user = userMap.get(memberId);
+
+            if (user == null) {
+                results.add(new BulkWorkScheduleUpdateResponseDto(memberId, false, "User not found"));
+                continue;
+            }
+
+            if (!orgId.equals(user.getOrganizationId())) {
+                results.add(new BulkWorkScheduleUpdateResponseDto(memberId, false, "Unauthorized"));
+                continue;
+            }
+
+            user.setWorkSchedule(workSchedule);
+            usersToUpdate.add(user);
+            results.add(new BulkWorkScheduleUpdateResponseDto(memberId, true, "Work schedule updated"));
+        }
+
+        if (!usersToUpdate.isEmpty()) {
             try {
-                UserEntity user = userAdapter.getUserById(memberId);
-
-                if (!user.getOrganizationId().equals(orgId)) {
-                    throw new RuntimeException("Unauthorized to update work schedule for user: " + memberId);
-                }
-                user.setWorkSchedule(workSchedule);
-                userAdapter.save(user);
-                results.add(new BulkWorkScheduleUpdateResponseDto(memberId, true, "Work schedule updated"));
-                log.info("Updated work schedule for user {} with scheduleId {}", memberId, workSchedule.getScheduleId());
-
+                userAdapter.saveAllUsers(usersToUpdate);
             } catch (Exception e) {
-                log.error("Failed to update work schedule for user {}: {}", memberId, e.getMessage());
-                results.add(new BulkWorkScheduleUpdateResponseDto(memberId, false, e.getMessage()));
+                log.error("Failed to save users in batch: {}", e.getMessage());
             }
         }
+
         long successCount = results.stream().filter(BulkWorkScheduleUpdateResponseDto::isSuccess).count();
         long failedCount = results.size() - successCount;
         log.info("Completed bulk work schedule update. Success count: {}, Failed count: {}", successCount, failedCount);
         if (isRedisEnabled) {
             CacheEventPublisherUtil.syncReloadThenPublish(
                     publisher,
-                    cacheKeyConfig.getUsers(),
+                    cacheKeyConfig.getGroups(),
                     orgId,
                     schema,
                     cacheReloadHandlerRegistry
             );
-            log.info("UserCacheReloadEvent published after Bulk Ws update");
+            log.info("GroupCacheReloadEvent published after Group Creation");
         } else {
-            log.info("Redis is not enabled or RedisTemplate is null. Skipping cache update Bulk Ws reload.");
+            log.info("Redis is not enabled or RedisTemplate is null. Skipping cache create group reload.");
         }
         return results;
+    }
+    @Override
+    @Transactional
+    public ApiResponse addOrUpdateGroupMembers(String orgId, UserGroupModel model) {
+        String schema = TenantUtil.getCurrentTenant();
+        if (model == null || model.getGroupIds() == null || model.getUserIds() == null ||
+                model.getGroupIds().isEmpty() || model.getUserIds().isEmpty()) {
+            log.warn("No user-groups provided for orgId={}", orgId);
+            return new ApiResponse(404, "No users or groups provided", null);
+        }
+
+        List<Long> groupIds = model.getGroupIds();
+        List<String> userIds = model.getUserIds();
+        String type = model.getType();
+
+        List<UserGroup> userGroups = new ArrayList<>();
+        for (Long groupId : groupIds) {
+            for (String userId : userIds) {
+                userGroups.add(new UserGroup(groupId, userId, type));
+            }
+        }
+
+        log.info("Processing {} user-group entries for orgId={}", userGroups.size(), orgId);
+
+        Set<Long> groupIdSet = userGroups.stream().map(UserGroup::getGroupId).collect(Collectors.toSet());
+        Set<String> userIdSet = userGroups.stream().map(UserGroup::getUserId).collect(Collectors.toSet());
+
+        List<GroupEntity> groupEntities = userAdapter.findGroupsByIds(groupIdSet);
+        Map<Long, GroupEntity> groupMap = groupEntities.stream()
+                .collect(Collectors.toMap(GroupEntity::getGroupId, g -> g));
+
+        Set<Long> missingGroups = new HashSet<>(groupIdSet);
+        missingGroups.removeAll(groupMap.keySet());
+        if (!missingGroups.isEmpty()) {
+            log.error("Groups not found: {}", missingGroups);
+            return new ApiResponse(404, "Group(s) not found: " + missingGroups, null);
+        }
+
+        List<UserEntity> userEntities = userAdapter.getUsersByIds(new ArrayList<>(userIdSet), orgId);
+        Map<String, UserEntity> userMap = userEntities.stream()
+                .filter(UserEntity::isActive)
+                .collect(Collectors.toMap(UserEntity::getUserId, u -> u));
+
+        Set<String> missingUsers = new HashSet<>(userIdSet);
+        missingUsers.removeAll(userMap.keySet());
+        if (!missingUsers.isEmpty()) {
+            log.error("Users not found or inactive: {}", missingUsers);
+            return new ApiResponse(404, "User(s) not found or inactive: " + missingUsers, null);
+        }
+
+        List<UserGroupEntity> existingUserGroups = userAdapter.findUserGroupsByUsersAndGroups(userIdSet, groupIdSet);
+        Map<String, Map<Long, UserGroupEntity>> existingMap = existingUserGroups.stream()
+                .collect(Collectors.groupingBy(
+                        ug -> ug.getUser().getUserId(),
+                        Collectors.toMap(ug -> ug.getGroup().getGroupId(), ug -> ug)
+                ));
+
+        List<UserGroupEntity> toSave = new ArrayList<>();
+
+        for (UserGroup ug : userGroups) {
+            UserEntity user = userMap.get(ug.getUserId());
+            GroupEntity group = groupMap.get(ug.getGroupId());
+
+            UserGroupEntity existing = existingMap.getOrDefault(user.getUserId(), Collections.emptyMap())
+                    .get(group.getGroupId());
+
+            if (existing != null) {
+                String currentType = normalizeType(existing.getType());
+                String newType = normalizeType(ug.getType());
+                if (!currentType.equals(newType)) {
+                    existing.setType(newType);
+                    toSave.add(existing);
+                    log.info("Updated user-group: user={} group={} type={}", user.getUserId(), group.getGroupId(), newType);
+                }
+            } else {
+                UserGroupEntity entity = userEntityMapper.toEntity(ug);
+                entity.setUser(user);
+                entity.setGroup(group);
+                entity.setType(normalizeType(ug.getType()));
+                toSave.add(entity);
+                log.info("Added new user-group: user={} group={} type={}", user.getUserId(), group.getGroupId(), entity.getType());
+            }
+        }
+
+        if (!toSave.isEmpty()) {
+            try {
+                userAdapter.saveAllUserGroups(toSave);
+                log.info("Saved {} user-group entities successfully", toSave.size());
+                if (isRedisEnabled) {
+                    CacheEventPublisherUtil.syncReloadThenPublish(
+                            publisher,
+                            cacheKeyConfig.getGroups(),
+                            orgId,
+                            schema,
+                            cacheReloadHandlerRegistry
+                    );
+                    log.info("GroupCacheReloadEvent published after add/update group members");
+                } else {
+                    log.info("Redis is not enabled. Skipping cache reload.");
+                }
+            } catch (Exception e) {
+                log.error("Failed to save user-group entities", e);
+                return new ApiResponse(500, "Error saving user-group entities", null);
+            }
+        } else {
+            log.info("No changes to save for orgId={}", orgId);
+        }
+
+        return new ApiResponse(200, "Users added successfully", null);
+    }
+
+    private String normalizeType(String type) {
+        if (type == null) return MemberType.MEMBER.getValue();
+        return type.trim().equalsIgnoreCase(MemberType.SUPERVISOR.getValue()) ?
+                MemberType.SUPERVISOR.getValue() :
+                MemberType.MEMBER.getValue();
+    }
+
+    @Override
+    public Long getSubscribedUserLimit(String orgId) {
+        Long subscribedLimit = userAdapter.getSubscribedUserLimit(orgId);
+        return subscribedLimit;
+    }
+
+    @Override
+    public Long getCurrentUserCount(String orgId) {
+        Long currentCount = userAdapter.getCurrentUserCount(orgId);
+        return currentCount;
+
+    }
+
+    @Override
+    @Transactional
+    public BulkUserLocationModel assignLocations(BulkUserLocationModel model) {
+
+        if (model.getMemberIds() == null || model.getMemberIds().isEmpty()
+                || model.getLocationIds() == null || model.getLocationIds().isEmpty()) {
+            throw new IllegalArgumentException("Member IDs or Location IDs cannot be empty");
+        }
+        List<String> errors = new ArrayList<>();
+        UserLocationEntity saveLocation=new UserLocationEntity();
+        BulkUserLocationModel toModel=userEntityMapper.toModel(saveLocation);
+        for (String userId : model.getMemberIds()) {
+            Optional<UserEntity> userOpt = userAdapter.findById(userId);
+            if (userOpt.isEmpty()) {
+                errors.add("User ID not found: " + userId);
+                continue;
+            }
+            for (Long locationId : model.getLocationIds()) {
+                Optional<LocationEntity> locationOpt = userAdapter.findLocationById(locationId);
+                if (locationOpt.isEmpty()) {
+                    errors.add("Location ID not found: " + locationId);
+                    continue;
+                }
+                boolean exists = userAdapter.exists(userId, locationId);
+                if (!exists) {
+                    UserLocationEntity mapping = new UserLocationEntity();
+                    mapping.setUser(userOpt.get());
+                    mapping.setLocation(locationOpt.get());
+                    saveLocation= userAdapter.save(mapping);
+                }}}
+        if (!errors.isEmpty()) {
+            throw new RuntimeException(String.join(", ", errors));
+        }
+        return toModel;
     }
 
 

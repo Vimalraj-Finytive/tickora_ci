@@ -20,10 +20,9 @@ public interface UserService {
     ApiResponse createUser(UserDto userDto, SecondaryDetailsDto secondaryDetailsDto, String organizationId);
     User updateUser(CreateUserDto updates, String orgId, String userId);
     List<UserResponseDto> getUsers(String orgId, String role);
-    void deleteUsers(String orgId, List<String>userIds, String userNameFromToken,DeactivateUserRequestDto requestDto );
-    AddGroup createGroup(AddGroup groupMiddleware, String orgId);
-    void deleteMember(Long groupId, String memberId, String orgId);
-    void deleteGroup(Long groupId, String orgId);
+    void deleteUsers(String orgId, List<String> userIds, String userNameFromToken, String comments);    AddGroup createGroup(AddGroup groupMiddleware, String orgId);
+    void deleteMember(DeleteMemberModel model,String orgId);
+    void deleteGroups(GroupBulkDeleteModel model, String orgId);
     List<User> getMembers(String orgId, Long roleId);
     boolean updateUserGroupType(UserGroup userGroup);
     List<GroupDto>getUserGroups(String userId, String role, String orgId);
@@ -44,4 +43,8 @@ public interface UserService {
     ApiResponse<List<UserHistoryResponseDto>> getUserHistoryLog(String userId);
     List<UserBulkChangingModel> updateMultipleUserRoles(List<String> userIds, Long roleId, String orgId);
     List<BulkWorkScheduleUpdateResponseDto> updateWorkSchedules(BulkWorkScheduleUpdateRequestDto requestDto, String userNameFromToken,String orgId);
+    ApiResponse addOrUpdateGroupMembers(String orgId, UserGroupModel model);
+    Long getSubscribedUserLimit(String orgId);
+    Long getCurrentUserCount(String orgId);
+    BulkUserLocationModel assignLocations(BulkUserLocationModel model);
 }

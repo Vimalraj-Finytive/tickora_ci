@@ -152,16 +152,18 @@ public class UserController {
 
     @DeleteMapping("/deleteMember")
     public ResponseEntity<ApiResponse> deleteMember(@RequestHeader("Authorization") String token,
-                                                    @RequestParam Long groupId,
-                                                    @RequestParam String memberId) {
-        ApiResponse response = userFacade.deleteMember(groupId, memberId);
+                                                    @RequestBody DeleteMemberDto request) {
+        ApiResponse response = userFacade.deleteMember(request);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
-    @DeleteMapping("/deleteGroup")
-    public ResponseEntity<ApiResponse> deleteGroup(@RequestHeader("Authorization") String token, @RequestParam Long groupId) {
-        ApiResponse response = userFacade.deleteGroup(groupId);
-        return ResponseEntity.status(response.getStatusCode()).body(response);
+    @DeleteMapping("/deleteGroups")
+    public ResponseEntity<ApiResponse> deleteGroups(
+            @RequestHeader("Authorization") String token,
+            @RequestBody @Valid GroupBulkDeleteDto request) {
+
+        String message = userFacade.deleteGroups(request);
+        return ResponseEntity.ok(new ApiResponse(200, message, null));
     }
 
     @GetMapping("/getMembers")
@@ -240,6 +242,22 @@ public class UserController {
     public ResponseEntity<ApiResponse> updateWorkSchedules(
             @Valid @RequestBody BulkWorkScheduleUpdateRequestDto requestDto) {
         ApiResponse response = userFacade.updateWorkSchedules(requestDto);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
+
+    @PostMapping("bulk/group")
+    public ResponseEntity<ApiResponse> addOrUpdateGroupMembers(
+            @RequestHeader("Authorization") String token,
+            @Valid @RequestBody AddOrUpdateGroupMembersDto requestDto) {
+        ApiResponse response = userFacade.addOrUpdateGroupMembers(requestDto);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
+
+    @PostMapping("/bulk/Location")
+    public ResponseEntity<ApiResponse<BulkUserLocationDto>> assignLocations(
+            @RequestHeader("Authorization") String token,
+            @Valid @RequestBody BulkUserLocationDto dto) {
+        ApiResponse<BulkUserLocationDto> response = userFacade.assignLocations(dto);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 

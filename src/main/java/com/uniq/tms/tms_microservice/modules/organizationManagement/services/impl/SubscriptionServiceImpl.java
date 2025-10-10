@@ -76,7 +76,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
             String newSubId  = subscriptionAdapter.updatePlan(orgId,orgSchema , request.getPlanId(), request.getSubscribedUserCount());
 
             if (newSubId != null) {
-                PaymentEntity payment = paymentService.createPayment(orgId,newSubId, billingCycle,request.getTotalSubscriptionAmount(), request.getSubscribedUserCount(), request.getPlanId(), orgSchema);
+                PaymentEntity payment = paymentService.createPayment(orgId,newSubId,orderId, billingCycle,request.getTotalSubscriptionAmount(), request.getSubscribedUserCount(), request.getPlanId(), orgSchema);
                 return "Subscription upgraded successfully!";
             } else {
                 return "Payment completed, but the plan was not updated (already expired or up-to-date).";

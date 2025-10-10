@@ -6,5 +6,5 @@ import java.math.BigDecimal;
 
 public interface PaymentService {
     String createPaymentOrder(String orgId, BigDecimal amount);
-    PaymentEntity createPayment(String orgId,String newSubId ,String billingCycle, BigDecimal subscriptionAmount, Integer subscribedUserCount, String planId, String orgSchema);
+    PaymentEntity createPayment(String orgId,String newSubId ,String orderId,String billingCycle, BigDecimal subscriptionAmount, Integer subscribedUserCount, String planId, String orgSchema);
 }

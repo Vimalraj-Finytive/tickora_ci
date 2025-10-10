@@ -1,12 +1,10 @@
 package com.uniq.tms.tms_microservice.modules.userManagement.mapper;
 
+import com.uniq.tms.tms_microservice.modules.locationManagement.entity.UserLocationEntity;
 import com.uniq.tms.tms_microservice.modules.userManagement.dto.UserHistoryResponseDto;
 import com.uniq.tms.tms_microservice.modules.userManagement.dto.UserValidationDto;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.*;
-import com.uniq.tms.tms_microservice.modules.userManagement.model.AddGroup;
-import com.uniq.tms.tms_microservice.modules.userManagement.model.Group;
-import com.uniq.tms.tms_microservice.modules.userManagement.model.User;
-import com.uniq.tms.tms_microservice.modules.userManagement.model.UserGroup;
+import com.uniq.tms.tms_microservice.modules.userManagement.model.*;
 import org.mapstruct.*;
 import java.util.List;
 
@@ -71,4 +69,7 @@ public interface UserEntityMapper {
     UserHistoryEntity toActiveUserEntity(String userId, String comments);
 
     List<UserHistoryResponseDto> toHistoryDto(List<UserHistoryEntity> responseDtos);
+    UserLocationEntity toEntity(BulkUserLocationModel model);
+
+    BulkUserLocationModel toModel(UserLocationEntity entity);
 }

@@ -18,6 +18,9 @@ public class PaymentEntity {
     @Column(name = "subscription_id", nullable = false)
     private String subscriptionId;
 
+    @Column(name = "order_id", nullable = false)
+    private String orderId;
+
     @Column(name = "amount", nullable = false)
     private BigDecimal amount;
 
@@ -53,6 +56,13 @@ public class PaymentEntity {
 
     public void setSubscriptionId(String subscriptionId) {
         this.subscriptionId = subscriptionId;
+    }
+    public String getOrderId() {
+        return orderId;
+    }
+
+    public void setOrderId(String orderId) {
+        this.orderId = orderId;
     }
 
     public BigDecimal getAmount() {

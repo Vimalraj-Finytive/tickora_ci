@@ -1,5 +1,7 @@
 package com.uniq.tms.tms_microservice.modules.userManagement.adapter.impl;
 
+import com.uniq.tms.tms_microservice.modules.locationManagement.entity.LocationEntity;
+import com.uniq.tms.tms_microservice.modules.locationManagement.entity.UserLocationEntity;
 import com.uniq.tms.tms_microservice.modules.locationManagement.repository.LocationRepository;
 import com.uniq.tms.tms_microservice.modules.locationManagement.repository.UserLocationRepository;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.RoleEntity;
@@ -128,7 +130,7 @@ public class UserAdapterImpl implements UserAdapter {
     }
 
     @Override
-    public void deleteMember(Long groupId, String memberId) {
+    public void deleteMember(Long groupId, List<String> memberId) {
         groupRepository.deleteMemberById(groupId, memberId);
     }
 
@@ -476,6 +478,65 @@ public class UserAdapterImpl implements UserAdapter {
     @Override
     public UserEntity save(UserEntity user) {
         return userRepository.save(user);
+    }
+
+    @Override
+    public void deleteByGroupIds(List<Long> groupIds) {
+        userGroupRepository.deleteByGroupIds(groupIds);
+    }
+
+    @Override
+    public void deleteGroups(List<Long> groupIds, String orgId) {
+        userGroupRepository.deleteGroupsByIds(groupIds, orgId);
+    }
+
+    @Override
+    public List<GroupEntity> findGroupsByIds(Set<Long> groupIds) {
+        return groupRepository.findAllByGroupIdIn(groupIds);
+    }
+
+    @Override
+    public List<UserGroupEntity> findUserGroupsByUsersAndGroups(Set<String> userIds, Set<Long> groupIds) {
+        if (userIds.isEmpty() || groupIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return userGroupRepository.findAllByUserIdsAndGroupIds(userIds, groupIds);
+    }
+
+    @Override
+    public void deactivateUsersByIds(List<String> userIds, String orgId) {
+        userRepository.deactivateUsersByIds(userIds, orgId);
+    }
+
+    @Override
+    @Transactional
+    public List<UserHistoryEntity> saveAllUserHistories(List<UserHistoryEntity> userHistoryEntities) {
+        return userHistoryRepository.saveAll(userHistoryEntities);
+    }
+
+    @Override
+    public Long getSubscribedUserLimit(String orgId) {
+        return subscriptionRepository.findSubscriptionIdByOrgId(orgId);
+    }
+
+    @Override
+    public Long getCurrentUserCount(String orgId) {
+        return userRepository.countUsersByOrganizationId(orgId);
+    }
+
+    @Override
+    public Optional<LocationEntity> findLocationById(Long locationId) {
+        return locationRepository.findById(locationId);
+    }
+
+    @Override
+    public boolean exists(String userId, Long locationId) {
+        return userLocationRepository.existsByUser_UserIdAndLocation_LocationId(userId, locationId);
+    }
+
+    @Override
+    public UserLocationEntity save(UserLocationEntity entity) {
+        return userLocationRepository.save(entity);
     }
 
 
