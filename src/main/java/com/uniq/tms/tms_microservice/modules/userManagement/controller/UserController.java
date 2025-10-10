@@ -160,7 +160,8 @@ public class UserController {
     @DeleteMapping("/deleteGroups")
     public ResponseEntity<ApiResponse> deleteGroups(
             @RequestHeader("Authorization") String token,
-            @RequestBody @Valid GroupBulkDeleteDto request) {
+            @RequestBody GroupBulkDeleteDto request) {
+
 
         String message = userFacade.deleteGroups(request);
         return ResponseEntity.ok(new ApiResponse(200, message, null));
