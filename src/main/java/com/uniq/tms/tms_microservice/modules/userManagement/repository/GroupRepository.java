@@ -11,6 +11,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Repository
 public interface GroupRepository extends JpaRepository<GroupEntity, Long> {
@@ -90,9 +91,9 @@ public interface GroupRepository extends JpaRepository<GroupEntity, Long> {
     @Transactional
     @Query(value = """
     DELETE FROM user_group
-    WHERE group_id = :groupId AND user_id = :memberId
+    WHERE group_id = :groupId AND user_id IN :memberId
 """, nativeQuery = true)
-    void deleteMemberById(@Param("groupId") Long groupId, @Param("memberId") String memberId);
+    void deleteMemberById(@Param("groupId") Long groupId, @Param("memberId") List<String> memberId);
 
     @Query("""
     SELECT COUNT(g) > 0
@@ -164,4 +165,13 @@ public interface GroupRepository extends JpaRepository<GroupEntity, Long> {
 
     @Query("SELECT g.groupName FROM GroupEntity g WHERE g.id = :groupId")
     String findGroupNameByGroupId(@Param("groupId") Long groupId);
+
+    @Query(value = """
+    SELECT group_id FROM org_groups
+    WHERE group_id IN (:groupIds)
+    AND organization_id = :orgId
+    """, nativeQuery = true)
+    List<Long> findExistingGroupIds(@Param("groupIds") List<Long> groupIds, @Param("orgId") String orgId);
+
+    List<GroupEntity> findAllByGroupIdIn(Set<Long> groupIds);
 }

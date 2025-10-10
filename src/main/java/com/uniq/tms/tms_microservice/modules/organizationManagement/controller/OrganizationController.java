@@ -107,7 +107,7 @@ public class OrganizationController {
         return ResponseEntity.ok(organizationFacade.getOrgSummary());
     }
 
-    @GetMapping("/subscription/active")
+    @GetMapping("/subscription/current")
     public ResponseEntity<ApiResponse> getActivePlan(
             @RequestHeader("Authorization") String token) {
         String orgId = authHelper.getOrgId();
@@ -115,6 +115,38 @@ public class OrganizationController {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized - Invalid Organization");
         }
         return ResponseEntity.ok(organizationFacade.getActivePlan());
+    }
+
+    @GetMapping("/subscription/history")
+    public ResponseEntity<ApiResponse> getPlanHistory(
+            @RequestHeader("Authorization") String token) {
+        String orgId = authHelper.getOrgId();
+        if (orgId == null || orgId.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized - Invalid Organization");
+        }
+        return ResponseEntity.ok(organizationFacade.getPlanHistory());
+    }
+
+    @GetMapping("/subscription/plans")
+    public ResponseEntity<ApiResponse> getAllPlans(
+            @RequestHeader("Authorization") String token) {
+        String orgId = authHelper.getOrgId();
+        if (orgId == null || orgId.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized - Invalid Organization");
+        }
+        return ResponseEntity.ok(organizationFacade.getAllPlans());
+    }
+
+    @PostMapping("/subscription/upgradePlan")
+    public ResponseEntity<ApiResponse> upgradePlan(
+            @RequestHeader("Authorization") String token,
+            @RequestBody UpgradePlanDto upgradePlanDto) {
+        String orgId = authHelper.getOrgId();
+        String orgSchema = authHelper.getSchema();
+        if (orgId == null || orgId.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized - Invalid Organization");
+        }
+        return ResponseEntity.ok( organizationFacade.upgradePlan(orgId,orgSchema, upgradePlanDto));
     }
 
 }

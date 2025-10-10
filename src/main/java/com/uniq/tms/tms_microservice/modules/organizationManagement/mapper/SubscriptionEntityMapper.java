@@ -11,6 +11,7 @@ import java.util.List;
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface SubscriptionEntityMapper {
     // Entity → Model
+    @Mapping(target = "subscriptionId", source = "subId")
     @Mapping(target = "planName", source = "planId")
     @Mapping(target = "startDate", source = "startDate")
     @Mapping(target = "endDate", source = "endDate")
@@ -21,6 +22,7 @@ public interface SubscriptionEntityMapper {
     List<Subscription> toModelList(List<SubscriptionEntity> entities);
 
     // Model → Entity
+    @Mapping(target = "subId", source = "subscriptionId")
     @Mapping(target = "planId", source = "planName")
     @Mapping(target = "startDate", source = "startDate")
     @Mapping(target = "endDate", source = "endDate")

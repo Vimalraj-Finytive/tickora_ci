@@ -42,4 +42,18 @@ public interface OrgUserSequenceRepository extends JpaRepository<OrgUserSequence
     @Modifying
     @Query("UPDATE OrgUserSequenceEntity s SET s.lastSecondaryUserId = :lastId WHERE s.orgId = :orgId")
     void updateLastSecondaryId(@Param("orgId") String orgId, @Param("lastId") int lastId);
+
+    @Modifying
+    @Transactional
+    @Query("UPDATE OrgUserSequenceEntity s SET s.lastPaymentId = COALESCE(s.lastPaymentId, 0) + 1 WHERE s.orgId = :orgId")
+    int incrementPaymentSequence(@Param("orgId") String orgId);
+
+    @Query("SELECT s.lastPaymentId FROM OrgUserSequenceEntity s WHERE s.orgId = :orgId")
+    Integer getLastPaymentId(@Param("orgId") String orgId);
+
+    @Modifying
+    @Transactional
+    @Query("UPDATE OrgUserSequenceEntity s SET s.lastPaymentId = :value WHERE s.orgId = :orgId")
+    void updateLastPaymentId(@Param("orgId") String orgId, @Param("value") int value);
+
 }

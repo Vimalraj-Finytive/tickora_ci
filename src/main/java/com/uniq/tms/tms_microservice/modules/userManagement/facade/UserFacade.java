@@ -1,7 +1,6 @@
 package com.uniq.tms.tms_microservice.modules.userManagement.facade;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.uniq.tms.tms_microservice.modules.userManagement.mapper.RoleMapper;
 import com.uniq.tms.tms_microservice.modules.userManagement.model.*;
 import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
 import com.uniq.tms.tms_microservice.modules.userManagement.dto.*;
@@ -25,13 +24,12 @@ import java.util.stream.Collectors;
 
 @Component
 public class UserFacade {
-    private final RoleMapper updateRole;
     private final AuthHelper authHelper;
     private final UserService userService;
     private final UserDtoMapper userDtoMapper;
 
-    public UserFacade(RoleMapper updateRole, AuthHelper authHelper, UserService userService, UserDtoMapper userDtoMapper) {
-        this.updateRole = updateRole;
+    public UserFacade(AuthHelper authHelper, UserService userService, UserDtoMapper userDtoMapper) {
+
         this.authHelper = authHelper;
         this.userService = userService;
         this.userDtoMapper = userDtoMapper;
@@ -70,11 +68,14 @@ public class UserFacade {
     public ApiResponse deleteUsers(com.uniq.tms.tms_microservice.dto.DeactivateUserRequestDto requestDto) {
         String orgId = authHelper.getOrgId();
         String userNameFromToken = authHelper.getUsername();
+
         if (orgId == null) {
             return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
         }
-        userService.deleteUsers(orgId, requestDto.getUserIds(), userNameFromToken, requestDto);
-        return new ApiResponse(200, "User Inactived successfully", "No Content");
+
+        userService.deleteUsers(orgId, requestDto.getUserIds(), userNameFromToken, requestDto.getComments());
+
+        return new ApiResponse(200, "User Inactived Successfully", null);
     }
 
     public ApiResponse createGroup( AddGroupDto addGroupDto) {
@@ -133,23 +134,24 @@ public class UserFacade {
         return new ApiResponse(200, "All Groups Details fetched successfully", groups);
     }
 
-    public ApiResponse deleteMember( Long groupId, String memberId) {
+    public ApiResponse deleteMember(DeleteMemberDto request) {
         String orgId = authHelper.getOrgId();
         if (orgId == null) {
             return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
         }
-        userService.deleteMember(groupId, memberId,orgId);
+        DeleteMemberModel model= userDtoMapper.toModel(request);
+        userService.deleteMember(model,orgId);
         return new ApiResponse(204, "Member Deleted successfully", "No Content");
     }
 
-    public ApiResponse deleteGroup( Long groupId) {
+    public String deleteGroups(GroupBulkDeleteDto request) {
         String orgId = authHelper.getOrgId();
         if (orgId == null) {
-            return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid organization");
         }
-
-        userService.deleteGroup(groupId, orgId);
-        return new ApiResponse(204, "Group Deleted successfully", "No Content");
+        GroupBulkDeleteModel model = userDtoMapper.toModel(request);
+        userService.deleteGroups(model, orgId);
+        return "Groups deleted successfully";
     }
 
     public ApiResponse getMembers( Long roleId) {
@@ -196,14 +198,28 @@ public class UserFacade {
         return userService.bulkCreateUsers(file, orgId, userId);
     }
 
+
     public ApiResponse createUser(UserDto userDto, SecondaryDetailsDto secondaryDetailsDto) {
         String orgId = authHelper.getOrgId();
         if (orgId == null) {
             return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
         }
+    Long subscribedLimit = userService.getSubscribedUserLimit(orgId);
+
+    if (subscribedLimit == null) {
+        return new ApiResponse(400, "Subscription not found.", null);
+    }
+
+    Long currentCount = userService.getCurrentUserCount(orgId);
+
+    if (currentCount.equals(subscribedLimit)) {
+        return new ApiResponse(403,"User creation limit reached. Please upgrade your plan.",null);
+    }
         ApiResponse user = userService.createUser(userDto, secondaryDetailsDto,orgId);
         return new ApiResponse(HttpStatus.CREATED.value(), "User Created successfully and Reset password link sent to email.", user);
     }
+
+
 
     public ApiResponse getUserProfile(String userId) {
         String orgId = authHelper.getOrgId();
@@ -302,7 +318,7 @@ public class UserFacade {
         String orgId = authHelper.getOrgId();
         List<UserBulkChangingModel> user= userService.updateMultipleUserRoles(userIds, roleId, orgId);
         Iterable<BulkRoleUpdate> result=user.stream()
-                .map(updateRole::toDto).collect(Collectors.toList());
+                .map(userDtoMapper::toDto).collect(Collectors.toList());
         return result;
     }
     public ApiResponse updateWorkSchedules(BulkWorkScheduleUpdateRequestDto requestDto) {
@@ -350,6 +366,22 @@ public class UserFacade {
         }
 
         return new ApiResponse(statusCode, message.toString().trim(), null);
+    }
+
+    public ApiResponse addOrUpdateGroupMembers(AddOrUpdateGroupMembersDto dto) {
+        String orgId = authHelper.getOrgId();
+        UserGroupModel model = userDtoMapper.toModel(dto);
+        ApiResponse response = userService.addOrUpdateGroupMembers(orgId, model);
+
+        return response;
+    }
+
+    public ApiResponse<BulkUserLocationDto> assignLocations(BulkUserLocationDto dto) {
+        BulkUserLocationModel model = userDtoMapper.toModel(dto);
+        BulkUserLocationModel saveUserLocation = userService.assignLocations(model);
+        BulkUserLocationDto Dto=userDtoMapper.toDto(saveUserLocation);
+        return new ApiResponse<>(200, "Locations assigned successfully", null);
+
     }
 
 

@@ -1,5 +1,6 @@
 package com.uniq.tms.tms_microservice.modules.userManagement.adapter;
 
+import com.uniq.tms.tms_microservice.modules.locationManagement.entity.LocationEntity;
 import com.uniq.tms.tms_microservice.modules.locationManagement.entity.UserLocationEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.RoleEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.SubscriptionEntity;
@@ -25,7 +26,7 @@ public interface UserAdapter {
     GroupEntity saveGroup(GroupEntity entity);
     boolean findByGroup(String teamName, String orgId);
     int updateUserGroupType(String userId, Long groupId, String type);
-    void deleteMember(Long groupId, String memberId);
+    void deleteMember(Long groupId, List<String> memberId);
     void deleteGroup(Long groupId, String orgId);
     List<UserEntity> getMembers(String orgId, Long roleId);
     List<UserEntity> getMembersByRole(String orgId, List<Integer> higherRoleIds);
@@ -93,5 +94,16 @@ public interface UserAdapter {
     int countInactiveMembers(String orgId);
     List<UserEntity> findByUserId(List<String> userId);
     UserEntity save(UserEntity user);
+    void deleteByGroupIds(List<Long> groupIds);
+    void deleteGroups(List<Long> groupIds, String orgId);
+    List<GroupEntity> findGroupsByIds(Set<Long> groupIds);
+    List<UserGroupEntity> findUserGroupsByUsersAndGroups(Set<String> userIds, Set<Long> groupIds);
+    void deactivateUsersByIds(List<String> userIds, String orgId);
+    List<UserHistoryEntity> saveAllUserHistories(List<UserHistoryEntity> userHistoryEntities);
+    Long getSubscribedUserLimit(String orgId);
+    Long getCurrentUserCount(String orgId);
+    Optional<LocationEntity> findLocationById(Long locationId);
+    boolean exists(String userId, Long locationId);
+    UserLocationEntity save(UserLocationEntity mapping);
 
 }

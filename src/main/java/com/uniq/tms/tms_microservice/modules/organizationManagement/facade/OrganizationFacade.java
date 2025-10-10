@@ -111,6 +111,30 @@ public class OrganizationFacade {
     public ApiResponse<SubscriptionDto> getActivePlan() {
         String orgId = authHelper.getOrgId();
         SubscriptionDto response = subscriptionService.getActivePlan(orgId);
-        return new ApiResponse<>(HttpStatus.OK.value(), "Organization Summary Fetched Successfully", response);
+
+        if ("EXPIRED".equalsIgnoreCase(response.getStatus())) {
+            return new ApiResponse<>(HttpStatus.OK.value(), "No active plan — showing latest expired plan", response);
+        }
+
+        return new ApiResponse<>(HttpStatus.OK.value(), "Active subscription fetched successfully", response);
+
     }
+
+    public ApiResponse<SubscriptionDto> getPlanHistory() {
+        String orgId = authHelper.getOrgId();
+        List<SubscriptionDto> response = subscriptionService.getPlanHistory(orgId);
+        return new ApiResponse<>(HttpStatus.OK.value(), "Subscription History fetched successfully", response);
+    }
+
+    public ApiResponse<PlanDto> getAllPlans() {
+        List<PlanDto> response = subscriptionService.getAllPlans();
+        return new ApiResponse<>(HttpStatus.OK.value(), "Plan fetched successfully", response);
+    }
+
+    public ApiResponse upgradePlan(String orgId, String orgSchema, UpgradePlanDto request) {
+        String resultMessage = subscriptionService.upgradePlan(orgId,orgSchema, request);
+        HttpStatus status = resultMessage.contains("mismatching") ? HttpStatus.BAD_REQUEST : HttpStatus.OK;
+        return new ApiResponse<>(status.value(), resultMessage, null);
+    }
+
 }

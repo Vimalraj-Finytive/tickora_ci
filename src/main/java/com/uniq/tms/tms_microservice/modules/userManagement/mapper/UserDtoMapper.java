@@ -41,6 +41,28 @@ public interface UserDtoMapper {
     @Mapping(source = "type", target = "userType")
     UserGroupProfileDto toGroupsDto(UserGroupEntity entity);
 
+    GroupBulkDeleteModel toModel(GroupBulkDeleteDto dto);
+
+    DeleteMemberModel toModel(DeleteMemberDto dto);
+    @Mapping(source = "groupId", target = "groupId")
+    @Mapping(source = "userId", target = "userId")
+    @Mapping(source = "type", target = "type")
+    UserGroup toModel(Long groupId, String userId, String type);
+
+    UserGroupModel toModel(AddOrUpdateGroupMembersDto dto);
+
+    UserBulkChangingModel todtoModel(BulkRoleUpdate dto);
+
+    BulkRoleUpdate toDto(UserBulkChangingModel model);
+
+    UserBulkChangingModel toModel(UserEntity entity);
+    UserEntity toUserEntity(UserBulkChangingModel model);
+
+    BulkUserLocationDto toDto(BulkUserLocationModel model);
+
+    BulkUserLocationModel toModel(BulkUserLocationDto dto);
+
+
     @Mapper(componentModel = "spring")
     interface CommonMapper {
         default String map(WorkScheduleTypeEntity entity) {

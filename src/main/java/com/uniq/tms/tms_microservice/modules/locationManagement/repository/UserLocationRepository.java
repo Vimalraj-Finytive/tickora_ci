@@ -36,4 +36,6 @@ public interface UserLocationRepository extends JpaRepository<UserLocationEntity
     List<UserEntity> findUsersByIdsAndLocationIds(@Param("userIds") List<String> userIds,
                                                   @Param("locationIds") List<Long> locationIds);
 
+    boolean existsByUser_UserIdAndLocation_LocationId(String userId, Long locationId);
+
 }

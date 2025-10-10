@@ -13,10 +13,13 @@ public class PaymentEntity {
 
     @Id
     @Column(name = "payment_id")
-    private Long paymentId;
+    private String paymentId;
 
     @Column(name = "subscription_id", nullable = false)
-    private Long subscriptionId;
+    private String subscriptionId;
+
+    @Column(name = "order_id", nullable = false)
+    private String orderId;
 
     @Column(name = "amount", nullable = false)
     private BigDecimal amount;
@@ -39,20 +42,27 @@ public class PaymentEntity {
     @Column(name = "schema_name", nullable = false)
     private String schemaName;
 
-    public Long getPaymentId() {
+    public String getPaymentId() {
         return paymentId;
     }
 
-    public void setPaymentId(Long paymentId) {
+    public void setPaymentId(String paymentId) {
         this.paymentId = paymentId;
     }
 
-    public Long getSubscriptionId() {
+    public String getSubscriptionId() {
         return subscriptionId;
     }
 
-    public void setSubscriptionId(Long subscriptionId) {
+    public void setSubscriptionId(String subscriptionId) {
         this.subscriptionId = subscriptionId;
+    }
+    public String getOrderId() {
+        return orderId;
+    }
+
+    public void setOrderId(String orderId) {
+        this.orderId = orderId;
     }
 
     public BigDecimal getAmount() {

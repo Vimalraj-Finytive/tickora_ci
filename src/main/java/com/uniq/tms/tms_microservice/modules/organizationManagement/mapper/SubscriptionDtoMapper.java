@@ -10,7 +10,8 @@ import java.util.List;
 public interface SubscriptionDtoMapper {
 
     // Model → DTO
-    @Mapping(target = "currentPlan", source = "planName")
+    @Mapping(target = "subscriptionId", source = "subscriptionId")
+    @Mapping(target = "planName", source = "planName")
     @Mapping(target = "start", source = "startDate", dateFormat = "yyyy-MM-dd")
     @Mapping(target = "activeUntil", source = "endDate", dateFormat = "yyyy-MM-dd")
     @Mapping(target = "status", source = "status")
@@ -20,7 +21,8 @@ public interface SubscriptionDtoMapper {
     List<SubscriptionDto> toDtoList(List<Subscription> models);
 
     // DTO → Model
-    @Mapping(target = "planName", source = "currentPlan")
+    @Mapping(target = "subscriptionId", source = "subscriptionId")
+    @Mapping(target = "planName", source = "planName")
     @Mapping(target = "startDate", source = "start")
     @Mapping(target = "endDate", source = "activeUntil")
     @Mapping(target = "status", source = "status")
