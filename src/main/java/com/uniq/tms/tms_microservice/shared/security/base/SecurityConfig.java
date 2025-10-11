@@ -41,6 +41,7 @@ public class SecurityConfig {
                                 "/tms/validate-email",
                                 "/tms/organization/**",
                                 "/tms/sendOTP",
+                                "/tms/leaveManagement/countries",
                                 "/tms/debug/**").permitAll()
                         .requestMatchers("/tms/**").authenticated()
                         .anyRequest().permitAll()
