@@ -175,6 +175,7 @@ CREATE TABLE ${schemaName}.work_schedule (
     is_active BOOLEAN NOT NULL,
     work_schedule_type VARCHAR NOT NULL,
     organization_id VARCHAR(20) NOT NULL,
+    split_time TIME NOT NULL,
     CONSTRAINT fk_work_schedule_type
         FOREIGN KEY (work_schedule_type)
         REFERENCES ${schemaName}.work_schedule_type(type_id),
@@ -526,7 +527,8 @@ CREATE TABLE user_history (
 CREATE TABLE IF NOT EXISTS calendar (
     id VARCHAR(10) PRIMARY KEY,
     name VARCHAR(255),
-    is_default BOOLEAN
+    is_default BOOLEAN,
+    is_active BOOLEAN
 );
 
 -- ===========================================================
@@ -540,22 +542,7 @@ CREATE TABLE IF NOT EXISTS calendar_details (
     year VARCHAR(10),
     calendar_id VARCHAR(10) NOT NULL,
     CONSTRAINT fk_calendar_details_calendar
-        FOREIGN KEY (calendar_id) REFERENCES calendar (id)
-        ON DELETE CASCADE
-);
-
--- ===========================================================
--- Table: public_holiday
--- ===========================================================
---changeset system:create-public-holiday-table
-CREATE TABLE IF NOT EXISTS public_holiday (
-    id VARCHAR(10) PRIMARY KEY,
-    date DATE,
-    name VARCHAR(255),
-    year VARCHAR(10),
-    country_id VARCHAR(10) NOT NULL,
-    CONSTRAINT fk_public_holiday_country
-        FOREIGN KEY (country_id) REFERENCES country (id)
+        FOREIGN KEY (calendar_code) REFERENCES calendar (id)
         ON DELETE CASCADE
 );
 
@@ -744,6 +731,7 @@ RETURNS TABLE (
     is_default BOOLEAN,
     is_active BOOLEAN,
     work_schedule_type VARCHAR,
+    split_time TIME,
     organization_id VARCHAR
 )
 LANGUAGE plpgsql
@@ -755,6 +743,7 @@ BEGIN
            ws.is_default,
            ws.is_active,
            ws.work_schedule_type,
+           ws.split_time,
            ws.organization_id
     FROM ${schemaName}.work_schedule ws
     JOIN ${schemaName}.users u ON ws.work_schedule_id = u.work_schedule_id

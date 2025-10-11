@@ -9,6 +9,8 @@ import com.uniq.tms.tms_microservice.modules.workScheduleManagement.model.WorkSc
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.model.WorkScheduleType;
 import org.mapstruct.*;
 import java.sql.Time;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
@@ -23,7 +25,14 @@ public interface WorkScheduleEntityMapper {
     WorkSchedule toMiddleware(WorkScheduleEntity entity);
 
     @Mapping(source = "type", target = "type")
+    @Mapping(target = "splitTime", expression = "java(stringToTime(model))")
     WorkScheduleEntity toEntity(WorkSchedule model);
+
+    default Time stringToTime(WorkSchedule model){
+        LocalTime localTime = LocalTime.parse(model.getSplitTime(), DateTimeFormatter.ofPattern("HH:mm"));
+        Time time = Time.valueOf(localTime);
+        return time;
+    }
 
     WorkScheduleType toModel(WorkScheduleTypeEntity saved);
 
@@ -47,6 +56,9 @@ public interface WorkScheduleEntityMapper {
         entity.setEndTime(end);
 
         long millis = end.getTime() - start.getTime();
+        if (millis < 0) {
+            millis += 24 * 60 * 60 * 1000;
+        }
         double duration = Math.round((millis / (1000.0 * 60 * 60)) * 100.0) / 100.0;
         entity.setDuration(duration);
         entity.setDay(DayOfWeekEnum.valueOf(dto.getDay()));
@@ -55,7 +67,8 @@ public interface WorkScheduleEntityMapper {
     @AfterMapping
     default void enrichFlexible(@MappingTarget FlexibleWorkScheduleEntity entity, FlexibleScheduleDto dto) {
         entity.setDay(DayOfWeekEnum.valueOf(dto.getDay()));
-        entity.setDuration(Double.valueOf(dto.getDuration()));
+        Double duration = Double.valueOf(dto.getDuration());
+        entity.setDuration( duration );
     }
 
     @AfterMapping

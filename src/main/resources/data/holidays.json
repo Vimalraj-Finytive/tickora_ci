@@ -1,0 +1,164 @@
+{
+  "IN": {
+    "2024": [
+      { "date": "2024-01-26", "name": "Republic Day", "countryCode": "IN", "holidayType": "National Holiday" },
+      { "date": "2024-03-25", "name": "Holi", "countryCode": "IN", "holidayType": "Festival" },
+      { "date": "2024-03-29", "name": "Good Friday", "countryCode": "IN", "holidayType": "Religious Holiday" },
+      { "date": "2024-04-11", "name": "Ramzan Id/Eid-ul-Fitar", "countryCode": "IN", "holidayType": "Religious Holiday" },
+      { "date": "2024-04-14", "name": "Ambedkar Jayanti", "countryCode": "IN", "holidayType": "Commemorative" },
+      { "date": "2024-04-17", "name": "Rama Navami", "countryCode": "IN", "holidayType": "Religious Holiday" },
+      { "date": "2024-04-21", "name": "Mahavir Jayanti", "countryCode": "IN", "holidayType": "Religious Holiday" },
+      { "date": "2024-05-23", "name": "Buddha Purnima/Vesak", "countryCode": "IN", "holidayType": "Religious Holiday" },
+      { "date": "2024-06-17", "name": "Bakrid/Eid ul-Adha", "countryCode": "IN", "holidayType": "Religious Holiday" },
+      { "date": "2024-07-17", "name": "Muharram/Ashura", "countryCode": "IN", "holidayType": "Religious Holiday" },
+      { "date": "2024-08-15", "name": "Independence Day", "countryCode": "IN", "holidayType": "National Holiday" },
+      { "date": "2024-08-26", "name": "Janmashtami", "countryCode": "IN", "holidayType": "Religious Holiday" },
+      { "date": "2024-09-16", "name": "Milad un-Nabi/Id-e-Milad", "countryCode": "IN", "holidayType": "Religious Holiday" },
+      { "date": "2024-10-02", "name": "Gandhi Jayanti", "countryCode": "IN", "holidayType": "National Holiday" },
+      { "date": "2024-10-12", "name": "Dussehra", "countryCode": "IN", "holidayType": "Religious Holiday" },
+      { "date": "2024-10-31", "name": "Diwali/Deepavali", "countryCode": "IN", "holidayType": "Festival" },
+      { "date": "2024-11-15", "name": "Guru Nanak Jayanti", "countryCode": "IN", "holidayType": "Religious Holiday" },
+      { "date": "2024-12-25", "name": "Christmas", "countryCode": "IN", "holidayType": "Religious Holiday" }
+    ],
+    "2025": [
+      { "date": "2025-01-26", "name": "Republic Day", "countryCode": "IN", "holidayType": "National Holiday" },
+      { "date": "2025-02-26", "name": "Maha Shivaratri/Shivaratri", "countryCode": "IN", "holidayType": "Religious Holiday" },
+      { "date": "2025-03-14", "name": "Holi", "countryCode": "IN", "holidayType": "Festival" },
+      { "date": "2025-04-10", "name": "Mahavir Jayanti", "countryCode": "IN", "holidayType": "Religious Holiday" },
+      { "date": "2025-04-18", "name": "Good Friday", "countryCode": "IN", "holidayType": "Religious Holiday" },
+      { "date": "2025-05-12", "name": "Buddha Purnima/Vesak", "countryCode": "IN", "holidayType": "Religious Holiday" },
+      { "date": "2025-08-15", "name": "Independence Day", "countryCode": "IN", "holidayType": "National Holiday" },
+      { "date": "2025-08-16", "name": "Janmashtami", "countryCode": "IN", "holidayType": "Religious Holiday" },
+      { "date": "2025-10-02", "name": "Dussehra", "countryCode": "IN", "holidayType": "Religious Holiday" },
+      { "date": "2025-10-20", "name": "Diwali/Deepavali", "countryCode": "IN", "holidayType": "Festival" },
+      { "date": "2025-11-05", "name": "Guru Nanak Jayanti", "countryCode": "IN", "holidayType": "Religious Holiday" },
+      { "date": "2025-12-25", "name": "Christmas", "countryCode": "IN", "holidayType": "Religious Holiday" }
+    ],
+    "2026": [
+      { "date": "2026-01-26", "name": "Republic Day", "countryCode": "IN", "holidayType": "National Holiday" },
+      { "date": "2026-02-15", "name": "Maha Shivaratri/Shivaratri", "countryCode": "IN", "holidayType": "Religious Holiday" },
+      { "date": "2026-03-04", "name": "Holi", "countryCode": "IN", "holidayType": "Festival" },
+      { "date": "2026-03-26", "name": "Rama Navami", "countryCode": "IN", "holidayType": "Religious Holiday" },
+      { "date": "2026-04-03", "name": "Good Friday", "countryCode": "IN", "holidayType": "Religious Holiday" },
+      { "date": "2026-08-15", "name": "Independence Day", "countryCode": "IN", "holidayType": "National Holiday" },
+      { "date": "2026-09-04", "name": "Janmashtami", "countryCode": "IN", "holidayType": "Religious Holiday" },
+      { "date": "2026-10-02", "name": "Mahatma Gandhi Jayanti", "countryCode": "IN", "holidayType": "National Holiday" },
+      { "date": "2026-10-20", "name": "Dussehra", "countryCode": "IN", "holidayType": "Religious Holiday" },
+      { "date": "2026-11-08", "name": "Diwali/Deepavali", "countryCode": "IN", "holidayType": "Festival" },
+      { "date": "2026-12-25", "name": "Christmas", "countryCode": "IN", "holidayType": "Religious Holiday" }
+    ]
+  },
+
+  "AU": {
+    "2024": [
+      {
+        "date": "2024-01-26",
+        "name": "Republic Day",
+        "countryCode": "AU",
+        "holidayType": "National Holiday"
+      },
+      {
+        "date": "2024-03-25",
+        "name": "Holi",
+        "countryCode": "AU",
+        "holidayType": "Festival"
+      },
+      {
+        "date": "2024-03-29",
+        "name": "Good Friday",
+        "countryCode": "AU",
+        "holidayType": "Religious Holiday"
+      },
+      {
+        "date": "2024-04-11",
+        "name": "Ramzan Id/Eid-ul-Fitar",
+        "countryCode": "AU",
+        "holidayType": "Religious Holiday"
+      },
+      {
+        "date": "2024-04-14",
+        "name": "Ambedkar Jayanti",
+        "countryCode": "AU",
+        "holidayType": "Commemorative"
+      },
+      {
+        "date": "2024-04-17",
+        "name": "Rama Navami",
+        "countryCode": "AU",
+        "holidayType": "Religious Holiday"
+      },
+      {
+        "date": "2024-04-21",
+        "name": "Mahavir Jayanti",
+        "countryCode": "AU",
+        "holidayType": "Religious Holiday"
+      },
+      {
+        "date": "2024-05-23",
+        "name": "Buddha Purnima/Vesak",
+        "countryCode": "AU",
+        "holidayType": "Religious Holiday"
+      },
+      {
+        "date": "2024-06-17",
+        "name": "Bakrid/Eid ul-Adha",
+        "countryCode": "AU",
+        "holidayType": "Religious Holiday"
+      },
+      {
+        "date": "2024-07-17",
+        "name": "Muharram/Ashura",
+        "countryCode": "AU",
+        "holidayType": "Religious Holiday"
+      },
+      {
+        "date": "2024-08-15",
+        "name": "Independence Day",
+        "countryCode": "AU",
+        "holidayType": "National Holiday"
+      },
+      {
+        "date": "2024-08-26",
+        "name": "Janmashtami",
+        "countryCode": "AU",
+        "holidayType": "Religious Holiday"
+      },
+      {
+        "date": "2024-09-16",
+        "name": "Milad un-Nabi/Id-e-Milad",
+        "countryCode": "AU",
+        "holidayType": "Religious Holiday"
+      },
+      {
+        "date": "2024-10-02",
+        "name": "Gandhi Jayanti",
+        "countryCode": "AU",
+        "holidayType": "National Holiday"
+      },
+      {
+        "date": "2024-10-12",
+        "name": "Dussehra",
+        "countryCode": "AU",
+        "holidayType": "Religious Holiday"
+      },
+      {
+        "date": "2024-10-31",
+        "name": "Diwali/Deepavali",
+        "countryCode": "AU",
+        "holidayType": "Festival"
+      },
+      {
+        "date": "2024-11-15",
+        "name": "Guru Nanak Jayanti",
+        "countryCode": "AU",
+        "holidayType": "Religious Holiday"
+      },
+      {
+        "date": "2024-12-25",
+        "name": "Christmas",
+        "countryCode": "AU",
+        "holidayType": "Religious Holiday"
+      }
+    ]
+  }
+}

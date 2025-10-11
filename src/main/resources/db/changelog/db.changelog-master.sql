@@ -65,8 +65,20 @@ CREATE TABLE IF NOT EXISTS public.country (
     name VARCHAR(255) NOT NULL
 );
 
---table : country - Default Countries
+--Table : country - Default Countries
 INSERT INTO country(id, code, name)
 VALUES
 ('CT001','IN','India')
 ON CONFLICT (id) DO NOTHING;
+
+--Table: public_holiday
+CREATE TABLE IF NOT EXISTS public.public_holiday (
+    id VARCHAR(10) PRIMARY KEY,
+    date DATE,
+    name VARCHAR(255),
+    year VARCHAR(10),
+    country_code VARCHAR(10) NOT NULL,
+    CONSTRAINT fk_public_holiday_country
+        FOREIGN KEY (country_code) REFERENCES country (code)
+        ON DELETE CASCADE
+);

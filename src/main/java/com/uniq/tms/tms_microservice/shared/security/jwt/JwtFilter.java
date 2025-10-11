@@ -203,14 +203,14 @@ public class JwtFilter extends OncePerRequestFilter {
         response.getWriter().write(json);
         response.flushBuffer();
     }
+    
     private static final List<String> WHITELISTED_PATHS = List.of(
-
             "/login", "/tms/loginByEmail", "/tms/loginByMobile",
             "/tms/reset-password", "/tms/validate-email",
             "/tms/organization/orgType", "/tms/organization/validate",
             "/tms/organization/create", "/tms/sendOTP",
             "/tms/debug/otpsCount", "/tms/debug/otps",
-            "/tms/organization/getDropDowns"
+            "/tms/organization/getDropDowns", "/tms/leaveManagement/countries"
     );
 
     private boolean isWhiteListed(String path){

@@ -4,6 +4,8 @@ import com.uniq.tms.tms_microservice.modules.userManagement.entity.GroupEntity;
 import com.uniq.tms.tms_microservice.modules.locationManagement.entity.LocationEntity;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.WorkScheduleEntity;
 import jakarta.persistence.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -35,8 +37,13 @@ public class OrganizationEntity {
     @Column(name = "time_zone", nullable = false, length = 100)
     private String timeZone;
 
+    @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at", nullable = false, updatable = false)
+    private LocalDateTime updatedAt;
 
     public LocalDateTime getCreatedAt() {
         return createdAt;
@@ -135,5 +142,11 @@ public class OrganizationEntity {
         this.timeZone = timeZone;
     }
 
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
 
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
 }
