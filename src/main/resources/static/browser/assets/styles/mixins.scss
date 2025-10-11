@@ -252,3 +252,38 @@
   font-size: 10px;
   display: inline-block;
 }
+
+@mixin calendar-option-radio {
+  .calendar-option {
+    cursor: pointer;
+    position: relative;
+    border: 1px solid var(--form-line);
+    transition: border-color 0.2s;
+    font-weight: 500;
+    color: #555;
+
+    .custom-radio-circle {
+      width: 16px;
+      height: 16px;
+      border: 2px solid var(--form-line);
+      border-radius: 50%;
+      background-color: #fff;
+    }
+
+    &.selected {
+      color: var(--primary-color);
+      background-color: var(--secondary-color);
+
+      .custom-radio-circle {
+        background-color: var(--primary-color);
+      }
+    }
+
+    input[type="radio"] {
+      display: none;
+    }
+  }
+  .calendar-item {
+    cursor: pointer;
+  }
+}
