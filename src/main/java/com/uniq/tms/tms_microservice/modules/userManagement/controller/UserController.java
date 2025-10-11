@@ -254,7 +254,7 @@ public class UserController {
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
-    @PostMapping("/bulk/Location")
+    @PostMapping("bulk/Location")
     public ResponseEntity<ApiResponse<BulkUserLocationDto>> assignLocations(
             @RequestHeader("Authorization") String token,
             @Valid @RequestBody BulkUserLocationDto dto) {
