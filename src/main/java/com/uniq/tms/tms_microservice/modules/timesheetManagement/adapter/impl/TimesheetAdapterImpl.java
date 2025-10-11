@@ -9,6 +9,7 @@ import com.uniq.tms.tms_microservice.modules.timesheetManagement.enums.LogFrom;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.enums.LogType;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.enums.TimesheetStatusEnum;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.enums.TimesheetWorkStatusEnum;
+import com.uniq.tms.tms_microservice.modules.workScheduleManagement.model.ScheduleTypeInfo;
 import com.uniq.tms.tms_microservice.shared.helper.TimesheetHelper;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.mapper.TimesheetDtoMapper;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.entity.TimesheetEntity;
@@ -174,7 +175,7 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
                     Set<DayOfWeek> wokingDays = userWorkingDaysMap.getOrDefault(dto.getUserId(),
                             Collections.emptySet());
                     boolean isWorkingDay = wokingDays.contains(dto.getDate().getDayOfWeek());
-                    Duration scheduledHours = getScheduledHoursForUser(dto.getUserId(), dto.getDate(), fixedMap, flexMap);
+                    ScheduleTypeInfo scheduledHours = TimesheetHelper.getScheduledHoursForUser(dto.getUserId(), dto.getDate(), fixedMap, flexMap);
                     setTimesheetStatusAndDayType(dto, isWorkingDay, dto.getDate(), today, scheduledHours);
                     return dto;
                 })
@@ -288,7 +289,6 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
         log.info("User projection is null");
         TimesheetDto timesheet = new TimesheetDto();
         boolean isWorkingDay = workingDays.contains(date.getDayOfWeek());
-
         timesheet.setId(null);
         timesheet.setDate(date);
         timesheet.setUserId(user.getUserId());
@@ -303,31 +303,9 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
         timesheet.setRegularHoursDuration("00h 00m");
         timesheet.setHistory(Collections.emptyList());
 
-        Duration scheduledHours = getScheduledHoursForUser(user.getUserId(), date, fixedMap, flexMap);
+        ScheduleTypeInfo scheduledHours = TimesheetHelper.getScheduledHoursForUser(user.getUserId(), date, fixedMap, flexMap);
         setTimesheetStatusAndDayType(timesheet, isWorkingDay, date, today, scheduledHours);
         return timesheet;
-    }
-
-    private Duration getScheduledHoursForUser(
-            String userId,
-            LocalDate date,
-            Map<String, Map<DayOfWeek, FixedWorkScheduleEntity>> fixedMap,
-            Map<String, Map<DayOfWeek, FlexibleWorkScheduleEntity>> flexMap
-    ) {
-        DayOfWeek day = date.getDayOfWeek();
-
-        if (fixedMap.containsKey(userId) && fixedMap.get(userId).containsKey(day)) {
-            FixedWorkScheduleEntity fixed = fixedMap.get(userId).get(day);
-
-            LocalTime start = fixed.getStartTime().toLocalTime();
-            LocalTime end = fixed.getEndTime().toLocalTime();
-
-            return Duration.between(start, end);
-        } else if (flexMap.containsKey(userId) && flexMap.get(userId).containsKey(day)) {
-            FlexibleWorkScheduleEntity flex = flexMap.get(userId).get(day);
-            return Duration.ofMinutes((long) (flex.getDuration() * 60)); // flex is in hours
-        }
-        return Duration.ZERO;
     }
 
     /**
@@ -338,12 +316,10 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
             boolean isWorkingDay,
             LocalDate date,
             LocalDate today,
-            Duration scheduledHours
+            ScheduleTypeInfo scheduledHours
     ) {
-        //  DayType
         timesheet.setDayType(isWorkingDay ? "Working Day" : "Holiday");
         log.info("working day ? :{}", timesheet.getDayType());
-        // Detect clock-in/out (ignore default 00:00)
         boolean hasClockIn = timesheet.getFirstClockIn() != null
                 && !timesheet.getFirstClockIn().equals(LocalTime.MIDNIGHT);
 
@@ -440,34 +416,94 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
     /**
      * Sets work status for timesheets with both clock-in and clock-out
      */
-    private void setWorkStatusForCompletedTimesheet(
-            TimesheetDto timesheet,
-            Duration scheduledHours
-    ) {
-        boolean hasSystemGeneratedClockOut = timesheet.getHistory().stream()
-                .anyMatch(h -> LogType.CLOCK_OUT.equals(h.getLogType())
-                        && LogFrom.SYSTEM_GENERATED.equals(h.getLogFrom()));
-
-        if (hasSystemGeneratedClockOut) {
-            log.info("System generated");
-            timesheet.setWorkStatus(TimesheetWorkStatusEnum.FAILED_CLOCK_OUT.getLabel());
-            timesheet.setStatus(TimesheetStatusEnum.PRESENT.getLabel());
+    private void setWorkStatusForCompletedTimesheet(TimesheetDto timesheet, ScheduleTypeInfo scheduleInfo) {
+        if (scheduleInfo == null) {
+            log.warn("No schedule found for userId={}", timesheet.getUserId());
+            //timesheet.setWorkStatus(TimesheetWorkStatusEnum.NO_SCHEDULE.getLabel());
+            timesheet.setStatus(TimesheetStatusEnum.ABSENT.getLabel());
             return;
         }
-        log.info("Scheduler Hours from WS : {}", scheduledHours);
-        Duration worked = timesheet.getTrackedHours() != null ? timesheet.getTrackedHours() : Duration.ZERO;
-        Duration overtimeThreshold = scheduledHours.plusMinutes(extraWorkedMinutes);
 
-        if (worked.compareTo(overtimeThreshold) > 0) {
-            timesheet.setWorkStatus(TimesheetWorkStatusEnum.OVERTIME.getLabel());
-            timesheet.setStatus(TimesheetStatusEnum.PRESENT.getLabel());
-        } else if (worked.compareTo(scheduledHours) >= 0) {
-            timesheet.setWorkStatus(TimesheetWorkStatusEnum.SUFFICIENT_HOURS.getLabel());
-            timesheet.setStatus(TimesheetStatusEnum.PRESENT.getLabel());
-        } else {
-            timesheet.setWorkStatus(TimesheetWorkStatusEnum.LESS_WORKED_HOURS.getLabel());
+        if (!scheduleInfo.isFixed()) {
+            log.info("Processing Flexible schedule for userId={}", timesheet.getUserId());
+
+            boolean hasSystemGeneratedClockOut = timesheet.getHistory().stream()
+                    .anyMatch(h -> LogType.CLOCK_OUT.equals(h.getLogType())
+                            && LogFrom.SYSTEM_GENERATED.equals(h.getLogFrom()));
+
+            if (hasSystemGeneratedClockOut) {
+                log.info("System generated clock-out found");
+                timesheet.setWorkStatus(TimesheetWorkStatusEnum.FAILED_CLOCK_OUT.getLabel());
+                timesheet.setStatus(TimesheetStatusEnum.PRESENT.getLabel());
+                return;
+            }
+
+            Duration scheduledHours = scheduleInfo.getDuration() != null ? scheduleInfo.getDuration() : Duration.ZERO;
+            log.info("Scheduled Hours (Flexible): {}", scheduledHours);
+
+            Duration worked = timesheet.getTrackedHours() != null ? timesheet.getTrackedHours() : Duration.ZERO;
+            Duration overtimeThreshold = scheduledHours.plusMinutes(extraWorkedMinutes);
+
+            if (worked.compareTo(overtimeThreshold) > 0) {
+                timesheet.setWorkStatus(TimesheetWorkStatusEnum.OVERTIME.getLabel());
+            } else if (worked.compareTo(scheduledHours) >= 0) {
+                timesheet.setWorkStatus(TimesheetWorkStatusEnum.SUFFICIENT_HOURS.getLabel());
+            } else {
+                timesheet.setWorkStatus(TimesheetWorkStatusEnum.LESS_WORKED_HOURS.getLabel());
+            }
+
             timesheet.setStatus(TimesheetStatusEnum.PRESENT.getLabel());
         }
+        else {
+            log.info("Processing Fixed schedule for userId={}", timesheet.getUserId());
+            handleFixedSchedule(timesheet, scheduleInfo);
+        }
+    }
+
+    private void handleFixedSchedule(TimesheetDto timesheet, ScheduleTypeInfo scheduleInfo) {
+        LocalTime fixedStartTime = scheduleInfo.getStartTime();
+        LocalTime fixedEndTime = scheduleInfo.getEndTime();
+        Duration scheduledHours = scheduleInfo.getDuration();
+
+        log.info("Processing Fixed schedule - Start: {}, End: {}", fixedStartTime, fixedEndTime);
+
+        LocalTime actualStart = timesheet.getFirstClockIn();
+        LocalTime actualEnd = timesheet.getLastClockOut();
+
+        if (actualStart != null && actualEnd != null && fixedStartTime != null && fixedEndTime != null) {
+            boolean isLateClockIn = actualStart.isAfter(fixedStartTime);
+            boolean isEarlyClockOut = actualEnd.isBefore(fixedEndTime);
+            Duration worked = timesheet.getTrackedHours() != null ? timesheet.getTrackedHours() : Duration.ZERO;
+            boolean hasOvertimeHours = worked.compareTo(scheduledHours) > 0;
+            boolean isOvertime = actualEnd.isAfter(fixedEndTime.plusMinutes(30));
+
+
+            if (!isLateClockIn && isOvertime && hasOvertimeHours) {
+                timesheet.setWorkStatus(TimesheetWorkStatusEnum.OVERTIME.getLabel());
+            } else if (isLateClockIn && isEarlyClockOut) {
+                timesheet.setWorkStatus(TimesheetWorkStatusEnum.IRREGULAR_WORK_TIME.getLabel());
+            } else if (isLateClockIn) {
+                timesheet.setWorkStatus(TimesheetWorkStatusEnum.LATE_CLOCK_IN.getLabel());
+            } else if (isEarlyClockOut) {
+                timesheet.setWorkStatus(TimesheetWorkStatusEnum.EARLY_CLOCK_OUT.getLabel());
+            } else {
+                if (worked.compareTo(scheduledHours) >= 0) {
+                    timesheet.setWorkStatus(TimesheetWorkStatusEnum.SUFFICIENT_HOURS.getLabel());
+                } else {
+                    timesheet.setWorkStatus(TimesheetWorkStatusEnum.LESS_WORKED_HOURS.getLabel());
+                }
+            }
+        } else {
+            log.warn("Missing clock times for fixed schedule evaluation");
+            Duration worked = timesheet.getTrackedHours() != null ? timesheet.getTrackedHours() : Duration.ZERO;
+            if (worked.compareTo(scheduledHours) >= 0) {
+                timesheet.setWorkStatus(TimesheetWorkStatusEnum.SUFFICIENT_HOURS.getLabel());
+            } else {
+                timesheet.setWorkStatus(TimesheetWorkStatusEnum.LESS_WORKED_HOURS.getLabel());
+            }
+        }
+
+        timesheet.setStatus(TimesheetStatusEnum.PRESENT.getLabel());
     }
 
     /**
@@ -732,27 +768,33 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
         List<TimesheetProjection> pagedUser = userRepository.findUsersByUserIds(userIdArray);
         log.info("Found {} users", pagedUser.size());
         pagedUser.forEach(u -> log.info("User: {}, Name: {}", u.getUserId(), u.getUserName()));
+        if(startDate == null) {
+            log.info("Startdate before:{}", startDate);
+            startDate = pagedUser.getFirst().getDate();
+            log.info("Startdate:{}", startDate);
+        }
         //Fetch main timesheets
-        startDate = pagedUser.getFirst().getDate();
-        log.info("Startdate:{}",startDate);
         List<TimesheetProjection> resultList = timesheetRepository.fetchMainTimesheets(startDate, endDate, userIdArray);
 
         // Prepare helper maps
         Set<Long> timesheetIdSet = resultList.stream().map(TimesheetProjection::getId).collect(Collectors.toSet());
         Map<Long, List<TimesheetHistoryDto>> historyMap = fetchTimesheetHistoryMap(timesheetIdSet);
+        log.info("Fetching Ws");
         TimesheetHelper.WorkScheduleResult scheduleResult = timesheetHelper.fetchWorkSchedulesAndDays(userIdArray);
+        log.info("Mapping Schules");
         Map<String, Map<DayOfWeek, FixedWorkScheduleEntity>> fixedMap = scheduleResult.getFixedMap();
         Map<String, Map<DayOfWeek, FlexibleWorkScheduleEntity>> flexMap = scheduleResult.getFlexMap();
         Map<String, Set<DayOfWeek>> userWorkingDaysMap = scheduleResult.getUserWorkingDaysMap();
 
         // Map projections to DTOs grouped by userId
+        log.info("Mapping mobile projections to Dtos");
         Map<String, List<TimesheetDto>> userTimesheetMap = resultList.stream()
                 .map(p -> {
                     TimesheetDto dto = mapToTimesheetDto(p, historyMap);
                     LocalDate today = LocalDate.now(ZoneId.of("Asia/Kolkata"));
                     Set<DayOfWeek> workingDays = userWorkingDaysMap.getOrDefault(dto.getUserId(), Collections.emptySet());
                     boolean isWorkingDay = workingDays.contains(dto.getDate().getDayOfWeek());
-                    Duration scheduledHours = getScheduledHoursForUser(dto.getUserId(), dto.getDate(), fixedMap, flexMap);
+                    ScheduleTypeInfo scheduledHours = TimesheetHelper.getScheduledHoursForUser(dto.getUserId(), dto.getDate(), fixedMap, flexMap);
                     setTimesheetStatusAndDayType(dto, isWorkingDay, dto.getDate(), today, scheduledHours);
                     return dto;
                 })
@@ -766,7 +808,7 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
             List<TimesheetDto> userTimesheets = getUsersTimesheetsWithDefaults(
                     user,
                     userTimesheetMap.getOrDefault(userId, new ArrayList<>()),
-                    user.getDate(),
+                    startDate,
                     endDate,
                     userWorkingDaysMap.getOrDefault(userId, Collections.emptySet()),
                     fixedMap,
@@ -873,7 +915,7 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
         timesheet.setRegularHoursDuration("00h 00m");
         timesheet.setHistory(Collections.emptyList());
 
-        Duration scheduledHours = getScheduledHoursForUser(user.getUserId(), date, fixedMap, flexMap);
+        ScheduleTypeInfo scheduledHours = TimesheetHelper.getScheduledHoursForUser(user.getUserId(), date, fixedMap, flexMap);
         setTimesheetStatusAndDayType(timesheet, isWorkingDay, date, today, scheduledHours);
         return timesheet;
     }

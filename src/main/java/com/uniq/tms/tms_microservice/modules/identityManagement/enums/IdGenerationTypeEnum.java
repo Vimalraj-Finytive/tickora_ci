@@ -12,7 +12,10 @@ public enum IdGenerationTypeEnum {
     SECONDARY_USER("USI"),
     PLAN("PL"),
     SUBSCRIPTION("SUB"),
-    PAYMENT("PAY");
+    PAYMENT("PAY"),
+    CALENDAR("CL"),
+    PUBLIC_HOLIDAY("PH"),
+    CALENDAR_DETAILS("CD");
 
     private final String prefix ;
 

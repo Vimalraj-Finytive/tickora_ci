@@ -1,6 +1,7 @@
 package com.uniq.tms.tms_microservice.modules.workScheduleManagement.projection;
 
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.dto.WeeklyScheduleDto;
+import java.sql.Time;
 
 public interface WorkScheduleData {
 
@@ -13,4 +14,5 @@ public interface WorkScheduleData {
     String getFixedSchedule();
     String getFlexibleSchedule();
     WeeklyScheduleDto getWeeklySchedule();
+    Time getSplitTime();
 }

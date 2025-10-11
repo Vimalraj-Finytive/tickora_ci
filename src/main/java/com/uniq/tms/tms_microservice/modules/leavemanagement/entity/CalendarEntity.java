@@ -14,6 +14,8 @@ public class CalendarEntity {
 
     private Boolean isDefault;
 
+    private Boolean isActive;
+
     @OneToMany(mappedBy = "calendar", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<CalendarHolidayEntity> calendarHolidays;
 
@@ -47,5 +49,21 @@ public class CalendarEntity {
 
     public void setCalendarHolidays(List<CalendarHolidayEntity> calendarHolidays) {
         this.calendarHolidays = calendarHolidays;
+    }
+
+    public Boolean getDefault() {
+        return isDefault;
+    }
+
+    public void setDefault(Boolean aDefault) {
+        isDefault = aDefault;
+    }
+
+    public Boolean getActive() {
+        return isActive;
+    }
+
+    public void setActive(Boolean active) {
+        isActive = active;
     }
 }

@@ -202,6 +202,17 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
     }
 
     private void saveFlexibleSchedule(List<FlexibleScheduleDto> flexibleSchedule, WorkScheduleEntity parent) {
+        for(FlexibleScheduleDto dto : flexibleSchedule){
+            Double duration = Double.valueOf(dto.getDuration());
+            try {
+                if( duration < 0 || duration > 12){
+                    throw new IllegalArgumentException();
+                }
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException("Invalid format " ,e);
+            }
+        }
+
         List<FlexibleWorkScheduleEntity> entities = workScheduleEntityMapper.toFlexibleEntity(flexibleSchedule);
         List<java.lang.String> ids = idGenerationService.generateNextId(IdGenerationTypeEnum.FLEXIBLE_WORK, entities.size());
 
