@@ -1,13 +1,17 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class HolidayDto {
 
     private String id;
 
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     @NotNull(message = "Holiday date cannot be null")
     private LocalDate date;
 
@@ -17,6 +21,8 @@ public class HolidayDto {
     private String year;
 
     private String countryCode;
+
+    private String holidayType;
 
     public String getId() {
         return id;
@@ -58,4 +64,11 @@ public class HolidayDto {
         this.countryCode = countryCode;
     }
 
+    public String getHolidayType() {
+        return holidayType;
+    }
+
+    public void setHolidayType(String holidayType) {
+        this.holidayType = holidayType;
+    }
 }

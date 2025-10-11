@@ -4,6 +4,8 @@ import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.OrganizationEntity;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
 import jakarta.persistence.*;
+
+import java.sql.Time;
 import java.util.List;
 import java.util.Set;
 
@@ -23,6 +25,9 @@ public class WorkScheduleEntity {
 
     @Column(name = "is_active", nullable = false)
     private Boolean isActive;
+
+    @Column(name = "split_time", nullable = false)
+    private Time splitTime;
 
     @ManyToOne(optional = false)
     @JoinColumn(name = "work_schedule_type", referencedColumnName = "type_id")
@@ -123,5 +128,13 @@ public class WorkScheduleEntity {
 
     public void setUsers(List<UserEntity> users) {
         this.users = users;
+    }
+
+    public Time getSplitTime() {
+        return splitTime;
+    }
+
+    public void setSplitTime(Time splitTime) {
+        this.splitTime = splitTime;
     }
 }

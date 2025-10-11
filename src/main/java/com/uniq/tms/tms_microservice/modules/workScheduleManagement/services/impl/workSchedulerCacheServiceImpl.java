@@ -18,6 +18,9 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -66,6 +69,9 @@ public class workSchedulerCacheServiceImpl implements WorkScheduleCacheService {
             schedule.setType(raw.getWorkScheduleType());
             schedule.setOrgId(raw.getOrganizationId());
             schedule.setWeeklySchedule(raw.getWeeklySchedule());
+            LocalTime localTime = raw.getSplitTime().toLocalTime();
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("hh:mm a");
+            schedule.setSplitTime(localTime.format(formatter));
 
             // Parse fixed and flexible schedules from JSON strings
             try {
