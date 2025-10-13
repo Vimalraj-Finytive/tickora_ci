@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.w3.org/1999/xhtml" xmlns="http://www.w3.org/1999/html">
+<head>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+        }
+        .btn {
+            display: block;
+            width: max-content;
+            padding: 12px 20px;
+            background-color: #007bff;
+            color: #ffffff !important;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            text-align: center;
+            font-size: 16px;
+            border: none;
+        }
+        .btn-expired {
+            background-color: #dc3545;
+        }
+        .highlight {
+            color: #007bff;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<h3 style="color: #3f3c3c;">Hi [[${username}]],</h3>
+
+<div>
+    <div th:if="${daysRemaining > 0}">
+        <p>This is a friendly reminder about your <strong>Tickora</strong> subscription.</p>
+
+        <p>Your subscription for the organization
+            <span class="highlight">[[${orgName}]]</span> will expire in
+            <span class="highlight">[[${daysRemaining}]] days</span> on
+            <span class="highlight">[[${expiryDate}]]</span>.
+        </p>
+
+        <p>
+            To ensure uninterrupted access to the <strong>Tickora</strong> platform,
+            please renew your subscription before the expiry date.
+        </p>
+
+        <p><strong style="color: red;">Important:</strong></p>
+        <ul>
+            <li>Renewing on time ensures you retain full access to all your Tickora services.</li>
+            <li>Failure to renew before <span class="highlight">[[${expiryDate}]]</span> may cause access interruptions.</li>
+        </ul>
+
+        <p>
+            <a th:href="${renewLink}" class="btn">Go to Website</a>
+        </p>
+    </div>
+
+    <div th:if="${daysRemaining <= 0}">
+        <p><strong style="color: red;">Your subscription for the organization
+            <span class="highlight">[[${orgName}]]</span> has expired</strong>
+            on <span class="highlight">[[${expiryDate}]]</span>.
+        </p>
+
+        <p>To regain access to <strong>Tickora</strong>, please renew your subscription immediately.</p>
+
+        <p>
+            <a th:href="${renewLink}" class="btn btn-expired">Go to Website</a>
+        </p>
+
+        <p>We value your presence and hope to have you back soon.</p>
+    </div>
+
+    <p>Thank you for your continued trust in <strong>Tickora</strong>.</p>
+
+    <h4>Warm regards,<br>&mdash; The Tickora Team</h4>
+</div>
+
+<h5 style="text-align:center;"><strong>Thank you for using Tickora</strong></h5>
+<h6 style="text-align:center;">This is an automated message. Please do not reply directly to this email.</h6>
+
+</body>
+</html>

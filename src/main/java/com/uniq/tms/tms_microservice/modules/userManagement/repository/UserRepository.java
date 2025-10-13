@@ -1,10 +1,12 @@
 package com.uniq.tms.tms_microservice.modules.userManagement.repository;
 
+import com.uniq.tms.tms_microservice.modules.userManagement.dto.UserNameEmailDto;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserGroupEntity;
 import com.uniq.tms.tms_microservice.modules.userManagement.model.UserResponse;
 import com.uniq.tms.tms_microservice.modules.userManagement.dto.UserNameSuggestionDto;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.projection.TimesheetProjection;
+import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.WorkScheduleEntity;
 import jakarta.transaction.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -222,6 +224,20 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
 
     @Query("SELECT COUNT(u) FROM UserEntity u WHERE u.organizationId = :orgId")
     Long countUsersByOrganizationId(@io.lettuce.core.dynamic.annotation.Param("orgId") String orgId);
+
+    @Query("SELECT new com.uniq.tms.tms_microservice.modules.userManagement.dto.UserNameEmailDto(u.userName, u.email) " +
+            "FROM UserEntity u WHERE u.role.roleId IN (1, 2)")
+    List<UserNameEmailDto> findAdminAndSuperAdminNamesAndEmails();
+
+
+
+    @Modifying
+    @Transactional
+    @Query("UPDATE UserEntity u SET u.workSchedule = :workSchedule WHERE u.userId IN :userIds AND u.organizationId = :orgId")
+    int bulkUpdateWorkSchedule(@Param("workSchedule") WorkScheduleEntity workSchedule,
+                               @Param("userIds") List<String> userIds,
+                               @Param("orgId") String orgId);
+
 
 
 

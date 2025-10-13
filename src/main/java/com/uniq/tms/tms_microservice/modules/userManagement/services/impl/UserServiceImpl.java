@@ -85,6 +85,7 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -1140,72 +1141,123 @@ public class UserServiceImpl implements UserService {
         throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No users found for this organization");
     }
 
+//    @Override
+//    @Transactional
+//    public void deleteUsers(String orgId, List<String> userIds, String userNameFromToken, String comments) {
+//        String schema = TenantUtil.getCurrentTenant();
+//
+//        List<UserEntity> users = userAdapter.findByUserId(userIds);
+//        if (users.isEmpty()) {
+//            throw new RuntimeException("No valid users found to delete.");
+//        }
+//
+//        Set<String> foundUserIds = users.stream()
+//                .map(UserEntity::getUserId)
+//                .collect(Collectors.toSet());
+//
+//        List<String> missingUsers = userIds.stream()
+//                .filter(id -> !foundUserIds.contains(id))
+//                .toList();
+//        if (!missingUsers.isEmpty()) {
+//            throw new RuntimeException("User IDs not found: " + missingUsers);
+//        }
+//
+//        Optional<UserEntity> unauthorized = users.stream()
+//                .filter(user -> !orgId.equals(user.getOrganizationId()))
+//                .findFirst();
+//        unauthorized.ifPresent(user -> {
+//            throw new RuntimeException("Unauthorized to delete user: " + user.getUserId());
+//        });
+//
+//        userAdapter.deactivateUsersByIds(userIds, orgId);
+//
+//        List<UserHistoryEntity> historyEntities = users.stream()
+//                .map(user -> {
+//                    String commentLog = "Inactivated By " + userNameFromToken + " - " + comments;
+//                    return userEntityMapper.toInactiveUserEntity(user.getUserId(), commentLog);
+//                })
+//                .toList();
+//
+//        if (!historyEntities.isEmpty()) {
+//            userAdapter.saveAllUserHistories(historyEntities);
+//        }
+//
+//        users.parallelStream().forEach(user -> {
+//            try {
+//                userAdapter.deleteUserFace(user.getUserId());
+//            } catch (Exception e) {
+//                log.error("Failed to delete face for user {}: {}", user.getUserId(), e.getMessage());
+//            }
+//        });
+//
+//        if (isRedisEnabled) {
+//            try {
+//                CacheEventPublisherUtil.syncReloadThenPublish(
+//                        publisher,
+//                        cacheKeyConfig.getUsers(),
+//                        orgId,
+//                        schema,
+//                        cacheReloadHandlerRegistry
+//                );
+//                log.info("Redis cache reloaded after user deletion");
+//            } catch (Exception e) {
+//                log.error("Redis reload failed: {}", e.getMessage());
+//            }
+//        }
+//
+//        log.info("Deleted users successfully: {}", userIds);
+//    }
+
     @Override
     @Transactional
     public void deleteUsers(String orgId, List<String> userIds, String userNameFromToken, String comments) {
+        if (userIds == null || userIds.isEmpty()) return;
+
         String schema = TenantUtil.getCurrentTenant();
-
-        List<UserEntity> users = userAdapter.findByUserId(userIds);
-        if (users.isEmpty()) {
-            throw new RuntimeException("No valid users found to delete.");
-        }
-
-        Set<String> foundUserIds = users.stream()
-                .map(UserEntity::getUserId)
-                .collect(Collectors.toSet());
-
-        List<String> missingUsers = userIds.stream()
-                .filter(id -> !foundUserIds.contains(id))
-                .toList();
-        if (!missingUsers.isEmpty()) {
-            throw new RuntimeException("User IDs not found: " + missingUsers);
-        }
-
-        Optional<UserEntity> unauthorized = users.stream()
-                .filter(user -> !orgId.equals(user.getOrganizationId()))
-                .findFirst();
-        unauthorized.ifPresent(user -> {
-            throw new RuntimeException("Unauthorized to delete user: " + user.getUserId());
-        });
-
         userAdapter.deactivateUsersByIds(userIds, orgId);
-
-        List<UserHistoryEntity> historyEntities = users.stream()
-                .map(user -> {
+        log.info("Deactivated users in bulk");
+        List<UserHistoryEntity> historyEntities = userIds.stream()
+                .map(id -> {
                     String commentLog = "Inactivated By " + userNameFromToken + " - " + comments;
-                    return userEntityMapper.toInactiveUserEntity(user.getUserId(), commentLog);
+                    return userEntityMapper.toInactiveUserEntity(id, commentLog);
                 })
                 .toList();
 
         if (!historyEntities.isEmpty()) {
-            userAdapter.saveAllUserHistories(historyEntities);
+            userAdapter.saveAllUserHistories(historyEntities); // batch insert
+            log.info("Saved {} user history records in batch", historyEntities.size());
         }
 
-        users.parallelStream().forEach(user -> {
-            try {
-                userAdapter.deleteUserFace(user.getUserId());
-            } catch (Exception e) {
-                log.error("Failed to delete face for user {}: {}", user.getUserId(), e.getMessage());
-            }
-        });
+        CompletableFuture.runAsync(() ->
+                userIds.parallelStream().forEach(userId -> {
+                    try {
+                        userAdapter.deleteUserFace(userId);
+                    } catch (Exception e) {
+                        log.error("Failed to delete face for user {}: {}", userId, e.getMessage());
+                    }
+                })
+        );
 
         if (isRedisEnabled) {
-            try {
-                CacheEventPublisherUtil.syncReloadThenPublish(
-                        publisher,
-                        cacheKeyConfig.getUsers(),
-                        orgId,
-                        schema,
-                        cacheReloadHandlerRegistry
-                );
-                log.info("Redis cache reloaded after user deletion");
-            } catch (Exception e) {
-                log.error("Redis reload failed: {}", e.getMessage());
-            }
+            CompletableFuture.runAsync(() -> {
+                try {
+                    CacheEventPublisherUtil.syncReloadThenPublish(
+                            publisher,
+                            cacheKeyConfig.getUsers(),
+                            orgId,
+                            schema,
+                            cacheReloadHandlerRegistry
+                    );
+                    log.info("Redis cache reloaded after user deletion");
+                } catch (Exception e) {
+                    log.error("Redis reload failed: {}", e.getMessage());
+                }
+            });
         }
 
-        log.info("Deleted users successfully: {}", userIds);
+        log.info("Deleted users successfully: {}", userIds.size());
     }
+
 
     @Override
     @Transactional
@@ -2056,14 +2108,88 @@ public class UserServiceImpl implements UserService {
         return result;
     }
 
+//    @Override
+//    @Transactional
+//    public List<BulkWorkScheduleUpdateResponseDto> updateWorkSchedules(
+//            BulkWorkScheduleUpdateRequestDto requestDto,
+//            String userNameFromToken,
+//            String orgId) {
+//        String schema = TenantUtil.getCurrentTenant();
+//
+//        List<BulkWorkScheduleUpdateResponseDto> results = new ArrayList<>();
+//
+//        WorkScheduleEntity workSchedule = null;
+//        if (requestDto.getWorkScheduleId() != null) {
+//            workSchedule = workScheduleAdapter.findByScheduleId(requestDto.getWorkScheduleId(), orgId);
+//            if (workSchedule == null) {
+//                throw new ResponseStatusException(
+//                        HttpStatus.NOT_FOUND,
+//                        "WorkSchedule not found with ID: " + requestDto.getWorkScheduleId()
+//                );
+//            }
+//        }
+//
+//        log.info("Starting bulk work schedule update for scheduleId {}",
+//                workSchedule != null ? workSchedule.getScheduleId() : "null");
+//
+//        Map<String, UserEntity> userMap = userAdapter.getUsersByIds(requestDto.getMemberIds(), orgId)
+//                .stream()
+//                .collect(Collectors.toMap(UserEntity::getUserId, Function.identity()));
+//
+//        List<UserEntity> usersToUpdate = new ArrayList<>();
+//
+//        for (String memberId : requestDto.getMemberIds()) {
+//            UserEntity user = userMap.get(memberId);
+//
+//            if (user == null) {
+//                results.add(new BulkWorkScheduleUpdateResponseDto(memberId, false, "User not found"));
+//                continue;
+//            }
+//
+//            if (!orgId.equals(user.getOrganizationId())) {
+//                results.add(new BulkWorkScheduleUpdateResponseDto(memberId, false, "Unauthorized"));
+//                continue;
+//            }
+//
+//            user.setWorkSchedule(workSchedule);
+//            usersToUpdate.add(user);
+//            results.add(new BulkWorkScheduleUpdateResponseDto(memberId, true, "Work schedule updated"));
+//        }
+//
+//        if (!usersToUpdate.isEmpty()) {
+//            try {
+//                userAdapter.saveAllUsers(usersToUpdate);
+//            } catch (Exception e) {
+//                log.error("Failed to save users in batch: {}", e.getMessage());
+//            }
+//        }
+//
+//        long successCount = results.stream().filter(BulkWorkScheduleUpdateResponseDto::isSuccess).count();
+//        long failedCount = results.size() - successCount;
+//        log.info("Completed bulk work schedule update. Success count: {}, Failed count: {}", successCount, failedCount);
+//        if (isRedisEnabled) {
+//            CacheEventPublisherUtil.syncReloadThenPublish(
+//                    publisher,
+//                    cacheKeyConfig.getGroups(),
+//                    orgId,
+//                    schema,
+//                    cacheReloadHandlerRegistry
+//            );
+//            log.info("GroupCacheReloadEvent published after Group Creation");
+//        } else {
+//            log.info("Redis is not enabled or RedisTemplate is null. Skipping cache create group reload.");
+//        }
+//        return results;
+//    }
+
     @Override
     @Transactional
     public List<BulkWorkScheduleUpdateResponseDto> updateWorkSchedules(
             BulkWorkScheduleUpdateRequestDto requestDto,
             String userNameFromToken,
             String orgId) {
-        String schema = TenantUtil.getCurrentTenant();
 
+        String schema = TenantUtil.getCurrentTenant();
         List<BulkWorkScheduleUpdateResponseDto> results = new ArrayList<>();
 
         WorkScheduleEntity workSchedule = null;
@@ -2080,41 +2206,27 @@ public class UserServiceImpl implements UserService {
         log.info("Starting bulk work schedule update for scheduleId {}",
                 workSchedule != null ? workSchedule.getScheduleId() : "null");
 
-        Map<String, UserEntity> userMap = userAdapter.getUsersByIds(requestDto.getMemberIds(), orgId)
-                .stream()
-                .collect(Collectors.toMap(UserEntity::getUserId, Function.identity()));
+        List<UserEntity> existingUsers = userAdapter.getUsersByIds(requestDto.getMemberIds(), orgId);
 
-        List<UserEntity> usersToUpdate = new ArrayList<>();
+        Set<String> existingUserIds = existingUsers.stream()
+                .map(UserEntity::getUserId)
+                .collect(Collectors.toSet());
 
         for (String memberId : requestDto.getMemberIds()) {
-            UserEntity user = userMap.get(memberId);
-
-            if (user == null) {
+            if (!existingUserIds.contains(memberId)) {
                 results.add(new BulkWorkScheduleUpdateResponseDto(memberId, false, "User not found"));
-                continue;
-            }
-
-            if (!orgId.equals(user.getOrganizationId())) {
-                results.add(new BulkWorkScheduleUpdateResponseDto(memberId, false, "Unauthorized"));
-                continue;
-            }
-
-            user.setWorkSchedule(workSchedule);
-            usersToUpdate.add(user);
-            results.add(new BulkWorkScheduleUpdateResponseDto(memberId, true, "Work schedule updated"));
-        }
-
-        if (!usersToUpdate.isEmpty()) {
-            try {
-                userAdapter.saveAllUsers(usersToUpdate);
-            } catch (Exception e) {
-                log.error("Failed to save users in batch: {}", e.getMessage());
+            } else {
+                results.add(new BulkWorkScheduleUpdateResponseDto(memberId, true, "Work schedule updated"));
             }
         }
 
+        if (!existingUserIds.isEmpty()) {
+            userAdapter.bulkUpdateWorkSchedule(workSchedule, new ArrayList<>(existingUserIds), orgId);
+        }
         long successCount = results.stream().filter(BulkWorkScheduleUpdateResponseDto::isSuccess).count();
         long failedCount = results.size() - successCount;
         log.info("Completed bulk work schedule update. Success count: {}, Failed count: {}", successCount, failedCount);
+
         if (isRedisEnabled) {
             CacheEventPublisherUtil.syncReloadThenPublish(
                     publisher,
@@ -2123,16 +2235,20 @@ public class UserServiceImpl implements UserService {
                     schema,
                     cacheReloadHandlerRegistry
             );
-            log.info("GroupCacheReloadEvent published after Group Creation");
+            log.info("GroupCacheReloadEvent published after bulk work schedule update");
         } else {
-            log.info("Redis is not enabled or RedisTemplate is null. Skipping cache create group reload.");
+            log.info("Redis is not enabled. Skipping cache reload.");
         }
+
         return results;
     }
+
+
     @Override
     @Transactional
     public ApiResponse addOrUpdateGroupMembers(String orgId, UserGroupModel model) {
         String schema = TenantUtil.getCurrentTenant();
+
         if (model == null || model.getGroupIds() == null || model.getUserIds() == null ||
                 model.getGroupIds().isEmpty() || model.getUserIds().isEmpty()) {
             log.warn("No user-groups provided for orgId={}", orgId);
@@ -2141,92 +2257,89 @@ public class UserServiceImpl implements UserService {
 
         List<Long> groupIds = model.getGroupIds();
         List<String> userIds = model.getUserIds();
-        String type = model.getType();
+        String type = normalizeType(model.getType());
 
-        List<UserGroup> userGroups = new ArrayList<>();
-        for (Long groupId : groupIds) {
-            for (String userId : userIds) {
-                userGroups.add(new UserGroup(groupId, userId, type));
+        log.info("Processing {} users × {} groups = {} total mappings for orgId={}",
+                userIds.size(), groupIds.size(), userIds.size() * groupIds.size(), orgId);
+
+        List<GroupEntity> groupEntities = userAdapter.findGroupsByIds(new HashSet<>(groupIds));
+        List<UserEntity> userEntities = userAdapter.getUsersByIds(userIds, orgId);
+        List<UserGroupEntity> existingUserGroups = userAdapter.findUserGroupsByUsersAndGroups(
+                new HashSet<>(userIds), new HashSet<>(groupIds));
+
+        Map<Long, GroupEntity> groupMap = new HashMap<>(groupEntities.size());
+        for (GroupEntity g : groupEntities) {
+            groupMap.put(g.getGroupId(), g);
+        }
+
+        Map<String, UserEntity> userMap = new HashMap<>(userEntities.size());
+        for (UserEntity u : userEntities) {
+            if (u.isActive()) {
+                userMap.put(u.getUserId(), u);
             }
         }
 
-        log.info("Processing {} user-group entries for orgId={}", userGroups.size(), orgId);
-
-        Set<Long> groupIdSet = userGroups.stream().map(UserGroup::getGroupId).collect(Collectors.toSet());
-        Set<String> userIdSet = userGroups.stream().map(UserGroup::getUserId).collect(Collectors.toSet());
-
-        List<GroupEntity> groupEntities = userAdapter.findGroupsByIds(groupIdSet);
-        Map<Long, GroupEntity> groupMap = groupEntities.stream()
-                .collect(Collectors.toMap(GroupEntity::getGroupId, g -> g));
-
-        Set<Long> missingGroups = new HashSet<>(groupIdSet);
-        missingGroups.removeAll(groupMap.keySet());
-        if (!missingGroups.isEmpty()) {
+        if (groupMap.size() != groupIds.size()) {
+            Set<Long> missingGroups = new HashSet<>(groupIds);
+            missingGroups.removeAll(groupMap.keySet());
             log.error("Groups not found: {}", missingGroups);
             return new ApiResponse(404, "Group(s) not found: " + missingGroups, null);
         }
 
-        List<UserEntity> userEntities = userAdapter.getUsersByIds(new ArrayList<>(userIdSet), orgId);
-        Map<String, UserEntity> userMap = userEntities.stream()
-                .filter(UserEntity::isActive)
-                .collect(Collectors.toMap(UserEntity::getUserId, u -> u));
-
-        Set<String> missingUsers = new HashSet<>(userIdSet);
-        missingUsers.removeAll(userMap.keySet());
-        if (!missingUsers.isEmpty()) {
+        if (userMap.size() != userIds.size()) {
+            Set<String> missingUsers = new HashSet<>(userIds);
+            missingUsers.removeAll(userMap.keySet());
             log.error("Users not found or inactive: {}", missingUsers);
             return new ApiResponse(404, "User(s) not found or inactive: " + missingUsers, null);
         }
 
-        List<UserGroupEntity> existingUserGroups = userAdapter.findUserGroupsByUsersAndGroups(userIdSet, groupIdSet);
-        Map<String, Map<Long, UserGroupEntity>> existingMap = existingUserGroups.stream()
-                .collect(Collectors.groupingBy(
-                        ug -> ug.getUser().getUserId(),
-                        Collectors.toMap(ug -> ug.getGroup().getGroupId(), ug -> ug)
-                ));
+        Map<String, Set<Long>> existingLinks = new HashMap<>();
+        for (UserGroupEntity e : existingUserGroups) {
+            existingLinks
+                    .computeIfAbsent(e.getUser().getUserId(), k -> new HashSet<>())
+                    .add(e.getGroup().getGroupId());
+        }
 
         List<UserGroupEntity> toSave = new ArrayList<>();
+        int updates = 0;
 
-        for (UserGroup ug : userGroups) {
-            UserEntity user = userMap.get(ug.getUserId());
-            GroupEntity group = groupMap.get(ug.getGroupId());
+        for (String userId : userIds) {
+            UserEntity user = userMap.get(userId);
+            Set<Long> userExistingGroups = existingLinks.getOrDefault(userId, Collections.emptySet());
+            for (Long groupId : groupIds) {
+                GroupEntity group = groupMap.get(groupId);
 
-            UserGroupEntity existing = existingMap.getOrDefault(user.getUserId(), Collections.emptyMap())
-                    .get(group.getGroupId());
+                if (userExistingGroups.contains(groupId)) {
+                    Optional<UserGroupEntity> existing = existingUserGroups.stream()
+                            .filter(ug -> ug.getUser().getUserId().equals(userId)
+                                    && ug.getGroup().getGroupId().equals(groupId))
+                            .findFirst();
 
-            if (existing != null) {
-                String currentType = normalizeType(existing.getType());
-                String newType = normalizeType(ug.getType());
-                if (!currentType.equals(newType)) {
-                    existing.setType(newType);
-                    toSave.add(existing);
-                    log.info("Updated user-group: user={} group={} type={}", user.getUserId(), group.getGroupId(), newType);
+                    if (existing.isPresent() && !normalizeType(existing.get().getType()).equals(type)) {
+                        existing.get().setType(type);
+                        toSave.add(existing.get());
+                        updates++;
+                    }
+                    continue;
                 }
-            } else {
-                UserGroupEntity entity = userEntityMapper.toEntity(ug);
+
+                UserGroupEntity entity = new UserGroupEntity();
                 entity.setUser(user);
                 entity.setGroup(group);
-                entity.setType(normalizeType(ug.getType()));
+                entity.setType(type);
                 toSave.add(entity);
-                log.info("Added new user-group: user={} group={} type={}", user.getUserId(), group.getGroupId(), entity.getType());
             }
         }
 
         if (!toSave.isEmpty()) {
             try {
                 userAdapter.saveAllUserGroups(toSave);
-                log.info("Saved {} user-group entities successfully", toSave.size());
+                log.info("Saved {} user-group mappings ({} updates)", toSave.size(), updates);
+
                 if (isRedisEnabled) {
                     CacheEventPublisherUtil.syncReloadThenPublish(
-                            publisher,
-                            cacheKeyConfig.getGroups(),
-                            orgId,
-                            schema,
-                            cacheReloadHandlerRegistry
-                    );
+                            publisher, cacheKeyConfig.getGroups(), orgId, schema, cacheReloadHandlerRegistry);
                     log.info("GroupCacheReloadEvent published after add/update group members");
-                } else {
-                    log.info("Redis is not enabled. Skipping cache reload.");
                 }
             } catch (Exception e) {
                 log.error("Failed to save user-group entities", e);
@@ -2236,8 +2349,26 @@ public class UserServiceImpl implements UserService {
             log.info("No changes to save for orgId={}", orgId);
         }
 
-        return new ApiResponse(200, "Users added successfully", null);
+        if (isRedisEnabled) {
+            try {
+                CacheEventPublisherUtil.syncReloadThenPublish(
+                        publisher,
+                        cacheKeyConfig.getGroups(),
+                        orgId,
+                        schema,
+                        cacheReloadHandlerRegistry
+                );
+                log.info("GroupCacheReloadEvent published after Group Creation for orgId={}", orgId);
+            } catch (Exception e) {
+                log.error("Failed to publish GroupCacheReloadEvent for orgId={}", orgId, e);
+            }
+        } else {
+            log.info("Redis is not enabled or RedisTemplate is null. Skipping cache reload for orgId={}", orgId);
+        }
+
+        return new ApiResponse(200, "Users added/updated successfully", null);
     }
+
 
     private String normalizeType(String type) {
         if (type == null) return MemberType.MEMBER.getValue();
