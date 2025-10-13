@@ -1,7 +1,9 @@
 package com.uniq.tms.tms_microservice.modules.organizationManagement.mapper;
 
 import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.PlanDto;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.PlanStatusDto;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.model.Plan;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.model.PlanStatusModel;
 import org.mapstruct.Mapper;
 
 import java.util.List;
@@ -10,4 +12,8 @@ import java.util.List;
 public interface PlanDtoMapper {
     PlanDto toDto(Plan model);
     List<PlanDto> toDtoList(List<Plan> models);
+
+    PlanStatusModel toModel(PlanStatusDto dto);
+
+    PlanStatusDto toDto(PlanStatusModel model);
 }

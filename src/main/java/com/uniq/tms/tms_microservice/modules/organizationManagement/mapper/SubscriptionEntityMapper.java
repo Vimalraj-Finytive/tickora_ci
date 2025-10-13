@@ -1,6 +1,8 @@
 package com.uniq.tms.tms_microservice.modules.organizationManagement.mapper;
 
+import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.PaymentEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.SubscriptionEntity;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.model.PaymentModel;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.model.Subscription;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -28,4 +30,6 @@ public interface SubscriptionEntityMapper {
     @Mapping(target = "endDate", source = "endDate")
     @Mapping(target = "status", source = "status")
     SubscriptionEntity toEntity(Subscription model);
+
+//    PaymentModel toModel(PaymentEntity entity);
 }

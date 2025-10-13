@@ -160,6 +160,11 @@ public class OrganizationController {
         }
         return ResponseEntity.ok( organizationFacade.upgradePlan(orgId,orgSchema, upgradePlanDto));
     }
-
+//    @GetMapping("subscription/planDetails")
+//    public ResponseEntity<ApiResponse<PlanStatusDto>> getCurrentPlan(@RequestHeader("Authorization") String token) {
+//        String orgId = authHelper.getOrgId(); // extract from token
+//        ApiResponse<PlanStatusDto> response = organizationFacade.getCurrentPlanStatus(orgId);
+//        return ResponseEntity.status(response.getStatusCode()).body(response);
+//    }
 }
 

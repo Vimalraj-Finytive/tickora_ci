@@ -19,7 +19,6 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Map;
 
 @Service
 public class SubscriptionServiceImpl implements SubscriptionService {
@@ -29,7 +28,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     private final PaymentService paymentService;
     private final UpgradeDtoMapper upgradeDtoMapper;
 
-    public SubscriptionServiceImpl(SubscriptionAdapter subscriptionAdapter, PaymentService paymentService, UpgradeDtoMapper upgradeDtoMapper) {
+    public SubscriptionServiceImpl(SubscriptionAdapter subscriptionAdapter, PaymentService paymentService, UpgradeDtoMapper upgradeDtoMapper){
         this.subscriptionAdapter = subscriptionAdapter;
         this.paymentService = paymentService;
         this.upgradeDtoMapper = upgradeDtoMapper;
