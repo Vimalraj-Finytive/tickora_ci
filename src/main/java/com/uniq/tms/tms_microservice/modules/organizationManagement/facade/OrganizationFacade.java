@@ -1,15 +1,14 @@
 package com.uniq.tms.tms_microservice.modules.organizationManagement.facade;
 
 import com.uniq.tms.tms_microservice.modules.authenticationManagement.services.AuthService;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.mapper.PlanDtoMapper;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.mapper.SubscriptionDtoMapper;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.model.*;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.services.SubscriptionService;
 import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.*;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.mapper.OrganizationDtoMapper;
-import com.uniq.tms.tms_microservice.modules.organizationManagement.model.Privilege;
-import com.uniq.tms.tms_microservice.modules.organizationManagement.model.RolePrivilege;
 import com.uniq.tms.tms_microservice.shared.helper.AuthHelper;
-import com.uniq.tms.tms_microservice.modules.organizationManagement.model.Organization;
-import com.uniq.tms.tms_microservice.modules.organizationManagement.model.OrganizationType;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.services.OrganizationService;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
@@ -19,14 +18,17 @@ import java.util.List;
 
 @Component
 public class OrganizationFacade {
-
+    private final PlanDtoMapper planDtoMapper;
+    private final SubscriptionDtoMapper subscriptionDtoMapper;
     private final OrganizationService organizationService;
     private final SubscriptionService subscriptionService;
     private final AuthHelper authHelper;
     private final AuthService authService;
     private final OrganizationDtoMapper organizationDtoMapper;
 
-    public OrganizationFacade(OrganizationService organizationService, SubscriptionService subscriptionService, AuthHelper authHelper, AuthService authService, OrganizationDtoMapper organizationDtoMapper) {
+    public OrganizationFacade(PlanDtoMapper planDtoMapper, SubscriptionDtoMapper subscriptionDtoMapper, OrganizationService organizationService, SubscriptionService subscriptionService, AuthHelper authHelper, AuthService authService, OrganizationDtoMapper organizationDtoMapper) {
+        this.planDtoMapper = planDtoMapper;
+        this.subscriptionDtoMapper = subscriptionDtoMapper;
         this.organizationService = organizationService;
         this.subscriptionService = subscriptionService;
         this.authHelper = authHelper;
@@ -137,4 +139,10 @@ public class OrganizationFacade {
         return new ApiResponse<>(status.value(), resultMessage, null);
     }
 
+    public ApiResponse<PlanStatusDto> getCurrentPlanStatus(String orgId) {
+
+        PlanStatusDto dto = planDtoMapper.toDto(subscriptionService.getCurrentPlanStatus(orgId));
+
+        return new ApiResponse<>(200, "Plan details fetched successfully", dto);
+    }
 }

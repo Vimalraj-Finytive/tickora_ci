@@ -7,6 +7,7 @@ import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.R
 import com.uniq.tms.tms_microservice.shared.communication.EmailService;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -17,6 +18,9 @@ public class EmailHelper {
     private final RoleRepository roleRepository;
     private final OrganizationCacheService organizationCacheService;
     private final RolePrivilegeHelper rolePrivilegeHelper;
+
+    @Value("${subscription.renew-link}")
+    private String renewLink;
 
     public EmailHelper(EmailService emailService, RoleRepository roleRepository, OrganizationCacheService organizationCacheService, RolePrivilegeHelper rolePrivilegeHelper) {
         this.emailService = emailService;
@@ -50,4 +54,14 @@ public class EmailHelper {
         String emailType = "success_mail";
         emailService.sendSuccessEmail(toEmail,subject,userName,uploadedCount,skippedCount,emailType);
     }
+
+
+    public void sendSubscriptionExpiryReminder(String toEmail, String username,
+                                               String orgName, long daysRemaining,
+                                               String expiryDate) {
+        emailService.sendSubscriptionReminderEmail(toEmail, username, orgName, daysRemaining, expiryDate, renewLink);
+    }
+
+
+
 }

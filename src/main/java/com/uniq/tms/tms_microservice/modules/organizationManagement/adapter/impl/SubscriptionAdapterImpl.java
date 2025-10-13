@@ -6,6 +6,7 @@ import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.Subs
 import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.PlanDto;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.SubscriptionDto;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.UpgradePlanDto;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.PaymentEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.PlanEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.SubscriptionEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.enums.OrganizationStatusEnum;
@@ -14,6 +15,7 @@ import com.uniq.tms.tms_microservice.modules.organizationManagement.mapper.PlanE
 import com.uniq.tms.tms_microservice.modules.organizationManagement.mapper.SubscriptionDtoMapper;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.mapper.SubscriptionEntityMapper;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.model.Plan;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.PaymentRepository;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.PlanRepository;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.SubscriptionRepository;
 import org.apache.logging.log4j.LogManager;
@@ -30,6 +32,7 @@ import java.util.stream.Collectors;
 @Component
 @ConditionalOnProperty(name = "database.type", havingValue = "postgres")
 public class SubscriptionAdapterImpl implements SubscriptionAdapter {
+    private final PaymentRepository paymentRepository;
     private static final Logger log = LogManager.getLogger(SubscriptionAdapterImpl.class);
     private final SubscriptionRepository subscriptionRepository;
     private final PlanRepository planRepository;
@@ -39,7 +42,8 @@ public class SubscriptionAdapterImpl implements SubscriptionAdapter {
     private final PlanDtoMapper planDtoMapper;
     private final IdGenerationService idGenerationService;
 
-    public SubscriptionAdapterImpl(SubscriptionRepository subscriptionRepository, SubscriptionEntityMapper subscriptionEntityMapper, SubscriptionDtoMapper subscriptionDtoMapper, PlanRepository planRepository, PlanEntityMapper planEntityMapper, PlanDtoMapper planDtoMapper, IdGenerationService idGenerationService) {
+    public SubscriptionAdapterImpl(PaymentRepository paymentRepository, SubscriptionRepository subscriptionRepository, SubscriptionEntityMapper subscriptionEntityMapper, SubscriptionDtoMapper subscriptionDtoMapper, PlanRepository planRepository, PlanEntityMapper planEntityMapper, PlanDtoMapper planDtoMapper, IdGenerationService idGenerationService) {
+        this.paymentRepository = paymentRepository;
         this.subscriptionRepository = subscriptionRepository;
         this.subscriptionEntityMapper = subscriptionEntityMapper;
         this.subscriptionDtoMapper = subscriptionDtoMapper;
@@ -188,7 +192,12 @@ public class SubscriptionAdapterImpl implements SubscriptionAdapter {
         }
     }
 
-
+public Optional<SubscriptionEntity> findActiveSubscriptionByOrgId(String orgId) {
+    return subscriptionRepository.findActiveSubscriptionByOrgId(orgId);
+}
+    public Optional<PlanEntity> findById(String planId) {
+        return planRepository.findById(planId);
+    }
 
 
 

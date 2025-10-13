@@ -20,7 +20,8 @@ public interface UserService {
     ApiResponse createUser(UserDto userDto, SecondaryDetailsDto secondaryDetailsDto, String organizationId);
     User updateUser(CreateUserDto updates, String orgId, String userId);
     List<UserResponseDto> getUsers(String orgId, String role);
-    void deleteUsers(String orgId, List<String> userIds, String userNameFromToken, String comments);    AddGroup createGroup(AddGroup groupMiddleware, String orgId);
+    void deleteUsers(String orgId, List<String> userIds, String userNameFromToken, String comments);
+    AddGroup createGroup(AddGroup groupMiddleware, String orgId);
     void deleteMember(DeleteMemberModel model,String orgId);
     void deleteGroups(GroupBulkDeleteModel model, String orgId);
     List<User> getMembers(String orgId, Long roleId);
