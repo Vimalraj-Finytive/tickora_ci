@@ -15,9 +15,6 @@ public class PaymentEntity {
     @Column(name = "payment_id")
     private String paymentId;
 
-    @Column(name = "subscription_id", nullable = false)
-    private String subscriptionId;
-
     @Column(name = "order_id", nullable = false)
     private String orderId;
 
@@ -50,13 +47,6 @@ public class PaymentEntity {
         this.paymentId = paymentId;
     }
 
-    public String getSubscriptionId() {
-        return subscriptionId;
-    }
-
-    public void setSubscriptionId(String subscriptionId) {
-        this.subscriptionId = subscriptionId;
-    }
     public String getOrderId() {
         return orderId;
     }

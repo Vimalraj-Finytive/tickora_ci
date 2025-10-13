@@ -5,6 +5,7 @@ import com.razorpay.RazorpayClient;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.PaymentAdapter;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.SubscriptionAdapter;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.PaymentEntity;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.enums.PaymentStatus;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.services.PaymentService;
 import org.springframework.beans.factory.annotation.Value;
 import org.json.JSONObject;
@@ -60,9 +61,11 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     @Override
-    public PaymentEntity createPayment(String orgId,String subId,String orderId, String billingCycle ,BigDecimal subscriptionAmount ,Integer subscribedUserCount, String planId, String orgSchema) {
-        return paymentAdapter.createPayment(orgId,subId,orderId,billingCycle,subscriptionAmount, subscribedUserCount,planId,orgSchema);
+    public PaymentEntity createPayment(String orgId, String orderId,  BigDecimal amount,String billingCycle, String orgSchema, PaymentStatus status) {
+        return paymentAdapter.createPayment(orgId,orderId,amount,billingCycle,status,orgSchema);
     }
+
+
 
 
 }

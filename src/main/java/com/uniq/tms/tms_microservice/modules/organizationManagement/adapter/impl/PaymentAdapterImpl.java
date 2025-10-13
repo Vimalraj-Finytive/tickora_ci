@@ -3,6 +3,7 @@ package com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.imp
 import com.uniq.tms.tms_microservice.modules.identityManagement.service.IdGenerationService;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.PaymentAdapter;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.PaymentEntity;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.enums.PaymentStatus;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.PaymentRepository;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.services.impl.SubscriptionServiceImpl;
 import org.apache.logging.log4j.LogManager;
@@ -26,25 +27,24 @@ public class PaymentAdapterImpl implements PaymentAdapter {
         this.paymentRepository = paymentRepository;
     }
 
+
     @Override
-    public PaymentEntity createPayment(String orgId,String subId,String orderId, String billingCycle, BigDecimal subscriptionAmount, Integer subscribedUserCount, String planId, String orgSchema) {
+    public PaymentEntity createPayment(String orgId, String orderId, BigDecimal amount, String billingCycle, PaymentStatus status, String orgSchema) {
         try {
 
             PaymentEntity payment = new PaymentEntity();
             payment.setPaymentId(idGenerationService.generateNextPaymentID(orgId));
-            payment.setSubscriptionId(subId);
             payment.setOrderId(orderId);
-            payment.setAmount(subscriptionAmount);
+            payment.setAmount(amount);
             payment.setBillingPeriod(billingCycle);
-            payment.setPaymentStatus("COMPLETED");
+            payment.setPaymentStatus(String.valueOf(status));
             payment.setPaymentDate(LocalDateTime.now());
             payment.setSchemaName(orgSchema);
             payment.setCreatedAt(LocalDateTime.now());
             payment.setUpdatedAt(LocalDateTime.now());
-
             return paymentRepository.save(payment);
         } catch (Exception e) {
-            log.error("Failed to create payment for Org: {}, Plan: {}", orgId, planId, e);
+            log.error("Failed to create payment for selected plan", orgId, e);
             throw new RuntimeException("Error while creating payment record: " + e.getMessage());
         }
     }

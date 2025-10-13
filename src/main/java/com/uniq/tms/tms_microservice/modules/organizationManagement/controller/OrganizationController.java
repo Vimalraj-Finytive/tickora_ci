@@ -137,7 +137,19 @@ public class OrganizationController {
         return ResponseEntity.ok(organizationFacade.getAllPlans());
     }
 
-    @PostMapping("/subscription/upgradePlan")
+    @PostMapping("/subscription/payment-validation")
+    public ResponseEntity<ApiResponse> amountValidation(
+            @RequestHeader("Authorization") String token,
+            @RequestBody UpgradePlanDto upgradePlanDto) {
+        String orgId = authHelper.getOrgId();
+        String orgSchema = authHelper.getSchema();
+        if (orgId == null || orgId.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized - Invalid Organization");
+        }
+        return ResponseEntity.ok( organizationFacade.amountValidation(orgId,orgSchema, upgradePlanDto));
+    }
+
+    @PostMapping("/subscription/upgrade")
     public ResponseEntity<ApiResponse> upgradePlan(
             @RequestHeader("Authorization") String token,
             @RequestBody UpgradePlanDto upgradePlanDto) {

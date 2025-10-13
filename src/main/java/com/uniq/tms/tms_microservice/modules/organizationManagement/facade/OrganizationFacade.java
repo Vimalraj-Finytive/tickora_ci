@@ -16,6 +16,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.Map;
 
 @Component
 public class OrganizationFacade {
@@ -131,10 +132,25 @@ public class OrganizationFacade {
         return new ApiResponse<>(HttpStatus.OK.value(), "Plan fetched successfully", response);
     }
 
-    public ApiResponse upgradePlan(String orgId, String orgSchema, UpgradePlanDto request) {
-        String resultMessage = subscriptionService.upgradePlan(orgId,orgSchema, request);
-        HttpStatus status = resultMessage.contains("mismatching") ? HttpStatus.BAD_REQUEST : HttpStatus.OK;
-        return new ApiResponse<>(status.value(), resultMessage, null);
+    public ApiResponse<Map<String, Boolean>> amountValidation(String orgId, String orgSchema, UpgradePlanDto request) {
+        boolean isValid = subscriptionService.amountValidation(orgId, orgSchema, request);
+        Map<String, Boolean> data = Map.of("isValid", isValid);
+        String message = isValid
+                ? "Amount is matching with the selected plan."
+                : "Amount is not matching with the selected plan.";
+
+        HttpStatus status = isValid ? HttpStatus.OK : HttpStatus.BAD_REQUEST;
+        return new ApiResponse<>(status.value(), message, data);
     }
 
+    public ApiResponse upgradePlan(String orgId, String orgSchema, UpgradePlanDto upgradePlanDto) {
+        boolean isUpgrade = subscriptionService.upgradePlan(orgId, orgSchema, upgradePlanDto);
+        Map<String, Boolean> data = Map.of("isValid", isUpgrade);
+        String message = isUpgrade
+                ? "Subscription Upgraded Successfully..."
+                : "Subscription Not Upgraded , Please try Again.";
+
+        HttpStatus status = isUpgrade ? HttpStatus.OK : HttpStatus.BAD_REQUEST;
+        return new ApiResponse<>(status.value(), message, null);
+    }
 }

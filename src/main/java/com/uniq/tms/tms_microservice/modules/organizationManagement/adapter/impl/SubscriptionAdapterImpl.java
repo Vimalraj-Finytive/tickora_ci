@@ -9,6 +9,7 @@ import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.UpgradeP
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.PlanEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.SubscriptionEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.enums.OrganizationStatusEnum;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.enums.PaymentStatus;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.mapper.PlanDtoMapper;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.mapper.PlanEntityMapper;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.mapper.SubscriptionDtoMapper;
@@ -126,7 +127,7 @@ public class SubscriptionAdapterImpl implements SubscriptionAdapter {
     }
 
     @Override
-    public String  updatePlan(String orgId,String orgSchema, String planId, Integer subscribedUserCount) {
+    public PaymentStatus  updatePlan(String orgId,String orgSchema, String planId, Integer subscribedUserCount,String paymentId) {
         LocalDateTime now = LocalDateTime.now();
         boolean wasUpdated = subscriptionRepository.findActiveSubscription(orgId)
                 .map(entity -> {
@@ -155,15 +156,14 @@ public class SubscriptionAdapterImpl implements SubscriptionAdapter {
             newSubscription.setStartDate(now);
             newSubscription.setEndDate(now.plusDays(durationInDays));
             newSubscription.setSubscribedUsers(subscribedUserCount);
+            newSubscription.setPaymentId(paymentId);
 
             log.info("Creating new subscription for Organization ID: {}", orgId);
             subscriptionRepository.save(newSubscription);
-
-
-            return newSubId;
+            return PaymentStatus.SUCCESS;
         } catch (Exception e) {
             log.error("Failed to create new subscription for Organization ID: {}", orgId, e);
-            return null;
+            return PaymentStatus.FAILED;
         }
     }
 

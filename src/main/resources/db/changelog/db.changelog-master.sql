@@ -53,9 +53,9 @@ CREATE TABLE IF NOT EXISTS public.plan (
 INSERT INTO plan (plan_id, plan_name, price_per_user, billing_cycle, is_default)
 VALUES
 ('PL01', 'Basic plan', 0.00, 'basic','true'),
-('PL02', 'Essential plan', 12.00, '3 month','false'),
-('PL03', 'Standard plan', 11.00, '6 month','false'),
-('PL04', 'Premium plan', 9.00, 'yearly','false')
+('PL02', 'Essential plan', 12.00, '12 month','false'),
+('PL03', 'Standard plan', 11.00, '24 month','false'),
+('PL04', 'Premium plan', 9.00, '36 month','false')
 ON CONFLICT (plan_id) DO NOTHING;
 
 --Table : country

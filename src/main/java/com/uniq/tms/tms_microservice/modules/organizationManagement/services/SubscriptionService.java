@@ -11,5 +11,6 @@ public interface SubscriptionService {
     SubscriptionDto getActivePlan(String orgId);
     List<SubscriptionDto> getPlanHistory(String orgId);
     List<PlanDto> getAllPlans();
-    String upgradePlan(String orgId,String orgSchema, UpgradePlanDto request);
+    boolean amountValidation(String orgId,String orgSchema, UpgradePlanDto request);
+    boolean upgradePlan(String orgId, String orgSchema, UpgradePlanDto upgradePlanDto);
 }

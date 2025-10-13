@@ -472,6 +472,7 @@ CREATE TABLE IF NOT EXISTS ${schemaName}.user_embedding (
 --changeset system:create-subscription
 CREATE TABLE subscription (
     subscription_id VARCHAR(20) PRIMARY KEY,
+    payment_id VARCHAR(20) NOT NULL,
     start_date TIMESTAMP NOT NULL,
     end_date TIMESTAMP NOT NULL,
     organization_id VARCHAR(20) NOT NULL,
@@ -483,6 +484,9 @@ CREATE TABLE subscription (
     updated_at TIMESTAMP,
     CONSTRAINT fk_subscription_plan FOREIGN KEY (plan_id)
         REFERENCES plan(plan_id)
+        ON DELETE RESTRICT,
+    CONSTRAINT fk_subscription_payment FOREIGN KEY (payment_id)
+        REFERENCES payment(payment_id)
         ON DELETE RESTRICT
 );
 
@@ -492,7 +496,6 @@ CREATE TABLE subscription (
 --changeset system:create-payment
 CREATE TABLE payment (
     payment_id VARCHAR(20) PRIMARY KEY,
-    subscription_id VARCHAR(20) NOT NULL,
     order_id VARCHAR(30) NOT NULL,
     amount NUMERIC(10, 2) NOT NULL,
     billing_period VARCHAR(50) NOT NULL,

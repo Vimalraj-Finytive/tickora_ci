@@ -6,7 +6,10 @@ import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.Subscrip
 import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.UpgradePlanDto;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.PaymentEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.PlanEntity;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.enums.PaymentStatus;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.enums.PlanFeaturesEnum;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.mapper.UpgradeDtoMapper;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.model.UpgradePlan;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.services.PaymentService;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.services.SubscriptionService;
 import org.apache.logging.log4j.LogManager;
@@ -16,6 +19,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class SubscriptionServiceImpl implements SubscriptionService {
@@ -23,10 +27,12 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
     private final SubscriptionAdapter subscriptionAdapter;
     private final PaymentService paymentService;
+    private final UpgradeDtoMapper upgradeDtoMapper;
 
-    public SubscriptionServiceImpl(SubscriptionAdapter subscriptionAdapter, PaymentService paymentService){
+    public SubscriptionServiceImpl(SubscriptionAdapter subscriptionAdapter, PaymentService paymentService, UpgradeDtoMapper upgradeDtoMapper) {
         this.subscriptionAdapter = subscriptionAdapter;
         this.paymentService = paymentService;
+        this.upgradeDtoMapper = upgradeDtoMapper;
     }
 
     @Override
@@ -54,7 +60,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     }
 
     @Override
-    public String upgradePlan(String orgId,String orgSchema, UpgradePlanDto request) {
+    public boolean amountValidation(String orgId, String orgSchema, UpgradePlanDto request) {
         boolean isValid = subscriptionAdapter.validatePlanAmount(
                 request.getPlanId(),
                 request.getSubscribedUserCount(),
@@ -62,38 +68,59 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         );
 
         if (!isValid) {
-            return "The requested amount is mismatching with actual calculated amount";
+            return false;
         }
 
-        String billingCycle = subscriptionAdapter.getBillingCycle(request.getPlanId());
+        return true;
 
-//        BigDecimal amount = new BigDecimal("1.00");
-//        String paymentResponse = paymentService.createPaymentOrder(orgId, amount);
-//        String orderId = extractOrderId(paymentResponse);
-
-        String orderId = "order_RQZ0IvCr651OlG";
-        if (orderId != null) {
-            String newSubId  = subscriptionAdapter.updatePlan(orgId,orgSchema , request.getPlanId(), request.getSubscribedUserCount());
-
-            if (newSubId != null) {
-                PaymentEntity payment = paymentService.createPayment(orgId,newSubId,orderId, billingCycle,request.getTotalSubscriptionAmount(), request.getSubscribedUserCount(), request.getPlanId(), orgSchema);
-                return "Subscription upgraded successfully!";
-            } else {
-                return "Payment completed, but the plan was not updated (already expired or up-to-date).";
-            }
-        } else {
-            return "Failed to create payment order: " ;
-        }
     }
 
-    private String extractOrderId(String paymentResponse) {
+    @Override
+    public boolean upgradePlan(String orgId, String orgSchema, UpgradePlanDto upgradePlanDto) {
         try {
-            JSONObject json = new JSONObject(paymentResponse);
-            return json.optString("orderId");
+            UpgradePlan model = upgradeDtoMapper.toModel(upgradePlanDto);
+            boolean isSuccess = Boolean.TRUE.equals(model.getSuccess());
+            PaymentStatus status = isSuccess ? PaymentStatus.SUCCESS : PaymentStatus.FAILED;
+            PaymentEntity payment = paymentService.createPayment(
+                    orgId,
+                    model.getOrderId(),
+                    model.getAmount(),
+                    subscriptionAdapter.getBillingCycle(model.getPlanId()),
+                    orgSchema,
+                    status
+            );
+            if (isSuccess) {
+
+                if (payment != null && payment.getPaymentId() != null) {
+                    log.info("Payment created successfully for Order ID: {} | Payment ID: {} | Payment Entity: {}",
+                            model.getOrderId(), payment.getPaymentId(), payment);
+                    log.info("Subscription activated for Order ID: {} | Plan ID: {}",
+                            model.getOrderId(), model.getPlanId());
+                    PaymentStatus isSubscribed = subscriptionAdapter.updatePlan(orgId,orgSchema,model.getPlanId(), model.getSubscribedUserCount(), payment.getPaymentId());
+                    if (PaymentStatus.SUCCESS.equals(isSubscribed)) {
+                        log.info("Subscription update successful for Org ID: {} | Payment ID: {}", orgId, payment.getPaymentId());
+                        return true;
+                    } else {
+                        log.warn("Subscription update failed for Org ID: {} | Payment ID: {}", orgId, payment.getPaymentId());
+                        return false;
+                    }
+                } else {
+                    log.warn("Payment creation failed or returned null for Order ID: {} | Plan ID: {}",
+                            model.getOrderId(), model.getPlanId());
+                    return false;
+                }
+
+            } else {
+                log.warn("Payment failed, subscription not activated for Order ID: {} | Plan ID: {}",
+                        model.getOrderId(), model.getPlanId());
+                return false;
+            }
         } catch (Exception e) {
-            return null;
+            log.error("Error occurred while upgrading plan for Org ID: {} | Error: {}", orgId, e.getMessage(), e);
+            return false;
         }
     }
+
 
     @Override
     public List<SubscriptionDto> getPlanHistory(String orgId) {
