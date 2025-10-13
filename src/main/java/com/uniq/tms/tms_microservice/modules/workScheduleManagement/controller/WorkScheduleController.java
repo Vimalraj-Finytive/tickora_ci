@@ -34,7 +34,7 @@ public class WorkScheduleController {
             }
             return ResponseEntity.ok(workScheduleFacade.getWorkSchedule(orgId));
         } catch (RuntimeException e) {
-            log.error("Error occurred during getWorkSchedule: {}", e.getMessage(), e);  // log it
+            log.error("Error occurred during getWorkSchedule: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(new ApiResponse(403, "Unauthorized", false));
         }
@@ -42,16 +42,11 @@ public class WorkScheduleController {
 
     @PostMapping("/create")
     public ResponseEntity<ApiResponse> createWorkschedule(@RequestHeader("Authorization") String token, @RequestBody WorkScheduleDto workScheduleDto){
-        try {
             String orgId = authHelper.getOrgId();
             if(orgId == null){
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ApiResponse(401,"Unauthorized - Invalid Organization",null));
             }
             return ResponseEntity.ok(workScheduleFacade.createWorkSchedule(orgId, workScheduleDto));
-        } catch (RuntimeException e) {
-            log.error("Error occurred during CreateWorkSchedule: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new ApiResponse(403,"Unauthorized",e));
-        }
     }
 
     @PostMapping("/addType")

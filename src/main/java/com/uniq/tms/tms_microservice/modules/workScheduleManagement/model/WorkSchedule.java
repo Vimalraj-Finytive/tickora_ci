@@ -13,6 +13,7 @@ public class WorkSchedule {
     private boolean isActive;
     private boolean isDefault;
     private String type;
+    private String splitTime;
     @JsonIgnore
     private String orgId;
     private Double duration;
@@ -108,4 +109,8 @@ public class WorkSchedule {
     public void setTypeName(String typeName) {
         this.typeName = typeName;
     }
+
+    public String getSplitTime() { return splitTime; }
+
+    public void setSplitTime(String splitTime) { this.splitTime = splitTime; }
 }

@@ -53,9 +53,9 @@ CREATE TABLE IF NOT EXISTS public.plan (
 INSERT INTO plan (plan_id, plan_name, price_per_user, billing_cycle, is_default)
 VALUES
 ('PL01', 'Basic plan', 0.00, 'basic','true'),
-('PL02', 'Essential plan', 12.00, '3 month','false'),
-('PL03', 'Standard plan', 11.00, '6 month','false'),
-('PL04', 'Premium plan', 9.00, 'yearly','false')
+('PL02', 'Essential plan', 12.00, '12 month','false'),
+('PL03', 'Standard plan', 11.00, '24 month','false'),
+('PL04', 'Premium plan', 9.00, '36 month','false')
 ON CONFLICT (plan_id) DO NOTHING;
 
 --Table : country
@@ -65,8 +65,20 @@ CREATE TABLE IF NOT EXISTS public.country (
     name VARCHAR(255) NOT NULL
 );
 
---table : country - Default Countries
+--Table : country - Default Countries
 INSERT INTO country(id, code, name)
 VALUES
 ('CT001','IN','India')
 ON CONFLICT (id) DO NOTHING;
+
+--Table: public_holiday
+CREATE TABLE IF NOT EXISTS public.public_holiday (
+    id VARCHAR(10) PRIMARY KEY,
+    date DATE,
+    name VARCHAR(255),
+    year VARCHAR(10),
+    country_code VARCHAR(10) NOT NULL,
+    CONSTRAINT fk_public_holiday_country
+        FOREIGN KEY (country_code) REFERENCES country (code)
+        ON DELETE CASCADE
+);

@@ -1,11 +1,15 @@
 package com.uniq.tms.tms_microservice.shared.helper;
 
+import com.uniq.tms.tms_microservice.modules.timesheetManagement.adapter.impl.TimesheetAdapterImpl;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.adapter.WorkScheduleAdapter;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.FixedWorkScheduleEntity;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.FlexibleWorkScheduleEntity;
+import com.uniq.tms.tms_microservice.modules.workScheduleManagement.model.ScheduleTypeInfo;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.DayOfWeek;
+import java.time.Duration;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -94,5 +98,30 @@ public class TimesheetHelper {
         public Map<String, Set<DayOfWeek>> getUserWorkingDaysMap() {
             return userWorkingDaysMap;
         }
+    }
+
+    public static ScheduleTypeInfo getScheduledHoursForUser(
+            String userId,
+            LocalDate date,
+            Map<String, Map<DayOfWeek, FixedWorkScheduleEntity>> fixedMap,
+            Map<String, Map<DayOfWeek, FlexibleWorkScheduleEntity>> flexMap
+    ) {
+        DayOfWeek day = date.getDayOfWeek();
+
+        if (fixedMap.containsKey(userId) && fixedMap.get(userId).containsKey(day)) {
+            FixedWorkScheduleEntity fixed = fixedMap.get(userId).get(day);
+            return ScheduleTypeInfo.fixed(
+                    fixed.getStartTime().toLocalTime(),
+                    fixed.getEndTime().toLocalTime()
+            );
+        }
+
+        if (flexMap.containsKey(userId) && flexMap.get(userId).containsKey(day)) {
+            FlexibleWorkScheduleEntity flex = flexMap.get(userId).get(day);
+            Duration duration = Duration.ofMinutes((long) (flex.getDuration() * 60));
+            return ScheduleTypeInfo.flexible(duration);
+        }
+
+        return null;
     }
 }

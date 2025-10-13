@@ -67,8 +67,14 @@ public class IdGenerationServiceImpl implements IdGenerationService {
         }
 
         final int start = nextNumber;
+
+        String format = switch (type){
+            case CALENDAR, CALENDAR_DETAILS, PUBLIC_HOLIDAY -> "%s%05d";
+            default -> "%s%03d";
+        };
+
         return IntStream.range(0, count)
-                .mapToObj(i -> String.format("%s%03d", prefix, start + i))
+                .mapToObj(i -> String.format(format, prefix, start + i))
                 .collect(Collectors.toList());
     }
 

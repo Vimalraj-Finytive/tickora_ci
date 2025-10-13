@@ -855,13 +855,16 @@ public class TimesheetServiceImpl implements TimesheetService {
     @Override
     public List<UserTimesheetDto> getUserTimesheets(String userIdFromToken, String orgId, String role, TimesheetReportDto request) {
         LocalDate fromDate = request.getFromDate();
-        LocalDate toDate = request.getToDate();
+        String timePeriod = request.getTimePeriod();
         List<String> userIds = request.getUserId();
 
         LocalDate startDate = null;
         LocalDate endDate = null;
-        if (fromDate == null && toDate == null && userIds != null) {
+        if (fromDate == null && timePeriod == null && userIds != null) {
             endDate = LocalDate.now(ZoneId.of("Asia/Kolkata"));
+        }else {
+            startDate = fromDate;
+            endDate = fromDate;
         }
         List<UserTimesheetDto> rawResults = timesheetAdapter.fetchUserTimesheetsWithHistory(startDate, endDate, userIds, orgId);
         return rawResults;

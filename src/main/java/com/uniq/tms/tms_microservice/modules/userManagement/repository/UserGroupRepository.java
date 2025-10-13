@@ -72,6 +72,8 @@ public interface UserGroupRepository extends JpaRepository<UserGroupEntity,Long>
     @Query("DELETE FROM UserGroupEntity ug WHERE ug.group.groupId IN (:groupIds)")
     void deleteByGroupIds(@Param("groupIds") List<Long> groupIds);
 
+    @Modifying(clearAutomatically = true)
+    @Transactional
     @Query(value = """
     DELETE FROM org_groups
     WHERE group_id IN (:groupIds)

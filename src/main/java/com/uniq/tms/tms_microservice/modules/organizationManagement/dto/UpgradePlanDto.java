@@ -7,6 +7,8 @@ public class UpgradePlanDto {
     private String planId;
     private Integer subscribedUserCount;
     private BigDecimal totalSubscriptionAmount;
+    private String orderID;
+    private Boolean status;
 
     public String getPlanId() {
         return planId;
@@ -30,5 +32,21 @@ public class UpgradePlanDto {
 
     public void setTotalSubscriptionAmount(BigDecimal totalSubscriptionAmount) {
         this.totalSubscriptionAmount = totalSubscriptionAmount;
+    }
+
+    public String getOrderID() {
+        return orderID;
+    }
+
+    public void setOrderID(String orderID) {
+        this.orderID = orderID;
+    }
+
+    public Boolean getStatus() {
+        return status;
+    }
+
+    public void setStatus(Boolean status) {
+        this.status = status;
     }
 }

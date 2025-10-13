@@ -1,9 +1,11 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.ImportType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class CalendarDto {
 
     private String id;
@@ -14,6 +16,7 @@ public class CalendarDto {
     private ImportType importType;
     @NotBlank(message = "Country code is required")
     private String countryCode;
+    private Boolean isActive;
 
     public String getId() {
         return id;
@@ -55,4 +58,11 @@ public class CalendarDto {
         this.countryCode = countryCode;
     }
 
+    public Boolean getActive() {
+        return isActive;
+    }
+
+    public void setActive(Boolean active) {
+        isActive = active;
+    }
 }

@@ -1,5 +1,6 @@
 package com.uniq.tms.tms_microservice.shared.exception;
 
+import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import com.sun.jdi.request.DuplicateRequestException;
 import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -7,6 +8,7 @@ import org.apache.coyote.BadRequestException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -16,6 +18,7 @@ import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.server.ResponseStatusException;
 import java.nio.file.AccessDeniedException;
+import java.time.format.DateTimeParseException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -33,9 +36,13 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<String> handleIllegalArgument(IllegalArgumentException ex) {
+    public ResponseEntity<Object> handleIllegalArgument(IllegalArgumentException ex) {
         log.error("Invalid argument: {}", ex.getMessage(), ex);
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid request parameters");
+        Map<String, Object> body = new HashMap<>();
+        body.put("statusCode", HttpStatus.BAD_REQUEST.value());
+        body.put("message", sanitizeMessage(ex.getMessage()));
+        body.put("data", null);
+        return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler(ResponseStatusException.class)
@@ -135,6 +142,33 @@ public class GlobalExceptionHandler {
         log.error("Internal server exception: {}", ex.getMessage(), ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(new ApiResponse(500, "Internal server error occurred. Please try again later.", null));
+    }
+
+    @ExceptionHandler(InvalidFormatException.class)
+    public ResponseEntity<ApiResponse> handleInvalidFormatException(InvalidFormatException ex) {
+        log.error("Media type not supported: {}", ex.getMessage(), ex);
+        ApiResponse response = new ApiResponse(400, sanitizeMessage(ex.getMessage()), null);
+        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(DateTimeParseException.class)
+    public ResponseEntity<ApiResponse> handleDateTimeParseException(DateTimeParseException ex) {
+        log.error("Invalid request: {}", ex.getMessage(), ex);
+        ApiResponse response = new ApiResponse(500,"Invalid Time Format", null);
+        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiResponse> handleHttpMessageNotReadable(HttpMessageNotReadableException ex) {
+        log.error("Invalid JSON input: {}", ex.getMessage());
+        Throwable cause = ex.getCause();
+        String message = "Malformed or invalid JSON request";
+        if (cause instanceof InvalidFormatException invalidFormatEx) {
+            message = "Invalid value '" + invalidFormatEx.getValue() +
+                    "' for field '" + invalidFormatEx.getPath().getFirst().getFieldName() + "'";
+        }
+        ApiResponse response = new ApiResponse(400, message, null);
+        return ResponseEntity.badRequest().body(response);
     }
 
     /**

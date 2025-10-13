@@ -160,7 +160,8 @@ public class UserController {
     @DeleteMapping("/deleteGroups")
     public ResponseEntity<ApiResponse> deleteGroups(
             @RequestHeader("Authorization") String token,
-            @RequestBody @Valid GroupBulkDeleteDto request) {
+            @RequestBody GroupBulkDeleteDto request) {
+
 
         String message = userFacade.deleteGroups(request);
         return ResponseEntity.ok(new ApiResponse(200, message, null));
@@ -253,7 +254,7 @@ public class UserController {
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
-    @PostMapping("/bulk/Location")
+    @PostMapping("bulk/Location")
     public ResponseEntity<ApiResponse<BulkUserLocationDto>> assignLocations(
             @RequestHeader("Authorization") String token,
             @Valid @RequestBody BulkUserLocationDto dto) {
