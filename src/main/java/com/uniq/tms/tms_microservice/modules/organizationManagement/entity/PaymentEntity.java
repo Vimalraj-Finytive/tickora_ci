@@ -47,13 +47,7 @@ public class PaymentEntity {
         this.paymentId = paymentId;
     }
 
-    public String getSubscriptionId() {
-        return subscriptionId;
-    }
 
-    public void setSubscriptionId(String subscriptionId) {
-        this.subscriptionId = subscriptionId;
-    }
     public String getOrderId() {
         return orderId;
     }

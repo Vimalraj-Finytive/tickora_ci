@@ -6,7 +6,10 @@ import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.Subscrip
 import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.UpgradePlanDto;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.PaymentEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.PlanEntity;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.enums.PaymentStatus;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.enums.PlanFeaturesEnum;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.mapper.UpgradeDtoMapper;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.model.UpgradePlan;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.services.PaymentService;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.services.SubscriptionService;
 import org.apache.logging.log4j.LogManager;
@@ -23,10 +26,12 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
     private final SubscriptionAdapter subscriptionAdapter;
     private final PaymentService paymentService;
+    private final UpgradeDtoMapper upgradeDtoMapper;
 
-    public SubscriptionServiceImpl(SubscriptionAdapter subscriptionAdapter, PaymentService paymentService){
+    public SubscriptionServiceImpl(SubscriptionAdapter subscriptionAdapter, PaymentService paymentService, UpgradeDtoMapper upgradeDtoMapper){
         this.subscriptionAdapter = subscriptionAdapter;
         this.paymentService = paymentService;
+        this.upgradeDtoMapper = upgradeDtoMapper;
     }
 
     @Override

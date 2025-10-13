@@ -3,6 +3,7 @@ package com.uniq.tms.tms_microservice.modules.organizationManagement.adapter;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.PlanDto;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.SubscriptionDto;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.UpgradePlanDto;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.enums.PaymentStatus;
 
 import java.math.BigDecimal;
 import java.util.List;
