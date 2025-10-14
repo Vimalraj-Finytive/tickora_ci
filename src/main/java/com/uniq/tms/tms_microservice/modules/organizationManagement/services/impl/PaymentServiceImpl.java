@@ -76,8 +76,8 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     @Override
-    public PaymentEntity createPayment(String orgId, String orderId, BigDecimal amount, String billingCycle, String orgSchema, PaymentStatus status) {
-        return null;
+    public PaymentEntity createPayment(String orgId, String orderId,  BigDecimal amount,String billingCycle, String orgSchema, PaymentStatus status) {
+        return paymentAdapter.createPayment(orgId,orderId,amount,billingCycle,status,orgSchema);
     }
 
 

@@ -84,6 +84,8 @@ public class SubscriptionServiceImpl implements SubscriptionService {
             UpgradePlan model = upgradeDtoMapper.toModel(upgradePlanDto);
             boolean isSuccess = Boolean.TRUE.equals(model.getSuccess());
             PaymentStatus status = isSuccess ? PaymentStatus.SUCCESS : PaymentStatus.FAILED;
+            log.info("Payment isSuccess:  {}",
+                    isSuccess);
             PaymentEntity payment = paymentService.createPayment(
                     orgId,
                     model.getOrderId(),
