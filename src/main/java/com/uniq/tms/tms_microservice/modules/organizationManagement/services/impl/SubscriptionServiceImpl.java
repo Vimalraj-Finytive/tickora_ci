@@ -6,18 +6,25 @@ import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.Subscrip
 import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.UpgradePlanDto;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.PaymentEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.PlanEntity;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.SubscriptionEntity;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.enums.OrganizationStatusEnum;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.enums.PaymentStatus;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.enums.PlanFeaturesEnum;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.enums.PlaneName;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.mapper.UpgradeDtoMapper;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.model.PlanStatusModel;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.model.UpgradePlan;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.services.PaymentService;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.services.SubscriptionService;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.json.JSONObject;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 @Service
@@ -126,4 +133,43 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         return subscriptionAdapter.getPlanHistory(orgId);
     }
 
+    @Value("${subscription.expiring-notificationday}")
+    private int expiringNotificationDay;
+
+    @Override
+    public PlanStatusModel getCurrentPlanStatus(String orgId) {
+        log.info("Fetching current plan status for org: {}", orgId);
+
+        SubscriptionEntity subscription = subscriptionAdapter.findActiveSubscriptionByOrgId(orgId).orElse(null);
+        if (subscription == null) {
+            return PlanStatusModel.builder()
+                    .planName("No Active Plan")
+                    .active(false)
+                    .showNotification(true)
+                    .message("No active subscription found.")
+                    .daysLeft(0)
+                    .build();
+        }
+
+        PlanEntity plan = subscriptionAdapter.findById(subscription.getPlanId()).orElse(null);
+        String planName = (plan != null) ? plan.getPlanName() : "Unknown Plan";
+
+        LocalDate today = LocalDate.now();
+        LocalDate endDate = subscription.getEndDate().toLocalDate();
+        long daysLeft = ChronoUnit.DAYS.between(today, endDate);
+        boolean isActive = OrganizationStatusEnum.ACTIVE.getDisplayValue().equalsIgnoreCase(subscription.getStatus());
+
+        boolean showNotification = (plan != null && PlaneName.BASIC_PLAN.name().equalsIgnoreCase(plan.getPlanName()))
+                || daysLeft <= expiringNotificationDay;
+
+        String message = String.format("Your plan is valid for %d more day%s.", daysLeft, daysLeft == 1 ? "" : "s");
+
+        return PlanStatusModel.builder()
+                .planName(planName)
+                .active(isActive)
+                .showNotification(showNotification)
+                .message(message)
+                .daysLeft(Math.max(daysLeft, 0))
+                .build();
+    }
 }

@@ -192,13 +192,12 @@ public class SubscriptionAdapterImpl implements SubscriptionAdapter {
         }
     }
 
-public Optional<SubscriptionEntity> findActiveSubscriptionByOrgId(String orgId) {
-    return subscriptionRepository.findActiveSubscriptionByOrgId(orgId);
-}
+    public Optional<SubscriptionEntity> findActiveSubscriptionByOrgId(String orgId) {
+        return subscriptionRepository.findActiveSubscriptionByOrgId(orgId);
+    }
     public Optional<PlanEntity> findById(String planId) {
         return planRepository.findById(planId);
     }
-
 
 
 }
