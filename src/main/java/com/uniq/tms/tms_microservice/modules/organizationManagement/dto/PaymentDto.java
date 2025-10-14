@@ -1,86 +1,67 @@
 package com.uniq.tms.tms_microservice.modules.organizationManagement.dto;
 
-
-
-import java.time.LocalDate;
-import java.util.List;
-
 public class PaymentDto {
-    private String id;
-    private String subscriptionId;
-    private Double amount;
-    private String billingPeriod;
-    private String paymentStatus;
-    private LocalDate paymentDate;
-    private LocalDate createdAt;
-    private LocalDate updateAt;
+    private String planName;
+    private String status;
+    private String start;
+    private String end;
+    private Integer subscribedUser;
+    private String billingCycle;
+    private PaymentDetailsDto payment;
 
-
-    public LocalDate getCreatedAt() {
-        return createdAt;
+    public String getPlanName() {
+        return planName;
     }
 
-    public void setCreatedAt(LocalDate createdAt) {
-        this.createdAt = createdAt;
+    public void setPlanName(String planName) {
+        this.planName = planName;
     }
 
-    public String getId() {
-        return id;
+    public String getStatus() {
+        return status;
     }
 
-    public void setId(String id) {
-        this.id = id;
+    public void setStatus(String status) {
+        this.status = status;
     }
 
-    public String getSubscriptionId() {
-        return subscriptionId;
+    public String getStart() {
+        return start;
     }
 
-    public void setSubscriptionId(String subscriptionId) {
-        this.subscriptionId = subscriptionId;
+    public void setStart(String start) {
+        this.start = start;
     }
 
-    public Double getAmount() {
-        return amount;
+    public String getEnd() {
+        return end;
     }
 
-    public void setAmount(Double amount) {
-        this.amount = amount;
+    public void setEnd(String end) {
+        this.end = end;
     }
 
-    public String getBillingPeriod() {
-        return billingPeriod;
+    public Integer getSubscribedUser() {
+        return subscribedUser;
     }
 
-    public void setBillingPeriod(String billingPeriod) {
-        this.billingPeriod = billingPeriod;
+    public void setSubscribedUser(Integer subscribedUser) {
+        this.subscribedUser = subscribedUser;
     }
 
-    public String getPaymentStatus() {
-        return paymentStatus;
+    public String getBillingCycle() {
+        return billingCycle;
     }
 
-    public void setPaymentStatus(String paymentStatus) {
-        this.paymentStatus = paymentStatus;
+    public void setBillingCycle(String billingCycle) {
+        this.billingCycle = billingCycle;
     }
 
-    public LocalDate getPaymentDate() {
-        return paymentDate;
+    public PaymentDetailsDto getPayment() {
+        return payment;
     }
 
-    public void setPaymentDate(LocalDate paymentDate) {
-        this.paymentDate = paymentDate;
-    }
-
-
-
-    public LocalDate getUpdateAt() {
-        return updateAt;
-    }
-
-    public void setUpdateAt(LocalDate updateAt) {
-        this.updateAt = updateAt;
-    }
-
-
+    public void setPayment(PaymentDetailsDto payment) {
+        this.payment = payment;
+}
 }

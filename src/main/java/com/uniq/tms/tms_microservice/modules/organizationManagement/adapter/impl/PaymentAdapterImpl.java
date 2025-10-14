@@ -48,4 +48,9 @@ public class PaymentAdapterImpl implements PaymentAdapter {
             throw new RuntimeException("Error while creating payment record: " + e.getMessage());
         }
     }
+
+    public PaymentEntity getPaymentById(String paymentId) {
+        return paymentRepository.findById(paymentId)
+                .orElseThrow(() -> new RuntimeException("Payment not found for ID: " + paymentId));
+    }
 }
