@@ -199,5 +199,8 @@ public class SubscriptionAdapterImpl implements SubscriptionAdapter {
         return planRepository.findById(planId);
     }
 
-
+    @Override
+    public Optional<SubscriptionEntity> findSubscriptionDetails(String subscriptionId) {
+        return subscriptionRepository.findById(subscriptionId);
+    }
 }

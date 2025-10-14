@@ -18,11 +18,8 @@ import com.uniq.tms.tms_microservice.modules.organizationManagement.services.Pay
 import com.uniq.tms.tms_microservice.modules.organizationManagement.services.SubscriptionService;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;

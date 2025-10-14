@@ -28,19 +28,19 @@ public class OrganizationController {
     }
 
     @PostMapping("/create")
-    public ResponseEntity<ApiResponse> createOrg(@RequestBody OrganizationDto organizationDto){
+    public ResponseEntity<ApiResponse> createOrg(@RequestBody OrganizationDto organizationDto) {
         ApiResponse response = organizationFacade.createOrg(organizationDto);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
     @PostMapping("/validate")
-    public ResponseEntity<ApiResponse> validateOrg(@RequestBody OrganizationDto organizationDto){
+    public ResponseEntity<ApiResponse> validateOrg(@RequestBody OrganizationDto organizationDto) {
         ApiResponse response = organizationFacade.validateOrg(organizationDto);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
     @GetMapping("/orgType")
-    public ResponseEntity<ApiResponse> getOrgType(){
+    public ResponseEntity<ApiResponse> getOrgType() {
         ApiResponse response = organizationFacade.getOrgType();
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
@@ -65,7 +65,7 @@ public class OrganizationController {
     }
 
     @GetMapping("/getDropDowns")
-    public ResponseEntity<ApiResponse<OrganizationDropdownDto>> getDropDowns(){
+    public ResponseEntity<ApiResponse<OrganizationDropdownDto>> getDropDowns() {
         ApiResponse<OrganizationDropdownDto> response = organizationFacade.getDropDowns();
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
@@ -89,14 +89,14 @@ public class OrganizationController {
     @PostMapping("/addPrivileges")
     public ResponseEntity<ApiResponse> addPrivileges(@RequestHeader("Authorization") String token,
                                                      @RequestBody PrivilegeDto privilegeDto) {
-        ApiResponse response = organizationFacade.addPrivileges( privilegeDto);
+        ApiResponse response = organizationFacade.addPrivileges(privilegeDto);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
     @PostMapping("/addRolwisePrivileges")
     public ResponseEntity<ApiResponse> addRolwisePrivileges(@RequestHeader("Authorization") String token,
                                                             @RequestBody RolePrivilegeDto rolePrivilegeDto) {
-        ApiResponse response = organizationFacade.addRolwisePrivileges( rolePrivilegeDto);
+        ApiResponse response = organizationFacade.addRolwisePrivileges(rolePrivilegeDto);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
@@ -149,7 +149,7 @@ public class OrganizationController {
         if (orgId == null || orgId.isBlank()) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized - Invalid Organization");
         }
-        return ResponseEntity.ok( organizationFacade.amountValidation(orgId,orgSchema, upgradePlanDto));
+        return ResponseEntity.ok(organizationFacade.amountValidation(orgId, orgSchema, upgradePlanDto));
     }
 
     @PostMapping("/subscription/upgrade")
@@ -161,19 +161,22 @@ public class OrganizationController {
         if (orgId == null || orgId.isBlank()) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized - Invalid Organization");
         }
-        return ResponseEntity.ok( organizationFacade.upgradePlan(orgId,orgSchema, upgradePlanDto));
+        return ResponseEntity.ok(organizationFacade.upgradePlan(orgId, orgSchema, upgradePlanDto));
     }
 
-    @GetMapping("/subscription/{paymentId}")
-    public ResponseEntity<List<Map<String, Object>>> getPaymentsByOrderId(@PathVariable String paymentId) {
-        List<Map<String, Object>> payments = organizationFacade.getPaymentDetailsByOrderId(paymentId);
 
-        if (payments.isEmpty()) {
+    @GetMapping("/subscription/{subscriptionId}")
+    public ResponseEntity<PaymentDto> getPaymentDetailsBySubscriptionId(@RequestHeader("Authorization") String token,@PathVariable String subscriptionId) {
+        PaymentDto paymentDetails = organizationFacade.getPaymentDetailsBySubscriptionId(subscriptionId);
+
+        if (paymentDetails == null) {
             return ResponseEntity.noContent().build();
         }
-        return ResponseEntity.ok(payments);
+
+        return ResponseEntity.ok(paymentDetails);
     }
-        @GetMapping("subscription/notification")
+
+    @GetMapping("subscription/notification")
     public ResponseEntity<ApiResponse<PlanStatusDto>> getCurrentPlan(@RequestHeader("Authorization") String token) {
         String orgId = authHelper.getOrgId();
         ApiResponse<PlanStatusDto> response = organizationFacade.getCurrentPlanStatus(orgId);
