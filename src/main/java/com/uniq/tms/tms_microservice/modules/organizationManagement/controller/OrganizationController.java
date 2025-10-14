@@ -173,7 +173,7 @@ public class OrganizationController {
         }
         return ResponseEntity.ok(payments);
     }
-        @GetMapping("subscription/planDetails")
+        @GetMapping("subscription/notification")
     public ResponseEntity<ApiResponse<PlanStatusDto>> getCurrentPlan(@RequestHeader("Authorization") String token) {
         String orgId = authHelper.getOrgId();
         ApiResponse<PlanStatusDto> response = organizationFacade.getCurrentPlanStatus(orgId);
