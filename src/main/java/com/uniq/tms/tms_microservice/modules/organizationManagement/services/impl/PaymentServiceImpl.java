@@ -5,16 +5,27 @@ import com.razorpay.Payment;
 import com.razorpay.RazorpayClient;
 import com.razorpay.RazorpayException;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.PaymentAdapter;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.SubscriptionAdapter;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.PaymentDetailsDto;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.PaymentDto;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.PaymentEntity;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.PlanEntity;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.SubscriptionEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.enums.PaymentStatus;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.enums.PlaneName;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.services.PaymentService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.json.JSONObject;
 import org.springframework.stereotype.Service;
-
 import java.math.BigDecimal;
-import java.util.*;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Optional;
 
+@Slf4j
 @Service
 public class PaymentServiceImpl implements PaymentService {
 
@@ -25,9 +36,11 @@ public class PaymentServiceImpl implements PaymentService {
     private String razorpayKeySecret;
 
     private final PaymentAdapter paymentAdapter;
+    private final SubscriptionAdapter subscriptionAdapter;
 
-    public PaymentServiceImpl(PaymentAdapter paymentAdapter) {
+    public PaymentServiceImpl(PaymentAdapter paymentAdapter, SubscriptionAdapter subscriptionAdapter) {
         this.paymentAdapter = paymentAdapter;
+        this.subscriptionAdapter = subscriptionAdapter;
     }
 
     @Override
@@ -62,43 +75,79 @@ public class PaymentServiceImpl implements PaymentService {
         }
     }
 
-
     @Override
-    public PaymentEntity createPayment(String orgId, String orderId,  BigDecimal amount,String billingCycle, String orgSchema, PaymentStatus status) {
-        return paymentAdapter.createPayment(orgId,orderId,amount,billingCycle,status,orgSchema);
+    public PaymentEntity createPayment(String orgId, String orderId, BigDecimal amount, String billingCycle, String orgSchema, PaymentStatus status) {
+        return null;
     }
 
+
     @Override
-    public List<Map<String, Object>> getPaymentDetailsByOrderId(String paymentId) {
-        List<Map<String, Object>> paymentDetails = new ArrayList<>();
+    public PaymentDto getPaymentDetailsBySubscriptionId(String subscriptionId) {
+        PaymentDto paymentDto = new PaymentDto();
 
         try {
+            SubscriptionEntity subscriptionEntity = subscriptionAdapter
+                    .findSubscriptionDetails(subscriptionId)
+                    .orElseThrow(() -> new RuntimeException("Subscription not found"));
+
+            PaymentEntity paymentEntity = paymentAdapter.getPaymentById(subscriptionEntity.getPaymentId());
+            PlanEntity plan = subscriptionAdapter.findById(subscriptionEntity.getPlanId()).orElse(null);
             RazorpayClient client = new RazorpayClient(razorpayKeyId, razorpayKeySecret);
-            Payment payment = client.payments.fetch(paymentId);
-
-            if (payment != null) {
-                JSONObject p = payment.toJson();
-
-                Map<String, Object> detail = new HashMap<>();
-                detail.put("paymentId", p.isNull("id") ? null : p.getString("id"));
-                detail.put("method", p.isNull("method") ? null : p.getString("method"));
-                detail.put("email", p.isNull("email") ? null : p.getString("email"));
-                detail.put("contact", p.isNull("contact") ? null : p.getString("contact"));
-                detail.put("bank", p.isNull("bank") ? null : p.getString("bank"));
-                detail.put("amount", p.isNull("amount") ? null : p.getInt("amount") / 100.0);
-                detail.put("currency", p.isNull("currency") ? null : p.getString("currency"));
-                detail.put("status", p.isNull("status") ? null : p.getString("status"));
-                detail.put("createdAt", p.isNull("created_at") ? null : p.getLong("created_at"));
-
-                paymentDetails.add(detail);
+            Payment payment = null;
+            try {
+                payment = client.payments.fetch(paymentEntity.getOrderId());
+            } catch (RazorpayException e) {
+                if (e.getMessage().contains("BAD_REQUEST_ERROR")) {
+                    // Payment ID not found, log and fallback to database values
+                    log.warn("Payment ID not found in Razorpay: " + paymentEntity.getPaymentId());
+                } else {
+                    throw e;
+                }
             }
+            JSONObject p = payment != null ? payment.toJson() : new JSONObject();
+
+            PaymentDetailsDto paymentDetails = new PaymentDetailsDto();
+            paymentDetails.setPaymentStatus(p.optString("status", paymentEntity.getPaymentStatus()));
+            paymentDetails.setPaidAt(p.has("created_at") ? convertEpochToDate(p.getLong("created_at")) : paymentEntity.getPaymentDate().toString());
+            paymentDetails.setInvoiceId(p.optString("invoice_id", null));
+            paymentDetails.setCreatedAt(p.has("created_at") ? p.getLong("created_at") : null);
+            paymentDetails.setBank(p.optString("bank", null));
+            paymentDetails.setAmount(p.has("amount") ? p.getInt("amount") / 100.0 : paymentEntity.getAmount().doubleValue());
+            paymentDetails.setMethod(p.optString("method", null));
+            paymentDetails.setPaymentId(p.optString("id", paymentEntity.getPaymentId()));
+            paymentDetails.setContact(p.optString("contact", null));
+            paymentDetails.setCurrency(p.optString("currency", null));
+            paymentDetails.setEmail(p.optString("email", null));
+            paymentDetails.setStatus(p.optString("status", null));
+
+            paymentDto.setStatus(subscriptionEntity.getStatus());
+            paymentDto.setStart(subscriptionEntity.getStartDate().toLocalDate().toString());
+            paymentDto.setEnd(subscriptionEntity.getEndDate().toLocalDate().toString());
+            paymentDto.setSubscribedUser(subscriptionEntity.getSubscribedUsers());
+            paymentDto.setBillingCycle(paymentEntity.getBillingPeriod());
+            paymentDto.setPayment(paymentDetails);
+
+
+            String planName = (plan != null) ? plan.getPlanName() : "Unknown Plan";
+            paymentDto.setPlanName(planName);
+
 
         } catch (RazorpayException e) {
-            System.err.println("Error fetching payment: " + e.getMessage());
+            throw new RuntimeException("Error fetching payment from Razorpay: " + e.getMessage());
         }
 
-        return paymentDetails; // Always safe for Jackson
+        return paymentDto;
     }
+
+    private String convertEpochToDate(Long epochSeconds) {
+        if (epochSeconds == null) return null;
+        Instant instant = Instant.ofEpochSecond(epochSeconds);
+        ZonedDateTime zonedDateTime = instant.atZone(ZoneId.systemDefault());
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        return zonedDateTime.format(formatter);
+    }
+
+
 
 
 }

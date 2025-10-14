@@ -158,9 +158,10 @@ public class OrganizationFacade {
         return new ApiResponse<>(status.value(), message, null);
     }
 
-    public List<Map<String, Object>> getPaymentDetailsByOrderId(String paymentId) {
-      return  paymentService.getPaymentDetailsByOrderId(paymentId);
+    public PaymentDto getPaymentDetailsBySubscriptionId(String subscriptionId) {
+        return paymentService.getPaymentDetailsBySubscriptionId(subscriptionId);
     }
+
         public ApiResponse<PlanStatusDto> getCurrentPlanStatus(String orgId) {
         PlanStatusModel model = subscriptionService.getCurrentPlanStatus(orgId);
         PlanStatusDto dto = planDtoMapper.toDto(model);
