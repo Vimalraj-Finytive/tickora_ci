@@ -1,11 +1,7 @@
 package com.uniq.tms.tms_microservice.modules.organizationManagement.dto;
 
-
-import com.fasterxml.jackson.annotation.JsonProperty;
-
 public class PlanStatusDto {
     private String planName;
-    @JsonProperty("isActive")
     private boolean active;
     private boolean showNotification;
     private String Message;
@@ -27,8 +23,13 @@ public class PlanStatusDto {
         this.planName = planName;
     }
 
-    public boolean isActive() { return active; }
-    public void setActive(boolean active) { this.active = active; }
+    public boolean isActive() {
+        return active;
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
+    }
 
     public boolean isShowNotification() {
         return showNotification;

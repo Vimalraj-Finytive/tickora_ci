@@ -12,6 +12,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.List;
+import java.util.Map;
+
 @RestController
 @RequestMapping(OrganizationConstant.ORGANIZATION_URL)
 public class OrganizationController {
@@ -160,11 +163,21 @@ public class OrganizationController {
         }
         return ResponseEntity.ok( organizationFacade.upgradePlan(orgId,orgSchema, upgradePlanDto));
     }
-//    @GetMapping("subscription/planDetails")
-//    public ResponseEntity<ApiResponse<PlanStatusDto>> getCurrentPlan(@RequestHeader("Authorization") String token) {
-//        String orgId = authHelper.getOrgId(); // extract from token
-//        ApiResponse<PlanStatusDto> response = organizationFacade.getCurrentPlanStatus(orgId);
-//        return ResponseEntity.status(response.getStatusCode()).body(response);
-//    }
+
+    @GetMapping("/subscription/{paymentId}")
+    public ResponseEntity<List<Map<String, Object>>> getPaymentsByOrderId(@PathVariable String paymentId) {
+        List<Map<String, Object>> payments = organizationFacade.getPaymentDetailsByOrderId(paymentId);
+
+        if (payments.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(payments);
+    }
+        @GetMapping("subscription/planDetails")
+    public ResponseEntity<ApiResponse<PlanStatusDto>> getCurrentPlan(@RequestHeader("Authorization") String token) {
+        String orgId = authHelper.getOrgId();
+        ApiResponse<PlanStatusDto> response = organizationFacade.getCurrentPlanStatus(orgId);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
 }
 

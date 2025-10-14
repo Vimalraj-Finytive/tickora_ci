@@ -1,9 +1,10 @@
 package com.uniq.tms.tms_microservice.modules.organizationManagement.services.impl;
 
 import com.razorpay.Order;
+import com.razorpay.Payment;
 import com.razorpay.RazorpayClient;
+import com.razorpay.RazorpayException;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.PaymentAdapter;
-import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.SubscriptionAdapter;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.PaymentEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.enums.PaymentStatus;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.services.PaymentService;
@@ -12,6 +13,7 @@ import org.json.JSONObject;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.util.*;
 
 @Service
 public class PaymentServiceImpl implements PaymentService {
@@ -60,12 +62,43 @@ public class PaymentServiceImpl implements PaymentService {
         }
     }
 
+
     @Override
     public PaymentEntity createPayment(String orgId, String orderId,  BigDecimal amount,String billingCycle, String orgSchema, PaymentStatus status) {
         return paymentAdapter.createPayment(orgId,orderId,amount,billingCycle,status,orgSchema);
     }
 
+    @Override
+    public List<Map<String, Object>> getPaymentDetailsByOrderId(String paymentId) {
+        List<Map<String, Object>> paymentDetails = new ArrayList<>();
 
+        try {
+            RazorpayClient client = new RazorpayClient(razorpayKeyId, razorpayKeySecret);
+            Payment payment = client.payments.fetch(paymentId);
+
+            if (payment != null) {
+                JSONObject p = payment.toJson();
+
+                Map<String, Object> detail = new HashMap<>();
+                detail.put("paymentId", p.isNull("id") ? null : p.getString("id"));
+                detail.put("method", p.isNull("method") ? null : p.getString("method"));
+                detail.put("email", p.isNull("email") ? null : p.getString("email"));
+                detail.put("contact", p.isNull("contact") ? null : p.getString("contact"));
+                detail.put("bank", p.isNull("bank") ? null : p.getString("bank"));
+                detail.put("amount", p.isNull("amount") ? null : p.getInt("amount") / 100.0);
+                detail.put("currency", p.isNull("currency") ? null : p.getString("currency"));
+                detail.put("status", p.isNull("status") ? null : p.getString("status"));
+                detail.put("createdAt", p.isNull("created_at") ? null : p.getLong("created_at"));
+
+                paymentDetails.add(detail);
+            }
+
+        } catch (RazorpayException e) {
+            System.err.println("Error fetching payment: " + e.getMessage());
+        }
+
+        return paymentDetails; // Always safe for Jackson
+    }
 
 
 }
