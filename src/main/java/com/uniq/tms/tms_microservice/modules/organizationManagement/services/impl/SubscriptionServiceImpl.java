@@ -162,7 +162,11 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         boolean showNotification = (plan != null && PlaneName.BASIC_PLAN.name().equalsIgnoreCase(plan.getPlanName()))
                 || daysLeft <= expiringNotificationDay;
 
-        String message = String.format("Your plan is valid for %d more day%s.", daysLeft, daysLeft == 1 ? "" : "s");
+        String message = String.format(
+                "Your plan is valid for %d more day%s Only. Renew or upgrade now to continue enjoying our services.",
+                daysLeft,
+                daysLeft == 1 ? "" : "s"
+        );
 
         return PlanStatusModel.builder()
                 .planName(planName)

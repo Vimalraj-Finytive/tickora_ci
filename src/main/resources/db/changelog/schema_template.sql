@@ -465,6 +465,24 @@ CREATE TABLE IF NOT EXISTS ${schemaName}.user_embedding (
     user_id VARCHAR(20) NOT NULL UNIQUE,
     embeddings TEXT
 );
+-- ===========================================================
+-- Table: payment
+-- ===========================================================
+--changeset system:create-payment
+CREATE TABLE payment (
+    payment_id VARCHAR(20) PRIMARY KEY,
+    order_id VARCHAR(30) NOT NULL,
+    amount NUMERIC(10, 2) NOT NULL,
+    billing_period VARCHAR(50) NOT NULL,
+    payment_status VARCHAR(20) NOT NULL,
+    payment_date TIMESTAMP NOT NULL,
+    schema_name VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP
+--    CONSTRAINT fk_payment_subscription FOREIGN KEY (subscription_id)
+--        REFERENCES subscription(subscription_id)
+--        ON DELETE CASCADE
+);
 
 -- ===========================================================
 -- Table: subscription
@@ -472,7 +490,7 @@ CREATE TABLE IF NOT EXISTS ${schemaName}.user_embedding (
 --changeset system:create-subscription
 CREATE TABLE subscription (
     subscription_id VARCHAR(20) PRIMARY KEY,
-    payment_id VARCHAR(20) NOT NULL,
+    payment_id VARCHAR(20),
     start_date TIMESTAMP NOT NULL,
     end_date TIMESTAMP NOT NULL,
     organization_id VARCHAR(20) NOT NULL,
@@ -490,24 +508,7 @@ CREATE TABLE subscription (
         ON DELETE RESTRICT
 );
 
--- ===========================================================
--- Table: payment
--- ===========================================================
---changeset system:create-payment
-CREATE TABLE payment (
-    payment_id VARCHAR(20) PRIMARY KEY,
-    order_id VARCHAR(30) NOT NULL,
-    amount NUMERIC(10, 2) NOT NULL,
-    billing_period VARCHAR(50) NOT NULL,
-    payment_status VARCHAR(20) NOT NULL,
-    payment_date TIMESTAMP NOT NULL,
-    schema_name VARCHAR(255) NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP,
-    CONSTRAINT fk_payment_subscription FOREIGN KEY (subscription_id)
-        REFERENCES subscription(subscription_id)
-        ON DELETE CASCADE
-);
+
 
 -- ===========================================================
 -- Table: user_history
