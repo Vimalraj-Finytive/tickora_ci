@@ -48,4 +48,5 @@ public interface UserService {
     Long getSubscribedUserLimit(String orgId);
     Long getCurrentUserCount(String orgId);
     BulkUserLocationModel assignLocations(BulkUserLocationModel model);
+    ApiResponse updateSplitTime(String userId,String OrgId,Boolean isSplitTimeEnabled);
 }

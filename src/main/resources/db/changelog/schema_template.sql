@@ -202,6 +202,7 @@ CREATE TABLE IF NOT EXISTS ${schemaName}.users (
     date_of_joining DATE,
     is_register_user BOOLEAN NOT NULL DEFAULT FALSE,
     active BOOLEAN NOT NULL,
+    is_split_time_enabled BOOLEAN NOT NULL DEFAULT TRUE,
     CONSTRAINT fk_role
         FOREIGN KEY (role_id)
         REFERENCES ${schemaName}.role(role_id)
@@ -532,7 +533,11 @@ CREATE TABLE IF NOT EXISTS calendar (
     id VARCHAR(10) PRIMARY KEY,
     name VARCHAR(255),
     is_default BOOLEAN,
-    is_active BOOLEAN
+    is_active BOOLEAN,
+    country_id VARCHAR(10),
+        CONSTRAINT fk_country
+           FOREIGN KEY (country_id)
+           REFERENCES public.country(id)
 );
 
 -- ===========================================================
@@ -546,7 +551,7 @@ CREATE TABLE IF NOT EXISTS calendar_details (
     year VARCHAR(10),
     calendar_id VARCHAR(10) NOT NULL,
     CONSTRAINT fk_calendar_details_calendar
-        FOREIGN KEY (calendar_code) REFERENCES calendar (id)
+        FOREIGN KEY (calendar_id) REFERENCES calendar (id)
         ON DELETE CASCADE
 );
 

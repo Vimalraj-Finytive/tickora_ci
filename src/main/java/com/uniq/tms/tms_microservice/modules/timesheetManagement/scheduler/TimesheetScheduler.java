@@ -23,7 +23,7 @@ public class TimesheetScheduler {
         this.organizationRepository = organizationRepository;
     }
 
-    @Scheduled(cron = "0 0 0 * * *", zone = "Asia/Kolkata")
+    @Scheduled(cron = "0 0 * * * *", zone = "Asia/Kolkata")
     public void autoClockOutForAllEmployees() {
         try{
             List<OrganizationEntity> orgIds = organizationRepository.findAll();

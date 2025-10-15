@@ -15,6 +15,7 @@ public class CountryEntity {
     @OneToMany(mappedBy = "country", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PublicHolidayEntity> publicHolidays;
 
+
     public String getId() {
         return id;
     }
@@ -46,4 +47,6 @@ public class CountryEntity {
     public void setPublicHolidays(List<PublicHolidayEntity> publicHolidays) {
         this.publicHolidays = publicHolidays;
     }
+
+
 }

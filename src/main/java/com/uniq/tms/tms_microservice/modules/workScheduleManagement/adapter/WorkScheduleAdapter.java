@@ -32,4 +32,5 @@ public interface WorkScheduleAdapter {
     Map<String, Set<DayOfWeek>> resolveWorkingDays(String[] userIds);
     List<FixedWorkScheduleEntity> findFixedSchedulesByUserIds(String[] pagedUserIds);
     List<FlexibleWorkScheduleEntity> findFlexibleSchedulesByUserIds(String[]  pagedUserIds);
+    WorkScheduleEntity findByScheduleIdModel(String workScheduleId, String orgId);
 }
