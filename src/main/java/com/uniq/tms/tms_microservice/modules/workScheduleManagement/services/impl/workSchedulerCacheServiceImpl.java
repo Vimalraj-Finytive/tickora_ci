@@ -69,9 +69,13 @@ public class workSchedulerCacheServiceImpl implements WorkScheduleCacheService {
             schedule.setType(raw.getWorkScheduleType());
             schedule.setOrgId(raw.getOrganizationId());
             schedule.setWeeklySchedule(raw.getWeeklySchedule());
-            LocalTime localTime = raw.getSplitTime().toLocalTime();
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("hh:mm a");
-            schedule.setSplitTime(localTime.format(formatter));
+
+            if (raw.getSplitTime() != null){
+                LocalTime localTime = raw.getSplitTime().toLocalTime();
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("hh:mm a");
+                String time = localTime.format(formatter);
+                schedule.setSplitTime(time);
+            }
 
             // Parse fixed and flexible schedules from JSON strings
             try {

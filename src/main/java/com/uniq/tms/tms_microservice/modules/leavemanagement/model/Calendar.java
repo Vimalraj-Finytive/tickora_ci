@@ -9,6 +9,8 @@ public class Calendar {
     private Boolean isDefault;
     private ImportType importType;
     private String countryCode;
+    private String countryId;
+    private String countryName;
     private Boolean isActive;
 
     public String getId() {
@@ -56,5 +58,29 @@ public class Calendar {
 
     public void setActive(Boolean active) {
         isActive = active;
+    }
+
+    public Boolean getDefault() {
+        return isDefault;
+    }
+
+    public void setDefault(Boolean aDefault) {
+        isDefault = aDefault;
+    }
+
+    public String getCountryId() {
+        return countryId;
+    }
+
+    public void setCountryId(String countryId) {
+        this.countryId = countryId;
+    }
+
+    public String getCountryName() {
+        return countryName;
+    }
+
+    public void setCountryName(String countryName) {
+        this.countryName = countryName;
     }
 }

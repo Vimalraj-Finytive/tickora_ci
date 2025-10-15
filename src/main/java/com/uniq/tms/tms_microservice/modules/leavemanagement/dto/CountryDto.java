@@ -2,6 +2,7 @@ package com.uniq.tms.tms_microservice.modules.leavemanagement.dto;
 
 public class CountryDto {
 
+    private String id;
     private String name;
     private String code;
 
@@ -19,6 +20,14 @@ public class CountryDto {
 
     public void setCode(String code) {
         this.code = code;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
     }
 
 }

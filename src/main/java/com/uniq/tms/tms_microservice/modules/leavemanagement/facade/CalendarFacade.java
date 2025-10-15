@@ -2,6 +2,7 @@ package com.uniq.tms.tms_microservice.modules.leavemanagement.facade;
 
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.CalendarDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.CalendarIdDto;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.CalendarResponseDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.HolidayDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.mapper.CalendarDtoMapper;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.mapper.HolidayDtoMapper;
@@ -12,6 +13,7 @@ import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
 import org.springframework.stereotype.Component;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.Calendar;
 import java.util.List;
+import java.util.Objects;
 
 @Component
 public class CalendarFacade {
@@ -33,9 +35,10 @@ public class CalendarFacade {
         return new ApiResponse<>(200,"Calendar Created Successfully",null);
     }
 
-    public ApiResponse<List<CalendarDto>> getAll() {
-        List<CalendarDto> calendar = calendarService.getAll().stream()
-                .map(calendarDtoMapper::toDto)
+    public ApiResponse<List<CalendarResponseDto>> getAll() {
+        List<CalendarResponseDto> calendar = calendarService.getAll().stream()
+                .filter(Objects::nonNull)
+                .map(calendarDtoMapper::toResponseDto)
                 .toList();
         return new ApiResponse<>(200,"Calendar Fetched Successfully",calendar);
     }
@@ -73,8 +76,8 @@ public class CalendarFacade {
         return new ApiResponse<>(200,"Holiday Updated Successfully", null);
     }
 
-    public ApiResponse<List<HolidayDto>> findHolidayByCalendarId(String id) {
-        List<HolidayDto> holiday = calendarService.findHolidaysByCalendar(id).stream()
+    public ApiResponse<List<HolidayDto>> findHolidayByCalendarId(String id, String year) {
+        List<HolidayDto> holiday = calendarService.findHolidaysByCalendar(id, year).stream()
                 .map(holidayDtoMapper::toDto).toList();
         return new ApiResponse<>(200,"Holidays Fetched Successfully",holiday);
     }

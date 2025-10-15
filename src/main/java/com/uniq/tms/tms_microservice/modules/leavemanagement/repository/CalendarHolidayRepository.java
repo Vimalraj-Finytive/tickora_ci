@@ -15,7 +15,7 @@ public interface CalendarHolidayRepository extends JpaRepository<CalendarHoliday
     @Query("SELECT MAX(ch.id) FROM CalendarHolidayEntity ch WHERE ch.id LIKE CONCAT(:prefix, '%')")
     String findMaxIdByPrefix(String prefix);
 
-    List<CalendarHolidayEntity> findByCalendar_Id(String id);
+    List<CalendarHolidayEntity> findByCalendar_IdAndYear(String id, String year);
 
     boolean existsByIdAndCalendar_Id(  String holidayId ,String calendarId);
 

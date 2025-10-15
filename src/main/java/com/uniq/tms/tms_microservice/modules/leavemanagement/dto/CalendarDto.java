@@ -14,9 +14,9 @@ public class CalendarDto {
     private String name;
     private Boolean isDefault;
     private ImportType importType;
-    @NotBlank(message = "Country code is required")
     private String countryCode;
     private Boolean isActive;
+    private String countryId;
 
     public String getId() {
         return id;
@@ -64,5 +64,13 @@ public class CalendarDto {
 
     public void setActive(Boolean active) {
         isActive = active;
+    }
+
+    public String getCountryId() {
+        return countryId;
+    }
+
+    public void setCountryId(String countryId) {
+        this.countryId = countryId;
     }
 }

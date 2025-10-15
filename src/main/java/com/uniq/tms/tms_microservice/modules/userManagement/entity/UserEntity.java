@@ -62,11 +62,14 @@ public class UserEntity {
         this.userId = userId;
     }
 
+    @Column(name = "is_split_time_enabled", nullable = false)
+    private boolean isSplitTimeEnabled = true;
+
     public UserEntity() {
     }
 
     public UserEntity(String userId, String userName, String email, String mobileNumber, boolean isDefaultPassword, LocalDate dateOfJoining, boolean active,
-                      RoleEntity role, LocalDateTime createdAt, String organizationId, String password, WorkScheduleEntity workSchedule) {
+                      RoleEntity role, LocalDateTime createdAt, String organizationId, String password, WorkScheduleEntity workSchedule,boolean isSplitTimeEnabled) {
         this.userId = userId;
         this.userName = userName;
         this.email = email;
@@ -79,6 +82,7 @@ public class UserEntity {
         this.organizationId = organizationId;
         this.password = password;
         this.workSchedule = workSchedule;
+        this.isSplitTimeEnabled = isSplitTimeEnabled;
     }
 
     public LocalDate getDateOfJoining() {
@@ -196,6 +200,14 @@ public class UserEntity {
 
     public void setUserGroups(List<UserGroupEntity> userGroups) {
         this.userGroups = userGroups;
+    }
+
+    public boolean isSplitTimeEnabled() {
+        return isSplitTimeEnabled;
+    }
+
+    public void setSplitTimeEnabled(boolean splitTimeEnabled) {
+        isSplitTimeEnabled = splitTimeEnabled;
     }
 
     @Override

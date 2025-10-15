@@ -36,10 +36,8 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
+
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -155,6 +153,9 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
         entity.setScheduleId(idGenerationService.generateNextId(IdGenerationTypeEnum.WORK_SCHEDULE));
         entity.setType(typeEntity);
         entity.setActive(true);
+        if ((entity.getSplitTime() !=null )&&(Objects.requireNonNull(typeEntity.getType()) != WorkScheduleTypeEnum.FIXED)) {
+            entity.setSplitTime(null);
+        }
 
         boolean shouldAssignToSuperAdmin = model.isDefault() || workScheduleAdapter.countByOrgId(orgId) == 0;
 
