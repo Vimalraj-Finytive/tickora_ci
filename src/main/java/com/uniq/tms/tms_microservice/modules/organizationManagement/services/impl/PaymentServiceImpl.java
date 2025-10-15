@@ -4,6 +4,7 @@ import com.razorpay.Order;
 import com.razorpay.Payment;
 import com.razorpay.RazorpayClient;
 import com.razorpay.RazorpayException;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.OrganizationAdapter;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.PaymentAdapter;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.SubscriptionAdapter;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.PaymentDetailsDto;
@@ -12,18 +13,22 @@ import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.Payme
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.PlanEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.SubscriptionEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.enums.PaymentStatus;
-import com.uniq.tms.tms_microservice.modules.organizationManagement.enums.PlaneName;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.services.PaymentService;
+import com.uniq.tms.tms_microservice.shared.helper.InvoiceGeneratorHelper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.json.JSONObject;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Optional;
 
 @Slf4j
 @Service
@@ -37,10 +42,12 @@ public class PaymentServiceImpl implements PaymentService {
 
     private final PaymentAdapter paymentAdapter;
     private final SubscriptionAdapter subscriptionAdapter;
+    private final OrganizationAdapter organizationAdapter;
 
-    public PaymentServiceImpl(PaymentAdapter paymentAdapter, SubscriptionAdapter subscriptionAdapter) {
+    public PaymentServiceImpl(PaymentAdapter paymentAdapter, SubscriptionAdapter subscriptionAdapter, OrganizationAdapter organizationAdapter) {
         this.paymentAdapter = paymentAdapter;
         this.subscriptionAdapter = subscriptionAdapter;
+        this.organizationAdapter = organizationAdapter;
     }
 
     @Override
@@ -84,7 +91,6 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     public PaymentDto getPaymentDetailsBySubscriptionId(String subscriptionId) {
         PaymentDto paymentDto = new PaymentDto();
-
         try {
             SubscriptionEntity subscriptionEntity = subscriptionAdapter
                     .findSubscriptionDetails(subscriptionId)
@@ -127,10 +133,8 @@ public class PaymentServiceImpl implements PaymentService {
             paymentDto.setBillingCycle(paymentEntity.getBillingPeriod());
             paymentDto.setPayment(paymentDetails);
 
-
             String planName = (plan != null) ? plan.getPlanName() : "Unknown Plan";
             paymentDto.setPlanName(planName);
-
 
         } catch (RazorpayException e) {
             throw new RuntimeException("Error fetching payment from Razorpay: " + e.getMessage());
@@ -147,7 +151,25 @@ public class PaymentServiceImpl implements PaymentService {
         return zonedDateTime.format(formatter);
     }
 
-
-
-
+    @Override
+    public ResponseEntity<byte[]> getPaymentDetailsPdfBySubscriptionId(String subscriptionId, String orgId) {
+        PaymentDto paymentDetails = getPaymentDetailsBySubscriptionId(subscriptionId);
+        String OrgName =organizationAdapter.getOrgName(orgId);
+        if (paymentDetails == null) {
+            return ResponseEntity.noContent().build();
+        }
+        try {
+            ByteArrayOutputStream pdfStream = InvoiceGeneratorHelper.generateInvoicePdf(paymentDetails, OrgName);
+            HttpHeaders headers = new HttpHeaders();
+            headers.add(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=invoice.pdf");
+            return ResponseEntity.ok()
+                    .headers(headers)
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .body(pdfStream.toByteArray());
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(("Failed to generate PDF: " + e.getMessage()).getBytes());
+        }
+    }
 }
