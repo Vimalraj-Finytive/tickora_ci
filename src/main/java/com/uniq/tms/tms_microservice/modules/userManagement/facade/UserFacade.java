@@ -313,11 +313,6 @@ public class UserFacade {
         return new ApiResponse(200,"User is activated", null);
     }
 
-    public ApiResponse<UserValidationDto> validateUser(String userId) {
-        String orgSchema = authHelper.getSchema();
-        return userService.validateUser(userId);
-    }
-
     public ApiResponse<List<UserHistoryResponseDto>> getUserHistoryLog(String userId) {
         return userService.getUserHistoryLog(userId);
     }
@@ -328,53 +323,6 @@ public class UserFacade {
                 .map(userDtoMapper::toDto).collect(Collectors.toList());
         return result;
     }
-
-//    public ApiResponse updateWorkSchedules(BulkWorkScheduleUpdateRequestDto requestDto) {
-//        String orgId = authHelper.getOrgId();
-//        String userNameFromToken = authHelper.getUsername();
-//
-//        if (orgId == null) {
-//            return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
-//        }
-//        List<BulkWorkScheduleUpdateResponseDto> results =
-//                userService.updateWorkSchedules(requestDto,userNameFromToken,orgId); // orgID, dto, username
-//
-//        List<String> successUsers = results.stream()
-//                .filter(BulkWorkScheduleUpdateResponseDto::isSuccess)
-//                .map(BulkWorkScheduleUpdateResponseDto::getMemberId)
-//                .collect(Collectors.toList());
-//
-//        List<String> failedUsers = results.stream()
-//                .filter(r -> !r.isSuccess())
-//                .map(BulkWorkScheduleUpdateResponseDto::getMessage) // <-- fixed here
-//                .collect(Collectors.toList());
-//
-//        StringBuilder message = new StringBuilder();
-//
-//        if (!successUsers.isEmpty()) {
-//            message.append("Bulk Work Schedule Update Completed. ");
-//            message.append("Updated: ").append(String.join(", ", successUsers)).append(". ");
-//        }
-//
-//        if (!failedUsers.isEmpty()) {
-//            if (successUsers.isEmpty()) {
-//                message.append(String.join(", ", failedUsers)).append(".");
-//            } else {
-//                message.append("Failed: ").append(String.join(", ", failedUsers)).append(".");
-//            }
-//        }
-//
-//        if (successUsers.isEmpty() && failedUsers.isEmpty()) {
-//            message.append("No updates were made.");
-//        }
-//
-//        int statusCode = 200;
-//        if (failedUsers.size() == 1 && failedUsers.get(0).startsWith("Work Schedule not found")) {
-//            statusCode = 404;
-//        }
-//
-//        return new ApiResponse(statusCode, message.toString().trim(), null);
-//    }
 
     public ApiResponse updateWorkSchedules(BulkWorkScheduleUpdateRequestDto requestDto) {
         String orgId = authHelper.getOrgId();

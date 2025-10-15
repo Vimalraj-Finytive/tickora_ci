@@ -225,13 +225,6 @@ public class UserController {
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
-    @PostMapping("/validation")
-    public ResponseEntity<ApiResponse<UserValidationDto>> validateUser(@RequestHeader("Authorization") String token,
-                                                                       @RequestBody UserValidationDto request) {
-        ApiResponse<UserValidationDto> response = userFacade.validateUser(request.getUserId());
-        return ResponseEntity.status(response.getStatusCode()).body(response);
-    }
-
     @PostMapping("/bulk/role")
     public ResponseEntity<ApiResponse> updateBulkUserRole(
             @RequestHeader("Authorization") String token,

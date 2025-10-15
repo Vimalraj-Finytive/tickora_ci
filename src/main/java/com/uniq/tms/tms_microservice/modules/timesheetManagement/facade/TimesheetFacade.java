@@ -1,5 +1,6 @@
 package com.uniq.tms.tms_microservice.modules.timesheetManagement.facade;
 
+import com.uniq.tms.tms_microservice.modules.userManagement.dto.UserValidationDto;
 import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.dto.*;
 import com.uniq.tms.tms_microservice.shared.security.schema.TenantContext;
@@ -170,4 +171,8 @@ public class TimesheetFacade {
         }
     }
 
+    public ApiResponse<UserValidationDto> validateUser(String userId) {
+        String orgSchema = authHelper.getSchema();
+        return faceService.validateUser(userId);
+    }
 }

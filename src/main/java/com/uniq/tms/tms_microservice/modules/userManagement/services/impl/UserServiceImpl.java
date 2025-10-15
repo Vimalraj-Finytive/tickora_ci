@@ -52,7 +52,6 @@ import com.uniq.tms.tms_microservice.modules.identityManagement.service.IdGenera
 import com.uniq.tms.tms_microservice.modules.userManagement.enums.UserRole;
 import com.uniq.tms.tms_microservice.modules.userManagement.repository.SecondaryDetailsRepository;
 import com.uniq.tms.tms_microservice.modules.userManagement.services.UserService;
-import com.uniq.tms.tms_microservice.dto.DeactivateUserRequestDto;
 import jakarta.annotation.Nullable;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Validator;
@@ -1996,45 +1995,6 @@ public class UserServiceImpl implements UserService {
         } catch (Exception e) {
             log.error("Error creating SuperAdmin user: {}", e.getMessage(), e);
             throw new CommonExceptionHandler.InternalServerException("Failed to create SuperAdmin user. " + e.getMessage());
-        }
-    }
-
-    @Override
-    public ApiResponse<UserValidationDto> validateUser(String userId) {
-        if (userId == null || userId.isBlank()) {
-            log.warn("Validation failed: userId is null or blank");
-            return new ApiResponse<>(400, "UserId must not be null or blank", null);
-        }
-
-        try {
-            Optional<UserEntity> userOptional = userAdapter.findById(userId);
-            if (userOptional.isEmpty()) {
-                log.info("No User found for userId: {}", userId);
-                return new ApiResponse<>(404, "User not found", null);
-            }
-
-            UserEntity userEntity = userOptional.get();
-            UserValidationDto dto = userEntityMapper.toDto(userEntity);
-
-            try {
-                List<LocationDto> locations = locationService.getUserLocation(userId);
-                if (locations == null || locations.isEmpty()) {
-                    log.warn("No locations found for userId: {}", userId);
-                    return new ApiResponse<>(404, "No locations assigned to this user", null);
-                }
-                log.info("User {} locations: {}", userId, locations);
-                dto.setLocation(locations);
-            } catch (Exception ex) {
-                log.error("Error fetching locations for userId {}: {}", userId, ex.getMessage(), ex);
-                return new ApiResponse<>(500, "Failed to fetch user locations", null);
-            }
-
-            log.info("User {} validated successfully", userId);
-            return new ApiResponse<>(200, "User validation returned successfully", dto);
-
-        } catch (Exception e) {
-            log.error("Unexpected error during user validation for userId {}: {}", userId, e.getMessage(), e);
-            return new ApiResponse<>(500, "Unexpected error during user validation", null);
         }
     }
 

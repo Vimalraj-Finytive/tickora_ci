@@ -1,5 +1,6 @@
 package com.uniq.tms.tms_microservice.modules.timesheetManagement.controller;
 
+import com.uniq.tms.tms_microservice.modules.userManagement.dto.UserValidationDto;
 import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.constant.TimesheetConstant;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.dto.ClockInOutRequestDto;
@@ -40,4 +41,10 @@ public class FaceController{
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
+    @PostMapping("/validation")
+    public ResponseEntity<ApiResponse<UserValidationDto>> validateUser(@RequestHeader("Authorization") String token,
+                                                                       @RequestBody UserValidationDto request) {
+        ApiResponse<UserValidationDto> response = timesheetFacade.validateUser(request.getUserId());
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
 }
