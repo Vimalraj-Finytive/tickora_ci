@@ -6,14 +6,17 @@ import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.Subs
 import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.PlanDto;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.SubscriptionDto;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.UpgradePlanDto;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.PaymentEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.PlanEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.SubscriptionEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.enums.OrganizationStatusEnum;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.enums.PaymentStatus;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.mapper.PlanDtoMapper;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.mapper.PlanEntityMapper;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.mapper.SubscriptionDtoMapper;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.mapper.SubscriptionEntityMapper;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.model.Plan;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.PaymentRepository;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.PlanRepository;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.SubscriptionRepository;
 import org.apache.logging.log4j.LogManager;
@@ -30,6 +33,7 @@ import java.util.stream.Collectors;
 @Component
 @ConditionalOnProperty(name = "database.type", havingValue = "postgres")
 public class SubscriptionAdapterImpl implements SubscriptionAdapter {
+    private final PaymentRepository paymentRepository;
     private static final Logger log = LogManager.getLogger(SubscriptionAdapterImpl.class);
     private final SubscriptionRepository subscriptionRepository;
     private final PlanRepository planRepository;
@@ -39,7 +43,8 @@ public class SubscriptionAdapterImpl implements SubscriptionAdapter {
     private final PlanDtoMapper planDtoMapper;
     private final IdGenerationService idGenerationService;
 
-    public SubscriptionAdapterImpl(SubscriptionRepository subscriptionRepository, SubscriptionEntityMapper subscriptionEntityMapper, SubscriptionDtoMapper subscriptionDtoMapper, PlanRepository planRepository, PlanEntityMapper planEntityMapper, PlanDtoMapper planDtoMapper, IdGenerationService idGenerationService) {
+    public SubscriptionAdapterImpl(PaymentRepository paymentRepository, SubscriptionRepository subscriptionRepository, SubscriptionEntityMapper subscriptionEntityMapper, SubscriptionDtoMapper subscriptionDtoMapper, PlanRepository planRepository, PlanEntityMapper planEntityMapper, PlanDtoMapper planDtoMapper, IdGenerationService idGenerationService) {
+        this.paymentRepository = paymentRepository;
         this.subscriptionRepository = subscriptionRepository;
         this.subscriptionEntityMapper = subscriptionEntityMapper;
         this.subscriptionDtoMapper = subscriptionDtoMapper;
@@ -126,7 +131,7 @@ public class SubscriptionAdapterImpl implements SubscriptionAdapter {
     }
 
     @Override
-    public String  updatePlan(String orgId,String orgSchema, String planId, Integer subscribedUserCount) {
+    public PaymentStatus  updatePlan(String orgId,String orgSchema, String planId, Integer subscribedUserCount,String paymentId) {
         LocalDateTime now = LocalDateTime.now();
         boolean wasUpdated = subscriptionRepository.findActiveSubscription(orgId)
                 .map(entity -> {
@@ -155,15 +160,14 @@ public class SubscriptionAdapterImpl implements SubscriptionAdapter {
             newSubscription.setStartDate(now);
             newSubscription.setEndDate(now.plusDays(durationInDays));
             newSubscription.setSubscribedUsers(subscribedUserCount);
+            newSubscription.setPaymentId(paymentId);
 
             log.info("Creating new subscription for Organization ID: {}", orgId);
             subscriptionRepository.save(newSubscription);
-
-
-            return newSubId;
+            return PaymentStatus.SUCCESS;
         } catch (Exception e) {
             log.error("Failed to create new subscription for Organization ID: {}", orgId, e);
-            return null;
+            return PaymentStatus.FAILED;
         }
     }
 
@@ -188,8 +192,15 @@ public class SubscriptionAdapterImpl implements SubscriptionAdapter {
         }
     }
 
+    public Optional<SubscriptionEntity> findActiveSubscriptionByOrgId(String orgId) {
+        return subscriptionRepository.findActiveSubscriptionByOrgId(orgId);
+    }
+    public Optional<PlanEntity> findById(String planId) {
+        return planRepository.findById(planId);
+    }
 
-
-
-
+    @Override
+    public Optional<SubscriptionEntity> findSubscriptionDetails(String subscriptionId) {
+        return subscriptionRepository.findById(subscriptionId);
+    }
 }

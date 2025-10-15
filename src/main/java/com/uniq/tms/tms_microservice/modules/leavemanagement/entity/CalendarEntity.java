@@ -14,10 +14,15 @@ public class CalendarEntity {
 
     private Boolean isDefault;
 
+    @Column(name = "is_active", nullable = false, columnDefinition = "BOOLEAN DEFAULT TRUE")
     private Boolean isActive;
 
     @OneToMany(mappedBy = "calendar", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<CalendarHolidayEntity> calendarHolidays;
+
+    @ManyToOne(optional = true)
+    @JoinColumn(name = "country_id")
+    private CountryEntity countryEntity;
 
     public String getId() {
         return id;
@@ -51,6 +56,7 @@ public class CalendarEntity {
         this.calendarHolidays = calendarHolidays;
     }
 
+
     public Boolean getDefault() {
         return isDefault;
     }
@@ -65,5 +71,20 @@ public class CalendarEntity {
 
     public void setActive(Boolean active) {
         isActive = active;
+    }
+
+    public CountryEntity getCountryEntity() {
+        return countryEntity;
+    }
+
+    public void setCountryEntity(CountryEntity countryEntity) {
+        this.countryEntity = countryEntity;
+    }
+
+    @PrePersist
+    public void prePersist() {
+        if (isActive == null) {
+            isActive = true;
+        }
     }
 }

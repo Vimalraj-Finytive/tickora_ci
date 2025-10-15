@@ -3,6 +3,7 @@ package com.uniq.tms.tms_microservice.modules.leavemanagement.controller;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.constant.LeaveConstant;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.CalendarDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.CalendarIdDto;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.CalendarResponseDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.HolidayDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.facade.CalendarFacade;
 import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
@@ -30,8 +31,8 @@ public class CalendarController {
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<CalendarDto>>> getAll(@RequestHeader("Authorization") String token){
-        ApiResponse<List<CalendarDto>> calendarDto = calendarFacade.getAll();
+    public ResponseEntity<ApiResponse<List<CalendarResponseDto>>> getAll(@RequestHeader("Authorization") String token){
+        ApiResponse<List<CalendarResponseDto>> calendarDto = calendarFacade.getAll();
         return ResponseEntity.status(HttpStatus.OK).body(calendarDto);
     }
 
@@ -75,8 +76,8 @@ public class CalendarController {
     }
 
     @GetMapping("/{id}/holidays")
-    public ResponseEntity<ApiResponse<List<HolidayDto>>> getHolidayBYId(@PathVariable String id) {
-        ApiResponse<List<HolidayDto>> holidayDto = calendarFacade.findHolidayByCalendarId(id);
+    public ResponseEntity<ApiResponse<List<HolidayDto>>> getHolidayBYId(@PathVariable String id, @RequestParam String year) {
+        ApiResponse<List<HolidayDto>> holidayDto = calendarFacade.findHolidayByCalendarId(id, year);
         return ResponseEntity.status(HttpStatus.OK).body(holidayDto);
     }
 

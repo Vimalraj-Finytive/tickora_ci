@@ -137,4 +137,6 @@ public class WorkScheduleEntity {
     public void setSplitTime(Time splitTime) {
         this.splitTime = splitTime;
     }
+
+
 }

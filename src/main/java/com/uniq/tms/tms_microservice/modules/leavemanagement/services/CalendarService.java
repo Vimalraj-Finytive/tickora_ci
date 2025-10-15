@@ -14,6 +14,6 @@ public interface CalendarService {
     Calendar update(Calendar model);
     Holiday createHoliday(Holiday holidayMiddleware, String calendarId);
     Holiday updateHoliday(HolidayDto holidayDto, String id, String holidayId);
-    List<Holiday> findHolidaysByCalendar(String id);
+    List<Holiday> findHolidaysByCalendar(String id, String year);
     void deleteHolidayById(String calendarId,String holidayId);
 }

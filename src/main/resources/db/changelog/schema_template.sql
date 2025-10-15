@@ -202,6 +202,7 @@ CREATE TABLE IF NOT EXISTS ${schemaName}.users (
     date_of_joining DATE,
     is_register_user BOOLEAN NOT NULL DEFAULT FALSE,
     active BOOLEAN NOT NULL,
+    is_split_time_enabled BOOLEAN NOT NULL DEFAULT TRUE,
     CONSTRAINT fk_role
         FOREIGN KEY (role_id)
         REFERENCES ${schemaName}.role(role_id)
@@ -465,6 +466,24 @@ CREATE TABLE IF NOT EXISTS ${schemaName}.user_embedding (
     user_id VARCHAR(20) NOT NULL UNIQUE,
     embeddings TEXT
 );
+-- ===========================================================
+-- Table: payment
+-- ===========================================================
+--changeset system:create-payment
+CREATE TABLE payment (
+    payment_id VARCHAR(20) PRIMARY KEY,
+    order_id VARCHAR(30) NOT NULL,
+    amount NUMERIC(10, 2) NOT NULL,
+    billing_period VARCHAR(50) NOT NULL,
+    payment_status VARCHAR(20) NOT NULL,
+    payment_date TIMESTAMP NOT NULL,
+    schema_name VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP
+--    CONSTRAINT fk_payment_subscription FOREIGN KEY (subscription_id)
+--        REFERENCES subscription(subscription_id)
+--        ON DELETE CASCADE
+);
 
 -- ===========================================================
 -- Table: subscription
@@ -472,6 +491,7 @@ CREATE TABLE IF NOT EXISTS ${schemaName}.user_embedding (
 --changeset system:create-subscription
 CREATE TABLE subscription (
     subscription_id VARCHAR(20) PRIMARY KEY,
+    payment_id VARCHAR(20),
     start_date TIMESTAMP NOT NULL,
     end_date TIMESTAMP NOT NULL,
     organization_id VARCHAR(20) NOT NULL,
@@ -483,28 +503,13 @@ CREATE TABLE subscription (
     updated_at TIMESTAMP,
     CONSTRAINT fk_subscription_plan FOREIGN KEY (plan_id)
         REFERENCES plan(plan_id)
+        ON DELETE RESTRICT,
+    CONSTRAINT fk_subscription_payment FOREIGN KEY (payment_id)
+        REFERENCES payment(payment_id)
         ON DELETE RESTRICT
 );
 
--- ===========================================================
--- Table: payment
--- ===========================================================
---changeset system:create-payment
-CREATE TABLE payment (
-    payment_id VARCHAR(20) PRIMARY KEY,
-    subscription_id VARCHAR(20) NOT NULL,
-    order_id VARCHAR(30) NOT NULL,
-    amount NUMERIC(10, 2) NOT NULL,
-    billing_period VARCHAR(50) NOT NULL,
-    payment_status VARCHAR(20) NOT NULL,
-    payment_date TIMESTAMP NOT NULL,
-    schema_name VARCHAR(255) NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP,
-    CONSTRAINT fk_payment_subscription FOREIGN KEY (subscription_id)
-        REFERENCES subscription(subscription_id)
-        ON DELETE CASCADE
-);
+
 
 -- ===========================================================
 -- Table: user_history
@@ -528,7 +533,11 @@ CREATE TABLE IF NOT EXISTS calendar (
     id VARCHAR(10) PRIMARY KEY,
     name VARCHAR(255),
     is_default BOOLEAN,
-    is_active BOOLEAN
+    is_active BOOLEAN,
+    country_id VARCHAR(10),
+        CONSTRAINT fk_country
+           FOREIGN KEY (country_id)
+           REFERENCES public.country(id)
 );
 
 -- ===========================================================
@@ -542,7 +551,7 @@ CREATE TABLE IF NOT EXISTS calendar_details (
     year VARCHAR(10),
     calendar_id VARCHAR(10) NOT NULL,
     CONSTRAINT fk_calendar_details_calendar
-        FOREIGN KEY (calendar_code) REFERENCES calendar (id)
+        FOREIGN KEY (calendar_id) REFERENCES calendar (id)
         ON DELETE CASCADE
 );
 

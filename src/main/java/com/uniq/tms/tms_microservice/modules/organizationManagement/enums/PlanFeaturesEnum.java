@@ -34,6 +34,7 @@ public enum PlanFeaturesEnum {
     private final String priceTerm;
     private final List<String> features;
 
+
     PlanFeaturesEnum(String priceTerm, List<String> features) {
         this.priceTerm = priceTerm;
         this.features = features;

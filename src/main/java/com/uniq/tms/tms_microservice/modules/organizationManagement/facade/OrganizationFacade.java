@@ -1,21 +1,25 @@
 package com.uniq.tms.tms_microservice.modules.organizationManagement.facade;
 
 import com.uniq.tms.tms_microservice.modules.authenticationManagement.services.AuthService;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.mapper.PlanDtoMapper;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.model.*;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.services.PaymentService;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.services.SubscriptionService;
 import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.*;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.mapper.OrganizationDtoMapper;
-import com.uniq.tms.tms_microservice.modules.organizationManagement.model.Privilege;
-import com.uniq.tms.tms_microservice.modules.organizationManagement.model.RolePrivilege;
 import com.uniq.tms.tms_microservice.shared.helper.AuthHelper;
-import com.uniq.tms.tms_microservice.modules.organizationManagement.model.Organization;
-import com.uniq.tms.tms_microservice.modules.organizationManagement.model.OrganizationType;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.services.OrganizationService;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.io.ByteArrayOutputStream;
 import java.util.List;
+import java.util.Map;
 
 @Component
 public class OrganizationFacade {
@@ -25,13 +29,17 @@ public class OrganizationFacade {
     private final AuthHelper authHelper;
     private final AuthService authService;
     private final OrganizationDtoMapper organizationDtoMapper;
+    private final PaymentService paymentService;
+    private final PlanDtoMapper planDtoMapper;
 
-    public OrganizationFacade(OrganizationService organizationService, SubscriptionService subscriptionService, AuthHelper authHelper, AuthService authService, OrganizationDtoMapper organizationDtoMapper) {
+    public OrganizationFacade(OrganizationService organizationService, SubscriptionService subscriptionService, AuthHelper authHelper, AuthService authService, OrganizationDtoMapper organizationDtoMapper, PaymentService paymentService, PlanDtoMapper planDtoMapper) {
         this.organizationService = organizationService;
         this.subscriptionService = subscriptionService;
         this.authHelper = authHelper;
         this.authService = authService;
         this.organizationDtoMapper = organizationDtoMapper;
+        this.paymentService = paymentService;
+        this.planDtoMapper = planDtoMapper;
     }
 
     public ApiResponse createOrg(OrganizationDto organizationDto) {
@@ -131,10 +139,39 @@ public class OrganizationFacade {
         return new ApiResponse<>(HttpStatus.OK.value(), "Plan fetched successfully", response);
     }
 
-    public ApiResponse upgradePlan(String orgId, String orgSchema, UpgradePlanDto request) {
-        String resultMessage = subscriptionService.upgradePlan(orgId,orgSchema, request);
-        HttpStatus status = resultMessage.contains("mismatching") ? HttpStatus.BAD_REQUEST : HttpStatus.OK;
-        return new ApiResponse<>(status.value(), resultMessage, null);
+    public ApiResponse<Map<String, Boolean>> amountValidation(String orgId, String orgSchema, UpgradePlanDto request) {
+        boolean isValid = subscriptionService.amountValidation(orgId, orgSchema, request);
+        Map<String, Boolean> data = Map.of("isValid", isValid);
+        String message = isValid
+                ? "Amount is matching with the selected plan."
+                : "Amount is not matching with the selected plan.";
+
+        HttpStatus status = isValid ? HttpStatus.OK : HttpStatus.BAD_REQUEST;
+        return new ApiResponse<>(status.value(), message, data);
     }
 
+    public ApiResponse upgradePlan(String orgId, String orgSchema, UpgradePlanDto upgradePlanDto) {
+        boolean isUpgrade = subscriptionService.upgradePlan(orgId, orgSchema, upgradePlanDto);
+        Map<String, Boolean> data = Map.of("isValid", isUpgrade);
+        String message = isUpgrade
+                ? "Subscription Upgraded Successfully..."
+                : "Subscription Not Upgraded , Please try Again.";
+
+        HttpStatus status = isUpgrade ? HttpStatus.OK : HttpStatus.BAD_REQUEST;
+        return new ApiResponse<>(status.value(), message, null);
+    }
+
+    public PaymentDto getPaymentDetailsBySubscriptionId(String subscriptionId) {
+        return paymentService.getPaymentDetailsBySubscriptionId(subscriptionId);
+    }
+
+        public ApiResponse<PlanStatusDto> getCurrentPlanStatus(String orgId) {
+        PlanStatusModel model = subscriptionService.getCurrentPlanStatus(orgId);
+        PlanStatusDto dto = planDtoMapper.toDto(model);
+        return new ApiResponse<>(200, "Plan details fetched successfully", dto);
+    }
+
+    public ResponseEntity<byte[]> getPaymentDetailsPdfBySubscriptionId(String subscriptionId, String orgId) {
+        return paymentService.getPaymentDetailsPdfBySubscriptionId(subscriptionId, orgId);
+    }
 }

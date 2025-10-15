@@ -3,7 +3,11 @@ package com.uniq.tms.tms_microservice.modules.leavemanagement.adapter;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.HolidayDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.CalendarEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.CalendarHolidayEntity;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.model.CalendarId;
+import org.etsi.uri.x01903.v13.SignerRoleType;
+
 import java.util.List;
+import java.util.Optional;
 
 public interface CalendarAdapter {
     void unsetExistingDefault();
@@ -17,12 +21,13 @@ public interface CalendarAdapter {
     List<CalendarEntity> findAllCalendarByIds(List<CalendarEntity> entity);
     CalendarEntity getById(String id);
     CalendarEntity updateCalendar(CalendarEntity entity);
-    CalendarEntity findByCalendarId(String calendarId);
+    Optional<CalendarEntity> findByCalendarId(String calendarId);
     CalendarHolidayEntity saveManualHolidays(CalendarHolidayEntity entity);
     CalendarHolidayEntity findById(String holidayId);
     CalendarHolidayEntity updateHoliday(CalendarHolidayEntity existingEntity);
-    List<CalendarHolidayEntity> findHolidayByCalendarId(String id);
+    List<CalendarHolidayEntity> findHolidayByCalendarId(String id, String year);
     Boolean existsById(String id);
     Boolean existsCalendarIdAndHolidayId(String calendarId,String holidayId);
     void deleteByCalendarAndHoliday(String calendarId , String holidayId);
+    CalendarEntity findByCalendarIdAndDefaultTrue(CalendarId ids);
 }

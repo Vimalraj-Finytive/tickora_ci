@@ -118,6 +118,11 @@ public class OrganizationAdapterImpl implements OrganizationAdapter {
     }
 
     @Override
+    public String getOrgName(String orgId) {
+        return organizationRepository.findOrgNameByOrganizationId(orgId);
+    }
+
+    @Override
     public List<OrganizationSummaryDto> getOrgSummary(String orgId) {
         Optional<OrganizationEntity> organizationOpt = organizationRepository.findSummaryById(orgId);
         List<OrganizationEntity> orgList = organizationOpt.map(List::of).orElse(List.of());
