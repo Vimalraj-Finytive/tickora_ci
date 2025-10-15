@@ -12,9 +12,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.List;
-import java.util.Map;
-
 @RestController
 @RequestMapping(OrganizationConstant.ORGANIZATION_URL)
 public class OrganizationController {
@@ -182,5 +179,14 @@ public class OrganizationController {
         ApiResponse<PlanStatusDto> response = organizationFacade.getCurrentPlanStatus(orgId);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
+
+
+    @GetMapping("/invoice/{subscriptionId}")
+    public ResponseEntity<byte[]> getPaymentDetailsPdfBySubscriptionId(
+            @RequestHeader("Authorization") String token,
+            @PathVariable String subscriptionId) {
+        return organizationFacade.getPaymentDetailsPdfBySubscriptionId(subscriptionId);
+    }
+
 }
 
