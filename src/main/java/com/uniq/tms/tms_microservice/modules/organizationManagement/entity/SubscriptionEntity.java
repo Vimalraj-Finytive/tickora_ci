@@ -11,6 +11,9 @@ public class SubscriptionEntity {
     @Column(name = "subscription_id")
     private String subId;
 
+    @Column(name = "payment_id", nullable = false)
+    private String paymentId;
+
     @Column(name = "start_date", nullable = false)
     private LocalDateTime startDate;
 
@@ -44,6 +47,14 @@ public class SubscriptionEntity {
 
     public void setSubId(String subId) {
         this.subId = subId;
+    }
+
+    public String getPaymentId() {
+        return paymentId;
+    }
+
+    public void setPaymentId(String paymentId) {
+        this.paymentId = paymentId;
     }
 
     public LocalDateTime getStartDate() {

@@ -1,6 +1,8 @@
 package com.uniq.tms.tms_microservice.shared.communication;
 
 import jakarta.annotation.Nullable;
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
@@ -8,6 +10,7 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.thymeleaf.TemplateEngine;
@@ -87,4 +90,37 @@ public class EmailService {
             throw new RuntimeException("Failed to send message to " + toEmail + ":" + e.getMessage(), e);
         }
     }
+
+    public void sendSubscriptionReminderEmail(String toEmail, String username,
+                                              String orgName, long daysRemaining,
+                                              String expiryDate, String renewLink) {
+        try {
+            Context context = new Context();
+            context.setVariable("username", username);
+            context.setVariable("orgName", orgName);
+            context.setVariable("daysRemaining", daysRemaining);
+            context.setVariable("expiryDate", expiryDate);
+            context.setVariable("renewLink", renewLink);
+            context.setVariable("emailType", "subscription_reminder");
+
+            String htmlContent = templateEngine.process("subscription_reminder", context);
+
+            Map<String, String> payload = new HashMap<>();
+            payload.put("to", toEmail);
+            payload.put("subject", "Subscription Renewal Reminder");
+            payload.put("body", htmlContent);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            HttpEntity<Map<String, String>> request = new HttpEntity<>(payload, headers);
+
+            ResponseEntity<String> response = restTemplate.postForEntity(mailServiceUrl, request, String.class);
+            log.info("Subscription reminder email sent to {}. Response: {}", toEmail, response.getStatusCode());
+        } catch (Exception e) {
+            log.error("Failed to send subscription reminder email to {}: {}", toEmail, e.getMessage(), e);
+            throw new RuntimeException("Failed to send subscription reminder email to " + toEmail, e);
+        }
+    }
+
+
 }

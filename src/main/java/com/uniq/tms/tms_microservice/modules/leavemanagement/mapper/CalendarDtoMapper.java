@@ -2,6 +2,7 @@ package com.uniq.tms.tms_microservice.modules.leavemanagement.mapper;
 
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.CalendarDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.CalendarIdDto;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.CalendarResponseDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.HolidayDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.CalendarEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.CalendarHolidayEntity;
@@ -20,6 +21,7 @@ public interface CalendarDtoMapper {
     CalendarDto toDto(Calendar middleware);
 
     @Mapping(target = "importType", expression = "java(mapImportType(calendarDto.getImportType()))")
+    @Mapping(target = "countryName", ignore = true)
     Calendar toMiddleware(CalendarDto calendarDto);
 
     @Mapping(target = "year", expression = "java(extractYear(dto.getDate()))")
@@ -39,4 +41,14 @@ public interface CalendarDtoMapper {
     }
 
     CalendarId toModel(CalendarIdDto ids);
+
+    CalendarResponseDto toResponseDto(Calendar model);
+
+    default CalendarResponseDto safeToResponseDto(Calendar model) {
+        if (model == null) {
+            return null;
+        }
+
+        return toResponseDto(model);
+    }
 }

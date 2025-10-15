@@ -32,6 +32,7 @@ public class UserController {
         this.authHelper = authHelper;
     }
 
+
     @GetMapping("/group")
     public ResponseEntity<ApiResponse> getAllGroup(@RequestHeader(value = "Authorization", required = false) String authHeader) {
         String orgId;
@@ -246,7 +247,7 @@ public class UserController {
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
-    @PostMapping("bulk/group")
+    @PostMapping("/bulk/group")
     public ResponseEntity<ApiResponse> addOrUpdateGroupMembers(
             @RequestHeader("Authorization") String token,
             @Valid @RequestBody AddOrUpdateGroupMembersDto requestDto) {
@@ -254,11 +255,19 @@ public class UserController {
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
-    @PostMapping("bulk/Location")
+    @PostMapping("/bulk/Location")
     public ResponseEntity<ApiResponse<BulkUserLocationDto>> assignLocations(
             @RequestHeader("Authorization") String token,
             @Valid @RequestBody BulkUserLocationDto dto) {
         ApiResponse<BulkUserLocationDto> response = userFacade.assignLocations(dto);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
+
+    @PatchMapping("/splitTime")
+    public ResponseEntity<ApiResponse> updateSplitTime(
+            @RequestHeader("Authorization") String token,
+            @Valid @RequestBody UpdateSplitTimeDto request) {
+        ApiResponse response = userFacade.updateSplitTime(request);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 

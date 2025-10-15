@@ -75,7 +75,7 @@ public class UserFacade {
 
         userService.deleteUsers(orgId, requestDto.getUserIds(), userNameFromToken, requestDto.getComments());
 
-        return new ApiResponse(200, "User Inactived Successfully", null);
+        return new ApiResponse(200, "Users Inactived Successfully", null);
     }
 
     public ApiResponse createGroup( AddGroupDto addGroupDto) {
@@ -198,28 +198,35 @@ public class UserFacade {
         return userService.bulkCreateUsers(file, orgId, userId);
     }
 
-
     public ApiResponse createUser(UserDto userDto, SecondaryDetailsDto secondaryDetailsDto) {
         String orgId = authHelper.getOrgId();
         if (orgId == null) {
             return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
         }
-    Long subscribedLimit = userService.getSubscribedUserLimit(orgId);
-
-    if (subscribedLimit == null) {
-        return new ApiResponse(400, "Subscription not found.", null);
+        Long currentCount = userService.getCurrentUserCount(orgId);
+        long freeLimit = 30L;
+        if (currentCount < freeLimit) {
+            ApiResponse user = userService.createUser(userDto, secondaryDetailsDto, orgId);
+            return new ApiResponse(HttpStatus.CREATED.value(),
+                    "User created successfully",
+                    user);
+        }
+        Long subscribedLimit = userService.getSubscribedUserLimit(orgId);
+        if (subscribedLimit == null) {
+            return new ApiResponse(400,
+                    "Free user limit (30) reached. Please subscribe to a plan to add more users.",
+                    null);
+        }
+        if (currentCount >= subscribedLimit) {
+            return new ApiResponse(403,
+                    "User creation limit reached based on your current plan. Please upgrade your plan.",
+                    null);
+        }
+        ApiResponse user = userService.createUser(userDto, secondaryDetailsDto, orgId);
+        return new ApiResponse(HttpStatus.CREATED.value(),
+                "User created successfully",
+                user);
     }
-
-    Long currentCount = userService.getCurrentUserCount(orgId);
-
-    if (currentCount.equals(subscribedLimit)) {
-        return new ApiResponse(403,"User creation limit reached. Please upgrade your plan.",null);
-    }
-        ApiResponse user = userService.createUser(userDto, secondaryDetailsDto,orgId);
-        return new ApiResponse(HttpStatus.CREATED.value(), "User Created successfully and Reset password link sent to email.", user);
-    }
-
-
 
     public ApiResponse getUserProfile(String userId) {
         String orgId = authHelper.getOrgId();
@@ -321,6 +328,54 @@ public class UserFacade {
                 .map(userDtoMapper::toDto).collect(Collectors.toList());
         return result;
     }
+
+//    public ApiResponse updateWorkSchedules(BulkWorkScheduleUpdateRequestDto requestDto) {
+//        String orgId = authHelper.getOrgId();
+//        String userNameFromToken = authHelper.getUsername();
+//
+//        if (orgId == null) {
+//            return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
+//        }
+//        List<BulkWorkScheduleUpdateResponseDto> results =
+//                userService.updateWorkSchedules(requestDto,userNameFromToken,orgId); // orgID, dto, username
+//
+//        List<String> successUsers = results.stream()
+//                .filter(BulkWorkScheduleUpdateResponseDto::isSuccess)
+//                .map(BulkWorkScheduleUpdateResponseDto::getMemberId)
+//                .collect(Collectors.toList());
+//
+//        List<String> failedUsers = results.stream()
+//                .filter(r -> !r.isSuccess())
+//                .map(BulkWorkScheduleUpdateResponseDto::getMessage) // <-- fixed here
+//                .collect(Collectors.toList());
+//
+//        StringBuilder message = new StringBuilder();
+//
+//        if (!successUsers.isEmpty()) {
+//            message.append("Bulk Work Schedule Update Completed. ");
+//            message.append("Updated: ").append(String.join(", ", successUsers)).append(". ");
+//        }
+//
+//        if (!failedUsers.isEmpty()) {
+//            if (successUsers.isEmpty()) {
+//                message.append(String.join(", ", failedUsers)).append(".");
+//            } else {
+//                message.append("Failed: ").append(String.join(", ", failedUsers)).append(".");
+//            }
+//        }
+//
+//        if (successUsers.isEmpty() && failedUsers.isEmpty()) {
+//            message.append("No updates were made.");
+//        }
+//
+//        int statusCode = 200;
+//        if (failedUsers.size() == 1 && failedUsers.get(0).startsWith("Work Schedule not found")) {
+//            statusCode = 404;
+//        }
+//
+//        return new ApiResponse(statusCode, message.toString().trim(), null);
+//    }
+
     public ApiResponse updateWorkSchedules(BulkWorkScheduleUpdateRequestDto requestDto) {
         String orgId = authHelper.getOrgId();
         String userNameFromToken = authHelper.getUsername();
@@ -329,30 +384,39 @@ public class UserFacade {
             return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
         }
         List<BulkWorkScheduleUpdateResponseDto> results =
-                userService.updateWorkSchedules(requestDto,userNameFromToken,orgId); // orgID, dto, username
+                userService.updateWorkSchedules(requestDto, userNameFromToken, orgId);
+        Map<Boolean, List<BulkWorkScheduleUpdateResponseDto>> partitioned =
+                results.stream().collect(Collectors.partitioningBy(BulkWorkScheduleUpdateResponseDto::isSuccess));
 
-        List<String> successUsers = results.stream()
-                .filter(BulkWorkScheduleUpdateResponseDto::isSuccess)
+        List<String> successUsers = partitioned.get(true).stream()
                 .map(BulkWorkScheduleUpdateResponseDto::getMemberId)
-                .collect(Collectors.toList());
+                .toList();
 
-        List<String> failedUsers = results.stream()
-                .filter(r -> !r.isSuccess())
-                .map(BulkWorkScheduleUpdateResponseDto::getMessage) // <-- fixed here
-                .collect(Collectors.toList());
+        List<String> failedUsers = partitioned.get(false).stream()
+                .map(BulkWorkScheduleUpdateResponseDto::getMessage)
+                .toList();
 
         StringBuilder message = new StringBuilder();
 
         if (!successUsers.isEmpty()) {
             message.append("Bulk Work Schedule Update Completed. ");
-            message.append("Updated: ").append(String.join(", ", successUsers)).append(". ");
+            if (successUsers.size() <= 10) {
+                message.append("Updated: ").append(String.join(", ", successUsers)).append(". ");
+            } else {
+                message.append("Updated ").append(successUsers.size()).append(" users successfully. ");
+            }
         }
 
         if (!failedUsers.isEmpty()) {
             if (successUsers.isEmpty()) {
                 message.append(String.join(", ", failedUsers)).append(".");
             } else {
-                message.append("Failed: ").append(String.join(", ", failedUsers)).append(".");
+                message.append("Failed: ");
+                if (failedUsers.size() <= 10) {
+                    message.append(String.join(", ", failedUsers)).append(".");
+                } else {
+                    message.append(failedUsers.size()).append(" users failed to update.");
+                }
             }
         }
 
@@ -368,6 +432,7 @@ public class UserFacade {
         return new ApiResponse(statusCode, message.toString().trim(), null);
     }
 
+
     public ApiResponse addOrUpdateGroupMembers(AddOrUpdateGroupMembersDto dto) {
         String orgId = authHelper.getOrgId();
         UserGroupModel model = userDtoMapper.toModel(dto);
@@ -382,6 +447,20 @@ public class UserFacade {
         BulkUserLocationDto Dto=userDtoMapper.toDto(saveUserLocation);
         return new ApiResponse<>(200, "Locations assigned successfully", null);
 
+    }
+
+    public ApiResponse updateSplitTime(UpdateSplitTimeDto request) {
+        String orgId = authHelper.getOrgId();
+        String userId = authHelper.getUserId();
+        if (orgId == null) {
+            return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
+        }
+        log.info("FACADE: Calling service with userId: {}, orgId: {}, splitTimeEnabled: {}",
+                userId, orgId, request.getSplitTimeEnabled());
+        ApiResponse serviceResponse = userService.updateSplitTime(userId, orgId, request.getSplitTimeEnabled());
+        log.info("FACADE: Service returned - status: {}, message: {}",
+                serviceResponse.getStatusCode(), serviceResponse.getMessage());
+        return serviceResponse;
     }
 
 

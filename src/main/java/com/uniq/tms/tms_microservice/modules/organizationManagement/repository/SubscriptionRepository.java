@@ -30,5 +30,8 @@ public interface SubscriptionRepository extends JpaRepository<SubscriptionEntity
     @Query("SELECT s.subscribedUsers FROM SubscriptionEntity s WHERE s.orgId = :orgId AND s.status = 'Active'")
     Long findSubscriptionIdByOrgId(@Param("orgId") String orgId);
 
+    @Query("SELECT s FROM SubscriptionEntity s WHERE s.orgId = :orgId AND s.status = 'Active'")
+    Optional<SubscriptionEntity> findActiveSubscriptionByOrgId(@Param("orgId") String orgId);
 
+    Optional<SubscriptionEntity> findById(String subscriptionId);
 }

@@ -5,8 +5,11 @@ import com.uniq.tms.tms_microservice.modules.locationManagement.entity.UserLocat
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.RoleEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.SubscriptionEntity;
 import com.uniq.tms.tms_microservice.modules.userManagement.dto.GroupDto;
+import com.uniq.tms.tms_microservice.modules.userManagement.dto.UserNameEmailDto;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.*;
 import com.uniq.tms.tms_microservice.modules.userManagement.dto.UserNameSuggestionDto;
+import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.WorkScheduleEntity;
+
 import java.lang.String;
 import java.util.List;
 import java.util.Map;
@@ -105,5 +108,8 @@ public interface UserAdapter {
     Optional<LocationEntity> findLocationById(Long locationId);
     boolean exists(String userId, Long locationId);
     UserLocationEntity save(UserLocationEntity mapping);
-
+    void bulkUpdateWorkSchedule(WorkScheduleEntity workSchedule, List<String> userIds, String orgId);
+    List<UserNameEmailDto> findAdminAndSuperAdminNamesAndEmails();
+    UserEntity findUserModelByOrgIdAndUserId(String orgId, String userId);
+    void updateUserEntity(UserEntity user);
 }

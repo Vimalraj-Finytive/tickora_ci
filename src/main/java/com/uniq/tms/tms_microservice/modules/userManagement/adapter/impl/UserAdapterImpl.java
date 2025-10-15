@@ -9,11 +9,13 @@ import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.Subsc
 import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.*;
 import com.uniq.tms.tms_microservice.modules.userManagement.adapter.UserAdapter;
 import com.uniq.tms.tms_microservice.modules.userManagement.dto.GroupDto;
+import com.uniq.tms.tms_microservice.modules.userManagement.dto.UserNameEmailDto;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.*;
 import com.uniq.tms.tms_microservice.modules.userManagement.repository.*;
 import com.uniq.tms.tms_microservice.modules.locationManagement.mapper.LocationEntityMapper;
 import com.uniq.tms.tms_microservice.modules.userManagement.model.UserResponse;
 import com.uniq.tms.tms_microservice.modules.userManagement.dto.UserNameSuggestionDto;
+import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.WorkScheduleEntity;
 import jakarta.transaction.Transactional;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -539,5 +541,24 @@ public class UserAdapterImpl implements UserAdapter {
         return userLocationRepository.save(entity);
     }
 
+    public void updateUserEntity(UserEntity user) {
+        userRepository.save(user);
+    }
 
+    public void bulkUpdateWorkSchedule(WorkScheduleEntity workSchedule, List<String> userIds, String orgId) {
+        if (userIds == null || userIds.isEmpty()) {
+            return;
+        }
+        int updatedCount = userRepository.bulkUpdateWorkSchedule(workSchedule, userIds, orgId);
+    }
+
+    @Override
+    public List<UserNameEmailDto> findAdminAndSuperAdminNamesAndEmails() {
+        return userRepository.findAdminAndSuperAdminNamesAndEmails();
+    }
+
+    @Override
+    public UserEntity findUserModelByOrgIdAndUserId(String orgId, String userId) {
+        return userRepository.findByOrganizationIdAndUserId(orgId, userId);
+    }
 }

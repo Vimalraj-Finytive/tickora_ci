@@ -17,6 +17,7 @@ public class User {
     private List<Long> groupId;
     private boolean active;
     private String workSchedule;
+    private boolean isSplitTimeEnabled = true;
 
     public boolean isActive() {
         return active;
@@ -112,5 +113,13 @@ public class User {
 
     public void setWorkSchedule(String workSchedule) {
         this.workSchedule = workSchedule;
+    }
+
+    public boolean isSplitTimeEnabled() {
+        return isSplitTimeEnabled;
+    }
+
+    public void setSplitTimeEnabled(boolean splitTimeEnabled) {
+        isSplitTimeEnabled = splitTimeEnabled;
     }
 }

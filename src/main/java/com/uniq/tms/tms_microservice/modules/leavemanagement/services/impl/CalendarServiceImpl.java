@@ -13,12 +13,14 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.model.Calendar;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.CalendarId;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.Holiday;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.services.CalendarService;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.OrganizationRepository;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 @Service
@@ -30,12 +32,14 @@ public class CalendarServiceImpl implements CalendarService {
     private final CalendarAdapter calendarAdapter;
     private final IdGenerationService idGenerationService;
     private final HolidayEntityMapper holidayEntityMapper;
+    private final OrganizationRepository organizationRepository;
 
-    public CalendarServiceImpl(CalendarEntityMapper calendarEntityMapper, CalendarAdapter calendarAdapter, IdGenerationService idGenerationService, HolidayEntityMapper holidayEntityMapper) {
+    public CalendarServiceImpl(CalendarEntityMapper calendarEntityMapper, CalendarAdapter calendarAdapter, IdGenerationService idGenerationService, HolidayEntityMapper holidayEntityMapper, OrganizationRepository organizationRepository) {
         this.calendarEntityMapper = calendarEntityMapper;
         this.calendarAdapter = calendarAdapter;
         this.idGenerationService = idGenerationService;
         this.holidayEntityMapper = holidayEntityMapper;
+        this.organizationRepository = organizationRepository;
     }
 
     @Override
@@ -49,6 +53,7 @@ public class CalendarServiceImpl implements CalendarService {
         if (isDefault) {
             calendarAdapter.unsetExistingDefault();
         }
+
         CalendarEntity entity = calendarEntityMapper.toEntity(calendarMiddleware);
         CalendarEntity savedEntity = calendarAdapter.saveCalendar(entity);
 
@@ -77,7 +82,9 @@ public class CalendarServiceImpl implements CalendarService {
 
     @Override
     public List<Calendar> getAll(){
-       return calendarAdapter.getAllCalendars().stream()
+        return calendarAdapter.getAllCalendars().stream()
+                .filter(Objects::nonNull)
+                .filter(e -> Boolean.TRUE.equals(e.getActive()))
                 .map(calendarEntityMapper::toModel)
                 .toList();
     }
@@ -87,12 +94,20 @@ public class CalendarServiceImpl implements CalendarService {
     public void delete(CalendarId ids){
         List<CalendarEntity> entity = calendarEntityMapper.toEntity(ids);
         List<CalendarEntity> calendarEntities = calendarAdapter.findAllCalendarByIds(entity);
-        if (calendarEntities == null || calendarEntities.isEmpty()){
-            log.warn("No calendars found for Ids: {}", ids);
+        if (calendarEntities == null || calendarEntities.isEmpty()) {
+            log.warn("No calendars found for IDs: {}", ids);
             return;
         }
-        log.info("Archiving the calendars listed");
-        calendarAdapter.deleteCalendarById(entity);
+
+        boolean hasDefault = calendarEntities.stream()
+                .anyMatch(CalendarEntity::getIsDefault);
+
+        if (hasDefault) {
+            throw new IllegalArgumentException("Default calendars cannot be deleted");
+        }
+
+        log.info("Archiving and deleting calendars: {}", ids);
+        calendarAdapter.deleteCalendarById(calendarEntities);
     }
 
     @Override
@@ -114,7 +129,11 @@ public class CalendarServiceImpl implements CalendarService {
     public Holiday createHoliday(Holiday holidayMiddleware, String calendarId) {
         CalendarHolidayEntity entity = holidayEntityMapper.toEntity(holidayMiddleware);
         entity.setId(idGenerationService.generateNextId(IdGenerationTypeEnum.CALENDAR_DETAILS));
-        CalendarEntity calendar = calendarAdapter.findByCalendarId(calendarId);
+        Optional<CalendarEntity> optionalCalendar = calendarAdapter.findByCalendarId(calendarId);
+        if (optionalCalendar.isEmpty()) {
+            throw new IllegalArgumentException("Calendar not found for ID: " + calendarId);
+        }
+        CalendarEntity calendar = optionalCalendar.get();
         entity.setCalendar(calendar);
         entity.setYear(String.valueOf(entity.getDate().getYear()));
         CalendarHolidayEntity savedEntity = calendarAdapter.saveManualHolidays(entity);
@@ -141,11 +160,11 @@ public class CalendarServiceImpl implements CalendarService {
     }
 
     @Override
-    public List<Holiday> findHolidaysByCalendar(String id) {
+    public List<Holiday> findHolidaysByCalendar(String id, String year) {
         if(!calendarAdapter.existsById(id)){
             throw new IllegalArgumentException("calendar Id not found");
         }
-        return calendarAdapter.findHolidayByCalendarId(id).stream()
+        return calendarAdapter.findHolidayByCalendarId(id, year).stream()
                 .map(holidayEntityMapper::toModel)
                 .toList();
     }
