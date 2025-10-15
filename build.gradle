@@ -61,8 +61,9 @@ dependencies {
 	implementation 'com.zaxxer:HikariCP'
 	implementation 'org.hibernate.orm:hibernate-core:6.4.4.Final'
 	implementation 'com.razorpay:razorpay-java:1.4.5'
-	implementation 'com.itextpdf:itext7-core:7.1.15'
-	implementation 'com.itextpdf:itextpdf:5.5.13.3'
+	implementation 'com.itextpdf:kernel:7.2.6'
+	implementation 'com.itextpdf:layout:7.2.6'
+	implementation 'com.itextpdf:html2pdf:4.0.4'
 }
 
 

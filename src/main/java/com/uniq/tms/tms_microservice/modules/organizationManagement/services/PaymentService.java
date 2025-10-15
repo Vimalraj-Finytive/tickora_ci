@@ -14,6 +14,5 @@ public interface PaymentService {
     String createPaymentOrder(String orgId, BigDecimal amount);
     PaymentEntity createPayment(String orgId, String orderId,  BigDecimal amount,String billingCycle, String orgSchema, PaymentStatus status);
     PaymentDto getPaymentDetailsBySubscriptionId(String subscriptionId);
-
-    ResponseEntity<byte[]> getPaymentDetailsPdfBySubscriptionId(String subscriptionId);
+    ResponseEntity<byte[]> getPaymentDetailsPdfBySubscriptionId(String subscriptionId, String orgId);
 }

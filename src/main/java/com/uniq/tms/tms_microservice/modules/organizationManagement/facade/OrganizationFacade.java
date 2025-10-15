@@ -171,7 +171,7 @@ public class OrganizationFacade {
         return new ApiResponse<>(200, "Plan details fetched successfully", dto);
     }
 
-    public ResponseEntity<byte[]> getPaymentDetailsPdfBySubscriptionId(String subscriptionId) {
-        return paymentService.getPaymentDetailsPdfBySubscriptionId(subscriptionId);
+    public ResponseEntity<byte[]> getPaymentDetailsPdfBySubscriptionId(String subscriptionId, String orgId) {
+        return paymentService.getPaymentDetailsPdfBySubscriptionId(subscriptionId, orgId);
     }
 }

@@ -185,7 +185,8 @@ public class OrganizationController {
     public ResponseEntity<byte[]> getPaymentDetailsPdfBySubscriptionId(
             @RequestHeader("Authorization") String token,
             @PathVariable String subscriptionId) {
-        return organizationFacade.getPaymentDetailsPdfBySubscriptionId(subscriptionId);
+        String orgId = authHelper.getOrgId();
+        return organizationFacade.getPaymentDetailsPdfBySubscriptionId(subscriptionId,orgId);
     }
 
 }

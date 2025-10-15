@@ -4,6 +4,7 @@ import com.razorpay.Order;
 import com.razorpay.Payment;
 import com.razorpay.RazorpayClient;
 import com.razorpay.RazorpayException;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.OrganizationAdapter;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.PaymentAdapter;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.SubscriptionAdapter;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.PaymentDetailsDto;
@@ -41,10 +42,12 @@ public class PaymentServiceImpl implements PaymentService {
 
     private final PaymentAdapter paymentAdapter;
     private final SubscriptionAdapter subscriptionAdapter;
+    private final OrganizationAdapter organizationAdapter;
 
-    public PaymentServiceImpl(PaymentAdapter paymentAdapter, SubscriptionAdapter subscriptionAdapter) {
+    public PaymentServiceImpl(PaymentAdapter paymentAdapter, SubscriptionAdapter subscriptionAdapter, OrganizationAdapter organizationAdapter) {
         this.paymentAdapter = paymentAdapter;
         this.subscriptionAdapter = subscriptionAdapter;
+        this.organizationAdapter = organizationAdapter;
     }
 
     @Override
@@ -149,13 +152,14 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     @Override
-    public ResponseEntity<byte[]> getPaymentDetailsPdfBySubscriptionId(String subscriptionId) {
+    public ResponseEntity<byte[]> getPaymentDetailsPdfBySubscriptionId(String subscriptionId, String orgId) {
         PaymentDto paymentDetails = getPaymentDetailsBySubscriptionId(subscriptionId);
+        String OrgName =organizationAdapter.getOrgName(orgId);
         if (paymentDetails == null) {
             return ResponseEntity.noContent().build();
         }
         try {
-            ByteArrayOutputStream pdfStream = InvoiceGeneratorHelper.generateInvoicePdf(paymentDetails);
+            ByteArrayOutputStream pdfStream = InvoiceGeneratorHelper.generateInvoicePdf(paymentDetails, OrgName);
             HttpHeaders headers = new HttpHeaders();
             headers.add(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=invoice.pdf");
             return ResponseEntity.ok()

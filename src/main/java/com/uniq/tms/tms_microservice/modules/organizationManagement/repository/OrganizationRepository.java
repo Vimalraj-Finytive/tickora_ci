@@ -27,4 +27,7 @@ public interface OrganizationRepository extends JpaRepository<OrganizationEntity
 
     @Query("SELECT o FROM OrganizationEntity o WHERE o.organizationId = :orgId")
     Optional<OrganizationEntity> findSummaryById(String orgId);
+
+    @Query("SELECT o.orgName FROM OrganizationEntity o WHERE o.organizationId = :orgId")
+    String findOrgNameByOrganizationId(String orgId);
 }
