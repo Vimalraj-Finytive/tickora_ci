@@ -10,8 +10,6 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
-
 import java.time.LocalDate;
 import java.util.List;
 
@@ -58,20 +56,6 @@ public class  TimesheetController {
         return ResponseEntity.ok(new ApiResponse<>(200, "Timesheet updated successfully", updatedTimesheet));
     }
 
-//    @PutMapping("/editTimesheet")
-//    public ResponseEntity<ApiResponse<TimesheetDto>> upsertClockInOutTimes(
-//            @RequestHeader("Authorization") String token,
-//            @RequestParam String userId,
-//            @RequestParam LocalDate date,
-//            @RequestBody TimesheetDto request) {
-//
-//        TimesheetDto timesheetDto =timesheetFacade.upsertClockInOut(userId, date, request);
-//
-//        return ResponseEntity.ok(new ApiResponse<>(200, "Timesheet upserted successfully", timesheetDto));
-//    }
-
-
-
     @PutMapping("/editTimesheet")
     public ResponseEntity<ApiResponse<TimesheetDto>> upsertClockInOutTimes(
             @RequestParam String userId,
@@ -87,10 +71,6 @@ public class  TimesheetController {
 
         return ResponseEntity.ok(new ApiResponse<>(200, "Timesheet upserted successfully", timesheetDto));
     }
-
-
-
-
 
     @PostMapping("/dashboard")
     public ResponseEntity<?> getDashboard(@RequestHeader("Authorization") String token,

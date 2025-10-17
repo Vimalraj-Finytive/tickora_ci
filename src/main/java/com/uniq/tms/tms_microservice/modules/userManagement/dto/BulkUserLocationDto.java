@@ -3,6 +3,7 @@ package com.uniq.tms.tms_microservice.modules.userManagement.dto;
 import java.util.List;
 
 public class BulkUserLocationDto {
+
     private List<String> memberIds;
     private List<Long> locationIds;
 

@@ -207,7 +207,7 @@ public class UserFacade {
         Long subscribedLimit = userService.getSubscribedUserLimit(orgId);
 
         if (!(currentCount < subscribedLimit)) {
-            return new ApiResponse(403,"User creation limit reached. Please upgrade your plan.",null);
+            return new ApiResponse(404,"User creation limit reached. Please upgrade your plan.",null);
         }
         else {
             ApiResponse user = userService.createUser(userDto, secondaryDetailsDto, orgId);

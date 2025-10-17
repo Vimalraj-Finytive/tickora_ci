@@ -2339,6 +2339,7 @@ public class UserServiceImpl implements UserService {
         }
         return toModel;
     }
+
     @Override
     @Transactional
     public ApiResponse updateSplitTime(String userId, String orgId, Boolean isSplitTimeEnabled) {

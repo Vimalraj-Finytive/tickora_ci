@@ -2,7 +2,6 @@ package com.uniq.tms.tms_microservice.modules.workScheduleManagement.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.validation.constraints.Pattern;
-
 import java.util.List;
 
 public class WorkScheduleDto {
