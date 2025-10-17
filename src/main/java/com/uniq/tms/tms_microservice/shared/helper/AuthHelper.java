@@ -1,20 +1,26 @@
 package com.uniq.tms.tms_microservice.shared.helper;
 
+import com.uniq.tms.tms_microservice.shared.security.jwt.JwtUtil;
 import com.uniq.tms.tms_microservice.shared.security.user.CustomUserDetails;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
 @Component
 public class AuthHelper {
+    private final JwtUtil jwtUtil;
 
+    @Autowired
+    public AuthHelper(JwtUtil jwtUtil) {
+        this.jwtUtil = jwtUtil;
+    }
     public CustomUserDetails getCurrentUser() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null && auth.getPrincipal() instanceof CustomUserDetails) {
-            return (CustomUserDetails) auth.getPrincipal();
-        } else {
-            throw new RuntimeException("Unauthenticated or Invalid user");
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.getPrincipal() instanceof CustomUserDetails) {
+            return (CustomUserDetails) authentication.getPrincipal();
         }
+        throw new IllegalStateException("No authenticated user found.");
     }
 
     public String getUserId() {

@@ -203,4 +203,9 @@ public class SubscriptionAdapterImpl implements SubscriptionAdapter {
     public Optional<SubscriptionEntity> findSubscriptionDetails(String subscriptionId) {
         return subscriptionRepository.findById(subscriptionId);
     }
+
+    @Override
+    public List<SubscriptionEntity> findAllSubscriptionsByOrgId(String orgId) {
+        return subscriptionRepository.findAllSubscriptionsByOrgId(orgId);
+    }
 }
