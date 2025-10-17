@@ -10,6 +10,7 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.CountryEntit
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.PublicHolidayEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.mapper.CalendarDtoMapper;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.mapper.HolidayDtoMapper;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.model.CalendarId;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.repository.CalendarHolidayRepository;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.repository.CalendarRepository;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.repository.CountryRepository;
@@ -201,9 +202,8 @@ public class CalendarAdapterImpl implements CalendarAdapter {
     }
 
     @Override
-    public CalendarEntity findByCalendarId(String calendarId) {
-        return calendarRepository.findById(calendarId).orElseThrow(
-                () -> new EntityNotFoundException("No Calendar found for Given Id"));
+    public Optional<CalendarEntity> findByCalendarId(String calendarId) {
+        return calendarRepository.findByCalendarId(calendarId);
     }
 
     @Override
@@ -224,8 +224,8 @@ public class CalendarAdapterImpl implements CalendarAdapter {
     }
 
     @Override
-    public List<CalendarHolidayEntity> findHolidayByCalendarId(String id) {
-        return calendarHolidayRepository.findByCalendar_Id(id);
+    public List<CalendarHolidayEntity> findHolidayByCalendarId(String id, String year) {
+        return calendarHolidayRepository.findByCalendar_IdAndYear(id, year);
     }
 
     @Override
@@ -241,6 +241,11 @@ public class CalendarAdapterImpl implements CalendarAdapter {
     @Override
     public void deleteByCalendarAndHoliday(String calendarId, String holidayId) {
         calendarHolidayRepository.deleteByCalendarAndHoliday(calendarId,holidayId);
+    }
+
+    @Override
+    public CalendarEntity findByCalendarIdAndDefaultTrue(CalendarId ids) {
+        return calendarRepository.findByIdAndIsDefaultTrue(ids);
     }
 }
 

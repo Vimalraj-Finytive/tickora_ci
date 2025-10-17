@@ -11,7 +11,6 @@ import org.springframework.web.multipart.MultipartFile;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
-import com.uniq.tms.tms_microservice.dto.DeactivateUserRequestDto;
 
 public interface UserService {
 
@@ -40,7 +39,6 @@ public interface UserService {
     List<UserResponseDto> getInactiveUsers(String orgId, String role);
     List<EditUserDto> updateIsActive(EditUser editUser, String orgId, String userNameFromToken);
     ApiResponse createSuperAdminUser(Organization organization, String orgId, String schemaName);
-    ApiResponse<UserValidationDto> validateUser(String userId);
     ApiResponse<List<UserHistoryResponseDto>> getUserHistoryLog(String userId);
     List<UserBulkChangingModel> updateMultipleUserRoles(List<String> userIds, Long roleId, String orgId);
     List<BulkWorkScheduleUpdateResponseDto> updateWorkSchedules(BulkWorkScheduleUpdateRequestDto requestDto, String userNameFromToken,String orgId);
@@ -48,4 +46,5 @@ public interface UserService {
     Long getSubscribedUserLimit(String orgId);
     Long getCurrentUserCount(String orgId);
     BulkUserLocationModel assignLocations(BulkUserLocationModel model,String orgId);
+    ApiResponse updateSplitTime(String userId,String OrgId,Boolean isSplitTimeEnabled);
 }

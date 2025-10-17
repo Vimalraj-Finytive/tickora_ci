@@ -14,6 +14,7 @@ import com.uniq.tms.tms_microservice.modules.locationManagement.entity.UserLocat
 import com.uniq.tms.tms_microservice.modules.userManagement.enums.PrivilegeConstants;
 import com.uniq.tms.tms_microservice.modules.userManagement.enums.RoleName;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.adapter.WorkScheduleAdapter;
+import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.WorkScheduleTypeEntity;
 import com.uniq.tms.tms_microservice.shared.helper.RolePrivilegeHelper;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.mapper.TimesheetDtoMapper;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.mapper.TimesheetEntityMapper;
@@ -31,6 +32,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import java.math.RoundingMode;
+import java.sql.Time;
 import java.text.DecimalFormat;
 import java.time.*;
 import java.time.temporal.ChronoUnit;
@@ -312,9 +314,6 @@ public class TimesheetServiceImpl implements TimesheetService {
             Set<String> locationUserIds = userLocation.stream()
                     .map(UserEntity::getUserId)
                     .collect(Collectors.toSet());
-
-            log.info("location User Ids: {}", locationUserIds.stream()
-                    .collect(Collectors.toSet()));
 
             stream = stream.filter(user -> locationUserIds.contains(user.getUserId()));
         }
@@ -794,41 +793,55 @@ public class TimesheetServiceImpl implements TimesheetService {
 
     @Override
     public void autoClockOut(String orgId) {
-        LocalDate yesterday = LocalDate.now(ZoneId.of("Asia/Kolkata"))
-.minusDays(1);
-        List<TimesheetEntity> openClockIns = timesheetAdapter.findActiveTimesheetsByDate(yesterday);
+        LocalDate day = LocalDate.now(ZoneId.of("Asia/Kolkata"));
+        if(LocalTime.now(ZoneId.of("Asia/Kolkata")).equals(LocalTime.MIDNIGHT)){
+            day = day.minusDays(1);
+        }
+
+        List<TimesheetEntity> openClockIns = timesheetAdapter.findActiveTimesheetsByDate(day);
         List<TimesheetHistoryEntity> historyEntries = new ArrayList<>();
 
-        log.info("Timesheets fetched for {}: {}", yesterday, openClockIns.size());
+        log.info("Timesheets fetched for {}: {}", day, openClockIns.size());
         LocationEntity locationEntity = new LocationEntity();
         LocationEntity location = timesheetAdapter.getDefaultLocation(orgId);
         for (TimesheetEntity entry : openClockIns) {
-            if (entry.getFirstClockIn() != null && entry.getLastClockOut() == null) {
-                log.info("Auto clock-out for userId={}, setting lastClockOut to 23:59", entry.getUser().getUserId());
+            UserEntity users = entry.getUser();
+            WorkScheduleEntity workSchedule = users.getWorkSchedule();
+            WorkScheduleTypeEntity typeEntity = workSchedule.getType();
+            Time splitTime = workSchedule.getSplitTime();
+            if (entry.getFirstClockIn() != null && entry.getLastClockOut() == null && typeEntity.getType() == FIXED) {
+                if(users.isSplitTimeEnabled()) {
+                    LocalTime currentTime = LocalTime.now(ZoneId.of("Asia/Kolkata"));
+                    LocalTime splitLocalTime = (splitTime != null) ? splitTime.toLocalTime() : null;
 
-                entry.setLastClockOut(LocalTime.of(23, 59));
-                calculateHours(entry);
+                    if (splitLocalTime != null && (currentTime.getHour() == splitLocalTime.getHour())) {
+                        log.info("Auto clock-out for userId={}, setting lastClockOut to 23:59", entry.getUser().getUserId());
 
-                TimesheetHistoryEntity history = new TimesheetHistoryEntity();
-                history.setLocationId(location.getLocationId());
-                history.setLogTime(LocalTime.of(23, 59));
-                history.setLogType(LogType.CLOCK_OUT);
-                history.setLogFrom(LogFrom.SYSTEM_GENERATED);
-                history.setLoggedTimestamp(LocalDateTime.now());
+                        entry.setLastClockOut(splitLocalTime.minusMinutes(1));
+                        calculateHours(entry);
 
-                TimesheetEntity timesheetRef = new TimesheetEntity();
-                timesheetRef.setId(entry.getId());
-                history.setTimesheet(timesheetRef);
+                        TimesheetHistoryEntity history = new TimesheetHistoryEntity();
+                        history.setLocationId(location.getLocationId());
+                        history.setLogTime(splitLocalTime.minusMinutes(1));
+                        history.setLogType(LogType.CLOCK_OUT);
+                        history.setLogFrom(LogFrom.SYSTEM_GENERATED);
+                        history.setLoggedTimestamp(LocalDateTime.now());
 
-                historyEntries.add(history);
+                        TimesheetEntity timesheetRef = new TimesheetEntity();
+                        timesheetRef.setId(entry.getId());
+                        history.setTimesheet(timesheetRef);
 
-                log.info("Added SYSTEM_GENERATED CLOCK_OUT history for userId={}, date={}", entry.getUser().getUserId(), entry.getDate());
+                        historyEntries.add(history);
+
+                        log.info("Added SYSTEM_GENERATED CLOCK_OUT history for userId={}, date={}", entry.getUser().getUserId(), entry.getDate());
+                    }
+                }
             }
         }
-
         log.info("Saving updated timesheets and history entries...");
         timesheetAdapter.saveAll(openClockIns);
         timesheetAdapter.saveAllTimesheetHistories(historyEntries);
+        log.info("Saving successfully...");
     }
 
     public List<UserDashboardDto> getAllUserInfo(String orgId, String userIdFromToken, LocalDate fromDate, LocalDate toDate, String userId, List<Long> groupIds, String type) {

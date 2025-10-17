@@ -8,6 +8,8 @@ import com.uniq.tms.tms_microservice.modules.locationManagement.mapper.LocationD
 import com.uniq.tms.tms_microservice.modules.locationManagement.repository.LocationRepository;
 import com.uniq.tms.tms_microservice.modules.locationManagement.services.LocationService;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.mapper.OrganizationEntityMapper;
+import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.WorkScheduleTypeEntity;
+import com.uniq.tms.tms_microservice.modules.workScheduleManagement.enums.WorkScheduleTypeEnum;
 import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.OrganizationAdapter;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.OrganizationEntity;
@@ -50,7 +52,6 @@ import com.uniq.tms.tms_microservice.modules.identityManagement.service.IdGenera
 import com.uniq.tms.tms_microservice.modules.userManagement.enums.UserRole;
 import com.uniq.tms.tms_microservice.modules.userManagement.repository.SecondaryDetailsRepository;
 import com.uniq.tms.tms_microservice.modules.userManagement.services.UserService;
-import com.uniq.tms.tms_microservice.dto.DeactivateUserRequestDto;
 import jakarta.annotation.Nullable;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Validator;
@@ -1909,7 +1910,7 @@ public class UserServiceImpl implements UserService {
             subscriptionEntity.setSchemaName(schemaName);
             subscriptionEntity.setStatus(OrganizationStatusEnum.ACTIVE.getDisplayValue());
             subscriptionEntity.setStartDate(LocalDateTime.now());
-            subscriptionEntity.setEndDate(LocalDateTime.now().plusDays(7));
+            subscriptionEntity.setEndDate(LocalDateTime.now().plusDays(30));
             subscriptionEntity.setSubscribedUsers(subscribedUsers);
             log.info("Save subscription for created Organization");
             SubscriptionEntity saveSubscription = userAdapter.saveSubscription(subscriptionEntity);
@@ -1924,45 +1925,6 @@ public class UserServiceImpl implements UserService {
         } catch (Exception e) {
             log.error("Error creating SuperAdmin user: {}", e.getMessage(), e);
             throw new CommonExceptionHandler.InternalServerException("Failed to create SuperAdmin user. " + e.getMessage());
-        }
-    }
-
-    @Override
-    public ApiResponse<UserValidationDto> validateUser(String userId) {
-        if (userId == null || userId.isBlank()) {
-            log.warn("Validation failed: userId is null or blank");
-            return new ApiResponse<>(400, "UserId must not be null or blank", null);
-        }
-
-        try {
-            Optional<UserEntity> userOptional = userAdapter.findById(userId);
-            if (userOptional.isEmpty()) {
-                log.info("No User found for userId: {}", userId);
-                return new ApiResponse<>(404, "User not found", null);
-            }
-
-            UserEntity userEntity = userOptional.get();
-            UserValidationDto dto = userEntityMapper.toDto(userEntity);
-
-            try {
-                List<LocationDto> locations = locationService.getUserLocation(userId);
-                if (locations == null || locations.isEmpty()) {
-                    log.warn("No locations found for userId: {}", userId);
-                    return new ApiResponse<>(404, "No locations assigned to this user", null);
-                }
-                log.info("User {} locations: {}", userId, locations);
-                dto.setLocation(locations);
-            } catch (Exception ex) {
-                log.error("Error fetching locations for userId {}: {}", userId, ex.getMessage(), ex);
-                return new ApiResponse<>(500, "Failed to fetch user locations", null);
-            }
-
-            log.info("User {} validated successfully", userId);
-            return new ApiResponse<>(200, "User validation returned successfully", dto);
-
-        } catch (Exception e) {
-            log.error("Unexpected error during user validation for userId {}: {}", userId, e.getMessage(), e);
-            return new ApiResponse<>(500, "Unexpected error during user validation", null);
         }
     }
 
@@ -2377,5 +2339,73 @@ public class UserServiceImpl implements UserService {
         }
         return toModel;
     }
+    @Override
+    @Transactional
+    public ApiResponse updateSplitTime(String userId, String orgId, Boolean isSplitTimeEnabled) {
+        log.info("Starting updateSplitTime for userId: {}, orgId: {}", userId, orgId);
+        try {
 
+            if (isSplitTimeEnabled == null) {
+                log.warn("isSplitTimeEnabled parameter is null for userId: {}", userId);
+                return new ApiResponse(400, "isSplitTimeEnabled parameter is required", null);
+            }
+
+            UserEntity user = userAdapter.findUserModelByOrgIdAndUserId(orgId, userId);
+            if (user == null) {
+                log.warn("User not found for orgId: {}, userId: {}", orgId, userId);
+                return new ApiResponse(404, "User not found for the given organization", null);
+            }
+
+            WorkScheduleEntity workScheduleEntity = user.getWorkSchedule();
+            if (workScheduleEntity == null) {
+                log.warn("User {} has no work schedule assigned", userId);
+                return new ApiResponse(400, "User has no work schedule assigned", null);
+            }
+            String workScheduleId = workScheduleEntity.getScheduleId();
+
+            WorkScheduleEntity workSchedule = workScheduleAdapter.findByScheduleIdModel(workScheduleId, orgId);
+
+
+            WorkScheduleTypeEntity scheduleTypeEntity = workSchedule.getType();
+            if (scheduleTypeEntity == null) {
+                log.warn("Work schedule type is null for scheduleId: {}", workScheduleId);
+                return new ApiResponse(400, "Work schedule type not found", null);
+            }
+
+            WorkScheduleTypeEnum scheduleType = scheduleTypeEntity.getType();
+            if (scheduleType == null) {
+                log.warn("Work schedule type enum is null for scheduleId: {}", workScheduleId);
+                return new ApiResponse(400, "Work schedule type enum not found", null);
+            }
+
+            if (!WorkScheduleTypeEnum.FIXED.equals(scheduleType)) {
+                log.warn("Split time can only be updated for FIXED schedules. Found: {}", scheduleType);
+                return new ApiResponse(400, "Split time cannot be updated for Flexible schedules.", null);
+            }
+
+            user.setSplitTimeEnabled(isSplitTimeEnabled);
+            userAdapter.updateUserEntity(user);
+
+            if (isRedisEnabled) {
+                CacheEventPublisherUtil.syncReloadThenPublish(
+                        publisher,
+                        cacheKeyConfig.getUsers(),
+                        orgId,
+                        TenantUtil.getCurrentTenant(),
+                        cacheReloadHandlerRegistry
+                );
+                log.info("User cache reload event published for orgId: {} after split time update", orgId);
+            }
+
+
+            String status = Boolean.TRUE.equals(isSplitTimeEnabled) ? "enabled" : "disabled";
+            log.info("Split time successfully {} for userId: {}", status, userId);
+            return new ApiResponse(200, "Split time successfully " + status, null);
+
+        } catch (Exception e) {
+            log.error("Unexpected error while updating split time for userId: {}, orgId: {}, error: {}",
+                    userId, orgId, e.getMessage(), e);
+            return new ApiResponse(500, "Failed to update split time: " + e.getMessage(), null);
+        }
+    }
 }

@@ -29,8 +29,11 @@ public interface WorkScheduleEntityMapper {
     WorkScheduleEntity toEntity(WorkSchedule model);
 
     default Time stringToTime(WorkSchedule model){
-        LocalTime localTime = LocalTime.parse(model.getSplitTime(), DateTimeFormatter.ofPattern("HH:mm"));
-        Time time = Time.valueOf(localTime);
+        Time time = null;
+        if(model.getSplitTime()!=null) {
+            LocalTime localTime = LocalTime.parse(model.getSplitTime(), DateTimeFormatter.ofPattern("HH:mm"));
+            time = Time.valueOf(localTime);
+        }
         return time;
     }
 

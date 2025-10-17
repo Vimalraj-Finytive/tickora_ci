@@ -6,7 +6,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.uniq.tms.tms_microservice.modules.locationManagement.adapter.LocationAdapter;
+import com.uniq.tms.tms_microservice.modules.locationManagement.dto.LocationDto;
+import com.uniq.tms.tms_microservice.modules.locationManagement.services.LocationService;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.adapter.FaceAdapter;
+import com.uniq.tms.tms_microservice.modules.userManagement.dto.UserValidationDto;
+import com.uniq.tms.tms_microservice.modules.userManagement.mapper.UserEntityMapper;
 import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.dto.*;
 import com.uniq.tms.tms_microservice.modules.userManagement.adapter.UserAdapter;
@@ -46,10 +50,12 @@ public class FaceServiceImpl implements FaceService {
     private final TimesheetEntityMapper timesheetEntityMapper;
     private final FaceAdapter faceAdapter;
     private final LocationAdapter locationAdapter;
+    private final UserEntityMapper userEntityMapper;
+    private final LocationService locationService;
 
     public FaceServiceImpl(UserAdapter userAdapter, RestTemplate restTemplate, UserFaceEntityMapper userFaceEntityMapper,
                            TimesheetService timesheetService, TimesheetEntityMapper timesheetEntityMapper,
-                           FaceAdapter faceAdapter, LocationAdapter locationAdapter) {
+                           FaceAdapter faceAdapter, LocationAdapter locationAdapter, UserEntityMapper userEntityMapper, LocationService locationService) {
         this.userAdapter = userAdapter;
         this.restTemplate = restTemplate;
         this.userFaceEntityMapper = userFaceEntityMapper;
@@ -57,6 +63,8 @@ public class FaceServiceImpl implements FaceService {
         this.timesheetEntityMapper = timesheetEntityMapper;
         this.faceAdapter = faceAdapter;
         this.locationAdapter = locationAdapter;
+        this.userEntityMapper = userEntityMapper;
+        this.locationService = locationService;
     }
 
     @Value("${external.python.service.register.url}")
@@ -433,6 +441,45 @@ public class FaceServiceImpl implements FaceService {
                     log.warn("Failed to delete temp file for Multi User Clock In/out: {}", convertFile.getAbsolutePath());
                 }
             }
+        }
+    }
+
+    @Override
+    public ApiResponse<UserValidationDto> validateUser(String userId) {
+        if (userId == null || userId.isBlank()) {
+            log.warn("Validation failed: userId is null or blank");
+            return new ApiResponse<>(400, "UserId must not be null or blank", null);
+        }
+
+        try {
+            Optional<UserEntity> userOptional = userAdapter.findById(userId);
+            if (userOptional.isEmpty()) {
+                log.info("No User found for userId: {}", userId);
+                return new ApiResponse<>(404, "User not found", null);
+            }
+
+            UserEntity userEntity = userOptional.get();
+            UserValidationDto dto = userEntityMapper.toDto(userEntity);
+
+            try {
+                List<LocationDto> locations = locationService.getUserLocation(userId);
+                if (locations == null || locations.isEmpty()) {
+                    log.warn("No locations found for userId: {}", userId);
+                    return new ApiResponse<>(404, "No locations assigned to this user", null);
+                }
+                log.info("User {} locations: {}", userId, locations);
+                dto.setLocation(locations);
+            } catch (Exception ex) {
+                log.error("Error fetching locations for userId {}: {}", userId, ex.getMessage(), ex);
+                return new ApiResponse<>(500, "Failed to fetch user locations", null);
+            }
+
+            log.info("User {} validated successfully", userId);
+            return new ApiResponse<>(200, "User validation returned successfully", dto);
+
+        } catch (Exception e) {
+            log.error("Unexpected error during user validation for userId {}: {}", userId, e.getMessage(), e);
+            return new ApiResponse<>(500, "Unexpected error during user validation", null);
         }
     }
 }

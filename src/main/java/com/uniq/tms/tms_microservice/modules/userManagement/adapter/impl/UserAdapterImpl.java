@@ -541,6 +541,9 @@ public class UserAdapterImpl implements UserAdapter {
         return userLocationRepository.save(entity);
     }
 
+    public void updateUserEntity(UserEntity user) {
+        userRepository.save(user);
+    }
 
     public void bulkUpdateWorkSchedule(WorkScheduleEntity workSchedule, List<String> userIds, String orgId) {
         if (userIds == null || userIds.isEmpty()) {
@@ -554,5 +557,8 @@ public class UserAdapterImpl implements UserAdapter {
         return userRepository.findAdminAndSuperAdminNamesAndEmails();
     }
 
-
+    @Override
+    public UserEntity findUserModelByOrgIdAndUserId(String orgId, String userId) {
+        return userRepository.findByOrganizationIdAndUserId(orgId, userId);
+    }
 }
