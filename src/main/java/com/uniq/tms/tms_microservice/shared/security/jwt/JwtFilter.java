@@ -1,6 +1,8 @@
 package com.uniq.tms.tms_microservice.shared.security.jwt;
 
 import com.uniq.tms.tms_microservice.modules.organizationManagement.services.OrganizationCacheService;
+import com.uniq.tms.tms_microservice.shared.exception.CommonExceptionHandler;
+import com.uniq.tms.tms_microservice.shared.helper.SubscriptionValHelper;
 import com.uniq.tms.tms_microservice.shared.security.schema.TenantContext;
 import com.uniq.tms.tms_microservice.shared.security.user.CustomUserDetails;
 import com.uniq.tms.tms_microservice.modules.userManagement.enums.PrivilegeConstants;
@@ -43,19 +45,21 @@ public class JwtFilter extends OncePerRequestFilter {
     private final OrganizationCacheService organizationCacheService;
     private final BlacklistedTokenRepository blacklistedTokenRepository;
     private final RolePrivilegeHelper rolePrivilegeHelper;
+    private final SubscriptionValHelper subscriptionValHelper;
 
     @Autowired
     public JwtFilter(JwtUtil jwtUtil,
                      UserRepository userRepository,
                      SecondaryDetailsRepository secondaryDetailsRepository,
                      OrganizationCacheService organizationCacheService,
-                     BlacklistedTokenRepository blacklistedTokenRepository, RolePrivilegeHelper rolePrivilegeHelper) {
+                     BlacklistedTokenRepository blacklistedTokenRepository, RolePrivilegeHelper rolePrivilegeHelper, SubscriptionValHelper subscriptionValHelper) {
         this.jwtUtil = jwtUtil;
         this.userRepository = userRepository;
         this.secondaryDetailsRepository = secondaryDetailsRepository;
         this.organizationCacheService = organizationCacheService;
         this.blacklistedTokenRepository = blacklistedTokenRepository;
         this.rolePrivilegeHelper = rolePrivilegeHelper;
+        this.subscriptionValHelper = subscriptionValHelper;
     }
 
     @Override
@@ -142,6 +146,16 @@ public class JwtFilter extends OncePerRequestFilter {
                 sendErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, "Invalid Token");
                 return;
             }
+
+            log.info("Incoming request URI: {}", path);
+            if (!isSubscriptionAllowedPath(path)) {
+                if (!subscriptionValHelper.hasActiveSubscription()) {
+                    String message = subscriptionValHelper.getExpiredMessage();
+                    log.warn("No active subscription found for org. URI: {}", path);
+                    sendErrorResponse(response, HttpServletResponse.SC_PAYMENT_REQUIRED, message);
+                    return;
+                }
+            }
         }
         chain.doFilter(request, response);
     }
@@ -212,6 +226,16 @@ public class JwtFilter extends OncePerRequestFilter {
             "/tms/debug/otpsCount", "/tms/debug/otps",
             "/tms/organization/getDropDowns", "/tms/leaveManagement/countries"
     );
+
+    private static final List<String> SUBSCRIPTION_ALLOWED_PATHS = List.of(
+            "/tms/organization/**",
+            "/admin/profile"
+    );
+
+    private boolean isSubscriptionAllowedPath(String path) {
+        return SUBSCRIPTION_ALLOWED_PATHS.stream()
+                .anyMatch(allowed -> pathMatcher.match(allowed, path));
+    }
 
     private boolean isWhiteListed(String path){
         return WHITELISTED_PATHS.stream()

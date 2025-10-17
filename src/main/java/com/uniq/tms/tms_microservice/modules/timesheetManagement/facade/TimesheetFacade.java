@@ -10,6 +10,7 @@ import com.uniq.tms.tms_microservice.modules.timesheetManagement.services.FaceSe
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.services.ReportService;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.services.TimesheetService;
 import com.uniq.tms.tms_microservice.modules.userManagement.dto.RegisterDto;
+import com.uniq.tms.tms_microservice.shared.security.user.CustomUserDetails;
 import com.uniq.tms.tms_microservice.shared.util.TimesheetLogParserUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -95,18 +96,52 @@ public class TimesheetFacade {
                 .toList();
     }
 
+
     public TimesheetDto updateClockInOut(String userId, LocalDate date, TimesheetDto request, String orgId) {
-        return timesheetService.updateClockInOut(userId, date, request, orgId);
+        // Get details from the logged-in user
+        CustomUserDetails user = authHelper.getCurrentUser();
+        String userIdFromToken = user.getUserId();
+        String role = user.getRole();
+
+        // Pass all details to service (with orgId from method param)
+        return timesheetService.updateClockInOut(userIdFromToken, role, userId, date, request, orgId);
     }
 
-    public TimesheetDto upsertClockInOut( String userId, LocalDate date, TimesheetDto request) {
-
-        String orgId = authHelper.getOrgId();
+    public TimesheetDto upsertClockInOut(String userIdFromToken, String userId, LocalDate date, TimesheetDto request, String orgId, String role) {
+        // Get orgId from token context
+        orgId = authHelper.getOrgId();
         if (orgId == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized - Invalid Organization");
         }
-        return timesheetService.updateClockInOut(userId, date, request, orgId);
+
+        // Get user details from token
+        CustomUserDetails user = authHelper.getCurrentUser();
+        userIdFromToken = user.getUserId();
+        role = user.getRole();
+
+        // Call the same service method (handles both insert/update)
+        return timesheetService.updateClockInOut(userIdFromToken, role, userId, date, request, orgId);
     }
+
+
+//    public TimesheetDto updateClockInOut(String userId, LocalDate date, TimesheetDto request, String orgId) {
+//        return timesheetService.updateClockInOut(userId, date, request, orgId);
+//    }
+
+//    public TimesheetDto upsertClockInOut( String userId, LocalDate date, TimesheetDto request) {
+//
+//        String orgId = authHelper.getOrgId();
+//        if (orgId == null) {
+//            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized - Invalid Organization");
+//        }
+//        return timesheetService.updateClockInOut(userId, date, request, orgId);
+//    }
+
+
+
+
+
+
 
     public ApiResponse getStatus() {
 

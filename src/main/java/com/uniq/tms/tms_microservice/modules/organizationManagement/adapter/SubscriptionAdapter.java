@@ -22,4 +22,6 @@ public interface SubscriptionAdapter {
     Optional<SubscriptionEntity> findActiveSubscriptionByOrgId(String orgId);
     Optional<PlanEntity> findById(String planId);
     Optional <SubscriptionEntity>findSubscriptionDetails(String subscriptionId);
+    List<SubscriptionEntity> findAllSubscriptionsByOrgId(String orgId);
+
 }
