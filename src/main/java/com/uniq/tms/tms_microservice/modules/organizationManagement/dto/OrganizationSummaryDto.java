@@ -1,11 +1,14 @@
 package com.uniq.tms.tms_microservice.modules.organizationManagement.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+
 import java.time.LocalDate;
 
 public class OrganizationSummaryDto {
     private String organizationId;
     private String name;
     private String type;
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd-MM-yyyy")
     private LocalDate createdAt;
     private Counts counts;
     private String country;
