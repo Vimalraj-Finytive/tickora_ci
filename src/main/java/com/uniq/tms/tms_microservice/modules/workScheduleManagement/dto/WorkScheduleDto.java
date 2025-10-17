@@ -1,6 +1,8 @@
 package com.uniq.tms.tms_microservice.modules.workScheduleManagement.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.validation.constraints.Pattern;
+
 import java.util.List;
 
 public class WorkScheduleDto {
@@ -9,6 +11,8 @@ public class WorkScheduleDto {
     private boolean isActive;
     private boolean isDefault;
     private String type;
+
+    @Pattern(regexp = "^(?:[01]\\d|2[0-3]):00$", message = "Invalid time. Minutes not allowed")
     private String splitTime;
     @JsonIgnore
     private String orgId;
@@ -109,5 +113,6 @@ public class WorkScheduleDto {
 
     public String getSplitTime() { return splitTime; }
 
-    public void setSplitTime(String splitTime) { this.splitTime = splitTime; }
+    public void setSplitTime(String splitTime) {
+        this.splitTime = splitTime; }
 }

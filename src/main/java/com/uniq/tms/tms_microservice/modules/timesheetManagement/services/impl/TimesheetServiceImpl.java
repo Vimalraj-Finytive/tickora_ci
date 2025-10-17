@@ -649,9 +649,9 @@ public class TimesheetServiceImpl implements TimesheetService {
         for (TimesheetEntity entry : openClockIns) {
             UserEntity users = entry.getUser();
             WorkScheduleEntity workSchedule = users.getWorkSchedule();
-            WorkScheduleTypeEntity typeEntity = workSchedule.getType();
+//            WorkScheduleTypeEntity typeEntity = workSchedule.getType();
             Time splitTime = workSchedule.getSplitTime();
-            if (entry.getFirstClockIn() != null && entry.getLastClockOut() == null && typeEntity.getType() == FIXED) {
+            if (entry.getFirstClockIn() != null && entry.getLastClockOut() == null) {
                 if(users.isSplitTimeEnabled()) {
                     LocalTime currentTime = LocalTime.now(ZoneId.of("Asia/Kolkata"));
                     LocalTime splitLocalTime = (splitTime != null) ? splitTime.toLocalTime() : null;
