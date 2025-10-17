@@ -45,6 +45,6 @@ public interface UserService {
     ApiResponse addOrUpdateGroupMembers(String orgId, UserGroupModel model);
     Long getSubscribedUserLimit(String orgId);
     Long getCurrentUserCount(String orgId);
-    BulkUserLocationModel assignLocations(BulkUserLocationModel model);
+    BulkUserLocationModel assignLocations(BulkUserLocationModel model,String orgId);
     ApiResponse updateSplitTime(String userId,String OrgId,Boolean isSplitTimeEnabled);
 }

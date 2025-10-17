@@ -11,6 +11,7 @@ import com.uniq.tms.tms_microservice.modules.timesheetManagement.services.FaceSe
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.services.ReportService;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.services.TimesheetService;
 import com.uniq.tms.tms_microservice.modules.userManagement.dto.RegisterDto;
+import com.uniq.tms.tms_microservice.shared.security.user.CustomUserDetails;
 import com.uniq.tms.tms_microservice.shared.util.TimesheetLogParserUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,8 +51,6 @@ public class TimesheetFacade {
             ;
         }
         String userId = request.getUserId();
-
-
         String orgId = authHelper.getOrgId();
         String userIdFromToken = authHelper.getUserId();
 
@@ -96,17 +95,22 @@ public class TimesheetFacade {
                 .toList();
     }
 
+
     public TimesheetDto updateClockInOut(String userId, LocalDate date, TimesheetDto request, String orgId) {
-        return timesheetService.updateClockInOut(userId, date, request, orgId);
+        CustomUserDetails user = authHelper.getCurrentUser();
+        String userIdFromToken = user.getUserId();
+        String role = user.getRole();
+        return timesheetService.updateClockInOut(userIdFromToken, role, userId, date, request, orgId);
     }
 
-    public TimesheetDto upsertClockInOut( String userId, LocalDate date, TimesheetDto request) {
-
-        String orgId = authHelper.getOrgId();
+    public TimesheetDto upsertClockInOut(String userIdFromToken, String userId, LocalDate date, TimesheetDto request, String orgId, String role) {
+        orgId = authHelper.getOrgId();
         if (orgId == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized - Invalid Organization");
         }
-        return timesheetService.updateClockInOut(userId, date, request, orgId);
+        CustomUserDetails user = authHelper.getCurrentUser();
+        role = user.getRole();
+        return timesheetService.updateClockInOut(userIdFromToken, role, userId, date, request, orgId);
     }
 
     public ApiResponse getStatus() {

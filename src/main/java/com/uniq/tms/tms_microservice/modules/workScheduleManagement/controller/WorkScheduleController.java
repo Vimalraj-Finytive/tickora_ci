@@ -6,6 +6,7 @@ import com.uniq.tms.tms_microservice.modules.workScheduleManagement.dto.WorkSche
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.dto.WorkScheduleTypeDto;
 import com.uniq.tms.tms_microservice.shared.helper.AuthHelper;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.constant.WorkScheduleConstant;
+import jakarta.validation.Valid;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.http.HttpStatus;
@@ -41,7 +42,7 @@ public class WorkScheduleController {
     }
 
     @PostMapping("/create")
-    public ResponseEntity<ApiResponse> createWorkschedule(@RequestHeader("Authorization") String token, @RequestBody WorkScheduleDto workScheduleDto){
+    public ResponseEntity<ApiResponse> createWorkschedule(@RequestHeader("Authorization") String token, @Valid @RequestBody WorkScheduleDto workScheduleDto){
             String orgId = authHelper.getOrgId();
             if(orgId == null){
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ApiResponse(401,"Unauthorized - Invalid Organization",null));

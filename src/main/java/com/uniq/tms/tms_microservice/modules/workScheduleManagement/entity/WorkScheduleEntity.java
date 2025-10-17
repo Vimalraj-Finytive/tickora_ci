@@ -26,7 +26,7 @@ public class WorkScheduleEntity {
     @Column(name = "is_active", nullable = false)
     private Boolean isActive;
 
-    @Column(name = "split_time", nullable = false)
+    @Column(name = "split_time",nullable = false)
     private Time splitTime;
 
     @ManyToOne(optional = false)

@@ -6,6 +6,7 @@ import com.uniq.tms.tms_microservice.shared.helper.AuthHelper;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.mapper.TimesheetDtoMapper;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.constant.TimesheetConstant;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.facade.TimesheetFacade;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -57,12 +58,16 @@ public class  TimesheetController {
 
     @PutMapping("/editTimesheet")
     public ResponseEntity<ApiResponse<TimesheetDto>> upsertClockInOutTimes(
-            @RequestHeader("Authorization") String token,
             @RequestParam String userId,
-            @RequestParam LocalDate date,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             @RequestBody TimesheetDto request) {
 
-        TimesheetDto timesheetDto =timesheetFacade.upsertClockInOut(userId, date, request);
+        String userIdFromToken = authHelper.getUserId();
+        String role = authHelper.getCurrentUser().getRole();
+        String orgId = authHelper.getOrgId();
+
+        TimesheetDto timesheetDto =
+                timesheetFacade.upsertClockInOut(userIdFromToken, userId, date, request, orgId, role);
 
         return ResponseEntity.ok(new ApiResponse<>(200, "Timesheet upserted successfully", timesheetDto));
     }

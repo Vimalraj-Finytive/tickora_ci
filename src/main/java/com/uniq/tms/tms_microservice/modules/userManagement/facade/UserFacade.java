@@ -204,28 +204,17 @@ public class UserFacade {
             return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
         }
         Long currentCount = userService.getCurrentUserCount(orgId);
-        long freeLimit = 30L;
-        if (currentCount < freeLimit) {
+        Long subscribedLimit = userService.getSubscribedUserLimit(orgId);
+
+        if (!(currentCount < subscribedLimit)) {
+            return new ApiResponse(404,"User creation limit reached. Please upgrade your plan.",null);
+        }
+        else {
             ApiResponse user = userService.createUser(userDto, secondaryDetailsDto, orgId);
             return new ApiResponse(HttpStatus.CREATED.value(),
                     "User created successfully",
                     user);
         }
-        Long subscribedLimit = userService.getSubscribedUserLimit(orgId);
-        if (subscribedLimit == null) {
-            return new ApiResponse(400,
-                    "Free user limit (30) reached. Please subscribe to a plan to add more users.",
-                    null);
-        }
-        if (currentCount >= subscribedLimit) {
-            return new ApiResponse(403,
-                    "User creation limit reached based on your current plan. Please upgrade your plan.",
-                    null);
-        }
-        ApiResponse user = userService.createUser(userDto, secondaryDetailsDto, orgId);
-        return new ApiResponse(HttpStatus.CREATED.value(),
-                "User created successfully",
-                user);
     }
 
     public ApiResponse getUserProfile(String userId) {
@@ -390,8 +379,9 @@ public class UserFacade {
     }
 
     public ApiResponse<BulkUserLocationDto> assignLocations(BulkUserLocationDto dto) {
+        String orgId = authHelper.getOrgId();
         BulkUserLocationModel model = userDtoMapper.toModel(dto);
-        BulkUserLocationModel saveUserLocation = userService.assignLocations(model);
+        BulkUserLocationModel saveUserLocation = userService.assignLocations(model,orgId);
         BulkUserLocationDto Dto=userDtoMapper.toDto(saveUserLocation);
         return new ApiResponse<>(200, "Locations assigned successfully", null);
 

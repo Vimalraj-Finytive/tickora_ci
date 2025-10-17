@@ -1142,73 +1142,6 @@ public class UserServiceImpl implements UserService {
         throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No users found for this organization");
     }
 
-//    @Override
-//    @Transactional
-//    public void deleteUsers(String orgId, List<String> userIds, String userNameFromToken, String comments) {
-//        String schema = TenantUtil.getCurrentTenant();
-//
-//        List<UserEntity> users = userAdapter.findByUserId(userIds);
-//        if (users.isEmpty()) {
-//            throw new RuntimeException("No valid users found to delete.");
-//        }
-//
-//        Set<String> foundUserIds = users.stream()
-//                .map(UserEntity::getUserId)
-//                .collect(Collectors.toSet());
-//
-//        List<String> missingUsers = userIds.stream()
-//                .filter(id -> !foundUserIds.contains(id))
-//                .toList();
-//        if (!missingUsers.isEmpty()) {
-//            throw new RuntimeException("User IDs not found: " + missingUsers);
-//        }
-//
-//        Optional<UserEntity> unauthorized = users.stream()
-//                .filter(user -> !orgId.equals(user.getOrganizationId()))
-//                .findFirst();
-//        unauthorized.ifPresent(user -> {
-//            throw new RuntimeException("Unauthorized to delete user: " + user.getUserId());
-//        });
-//
-//        userAdapter.deactivateUsersByIds(userIds, orgId);
-//
-//        List<UserHistoryEntity> historyEntities = users.stream()
-//                .map(user -> {
-//                    String commentLog = "Inactivated By " + userNameFromToken + " - " + comments;
-//                    return userEntityMapper.toInactiveUserEntity(user.getUserId(), commentLog);
-//                })
-//                .toList();
-//
-//        if (!historyEntities.isEmpty()) {
-//            userAdapter.saveAllUserHistories(historyEntities);
-//        }
-//
-//        users.parallelStream().forEach(user -> {
-//            try {
-//                userAdapter.deleteUserFace(user.getUserId());
-//            } catch (Exception e) {
-//                log.error("Failed to delete face for user {}: {}", user.getUserId(), e.getMessage());
-//            }
-//        });
-//
-//        if (isRedisEnabled) {
-//            try {
-//                CacheEventPublisherUtil.syncReloadThenPublish(
-//                        publisher,
-//                        cacheKeyConfig.getUsers(),
-//                        orgId,
-//                        schema,
-//                        cacheReloadHandlerRegistry
-//                );
-//                log.info("Redis cache reloaded after user deletion");
-//            } catch (Exception e) {
-//                log.error("Redis reload failed: {}", e.getMessage());
-//            }
-//        }
-//
-//        log.info("Deleted users successfully: {}", userIds);
-//    }
-
     @Override
     @Transactional
     public void deleteUsers(String orgId, List<String> userIds, String userNameFromToken, String comments) {
@@ -1240,21 +1173,18 @@ public class UserServiceImpl implements UserService {
         );
 
         if (isRedisEnabled) {
-            CompletableFuture.runAsync(() -> {
-                try {
-                    CacheEventPublisherUtil.syncReloadThenPublish(
-                            publisher,
-                            cacheKeyConfig.getUsers(),
-                            orgId,
-                            schema,
-                            cacheReloadHandlerRegistry
-                    );
-                    log.info("Redis cache reloaded after user deletion");
-                } catch (Exception e) {
-                    log.error("Redis reload failed: {}", e.getMessage());
-                }
-            });
+            CacheEventPublisherUtil.syncReloadThenPublish(
+                    publisher,
+                    cacheKeyConfig.getUsers(),
+                    orgId,
+                    schema,
+                    cacheReloadHandlerRegistry
+            );
+            log.info("UserCacheReloadEvent published after bulk inactivation for orgId: {}", orgId);
+        } else {
+            log.info("Redis is not enabled or RedisTemplate is null. Skipping cache reload after bulk inactivation.");
         }
+
 
         log.info("Deleted users successfully: {}", userIds.size());
     }
@@ -2355,7 +2285,8 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public BulkUserLocationModel assignLocations(BulkUserLocationModel model) {
+    public BulkUserLocationModel assignLocations(BulkUserLocationModel model,String orgId) {
+        String schema = TenantUtil.getCurrentTenant();
 
         if (model.getMemberIds() == null || model.getMemberIds().isEmpty()
                 || model.getLocationIds() == null || model.getLocationIds().isEmpty()) {
@@ -2381,18 +2312,38 @@ public class UserServiceImpl implements UserService {
                     UserLocationEntity mapping = new UserLocationEntity();
                     mapping.setUser(userOpt.get());
                     mapping.setLocation(locationOpt.get());
-                    saveLocation= userAdapter.save(mapping);
-                }}}
+                    userAdapter.save(mapping);
+                }
+            }
+        }
+
+        if (isRedisEnabled) {
+            try {
+                CacheEventPublisherUtil.syncReloadThenPublish(
+                        publisher,
+                        cacheKeyConfig.getUsers(),
+                        orgId,
+                        schema,
+                        cacheReloadHandlerRegistry
+                );
+                log.info("LocationCacheReloadEvent published after the for bulk users location update for orgId={}", orgId);
+            } catch (Exception e) {
+                log.error("Failed to publish locationCacheReloadEvent for orgId={}", orgId, e);
+            }
+        } else {
+            log.info("Redis is not enabled or RedisTemplate is null. Skipping cache reload for bulk location update for orgId={}", orgId);
+        }
+
         if (!errors.isEmpty()) {
             throw new RuntimeException(String.join(", ", errors));
         }
         return toModel;
     }
+
     @Override
     @Transactional
     public ApiResponse updateSplitTime(String userId, String orgId, Boolean isSplitTimeEnabled) {
         log.info("Starting updateSplitTime for userId: {}, orgId: {}", userId, orgId);
-
         try {
 
             if (isSplitTimeEnabled == null) {
