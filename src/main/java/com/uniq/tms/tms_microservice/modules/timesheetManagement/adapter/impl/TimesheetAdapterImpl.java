@@ -320,11 +320,10 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
     ) {
         timesheet.setDayType(isWorkingDay ? "Working Day" : "Holiday");
         log.info("working day ? :{}", timesheet.getDayType());
-        boolean hasClockIn = timesheet.getFirstClockIn() != null
-                && !timesheet.getFirstClockIn().equals(LocalTime.MIDNIGHT);
 
-        boolean hasClockOut = timesheet.getLastClockOut() != null
-                && !timesheet.getLastClockOut().equals(LocalTime.MIDNIGHT);
+        boolean hasClockIn = timesheet.getFirstClockIn() != null;
+
+        boolean hasClockOut = timesheet.getLastClockOut() != null;
 
         boolean hasSystemGeneratedClockOut = timesheet.getHistory().stream()
                 .anyMatch(h -> LogType.CLOCK_OUT.equals(h.getLogType())
