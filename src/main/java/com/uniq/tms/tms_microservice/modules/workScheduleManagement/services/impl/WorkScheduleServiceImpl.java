@@ -149,6 +149,7 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "Organization not found"));
 
         WorkScheduleEntity entity = workScheduleEntityMapper.toEntity(model);
+
         entity.setOrganizationEntity(organizationEntity);
         entity.setScheduleId(idGenerationService.generateNextId(IdGenerationTypeEnum.WORK_SCHEDULE));
         entity.setType(typeEntity);
@@ -273,7 +274,7 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
             entity.setOrganizationEntity(organizationEntity);
             entity.setType(typeEntity);
             entity.setScheduleId(model.getScheduleId());
-            entity.setActive(true);
+            entity.setAutoClockOut(model.getAutoClockOut());
             entity.setSplitTime(existing.getSplitTime());
             if (entity.getFixedWorkSchedules() == null) {
                 entity.setFixedWorkSchedules(new HashSet<>());
