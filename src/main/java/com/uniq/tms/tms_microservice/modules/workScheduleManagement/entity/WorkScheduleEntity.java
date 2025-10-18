@@ -24,7 +24,10 @@ public class WorkScheduleEntity {
     private Boolean isDefault = false;
 
     @Column(name = "is_active", nullable = false)
-    private Boolean isActive;
+    private Boolean isActive = true;
+
+    @Column(name = "is_auto_clock_out", nullable = false)
+    private Boolean isAutoClockOut = true;
 
     @Column(name = "split_time",nullable = false)
     private Time splitTime;
@@ -49,6 +52,7 @@ public class WorkScheduleEntity {
     @OneToMany(mappedBy = "workSchedule", cascade = CascadeType.ALL)
     @JsonManagedReference
     private List<UserEntity> users;
+
 
     public String getScheduleId() {
         return scheduleId;
@@ -138,5 +142,11 @@ public class WorkScheduleEntity {
         this.splitTime = splitTime;
     }
 
+    public Boolean getAutoClockOut() {
+        return isAutoClockOut;
+    }
 
+    public void setAutoClockOut(Boolean autoClockOut) {
+        isAutoClockOut = autoClockOut;
+    }
 }

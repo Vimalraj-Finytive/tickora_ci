@@ -15,4 +15,5 @@ public interface WorkScheduleData {
     String getFlexibleSchedule();
     WeeklyScheduleDto getWeeklySchedule();
     Time getSplitTime();
+    Boolean getIsAutoClockOut();
 }

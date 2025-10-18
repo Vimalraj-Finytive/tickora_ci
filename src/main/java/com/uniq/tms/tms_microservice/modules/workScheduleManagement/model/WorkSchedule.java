@@ -14,6 +14,7 @@ public class WorkSchedule {
     private boolean isDefault;
     private String type;
     private String splitTime;
+    private boolean isAutoClockOut;
     @JsonIgnore
     private String orgId;
     private Double duration;
@@ -113,4 +114,12 @@ public class WorkSchedule {
     public String getSplitTime() { return splitTime; }
 
     public void setSplitTime(String splitTime) { this.splitTime = splitTime; }
+
+    public Boolean getAutoClockOut() {
+        return isAutoClockOut;
+    }
+
+    public void setAutoClockOut(boolean autoClockOut) {
+        isAutoClockOut = autoClockOut;
+    }
 }

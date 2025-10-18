@@ -13,9 +13,7 @@ import java.util.List;
 @Mapper(componentModel = "spring",unmappedTargetPolicy = ReportingPolicy.IGNORE, uses = {UserDtoMapper.CommonMapper.class})
 public interface UserDtoMapper {
 
-    UpdateSplitTimeDto toUpdateSplitTimeDto(User user);
 
-    User fromUpdateSplitTimeDto(UpdateSplitTimeDto dto);
 
     @Mapping(target = "roleId" , source = "roleId")
     @Mapping(target = "workSchedule", source = "workSchedule")
