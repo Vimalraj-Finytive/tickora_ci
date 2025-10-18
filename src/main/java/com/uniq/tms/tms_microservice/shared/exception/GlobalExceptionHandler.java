@@ -69,7 +69,8 @@ public class GlobalExceptionHandler {
         Map<String, String> errors = new HashMap<>();
         ex.getBindingResult().getFieldErrors().forEach(error ->
                 errors.put("Error", error.getDefaultMessage()));
-        return ResponseEntity.badRequest().body(new ApiResponse(400, errors.values().toString(), false));
+        String errorMessage = String.join(", ", errors.values());
+        return ResponseEntity.badRequest().body(new ApiResponse(400, errorMessage, false));
     }
 
     @ExceptionHandler(UsernameNotFoundException.class)

@@ -176,6 +176,7 @@ CREATE TABLE ${schemaName}.work_schedule (
     work_schedule_type VARCHAR NOT NULL,
     organization_id VARCHAR(20) NOT NULL,
     split_time TIME NOT NULL,
+    is_auto_clock_out BOOLEAN NOT NULL DEFAULT TRUE,
     CONSTRAINT fk_work_schedule_type
         FOREIGN KEY (work_schedule_type)
         REFERENCES ${schemaName}.work_schedule_type(type_id),
@@ -202,7 +203,6 @@ CREATE TABLE IF NOT EXISTS ${schemaName}.users (
     date_of_joining DATE,
     is_register_user BOOLEAN NOT NULL DEFAULT FALSE,
     active BOOLEAN NOT NULL,
-    is_split_time_enabled BOOLEAN NOT NULL DEFAULT TRUE,
     CONSTRAINT fk_role
         FOREIGN KEY (role_id)
         REFERENCES ${schemaName}.role(role_id)

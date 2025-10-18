@@ -149,6 +149,7 @@ public class JwtFilter extends OncePerRequestFilter {
 
             log.info("Incoming request URI: {}", path);
             if (!isSubscriptionAllowedPath(path)) {
+                log.info("No Path is matched");
                 if (!subscriptionValHelper.hasActiveSubscription()) {
                     String message = subscriptionValHelper.getExpiredMessage();
                     log.warn("No active subscription found for org. URI: {}", path);

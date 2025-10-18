@@ -34,7 +34,8 @@ public interface WorkScheduleRepository extends JpaRepository<WorkScheduleEntity
               w.organization_id AS organizationId,
               w.work_schedule_type AS workScheduleType,
               w.split_time As splitTime,
-            
+              COALESCE(w.is_auto_clock_out, false) AS isAutoClockOut,
+
               (
                 SELECT json_agg(jsonb_build_object(
                   'day', fws.day,

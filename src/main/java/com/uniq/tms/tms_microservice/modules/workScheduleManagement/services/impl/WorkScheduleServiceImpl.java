@@ -174,15 +174,13 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
         }
 
         WorkScheduleEntity entity = workScheduleEntityMapper.toEntity(model);
+
         entity.setOrganizationEntity(organizationEntity);
         entity.setScheduleId(idGenerationService.generateNextId(IdGenerationTypeEnum.WORK_SCHEDULE));
         entity.setType(typeEntity);
         entity.setActive(true);
-        if ((entity.getSplitTime() !=null )&&(Objects.requireNonNull(typeEntity.getType()) != WorkScheduleTypeEnum.FIXED)) {
-            entity.setSplitTime(null);
-        }
+        entity.setSplitTime(entity.getSplitTime());
         boolean shouldAssignToSuperAdmin = model.isDefault() || workScheduleAdapter.countByOrgId(orgId) == 0;
-
         WorkScheduleEntity savedEntity = workScheduleAdapter.saveWorkSchedule(entity);
 
 
@@ -292,6 +290,9 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
             WorkScheduleTypeEntity typeEntity = workScheduleAdapter.findById(model.getType())
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid type"));
 
+            if(!model.isDefault() && existing.getDefault()){
+                throw new IllegalArgumentException("make at least one default");
+            }
             if (model.isDefault()){
                 workScheduleAdapter.updateDefaultWorkSchedule(orgId, model.getScheduleId());
             }
@@ -302,7 +303,8 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
             entity.setOrganizationEntity(organizationEntity);
             entity.setType(typeEntity);
             entity.setScheduleId(model.getScheduleId());
-            entity.setActive(true);
+            entity.setAutoClockOut(model.getAutoClockOut());
+            entity.setSplitTime(existing.getSplitTime());
             if (entity.getFixedWorkSchedules() == null) {
                 entity.setFixedWorkSchedules(new HashSet<>());
             }

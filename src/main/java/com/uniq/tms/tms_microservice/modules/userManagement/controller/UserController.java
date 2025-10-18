@@ -248,7 +248,7 @@ public class UserController {
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
-    @PostMapping("/bulk/Location")
+    @PostMapping("/bulk/location")
     public ResponseEntity<ApiResponse<BulkUserLocationDto>> assignLocations(
             @RequestHeader("Authorization") String token,
             @Valid @RequestBody BulkUserLocationDto dto) {
@@ -256,13 +256,7 @@ public class UserController {
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
-    @PatchMapping("/splitTime")
-    public ResponseEntity<ApiResponse> updateSplitTime(
-            @RequestHeader("Authorization") String token,
-            @Valid @RequestBody UpdateSplitTimeDto request) {
-        ApiResponse response = userFacade.updateSplitTime(request);
-        return ResponseEntity.status(response.getStatusCode()).body(response);
-    }
+
 
 
 }

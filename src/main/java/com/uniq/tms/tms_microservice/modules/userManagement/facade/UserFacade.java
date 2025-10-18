@@ -207,7 +207,7 @@ public class UserFacade {
         Long subscribedLimit = userService.getSubscribedUserLimit(orgId);
 
         if (!(currentCount < subscribedLimit)) {
-            return new ApiResponse(403,"User creation limit reached. Please upgrade your plan.",null);
+            return new ApiResponse(404,"User creation limit reached. Please upgrade your plan.",null);
         }
         else {
             ApiResponse user = userService.createUser(userDto, secondaryDetailsDto, orgId);
@@ -387,19 +387,6 @@ public class UserFacade {
 
     }
 
-    public ApiResponse updateSplitTime(UpdateSplitTimeDto request) {
-        String orgId = authHelper.getOrgId();
-        String userId = authHelper.getUserId();
-        if (orgId == null) {
-            return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
-        }
-        log.info("FACADE: Calling service with userId: {}, orgId: {}, splitTimeEnabled: {}",
-                userId, orgId, request.getSplitTimeEnabled());
-        ApiResponse serviceResponse = userService.updateSplitTime(userId, orgId, request.getSplitTimeEnabled());
-        log.info("FACADE: Service returned - status: {}, message: {}",
-                serviceResponse.getStatusCode(), serviceResponse.getMessage());
-        return serviceResponse;
-    }
 
 
 }

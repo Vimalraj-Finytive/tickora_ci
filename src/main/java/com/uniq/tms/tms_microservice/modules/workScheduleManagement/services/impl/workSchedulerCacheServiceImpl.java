@@ -69,6 +69,7 @@ public class workSchedulerCacheServiceImpl implements WorkScheduleCacheService {
             schedule.setType(raw.getWorkScheduleType());
             schedule.setOrgId(raw.getOrganizationId());
             schedule.setWeeklySchedule(raw.getWeeklySchedule());
+            schedule.setAutoClockOut(raw.getIsAutoClockOut());
 
             if (raw.getSplitTime() != null){
                 LocalTime localTime = raw.getSplitTime().toLocalTime();
