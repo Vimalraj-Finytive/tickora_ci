@@ -37,6 +37,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.sql.Time;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -148,6 +151,28 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
         OrganizationEntity organizationEntity = organizationAdapter.findByOrgId(orgId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "Organization not found"));
 
+        List<FixedScheduleDto> fix = model.getFixedSchedule();
+        if (fix != null && !fix.isEmpty() && model.getSplitTime() != null) {
+
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
+            LocalTime splitLocalTime = LocalTime.parse(model.getSplitTime(), formatter);
+            Time splitTime = Time.valueOf(splitLocalTime);
+
+            for (FixedScheduleDto f : fix) {
+                if (f.getStartTime() != null && f.getEndTime() != null) {
+                    LocalTime startLocalTime = LocalTime.parse(f.getStartTime(), formatter);
+                    LocalTime endLocalTime = LocalTime.parse(f.getEndTime(), formatter);
+                    Time startTime = Time.valueOf(startLocalTime);
+                    Time endTime = Time.valueOf(endLocalTime);
+
+                    if (splitTime.equals(startTime) || splitTime.equals(endTime)
+                            || (splitTime.after(startTime) && splitTime.before(endTime))) {
+                        throw new IllegalArgumentException("Invalid split time");
+                    }
+                }
+            }
+        }
+
         WorkScheduleEntity entity = workScheduleEntityMapper.toEntity(model);
 
         entity.setOrganizationEntity(organizationEntity);
@@ -157,6 +182,9 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
         entity.setSplitTime(entity.getSplitTime());
         boolean shouldAssignToSuperAdmin = model.isDefault() || workScheduleAdapter.countByOrgId(orgId) == 0;
         WorkScheduleEntity savedEntity = workScheduleAdapter.saveWorkSchedule(entity);
+
+
+
 
         if (shouldAssignToSuperAdmin) {
             int superAdminRoleLevel = UserRole.SUPERADMIN.getHierarchyLevel();
@@ -175,6 +203,7 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
             case FLEXIBLE -> saveFlexibleSchedule(model.getFlexibleSchedule(), entity);
             case WEEKLY -> saveWeeklySchedule(model.getWeeklySchedule(), entity);
         }
+
 
         if (isRedisEnabled) {
             CacheEventPublisherUtil.syncReloadThenPublish(
