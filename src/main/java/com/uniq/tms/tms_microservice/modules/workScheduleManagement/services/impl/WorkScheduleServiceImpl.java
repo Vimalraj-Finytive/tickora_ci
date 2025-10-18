@@ -302,6 +302,7 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
             WorkScheduleEntity entity = workScheduleEntityMapper.toEntity(model);
             entity.setOrganizationEntity(organizationEntity);
             entity.setType(typeEntity);
+            entity.setActive(true);
             entity.setScheduleId(model.getScheduleId());
             entity.setAutoClockOut(model.getAutoClockOut());
             entity.setSplitTime(existing.getSplitTime());
