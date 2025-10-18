@@ -13,7 +13,6 @@ public interface UserEntityMapper {
 
     @Mapping(target = "roleId", source = "role.roleId")
     @Mapping(target = "workSchedule", source = "workSchedule.scheduleName")
-    @Mapping(target = "splitTimeEnabled", source = "splitTimeEnabled")
     User toMiddleware(UserEntity entity);
 
     @Mapping(target = "password", ignore = true)
@@ -23,7 +22,6 @@ public interface UserEntityMapper {
     @Mapping(target = "workSchedule.scheduleName", source = "workSchedule")
     @Mapping(target = "workSchedule.type", ignore = true)
     @Mapping(target = "workSchedule.scheduleId", source = "workSchedule")
-    @Mapping(target = "splitTimeEnabled", source = "splitTimeEnabled")
     UserEntity toEntity(User user);
 
     @Mapping(target = "workSchedule", ignore = true)

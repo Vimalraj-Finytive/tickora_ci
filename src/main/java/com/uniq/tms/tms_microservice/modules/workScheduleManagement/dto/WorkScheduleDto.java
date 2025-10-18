@@ -10,9 +10,11 @@ public class WorkScheduleDto {
     private boolean isActive;
     private boolean isDefault;
     private String type;
+    private boolean isAutoClockOut;
 
     @Pattern(regexp = "^(?:[01]\\d|2[0-3]):00$", message = "Invalid time. Minutes not allowed")
     private String splitTime;
+
     @JsonIgnore
     private String orgId;
     private Double duration;
@@ -114,4 +116,12 @@ public class WorkScheduleDto {
 
     public void setSplitTime(String splitTime) {
         this.splitTime = splitTime; }
+
+    public boolean getAutoClockOut() {
+        return isAutoClockOut;
+    }
+
+    public void setAutoClockOut(boolean autoClockOut) {
+        isAutoClockOut = autoClockOut;
+    }
 }

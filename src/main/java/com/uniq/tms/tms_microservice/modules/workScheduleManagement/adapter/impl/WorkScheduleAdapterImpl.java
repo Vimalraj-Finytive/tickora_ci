@@ -213,9 +213,5 @@ public class WorkScheduleAdapterImpl implements WorkScheduleAdapter {
         return workScheduleRepository.findFlexibleSchedulesByUserIds(pagedUserIds);
     }
 
-    @Override
-    public WorkScheduleEntity findByScheduleIdModel(String workScheduleId, String orgId) {
-        return workScheduleRepository.findByScheduleIdAndOrganizationEntity_OrganizationId(workScheduleId, orgId);
-    }
 
 }
