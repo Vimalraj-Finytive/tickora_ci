@@ -114,6 +114,13 @@
   }
 }
 
+@mixin input-lable{
+   font-size: 1rem;
+  font-weight: 500;
+  margin-bottom: 5px;
+  color: var(--black);
+}
+
 @mixin search-input {
   height: 32px;
   padding: 10px; 
@@ -285,5 +292,39 @@
   }
   .calendar-item {
     cursor: pointer;
+  }
+}
+
+@mixin checkbox {
+  .checkbox {
+  cursor: pointer;
+  accent-color: var(--primary-color);
+  appearance: auto;
+  -webkit-appearance: checkbox;
+  font-size: small;
+}
+
+.checkbox:focus {
+  outline: none;
+  box-shadow: none;
+}
+}
+@mixin no-data-image-content {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 60vh; 
+  width: 100%;
+  overflow: hidden; 
+
+  .no-data-image {
+    max-width: 350px;
+    margin-bottom: 0.5rem;
+  }
+
+  .no-data-message {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #6c757d;
   }
 }
