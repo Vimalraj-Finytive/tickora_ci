@@ -8,6 +8,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.uniq.tms.tms_microservice.modules.locationManagement.adapter.LocationAdapter;
 import com.uniq.tms.tms_microservice.modules.locationManagement.dto.LocationDto;
 import com.uniq.tms.tms_microservice.modules.locationManagement.services.LocationService;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.RoleEntity;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.adapter.FaceAdapter;
 import com.uniq.tms.tms_microservice.modules.userManagement.dto.UserValidationDto;
 import com.uniq.tms.tms_microservice.modules.userManagement.mapper.UserEntityMapper;
@@ -26,6 +27,7 @@ import com.uniq.tms.tms_microservice.modules.timesheetManagement.services.FaceSe
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.services.TimesheetService;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.*;
@@ -52,6 +54,7 @@ public class FaceServiceImpl implements FaceService {
     private final LocationAdapter locationAdapter;
     private final UserEntityMapper userEntityMapper;
     private final LocationService locationService;
+
 
     public FaceServiceImpl(UserAdapter userAdapter, RestTemplate restTemplate, UserFaceEntityMapper userFaceEntityMapper,
                            TimesheetService timesheetService, TimesheetEntityMapper timesheetEntityMapper,
@@ -314,7 +317,7 @@ public class FaceServiceImpl implements FaceService {
     }
 
     @Override
-    public ApiResponse<RegisterDto> compareMultiFace(FaceDto faceDto, String orgSchema) {
+    public ApiResponse<RegisterDto> compareMultiFace(FaceDto faceDto, String orgSchema,String UserIdFromToken) {
         if (faceDto.getTimesheetLogs() != null && !faceDto.getTimesheetLogs().isEmpty()) {
             for (TimesheetHistoryDto log : faceDto.getTimesheetLogs()) {
                 if (log.getLocationId() == null || log.getLocationName() == null) {
@@ -370,12 +373,32 @@ public class FaceServiceImpl implements FaceService {
                 return new ApiResponse<>(400, "Face comparison failed: empty response", null);
             }
 
+
+
+
+
             UserClockStatusDto userClockStatusDto = responseDto.getData().getFirst();
 
             if (!userClockStatusDto.isFaceMatch()) {
                 return new ApiResponse<>(400, "Face does not match", null);
             }
-
+           String userIdFromFace = userClockStatusDto.getUserId();
+            log.info("Comparing userIdFromToken={} with userIdFromFace={}", UserIdFromToken, userIdFromFace);
+            if (UserIdFromToken != null && UserIdFromToken.equals(userIdFromFace)) {
+                log.warn("Unauthorized access: same user ({}) attempted face comparison", UserIdFromToken);
+                return new ApiResponse<>(400, " You cannot perform face comparison for your own ID", null);
+            }
+            UserEntity faceUser = userAdapter.getUserById(userIdFromFace);
+            UserEntity tokenUser = userAdapter.getUserById(UserIdFromToken);
+            if (faceUser == null || tokenUser == null) {
+                return new ApiResponse<>(404, "User not found for hierarchy validation", null);
+            }
+            int faceUserHierarchy = faceUser.getRole().getHierarchyLevel();
+            int tokenUserHierarchy = tokenUser.getRole().getHierarchyLevel();
+            log.info("Hierarchy comparison: FaceUserLevel={} TokenUserLevel={}", faceUserHierarchy, tokenUserHierarchy);
+            if (faceUserHierarchy > tokenUserHierarchy) {
+                return new ApiResponse<>(400, "Access denied", null);
+            }
             if(userClockStatusDto.getUserId() != null){
                 faceDto.getTimesheetLogs()
                         .forEach(log -> log.setUserId(userClockStatusDto.getUserId()));

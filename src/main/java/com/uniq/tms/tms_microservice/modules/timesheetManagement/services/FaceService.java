@@ -11,7 +11,7 @@ public interface FaceService {
 
     ApiResponse<ClockInOutRequestDto> clockInOutUser(ClockInOutRequestDto registerDto, String orgSchema);
 
-    ApiResponse<RegisterDto> compareMultiFace(FaceDto faceDto, String orgSchema);
+    ApiResponse<RegisterDto> compareMultiFace(FaceDto faceDto, String orgSchema,String UserIdFromToken);
 
     ApiResponse<UserValidationDto> validateUser(String userId);
 

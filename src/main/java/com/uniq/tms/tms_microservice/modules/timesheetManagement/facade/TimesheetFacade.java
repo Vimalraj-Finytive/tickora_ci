@@ -15,6 +15,7 @@ import com.uniq.tms.tms_microservice.shared.security.user.CustomUserDetails;
 import com.uniq.tms.tms_microservice.shared.util.TimesheetLogParserUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ResponseStatusException;
@@ -144,9 +145,10 @@ public class TimesheetFacade {
         }
     }
 
-    public ApiResponse<RegisterDto> compareMultiFace(FaceDto faceDto) {
+    public ApiResponse<RegisterDto> compareMultiFace(FaceDto faceDto,String userIdFromToken) {
+
         String orgSchema = authHelper.getSchema();
-        return faceService.compareMultiFace(faceDto,orgSchema);
+        return faceService.compareMultiFace(faceDto,orgSchema,userIdFromToken);
     }
 
     public CompletableFuture<FileExportResponseDto> generateTimesheetFileAsync(
@@ -179,4 +181,6 @@ public class TimesheetFacade {
         String orgSchema = authHelper.getSchema();
         return faceService.validateUser(userId);
     }
+
+
 }
