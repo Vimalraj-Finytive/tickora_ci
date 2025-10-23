@@ -741,6 +741,7 @@ RETURNS TABLE (
     is_active BOOLEAN,
     work_schedule_type VARCHAR,
     split_time TIME,
+    is_auto_clock_out BOOLEAN,
     organization_id VARCHAR
 )
 LANGUAGE plpgsql
@@ -753,6 +754,7 @@ BEGIN
            ws.is_active,
            ws.work_schedule_type,
            ws.split_time,
+           ws.is_auto_clock_out,
            ws.organization_id
     FROM ${schemaName}.work_schedule ws
     JOIN ${schemaName}.users u ON ws.work_schedule_id = u.work_schedule_id

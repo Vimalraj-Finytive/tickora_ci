@@ -230,7 +230,7 @@ public class JwtFilter extends OncePerRequestFilter {
 
     private static final List<String> SUBSCRIPTION_ALLOWED_PATHS = List.of(
             "/tms/organization/**",
-            "/admin/profile"
+            "/tms/admin/profile"
     );
 
     private boolean isSubscriptionAllowedPath(String path) {
