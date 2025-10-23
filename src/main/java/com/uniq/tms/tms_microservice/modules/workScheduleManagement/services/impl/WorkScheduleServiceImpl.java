@@ -183,9 +183,6 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
         boolean shouldAssignToSuperAdmin = model.isDefault() || workScheduleAdapter.countByOrgId(orgId) == 0;
         WorkScheduleEntity savedEntity = workScheduleAdapter.saveWorkSchedule(entity);
 
-
-
-
         if (shouldAssignToSuperAdmin) {
             int superAdminRoleLevel = UserRole.SUPERADMIN.getHierarchyLevel();
             List<UserEntity> superAdminUser = userAdapter.findUserByOrgIdAndRoleId(orgId, superAdminRoleLevel);
