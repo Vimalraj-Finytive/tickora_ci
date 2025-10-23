@@ -7,6 +7,8 @@ import com.uniq.tms.tms_microservice.modules.timesheetManagement.dto.ClockInOutR
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.dto.FaceDto;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.facade.TimesheetFacade;
 import com.uniq.tms.tms_microservice.modules.userManagement.dto.RegisterDto;
+import com.uniq.tms.tms_microservice.shared.helper.AuthHelper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,12 +17,16 @@ import org.springframework.web.bind.annotation.*;
 public class FaceController{
 
     private final TimesheetFacade timesheetFacade;
+    @Autowired
+    private final AuthHelper authHelper;
 
-    public FaceController(TimesheetFacade timesheetFacade) {
+    public FaceController(TimesheetFacade timesheetFacade, AuthHelper authHelper) {
         this.timesheetFacade = timesheetFacade;
+        this.authHelper = authHelper;
     }
 
-    @PostMapping("/register")
+
+    @PostMapping(value = "/register")
     public ResponseEntity<ApiResponse<RegisterDto>> registerUserFace(@RequestHeader("Authorization") String token,
                                                                      @ModelAttribute RegisterDto registerDto){
         ApiResponse<RegisterDto> response =timesheetFacade.registerUserFace(registerDto);
@@ -37,7 +43,9 @@ public class FaceController{
     @PostMapping("/multiface/compare")
     public ResponseEntity<ApiResponse<RegisterDto>> compareMultiFace(@RequestHeader("Authorization") String token,
                                                                    @ModelAttribute FaceDto faceDto){
-        ApiResponse<RegisterDto> response =timesheetFacade.compareMultiFace(faceDto);
+
+        String userIdFromToken = authHelper.getUserId();
+        ApiResponse<RegisterDto> response =timesheetFacade.compareMultiFace(faceDto,userIdFromToken);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
