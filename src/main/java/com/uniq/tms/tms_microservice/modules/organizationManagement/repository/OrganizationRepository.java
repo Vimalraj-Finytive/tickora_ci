@@ -30,4 +30,11 @@ public interface OrganizationRepository extends JpaRepository<OrganizationEntity
 
     @Query("SELECT o.orgName FROM OrganizationEntity o WHERE o.organizationId = :orgId")
     String findOrgNameByOrganizationId(String orgId);
+
+    @Query(
+            value = "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = :schemaName AND table_name = :tableName)",
+            nativeQuery = true
+    )
+
+    boolean tableExists( String schemaName,  String tableName);
 }
