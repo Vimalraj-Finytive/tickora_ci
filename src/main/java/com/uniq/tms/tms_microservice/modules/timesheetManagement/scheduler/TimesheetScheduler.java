@@ -4,6 +4,7 @@ import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.Organ
 import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.OrganizationRepository;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.services.TimesheetService;
 import com.uniq.tms.tms_microservice.shared.util.TenantUtil;
+import liquibase.database.core.DatabaseUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -31,7 +32,10 @@ public class TimesheetScheduler {
                 TenantUtil.setCurrentTenant(orgId.getSchemaName());
                 log.info("Scheduled clock triggered for schema:{}", orgId.getSchemaName());
                 String organizationId = orgId.getOrganizationId();
-                timesheetService.autoClockOut(organizationId);
+                if(organizationRepository.tableExists(orgId.getSchemaName(),"timesheet")) {
+                    log.info("Table exists for schema : {}", orgId.getSchemaName());
+                    timesheetService.autoClockOut(organizationId);
+                }
                 TenantUtil.clearTenant();
             }
         } catch (Exception e) {
