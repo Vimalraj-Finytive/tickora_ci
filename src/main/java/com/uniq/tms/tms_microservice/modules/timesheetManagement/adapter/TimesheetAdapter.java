@@ -37,4 +37,5 @@ public interface TimesheetAdapter {
     List<TimesheetEntity> findUserByStatusId(List<String> statusId, LocalDate startDate, LocalDate endDate);
     LocationEntity getDefaultLocation(String orgId);
     List<String> findUserByStatusIdNotIn(LocalDate startDate, LocalDate endDate);
+    long countByUserIdsAndDateAndStatus(List<String> userIds, LocalDate date, String status);
 }

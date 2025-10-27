@@ -396,7 +396,7 @@ public class FaceServiceImpl implements FaceService {
             int faceUserHierarchy = faceUser.getRole().getHierarchyLevel();
             int tokenUserHierarchy = tokenUser.getRole().getHierarchyLevel();
             log.info("Hierarchy comparison: FaceUserLevel={} TokenUserLevel={}", faceUserHierarchy, tokenUserHierarchy);
-            if (faceUserHierarchy > tokenUserHierarchy) {
+            if (faceUserHierarchy >= tokenUserHierarchy) {
                 return new ApiResponse<>(400, "Access denied", null);
             }
             if(userClockStatusDto.getUserId() != null){

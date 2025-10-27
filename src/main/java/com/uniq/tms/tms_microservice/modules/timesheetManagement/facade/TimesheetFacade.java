@@ -182,5 +182,20 @@ public class TimesheetFacade {
         return faceService.validateUser(userId);
     }
 
+    public List<DashboardSummaryDto> getDashboardSummary(DashboardSummaryRequest request) {
+        LocalDate fromDate = request.getFromDate();
+        LocalDate toDate = request.getToDate();
+
+        if (toDate.isAfter(LocalDate.now(ZoneId.of("Asia/Kolkata")))) {
+            toDate = LocalDate.now(ZoneId.of("Asia/Kolkata"));
+        }
+
+        String orgId = request.getOrganizationId();
+        if (orgId == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Organization ID is required");
+        }
+
+        return timesheetService.getDashboardSummary(orgId, fromDate, toDate);
+    }
 
 }

@@ -162,6 +162,7 @@ public class OrganizationFacade {
     }
 
     public PaymentDto getPaymentDetailsBySubscriptionId(String subscriptionId) {
+
         return paymentService.getPaymentDetailsBySubscriptionId(subscriptionId);
     }
 
@@ -174,4 +175,38 @@ public class OrganizationFacade {
     public ResponseEntity<byte[]> getPaymentDetailsPdfBySubscriptionId(String subscriptionId, String orgId) {
         return paymentService.getPaymentDetailsPdfBySubscriptionId(subscriptionId, orgId);
     }
+
+
+    public ApiResponse<List<OrganizationDetailsDto>> getAllOrganizationDetails() {
+        List<OrganizationDetailsDto> dtoList = organizationService.getAllOrganizationDetails();
+        return new ApiResponse<>(HttpStatus.OK.value(), "Organization Details Fetched Successfully", dtoList);
+    }
+
+//
+//    public double calculateProratedAmount(int additionalUsers) {
+//        String orgId = authHelper.getOrgId();
+//        return subscriptionService.calculateProratedAmount(additionalUsers,orgId);
+//    }
+//
+//    public ApiResponse addSubscribedUsers(UpgradePlanDto dto) {
+//        String orgId = authHelper.getOrgId();
+//        String orgSchema = authHelper.getSchema();
+//        if (orgId == null || orgId.isBlank()) {
+//            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized - Invalid Organization");
+//        }
+//        boolean isUpdated = subscriptionService.addSubscribedUsers(orgId, orgSchema, dto);
+//
+//        String message = isUpdated
+//                ? "Subscribed users updated successfully."
+//                : "Failed to update subscribed users.";
+//
+//        HttpStatus status = isUpdated ? HttpStatus.OK : HttpStatus.BAD_REQUEST;
+//        return new ApiResponse<>(status.value(), message, null);
+//    }
+
+
+
+
+
+
 }

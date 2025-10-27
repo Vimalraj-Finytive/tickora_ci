@@ -12,6 +12,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.List;
+
 @RestController
 @RequestMapping(OrganizationConstant.ORGANIZATION_URL)
 public class OrganizationController {
@@ -60,6 +62,7 @@ public class OrganizationController {
         ApiResponse<OrganizationTypeDto> response = organizationFacade.getUserOrgType();
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
+
 
     @GetMapping("/getDropDowns")
     public ResponseEntity<ApiResponse<OrganizationDropdownDto>> getDropDowns() {
@@ -188,6 +191,29 @@ public class OrganizationController {
         String orgId = authHelper.getOrgId();
         return organizationFacade.getPaymentDetailsPdfBySubscriptionId(subscriptionId,orgId);
     }
+
+    @GetMapping("/analytics/orgDetails")
+    public ResponseEntity<ApiResponse<List<OrganizationDetailsDto>>> getAllOrgDetails() {
+        ApiResponse<List<OrganizationDetailsDto>> response = organizationFacade.getAllOrganizationDetails();
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
+
+
+//    @PostMapping("/subscription/upgrade/amount")
+//    public ResponseEntity<Double> upgradePlan(@RequestParam int additionalUsers) {
+//        double totalAmount = organizationFacade.calculateProratedAmount(additionalUsers);
+//        return ResponseEntity.ok(totalAmount);
+//    }
+//
+//    @PostMapping("/subscription/add-users")
+//    public ResponseEntity<ApiResponse> addSubscribedUsers(
+//            @RequestHeader("Authorization") String token,
+//            @RequestBody UpgradePlanDto upgradePlanDto) {
+//        return ResponseEntity.ok(organizationFacade.addSubscribedUsers(upgradePlanDto));
+//    }
+
+
+
 
 }
 

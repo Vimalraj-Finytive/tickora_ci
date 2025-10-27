@@ -1,6 +1,7 @@
 package com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.impl;
 
 import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.OrganizationAdapter;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.OrganizationDetailsDto;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.OrganizationSummaryDto;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.OrganizationEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.OrganizationTypeEntity;
@@ -123,13 +124,15 @@ public class OrganizationAdapterImpl implements OrganizationAdapter {
     }
 
     @Override
+    public List<OrganizationEntity> findAll() {
+        return organizationRepository.findAll();
+    }
+
+    @Override
     public List<OrganizationSummaryDto> getOrgSummary(String orgId) {
         Optional<OrganizationEntity> organizationOpt = organizationRepository.findSummaryById(orgId);
         List<OrganizationEntity> orgList = organizationOpt.map(List::of).orElse(List.of());
         return organizationEntityMapper.toMiddleware(orgList);
     }
-
-
-
 
 }

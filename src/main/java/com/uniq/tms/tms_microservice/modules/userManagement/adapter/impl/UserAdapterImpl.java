@@ -555,5 +555,16 @@ public class UserAdapterImpl implements UserAdapter {
         return userRepository.findAdminAndSuperAdminNamesAndEmails();
     }
 
+    @Override
+    public List<UserEntity> findByOrganizationIdAndActiveTrue(String orgId) {
+        return userRepository.findAllActiveUsersByOrganizationId(orgId);
+    }
+
+    @Override
+    public int countActiveUsers(String orgId) {
+        long count = userRepository.countByOrganizationIdAndActiveTrue(orgId);
+        return Math.toIntExact(count);
+    }
+
 
 }

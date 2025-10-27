@@ -23,5 +23,7 @@ public interface SubscriptionAdapter {
     Optional<PlanEntity> findById(String planId);
     Optional <SubscriptionEntity>findSubscriptionDetails(String subscriptionId);
     List<SubscriptionEntity> findAllSubscriptionsByOrgId(String orgId);
+    boolean updateSubscription(SubscriptionEntity subscription);
+
 
 }
