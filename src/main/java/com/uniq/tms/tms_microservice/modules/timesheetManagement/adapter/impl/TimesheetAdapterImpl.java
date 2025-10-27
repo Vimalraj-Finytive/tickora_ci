@@ -963,5 +963,19 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
     public List<String> findUserByStatusIdNotIn(LocalDate startDate, LocalDate endDate) {
         return timesheetRepository.findUserByStatusIdNotIn(startDate,endDate);
     }
+    @Override
+    public long countByUserIdsAndDateAndStatus(List<String> userIds, LocalDate date, String status) {
+        String statusId;
+        if ("PRESENT".equalsIgnoreCase(status)) {
+            statusId = TimesheetStatusEnum.PRESENT.getId();
+        } else if ("ABSENT".equalsIgnoreCase(status)) {
+            statusId = TimesheetStatusEnum.ABSENT.getId();
+        } else {
+            throw new IllegalArgumentException("Unsupported status: " + status);
+        }
+
+        return timesheetRepository.countByUserIdsAndDateAndStatusId(userIds, date, statusId);
+    }
+
 
 }

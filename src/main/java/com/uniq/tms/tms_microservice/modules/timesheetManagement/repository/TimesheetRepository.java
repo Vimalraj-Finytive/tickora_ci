@@ -82,4 +82,15 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
     List<String> findUserByStatusIdNotIn(@Param("startDate") LocalDate startDate,
                                                      @Param("endDate") LocalDate endDate);
 
+    @Query("""
+        SELECT COUNT(t)
+        FROM TimesheetEntity t
+        WHERE t.user.userId IN :userIds
+          AND t.date = :date
+          AND t.status.id = :statusId
+    """)
+    long countByUserIdsAndDateAndStatusId(@Param("userIds") List<String> userIds,
+                                          @Param("date") LocalDate date,
+                                          @Param("statusId") String statusId);
+
 }

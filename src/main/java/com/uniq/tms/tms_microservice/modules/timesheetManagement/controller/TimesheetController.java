@@ -91,4 +91,11 @@ public class  TimesheetController {
         return ResponseEntity.ok(timesheetFacade.getStatus());
     }
 
+    @PostMapping("dashboard/summary")
+    public ResponseEntity<?> getDashboardSummary(@RequestHeader("Authorization") String token,
+                                                 @RequestBody DashboardSummaryRequest request) {
+        List<DashboardSummaryDto> summary = timesheetFacade.getDashboardSummary(request);
+        return ResponseEntity.ok(new ApiResponse(200, "Dashboard Summary Loaded Successfully", summary));
+    }
+
 }
