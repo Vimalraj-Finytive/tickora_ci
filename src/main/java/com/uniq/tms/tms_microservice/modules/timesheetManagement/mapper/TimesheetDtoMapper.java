@@ -1,11 +1,8 @@
 package com.uniq.tms.tms_microservice.modules.timesheetManagement.mapper;
 
+import com.uniq.tms.tms_microservice.modules.timesheetManagement.dto.*;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.entity.TimesheetEntity;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.entity.TimesheetStatusEntity;
-import com.uniq.tms.tms_microservice.modules.timesheetManagement.dto.TimesheetDto;
-import com.uniq.tms.tms_microservice.modules.timesheetManagement.dto.TimesheetHistoryDto;
-import com.uniq.tms.tms_microservice.modules.timesheetManagement.dto.TimesheetStatusDto;
-import com.uniq.tms.tms_microservice.modules.timesheetManagement.dto.UserDashboardDto;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.model.TimesheetHistory;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.model.TimesheetStatus;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.projection.TimesheetProjection;
@@ -13,6 +10,7 @@ import com.uniq.tms.tms_microservice.modules.userManagement.projections.UserDash
 import org.mapstruct.*;
 
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -59,6 +57,14 @@ public interface TimesheetDtoMapper {
 
     @IterableMapping(qualifiedByName = "timeOnlyMapping")
     List<TimesheetDto> toTimeDto(List<TimesheetProjection> timesheets);
+
+    @Mapping(source = "orgId", target = "organizationId")
+    @Mapping(source = "orgName", target = "orgName")
+    @Mapping(source = "presentCount", target = "presentCount")
+    @Mapping(source = "absentCount", target = "absentCount")
+    DashboardOrganizationSummaryDto toDashboardOrgSummary(String orgId, String orgName, int presentCount, int absentCount);
+
+    DashboardSummaryDto toDashboardSummary(LocalDate date, List<DashboardOrganizationSummaryDto> organizations);
 
 
     default String formatTime(LocalTime localTime) {

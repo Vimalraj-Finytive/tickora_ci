@@ -3,8 +3,10 @@ package com.uniq.tms.tms_microservice.modules.organizationManagement.services.im
 import com.uniq.tms.tms_microservice.modules.locationManagement.adapter.LocationAdapter;
 import com.uniq.tms.tms_microservice.modules.locationManagement.entity.LocationEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.OrganizationAdapter;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.OrganizationDetailsDto;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.OrganizationSummaryDto;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.*;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.mapper.OrganizationDetailsMapper;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.mapper.OrganizationEntityMapper;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.model.*;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.OrganizationRepository;
@@ -39,6 +41,7 @@ import liquibase.database.jvm.JdbcConnection;
 import liquibase.resource.ClassLoaderResourceAccessor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -48,7 +51,9 @@ import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -70,13 +75,13 @@ public class OrganizationServiceImpl implements OrganizationService {
     private final ApplicationEventPublisher publisher;
     private final LocationAdapter locationAdapter;
     private final SubscriptionService subscriptionService;
-
+    private final OrganizationDetailsMapper mapper;;
     public OrganizationServiceImpl(OrganizationEntityMapper organizationEntityMapper, UserAdapter userAdapter, WorkScheduleAdapter workScheduleAdapter,
                                    IdGenerationService idGenerationService, DataSource dataSource, ExceptionHelper exceptionHelper,
                                    OrganizationRepository organizationRepository, OrganizationTypeRepository organizationTypeRepository,
                                    UserService userService, OrganizationAdapter organizationAdapter, CacheKeyConfig cacheKeyConfig,
                                    CacheReloadHandlerRegistry cacheReloadHandlerRegistry, ApplicationEventPublisher publisher,
-                                   LocationAdapter locationAdapter, SubscriptionService subscriptionService) {
+                                   LocationAdapter locationAdapter, SubscriptionService subscriptionService, OrganizationDetailsMapper mapper ) {
         this.organizationEntityMapper = organizationEntityMapper;
         this.userAdapter = userAdapter;
         this.workScheduleAdapter = workScheduleAdapter;
@@ -92,6 +97,8 @@ public class OrganizationServiceImpl implements OrganizationService {
         this.publisher = publisher;
         this.locationAdapter = locationAdapter;
         this.subscriptionService = subscriptionService;
+        this.mapper=mapper;
+
     }
 
     @Value("${cache.redis.enabled}")
@@ -416,4 +423,22 @@ public class OrganizationServiceImpl implements OrganizationService {
         }
     }
 
+    @Override
+    public List<OrganizationDetailsDto> getAllOrganizationDetails() {
+        List<OrganizationEntity> organizations = organizationAdapter.findAll();
+        List<OrganizationDetailsDto> dtoList = new ArrayList<>();
+
+        for (OrganizationEntity orgEntity : organizations) {
+            OrganizationDetailsModel model = mapper.toModel(orgEntity);
+            model.setActiveUsers(userAdapter.countActiveMembers(orgEntity.getOrganizationId()));
+            model.setInactiveUsers(userAdapter.countInactiveMembers(orgEntity.getOrganizationId()));
+            dtoList.add(mapper.toDto(model));
+        }
+
+        return dtoList;
+    }
+
+
+
 }
+

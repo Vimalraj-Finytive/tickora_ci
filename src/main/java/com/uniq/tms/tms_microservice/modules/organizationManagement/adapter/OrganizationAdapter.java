@@ -28,4 +28,5 @@ public interface OrganizationAdapter {
     List<OrganizationSummaryDto> getOrgSummary(String orgId);
     String getOrgTypeNameById(String type);
     String getOrgName(String orgId);
+    List<OrganizationEntity> findAll();
 }

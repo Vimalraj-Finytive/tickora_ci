@@ -2,6 +2,8 @@ package com.uniq.tms.tms_microservice.modules.timesheetManagement.services.impl;
 
 import com.uniq.tms.tms_microservice.modules.locationManagement.adapter.LocationAdapter;
 import com.uniq.tms.tms_microservice.modules.locationManagement.entity.LocationEntity;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.OrganizationAdapter;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.OrganizationEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.services.OrganizationCacheService;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.adapter.TimesheetAdapter;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.dto.*;
@@ -57,11 +59,12 @@ public class TimesheetServiceImpl implements TimesheetService {
     private final OrganizationCacheService organizationCacheService;
     private final RolePrivilegeHelper rolePrivilegeHelper;
     private final LocationAdapter locationAdapter;
+    private final OrganizationAdapter organizationAdapter;
 
     public TimesheetServiceImpl(TimesheetAdapter timesheetAdapter, TimesheetEntityMapper timesheetEntityMapper, TimesheetDtoMapper timesheetDtoMapper,
                                 UserAdapter userAdapter, WorkScheduleAdapter workScheduleAdapter,
                                 OrganizationCacheService organizationCacheService, RolePrivilegeHelper rolePrivilegeHelper,
-                                LocationAdapter locationAdapter) {
+                                LocationAdapter locationAdapter, OrganizationAdapter organizationAdapter) {
         this.timesheetAdapter = timesheetAdapter;
         this.timesheetEntityMapper = timesheetEntityMapper;
         this.timesheetDtoMapper = timesheetDtoMapper;
@@ -70,6 +73,7 @@ public class TimesheetServiceImpl implements TimesheetService {
         this.organizationCacheService = organizationCacheService;
         this.rolePrivilegeHelper = rolePrivilegeHelper;
         this.locationAdapter = locationAdapter;
+        this.organizationAdapter = organizationAdapter;
     }
 
     public PaginationResponseDto getAllTimesheets(String userIdFromToken, String orgId, String role, TimesheetReportDto request) {
@@ -910,4 +914,36 @@ public class TimesheetServiceImpl implements TimesheetService {
                 .toList();
         return status;
     }
+
+    @Override
+    public List<DashboardSummaryDto> getDashboardSummary(String orgId, LocalDate fromDate, LocalDate toDate) {
+            OrganizationEntity organization = organizationAdapter.findByOrgId(orgId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Organization not found"));
+
+            String orgName = organization.getOrgName();
+            List<UserEntity> users = userAdapter.findByOrganizationIdAndActiveTrue(orgId);
+
+            List<DashboardSummaryDto> result = new ArrayList<>();
+
+            for (LocalDate date = fromDate; !date.isAfter(toDate); date = date.plusDays(1)) {
+
+                long presentCount = timesheetAdapter.countByUserIdsAndDateAndStatus(
+                        users.stream().map(UserEntity::getUserId).toList(),
+                        date,
+                        "PRESENT"
+                );
+                long absentCount = users.size() - presentCount;
+
+                DashboardOrganizationSummaryDto orgSummary = timesheetDtoMapper
+                        .toDashboardOrgSummary(orgId, orgName, (int) presentCount, (int) absentCount);
+
+                DashboardSummaryDto dailyDto = timesheetDtoMapper
+                        .toDashboardSummary(date, List.of(orgSummary));
+
+                result.add(dailyDto);
+            }
+
+            return result;
+        }
+
 }

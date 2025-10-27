@@ -1,5 +1,6 @@
 package com.uniq.tms.tms_microservice.modules.organizationManagement.services.impl;
 
+import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.PaymentAdapter;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.SubscriptionAdapter;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.PlanDto;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.SubscriptionDto;
@@ -21,6 +22,7 @@ import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 
@@ -31,11 +33,13 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     private final SubscriptionAdapter subscriptionAdapter;
     private final PaymentService paymentService;
     private final UpgradeDtoMapper upgradeDtoMapper;
+    private final PaymentAdapter paymentAdapter;
 
-    public SubscriptionServiceImpl(SubscriptionAdapter subscriptionAdapter, PaymentService paymentService, UpgradeDtoMapper upgradeDtoMapper){
+    public SubscriptionServiceImpl(SubscriptionAdapter subscriptionAdapter, PaymentService paymentService, UpgradeDtoMapper upgradeDtoMapper, PaymentAdapter paymentAdapter){
         this.subscriptionAdapter = subscriptionAdapter;
         this.paymentService = paymentService;
         this.upgradeDtoMapper = upgradeDtoMapper;
+        this.paymentAdapter = paymentAdapter;
     }
 
     @Override
@@ -175,4 +179,108 @@ public class SubscriptionServiceImpl implements SubscriptionService {
                 .daysLeft(Math.max(daysLeft, 0))
                 .build();
     }
+
+//    @Override
+//    public double calculateProratedAmount(int additionalUsers, String orgId) {
+//        SubscriptionEntity subscription = subscriptionAdapter.findActiveSubscriptionByOrgId(orgId)
+//                .orElseThrow(() -> new RuntimeException("No active or expired subscription found for org: " + orgId));
+//
+//        PlanEntity plan = subscriptionAdapter.findById(subscription.getPlanId())
+//                .orElseThrow(() -> new RuntimeException("Plan not found for planId: " + subscription.getPlanId()));
+//
+//        double pricePerUser = plan.getPricePerUser().doubleValue();
+//
+//        LocalDate today = LocalDate.now();
+//        LocalDate endDate = subscription.getEndDate().toLocalDate();
+//
+//        if (!today.isBefore(endDate)) {
+//            throw new RuntimeException("Subscription has already expired");
+//        }
+//
+//        long remainingDays = ChronoUnit.DAYS.between(today, endDate);
+//
+//        long months = remainingDays / 30;
+//        long extraDays = remainingDays % 30;
+//
+//        double amountForMonths = additionalUsers * pricePerUser * months;
+//        double amountForExtraDays = additionalUsers * pricePerUser * ((double) extraDays / 30);
+//
+//        double totalAmount = amountForMonths + amountForExtraDays;
+//
+//        return totalAmount;
+//    }
+//
+//    @Override
+//    public boolean addSubscribedUsers(String orgId, String orgSchema, UpgradePlanDto dto) {
+//        boolean isUpdated = false;
+//        PaymentStatus historyStatus;
+//
+//        try {
+//            SubscriptionEntity subscription = subscriptionAdapter.findActiveSubscriptionByOrgId(orgId)
+//                    .orElse(null);
+//
+//            if (subscription == null) {
+//                log.warn("No active subscription found for orgID: {}", orgId);
+//                historyStatus = PaymentStatus.FAILED;
+//            } else {
+//                if (Boolean.TRUE.equals(dto.getStatus())) {
+//
+//                    int totalSubscribedUsers = subscription.getSubscribedUsers() + dto.getSubscribedUserCount();
+//                    subscription.setSubscribedUsers(totalSubscribedUsers);
+//                    subscription.setUpdatedAt(LocalDateTime.now());
+//
+//                    boolean updated = subscriptionAdapter.updateSubscription(subscription);
+//
+//                    if (updated) {
+//                        isUpdated = true;
+//                        historyStatus = PaymentStatus.SUCCESS;
+//                        log.info("Subscribed users updated successfully for orgID: {} | SubscriptionID: {} | New Count: {}",
+//                                orgId, subscription.getSubId(), totalSubscribedUsers);
+//                    } else {
+//                        historyStatus = PaymentStatus.FAILED;
+//                        log.warn("Failed to update subscribed users for orgID: {}", orgId);
+//                    }
+//
+//                } else {
+//                    historyStatus = PaymentStatus.FAILED;
+//                    log.info("dto.status is FALSE — skipping subscribed user update.");
+//                }
+//            }
+//
+//            PaymentEntity paymentHistory = paymentAdapter.createPayment(
+//                    orgId,
+//                    dto.getOrderID(),
+//                    dto.getTotalSubscriptionAmount(),
+//                    subscriptionAdapter.getBillingCycle(dto.getPlanId()),
+//                    historyStatus,
+//                    orgSchema
+//            );
+//
+//            log.info("Payment history saved for orgID: {} | PaymentHistoryID: {} | Status: {}",
+//                    orgId, paymentHistory.getPaymentId(), historyStatus.getDisplayValue());
+//
+//            return isUpdated;
+//
+//        } catch (Exception e) {
+//            log.error("Error while adding subscribed users for orgID: {} | Error: {}", orgId, e.getMessage(), e);
+//
+//            try {
+//                PaymentEntity paymentHistory = paymentAdapter.createPayment(
+//                        orgId,
+//                        dto.getOrderID(),
+//                        dto.getTotalSubscriptionAmount(),
+//                        subscriptionAdapter.getBillingCycle(dto.getPlanId()),
+//                        PaymentStatus.FAILED,
+//                        orgSchema
+//                );
+//                log.info("Payment history saved with FAILED status for orgID: {} | PaymentHistoryID: {}",
+//                        orgId, paymentHistory.getPaymentId());
+//            } catch (Exception ex) {
+//                log.error("Failed to save payment history after exception for orgID: {} | Error: {}", orgId, ex.getMessage(), ex);
+//            }
+//
+//            return false;
+//        }
+//    }
+
 }

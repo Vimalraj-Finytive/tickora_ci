@@ -229,8 +229,6 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
             "FROM UserEntity u WHERE u.role.roleId IN (1, 2)")
     List<UserNameEmailDto> findAdminAndSuperAdminNamesAndEmails();
 
-
-
     @Modifying
     @Transactional
     @Query("UPDATE UserEntity u SET u.workSchedule = :workSchedule WHERE u.userId IN :userIds AND u.organizationId = :orgId")
