@@ -2,6 +2,8 @@ package com.uniq.tms.tms_microservice.modules.timesheetManagement.services.impl;
 
 import com.uniq.tms.tms_microservice.modules.locationManagement.adapter.LocationAdapter;
 import com.uniq.tms.tms_microservice.modules.locationManagement.entity.LocationEntity;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.OrganizationAdapter;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.OrganizationEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.services.OrganizationCacheService;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.adapter.TimesheetAdapter;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.dto.*;
@@ -57,11 +59,12 @@ public class TimesheetServiceImpl implements TimesheetService {
     private final OrganizationCacheService organizationCacheService;
     private final RolePrivilegeHelper rolePrivilegeHelper;
     private final LocationAdapter locationAdapter;
+    private final OrganizationAdapter organizationAdapter;
 
     public TimesheetServiceImpl(TimesheetAdapter timesheetAdapter, TimesheetEntityMapper timesheetEntityMapper, TimesheetDtoMapper timesheetDtoMapper,
                                 UserAdapter userAdapter, WorkScheduleAdapter workScheduleAdapter,
                                 OrganizationCacheService organizationCacheService, RolePrivilegeHelper rolePrivilegeHelper,
-                                LocationAdapter locationAdapter) {
+                                LocationAdapter locationAdapter, OrganizationAdapter organizationAdapter) {
         this.timesheetAdapter = timesheetAdapter;
         this.timesheetEntityMapper = timesheetEntityMapper;
         this.timesheetDtoMapper = timesheetDtoMapper;
@@ -70,6 +73,7 @@ public class TimesheetServiceImpl implements TimesheetService {
         this.organizationCacheService = organizationCacheService;
         this.rolePrivilegeHelper = rolePrivilegeHelper;
         this.locationAdapter = locationAdapter;
+        this.organizationAdapter = organizationAdapter;
     }
 
     public PaginationResponseDto getAllTimesheets(String userIdFromToken, String orgId, String role, TimesheetReportDto request) {
@@ -637,19 +641,42 @@ public class TimesheetServiceImpl implements TimesheetService {
 
     private void calculateHours(TimesheetEntity timesheet) {
         try {
-            if (timesheet.getFirstClockIn() != null && timesheet.getLastClockOut() != null) {
-                if (!timesheet.getLastClockOut().isBefore(timesheet.getFirstClockIn())) {
-                    Duration workedDuration = Duration.between(timesheet.getFirstClockIn(), timesheet.getLastClockOut());
-                    log.info("Worked duration: {}", workedDuration);
-                    timesheet.setRegularHours(LocalTime.ofSecondOfDay(workedDuration.toSeconds()));
-                    log.info("Regular hours: {}", timesheet.getRegularHours());
-                    timesheet.setTrackedHours(LocalTime.ofSecondOfDay(workedDuration.toSeconds()));
-                    log.info("Tracked hours: {}", timesheet.getTrackedHours());
-                } else {
-                    log.warn("Invalid clock-out time: earlier than clock-in.");
-                }
+            if (timesheet.getFirstClockIn() == null || timesheet.getLastClockOut() == null) {
+                log.warn("Clock-in or clock-out time is missing for timesheet ID: {}", timesheet.getId());
+                return;
             }
+
+            LocalTime clockIn = timesheet.getFirstClockIn();
+            LocalTime clockOut = timesheet.getLastClockOut();
+            LocalDate timesheetDate = timesheet.getDate();
+            LocalDate today = LocalDate.now(ZoneId.of("Asia/Kolkata"));
+
+            boolean isPreviousDay = today.isAfter(timesheetDate);
+            Duration workedDuration;
+
+            if (clockOut.isBefore(clockIn)) {
+                workedDuration = Duration.between(clockIn, clockOut);
+                log.info("Overnight Work Duration: {}", workedDuration);
+                workedDuration = workedDuration.plusHours(24);
+                log.info("ON Work Duration: {}", workedDuration);
+            } else {
+                workedDuration = Duration.between(clockIn, clockOut);
+                log.info("Same-day Work Duration: {}", workedDuration);
+            }
+
+            log.info("Clock-in time: {}", clockIn);
+            log.info("Clock-out time: {}", clockOut);
+            log.info("Calculated Worked Duration: {}", workedDuration);
+
+            LocalTime workedTime = LocalTime.ofSecondOfDay(workedDuration.toSeconds());
+            timesheet.setRegularHours(workedTime);
+            timesheet.setTrackedHours(workedTime);
+
+            log.info("Regular Hours: {}", workedTime);
+            log.info("Tracked Hours: {}", workedTime);
+
         } catch (Exception e) {
+            log.error("Error calculating hours for timesheet ID: {}", timesheet.getId(), e);
             throw new RuntimeException(e);
         }
     }
@@ -657,9 +684,8 @@ public class TimesheetServiceImpl implements TimesheetService {
     @Override
     public void autoClockOut(String orgId) {
         LocalDate day = LocalDate.now(ZoneId.of("Asia/Kolkata"));
-        if(LocalTime.now(ZoneId.of("Asia/Kolkata")).equals(LocalTime.MIDNIGHT)){
-            day = day.minusDays(1);
-        }
+        LocalTime now = LocalTime.now(ZoneId.of("Asia/Kolkata"));
+        LocalDate yesterday = day.minusDays(1);
 
         List<TimesheetEntity> openClockIns = timesheetAdapter.findActiveTimesheetsByDate(day);
         List<TimesheetHistoryEntity> historyEntries = new ArrayList<>();
@@ -702,8 +728,45 @@ public class TimesheetServiceImpl implements TimesheetService {
         }
         log.info("Saving updated timesheets and history entries...");
         timesheetAdapter.saveAll(openClockIns);
-        timesheetAdapter.saveAllTimesheetHistories(historyEntries);
-        log.info("Saving successfully...");
+        log.info("Today Timesheet Saving successfully...");
+            openClockIns = timesheetAdapter.findActiveTimesheetsByDate(yesterday);
+            for (TimesheetEntity entry : openClockIns) {
+                UserEntity users = entry.getUser();
+                WorkScheduleEntity workSchedule = users.getWorkSchedule();
+                Time splitTime = workSchedule.getSplitTime();
+                if (entry.getFirstClockIn() != null && entry.getLastClockOut() == null) {
+                    if (workSchedule.getAutoClockOut()) {
+                        LocalTime currentTime = LocalTime.now(ZoneId.of("Asia/Kolkata"));
+                        LocalTime splitLocalTime = (splitTime != null) ? splitTime.toLocalTime() : null;
+
+                        if (splitLocalTime != null && (currentTime.getHour() == splitLocalTime.getHour())) {
+                            log.info("Auto clock-out for userId={}, setting lastClockOut to 23:59", entry.getUser().getUserId());
+
+                            entry.setLastClockOut(splitLocalTime.minusMinutes(1));
+                            calculateHours(entry);
+                            log.info("Calculated Duration for Yesterday schedule");
+                            TimesheetHistoryEntity history = new TimesheetHistoryEntity();
+                            history.setLocationId(location.getLocationId());
+                            history.setLogTime(splitLocalTime.minusMinutes(1));
+                            history.setLogType(LogType.CLOCK_OUT);
+                            history.setLogFrom(LogFrom.SYSTEM_GENERATED);
+                            history.setLoggedTimestamp(LocalDateTime.now());
+
+                            TimesheetEntity timesheetRef = new TimesheetEntity();
+                            timesheetRef.setId(entry.getId());
+                            history.setTimesheet(timesheetRef);
+
+                            historyEntries.add(history);
+
+                            log.info("Added SYSTEM_GENERATED CLOCK_OUT history for userId={}, date={}", entry.getUser().getUserId(), entry.getDate());
+                        }
+                    }
+                }
+            }
+            log.info("Saving updated timesheets and history entries...");
+            timesheetAdapter.saveAll(openClockIns);
+            timesheetAdapter.saveAllTimesheetHistories(historyEntries);
+            log.info("yesterday Timesheet Saving successfully...");
     }
 
     public List<UserDashboardDto> getAllUserInfo(String orgId, String userIdFromToken, LocalDate fromDate, LocalDate toDate, String userId, List<Long> groupIds, String type) {
@@ -910,4 +973,36 @@ public class TimesheetServiceImpl implements TimesheetService {
                 .toList();
         return status;
     }
+
+    @Override
+    public List<DashboardSummaryDto> getDashboardSummary(String orgId, LocalDate fromDate, LocalDate toDate) {
+            OrganizationEntity organization = organizationAdapter.findByOrgId(orgId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Organization not found"));
+
+            String orgName = organization.getOrgName();
+            List<UserEntity> users = userAdapter.findByOrganizationIdAndActiveTrue(orgId);
+
+            List<DashboardSummaryDto> result = new ArrayList<>();
+
+            for (LocalDate date = fromDate; !date.isAfter(toDate); date = date.plusDays(1)) {
+
+                long presentCount = timesheetAdapter.countByUserIdsAndDateAndStatus(
+                        users.stream().map(UserEntity::getUserId).toList(),
+                        date,
+                        "PRESENT"
+                );
+                long absentCount = users.size() - presentCount;
+
+                DashboardOrganizationSummaryDto orgSummary = timesheetDtoMapper
+                        .toDashboardOrgSummary(orgId, orgName, (int) presentCount, (int) absentCount);
+
+                DashboardSummaryDto dailyDto = timesheetDtoMapper
+                        .toDashboardSummary(date, List.of(orgSummary));
+
+                result.add(dailyDto);
+            }
+
+            return result;
+        }
+
 }

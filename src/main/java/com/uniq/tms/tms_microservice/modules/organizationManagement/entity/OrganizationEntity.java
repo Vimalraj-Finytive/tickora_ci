@@ -102,11 +102,11 @@ public class OrganizationEntity {
         this.orgName = orgName;
     }
 
-    public List<WorkScheduleEntity > getWorkSchedule() {
+    public List<WorkScheduleEntity> getWorkSchedule() {
         return workSchedule;
     }
 
-    public void setWorkSchedule(List<WorkScheduleEntity > workSchedule) {
+    public void setWorkSchedule(List<WorkScheduleEntity> workSchedule) {
         this.workSchedule = workSchedule;
     }
 

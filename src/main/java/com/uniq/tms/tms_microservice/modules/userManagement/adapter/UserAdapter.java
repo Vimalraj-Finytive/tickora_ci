@@ -110,5 +110,7 @@ public interface UserAdapter {
     UserLocationEntity save(UserLocationEntity mapping);
     void bulkUpdateWorkSchedule(WorkScheduleEntity workSchedule, List<String> userIds, String orgId);
     List<UserNameEmailDto> findAdminAndSuperAdminNamesAndEmails();
+    List<UserEntity> findByOrganizationIdAndActiveTrue(String orgId);
+    int countActiveUsers(String orgId);
 
 }

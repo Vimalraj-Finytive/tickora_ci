@@ -14,5 +14,7 @@ public interface SubscriptionService {
     List<PlanDto> getAllPlans();
     boolean amountValidation(String orgId,String orgSchema, UpgradePlanDto request);
     boolean upgradePlan(String orgId, String orgSchema, UpgradePlanDto upgradePlanDto);
-        PlanStatusModel getCurrentPlanStatus(String orgId);
+    PlanStatusModel getCurrentPlanStatus(String orgId);
+//    double calculateProratedAmount(int additionalUsers,String orgId);
+//    boolean addSubscribedUsers(String orgId, String orgSchema, UpgradePlanDto dto);
 }
