@@ -195,7 +195,14 @@ public class UserFacade {
         if (orgId == null) {
             return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
         }
-        return userService.bulkCreateUsers(file, orgId, userId);
+        Long currentCount = userService.getCurrentUserCount(orgId);
+        Long subscribedLimit = userService.getSubscribedUserLimit(orgId);
+        if (!(currentCount < subscribedLimit)) {
+            return new ApiResponse(404,"User creation limit reached. Please upgrade your plan.",null);
+        }
+        else {
+            return userService.bulkCreateUsers(file, orgId, userId);
+        }
     }
 
     public ApiResponse createUser(UserDto userDto, SecondaryDetailsDto secondaryDetailsDto) {
@@ -305,12 +312,14 @@ public class UserFacade {
     public ApiResponse<List<UserHistoryResponseDto>> getUserHistoryLog(String userId) {
         return userService.getUserHistoryLog(userId);
     }
-    public Iterable<BulkRoleUpdate> updateMultipleUserRoles(List<String> userIds, Long roleId) {
+
+    public ApiResponse<BulkRoleUpdateDto> updateMultipleUserRoles(BulkRoleUpdateDto request) {
         String orgId = authHelper.getOrgId();
-        List<UserBulkChangingModel> user= userService.updateMultipleUserRoles(userIds, roleId, orgId);
-        Iterable<BulkRoleUpdate> result=user.stream()
-                .map(userDtoMapper::toDto).collect(Collectors.toList());
-        return result;
+        BulkRoleUpdateModel model = userDtoMapper.toModel(request);
+        BulkRoleUpdateModel updateRole = userService.updateMultipleUserRoles(model, orgId);
+        BulkRoleUpdateDto dto = userDtoMapper.toDto(updateRole);
+        String message = String.format("Role Updated successfully. Uploaded Count : %d , SkippedCount : %d", dto.getUpdateCount(),dto.getSkippedCount());
+        return new ApiResponse<>(200, message,null);
     }
 
     public ApiResponse updateWorkSchedules(BulkWorkScheduleUpdateRequestDto requestDto) {
@@ -384,7 +393,6 @@ public class UserFacade {
         BulkUserLocationModel saveUserLocation = userService.assignLocations(model,orgId);
         BulkUserLocationDto Dto=userDtoMapper.toDto(saveUserLocation);
         return new ApiResponse<>(200, "Locations assigned successfully", null);
-
     }
 
 

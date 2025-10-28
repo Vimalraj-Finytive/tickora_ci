@@ -519,19 +519,6 @@ public class TimesheetServiceImpl implements TimesheetService {
             TimesheetDto request,
             String orgId) {
 
-        boolean isSuperAdmin = UserRoleName.SUPERADMIN.getRoleName().equalsIgnoreCase(roleName);
-
-        if (!isSuperAdmin && userIdFromToken.equals(userId)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                    "Access denied: you cannot edit your own timesheet.");
-        }
-
-        if (!isSuperAdmin) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                    "Access denied: only superadmin can edit other users' timesheets.");
-        }
-
-
         TimesheetEntity timesheet = timesheetAdapter.findUserIdAndDate(userId, date);
         boolean isNew = false;
 

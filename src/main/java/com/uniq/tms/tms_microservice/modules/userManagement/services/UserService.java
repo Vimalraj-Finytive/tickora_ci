@@ -40,7 +40,7 @@ public interface UserService {
     List<EditUserDto> updateIsActive(EditUser editUser, String orgId, String userNameFromToken);
     ApiResponse createSuperAdminUser(Organization organization, String orgId, String schemaName);
     ApiResponse<List<UserHistoryResponseDto>> getUserHistoryLog(String userId);
-    List<UserBulkChangingModel> updateMultipleUserRoles(List<String> userIds, Long roleId, String orgId);
+    BulkRoleUpdateModel updateMultipleUserRoles(BulkRoleUpdateModel model, String orgId);
     List<BulkWorkScheduleUpdateResponseDto> updateWorkSchedules(BulkWorkScheduleUpdateRequestDto requestDto, String userNameFromToken,String orgId);
     ApiResponse addOrUpdateGroupMembers(String orgId, UserGroupModel model);
     Long getSubscribedUserLimit(String orgId);
