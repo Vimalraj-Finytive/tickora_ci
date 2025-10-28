@@ -2,10 +2,12 @@ package com.uniq.tms.tms_microservice.modules.userManagement.dto;
 
 import java.util.List;
 
-public class BulkRoleUpdate {
+public class BulkRoleUpdateDto {
 
     private List<String> userIds;
     private Long roleId;
+    private int updateCount;
+    private int skippedCount;
 
     public String getMessage() {
         return message;
@@ -31,6 +33,22 @@ public class BulkRoleUpdate {
 
     public void setRoleId(Long roleId) {
         this.roleId = roleId;
+    }
+
+    public int getUpdateCount() {
+        return updateCount;
+    }
+
+    public void setUpdateCount(int updateCount) {
+        this.updateCount = updateCount;
+    }
+
+    public int getSkippedCount() {
+        return skippedCount;
+    }
+
+    public void setSkippedCount(int skippedCount) {
+        this.skippedCount = skippedCount;
     }
 }
 

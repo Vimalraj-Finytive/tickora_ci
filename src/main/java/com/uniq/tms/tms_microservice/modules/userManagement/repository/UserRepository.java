@@ -137,8 +137,8 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
             "LEFT JOIN GroupEntity g ON ug.group.groupId = g.groupId " +
             "LEFT JOIN u.workSchedule w " +
             "JOIN RoleEntity r ON u.role = r " +
-            "JOIN UserLocationEntity ul ON ul.user.userId= u.userId " +
-            "JOIN LocationEntity l ON ul.location.locationId = l.locationId " +
+            "LEFT JOIN UserLocationEntity ul ON ul.user.userId= u.userId " +
+            "LEFT JOIN LocationEntity l ON ul.location.locationId = l.locationId " +
             "LEFT JOIN SecondaryDetailsEntity sd ON sd.user.userId = u.userId " +
             "WHERE u.organizationId = :orgId AND u.active = false AND r.hierarchyLevel > :hierarchyLevel")
     List<UserResponse> findAllInActiveUsers(@Param("orgId") String orgId, @Param("hierarchyLevel") int hierarchyLevel);
@@ -235,8 +235,4 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
     int bulkUpdateWorkSchedule(@Param("workSchedule") WorkScheduleEntity workSchedule,
                                @Param("userIds") List<String> userIds,
                                @Param("orgId") String orgId);
-
-
-
-
 }
