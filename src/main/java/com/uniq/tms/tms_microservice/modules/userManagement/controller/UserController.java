@@ -226,11 +226,11 @@ public class UserController {
     }
 
     @PostMapping("/bulk/role")
-    public ResponseEntity<ApiResponse> updateBulkUserRole(
+    public ResponseEntity<ApiResponse<BulkRoleUpdateDto>> updateBulkUserRole(
             @RequestHeader("Authorization") String token,
-            @RequestBody @Valid BulkRoleUpdate request) {
-        Iterable<BulkRoleUpdate> updatedUsers = userFacade.updateMultipleUserRoles((request.getUserIds()), request.getRoleId());
-        return ResponseEntity.ok(new ApiResponse(200, "Roles updated successfully", null));
+            @RequestBody @Valid BulkRoleUpdateDto request) {
+        ApiResponse<BulkRoleUpdateDto> updatedUsers = userFacade.updateMultipleUserRoles(request);
+        return ResponseEntity.status(updatedUsers.getStatusCode()).body(updatedUsers);
     }
 
     @PostMapping("/bulk/workSchedule")

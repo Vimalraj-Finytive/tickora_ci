@@ -338,11 +338,11 @@ public class UserCacheServiceImpl implements UserCacheService {
                     userMap.compute(user.getUserId(), (id, existing) -> {
                         if (existing == null) return user;
 
-                        if (!existing.getGroupName().contains(user.getGroupName().get(0))) {
-                            existing.getGroupName().add(user.getGroupName().get(0));
+                        if (!existing.getGroupName().contains(user.getGroupName().getFirst())) {
+                            existing.getGroupName().add(user.getGroupName().getFirst());
                         }
-                        if (!existing.getLocationName().contains(user.getLocationName().get(0))) {
-                            existing.getLocationName().add(user.getLocationName().get(0));
+                        if (!existing.getLocationName().contains(user.getLocationName().getFirst())) {
+                            existing.getLocationName().add(user.getLocationName().getFirst());
                         }
                         return existing;
                     });

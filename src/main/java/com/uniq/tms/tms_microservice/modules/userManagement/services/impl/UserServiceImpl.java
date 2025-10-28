@@ -8,8 +8,6 @@ import com.uniq.tms.tms_microservice.modules.locationManagement.mapper.LocationD
 import com.uniq.tms.tms_microservice.modules.locationManagement.repository.LocationRepository;
 import com.uniq.tms.tms_microservice.modules.locationManagement.services.LocationService;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.mapper.OrganizationEntityMapper;
-import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.WorkScheduleTypeEntity;
-import com.uniq.tms.tms_microservice.modules.workScheduleManagement.enums.WorkScheduleTypeEnum;
 import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.OrganizationAdapter;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.OrganizationEntity;
@@ -275,10 +273,12 @@ public class UserServiceImpl implements UserService {
             log.info("Fetched {} work schedules: {}", workScheduleMap.size(), workScheduleMap);
 
             UserEntity userEntity = new UserEntity();
+            log.info("Fetched {} userEntity: {}",userEntity);
             List<String> expectedHeaders = List.of(
                     "username", "email", "mobilenumber", "rolename", "locationname", "dateofjoining",
                     "secondaryusername", "secondarymobile", "secondaryemail", "relation", "groupname", "workschedule"
             );
+            log.info("Fetched {} headers {}", expectedHeaders.size(), expectedHeaders);
 
             try (CSVReader reader = new CSVReader(new InputStreamReader(inputStream))) {
                 String[] headerRow = reader.readNext();
@@ -310,39 +310,75 @@ public class UserServiceImpl implements UserService {
                     String relation = row[9].trim();
                     String groupName = row[10].trim();
                     String workSchedule = row[11].trim().toLowerCase();
+                    log.info("Role fetch");
 
                     Long roleId = roleMap.get(roleName.toLowerCase());
                     log.info("RL ID:{}", roleId);
                     String scheduleId = workScheduleMap.get(workSchedule.toLowerCase());
-                    log.info("ES ID:{}", scheduleId);
-                    Long locationId = null;
-                    List<Long> locationIds = new ArrayList<>();
-                    if (!isBlank(locationName)) {
-                        String[] locationList = locationName.split(",");
-                        log.info("locationList" + ":" + locationList);
-                        boolean invalidLocationFound = false;
-                        for (String location : locationList) {
-                            String trimmedLocation = location.trim().toLowerCase();
-                            locationId = locationMap.get(trimmedLocation);
-                            if (isBlank(locationId)) {
-                                invalidLocationFound = true;
-                                break;
-                            }
-                            locationIds.add(locationId);
-                        }
+                    log.info("WorkSchedule ID from map: {}", scheduleId);
 
-                        if (invalidLocationFound || locationIds.isEmpty()) {
-                            skippedRows.add(Map.of(
-                                    "rowNumber", rowNumber,
-                                    "data", Arrays.asList(row),
-                                    "reason", "Location not found or invalid: " + locationName
-                            ));
-                            skippedCount++;
-                            rowNumber++;
-                            continue;
-                        }
+                    if (isBlank(workSchedule)) {
+                        skippedRows.add(Map.of(
+                                "rowNumber", rowNumber,
+                                "data", Arrays.asList(row),
+                                "reason", "WorkSchedule is missing"
+                        ));
+                        skippedCount++;
+                        rowNumber++;
+                        continue;
                     }
 
+                    if (scheduleId == null) {
+                        skippedRows.add(Map.of(
+                                "rowNumber", rowNumber,
+                                "data", Arrays.asList(row),
+                                "reason", "WorkSchedule not found: " + workSchedule
+                        ));
+                        skippedCount++;
+                        rowNumber++;
+                        continue;
+                    }
+                    WorkScheduleEntity workScheduleEntity = workScheduleAdapter.findByScheduleId(scheduleId, orgId);
+
+                    Long locationId = null;
+                    List<Long> locationIds = new ArrayList<>();
+
+                    if (isBlank(locationName)) {
+                        skippedRows.add(Map.of(
+                                "rowNumber", rowNumber,
+                                "data", Arrays.asList(row),
+                                "reason", "Location is missing"
+                        ));
+                        skippedCount++;
+                        rowNumber++;
+                        continue;
+                    }
+
+                    String[] locationList = locationName.split(",");
+                    boolean invalidLocationFound = false;
+
+                    for (String location : locationList) {
+                        String trimmedLocation = location.trim().toLowerCase();
+                        Long locationsId = locationMap.get(trimmedLocation);
+
+                        if (locationsId == null) {
+                            invalidLocationFound = true;
+                            log.warn("Invalid location found: {}", trimmedLocation);
+                            break;
+                        }
+                        locationIds.add(locationsId);
+                    }
+
+                    if (invalidLocationFound || locationIds.isEmpty()) {
+                        skippedRows.add(Map.of(
+                                "rowNumber", rowNumber,
+                                "data", Arrays.asList(row),
+                                "reason", "Invalid or missing location(s): " + locationName
+                        ));
+                        skippedCount++;
+                        rowNumber++;
+                        continue;
+                    }
 
                     Long groupId = null;
                     List<Long> groupIds = new ArrayList<>();
@@ -364,21 +400,33 @@ public class UserServiceImpl implements UserService {
                         }
                     }
 
-                    if (!isBlank(workSchedule)) {
-                        String workScheduleId = workScheduleMap.get(workSchedule.trim().toLowerCase());
-                        if (isBlank(workScheduleId)) {
-                            skippedRows.add(Map.of(
-                                    "rowNumber", rowNumber,
-                                    "data", Arrays.asList(row),
-                                    "reason", "WorkSchedule not found" + workScheduleId
-                            ));
-                            skippedCount++;
-                            rowNumber++;
-                            continue;
-                        }
+                    if (isBlank(workSchedule)) {
+                        skippedRows.add(Map.of(
+                                "rowNumber", rowNumber,
+                                "data", Arrays.asList(row),
+                                "reason", "WorkSchedule is missing"
+                        ));
+                        skippedCount++;
+                        rowNumber++;
+                        continue;
                     }
 
-                    if (isBlank(email) || isBlank(mobile) || isBlank(roleId) || isBlank(doj) || isBlank(workSchedule)) {
+                    String workScheduleKey = workSchedule.trim().toLowerCase();
+                    String schedulesId = workScheduleMap.get(workScheduleKey);
+
+                    if (schedulesId == null) {
+                        skippedRows.add(Map.of(
+                                "rowNumber", rowNumber,
+                                "data", Arrays.asList(row),
+                                "reason", "WorkSchedule not found: " + workSchedule
+                        ));
+                        skippedCount++;
+                        rowNumber++;
+                        continue;
+                    }
+
+                    if (isBlank(email) || isBlank(mobile) || isBlank(roleId) || isBlank(doj)
+                            ||isBlank(locationName) || isBlank(workSchedule)) {
                         skippedRows.add(Map.of(
                                 "rowNumber", rowNumber,
                                 "data", Arrays.asList(row),
@@ -454,7 +502,6 @@ public class UserServiceImpl implements UserService {
                             continue;
                         }
                     }
-                    WorkScheduleEntity workScheduleEntity = workScheduleAdapter.findByScheduleId(scheduleId, orgId);
                     // Create and validate user DTO
                     UserDto userDto = new UserDto();
                     userDto.setUserName(username);
@@ -1960,32 +2007,37 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public List<UserBulkChangingModel> updateMultipleUserRoles(List<String> userIds, Long roleId, String orgId) {
+    public BulkRoleUpdateModel updateMultipleUserRoles(BulkRoleUpdateModel model, String orgId) {
         String schema = TenantUtil.getCurrentTenant();
+        Long roleId = model.getRoleId();
+        List<String> userIds = model.getUserIds();
+
         RoleEntity newRole = userAdapter.findById(roleId)
                 .orElseThrow(() -> new RuntimeException("Role not found: " + roleId));
+
         List<UserEntity> users = userAdapter.findByUserId(userIds);
-        Set<String> foundIds = users.stream()
-                .map(UserEntity::getUserId)
-                .collect(Collectors.toSet());
-        List<String> missingIds = userIds.stream()
-                .filter(id -> !foundIds.contains(id))
-                .toList();
+
+        int updatedCount = 0;
+        int skippedCount = 0;
         List<UserEntity> updatedUsers = new ArrayList<>();
+        log.info("UserIds from request: {}", model.getUserIds());
+
         for (UserEntity user : users) {
-            if (!UserRole.STUDENT.name().equalsIgnoreCase(user.getRole().getName())) {
-                user.setRole(newRole);
-                updatedUsers.add(user);
+            log.info("Checking user {} with role {}", user.getUserId(), user.getRole().getName());
+            if (UserRole.STUDENT.name().equalsIgnoreCase(user.getRole().getName())) {
+                log.info("Skipping user {}: STUDENT role cannot be changed.", user.getUserId());
+                skippedCount++;
+                continue;
             }
+            user.setRole(newRole);
+            updatedUsers.add(user);
         }
-        List<UserEntity> savedUsers = userAdapter.saveAllUsers(updatedUsers);
-        List<UserBulkChangingModel> result=savedUsers.stream()
-                .map(userDtoMapper::toModel).collect(Collectors.toList());
-        if (!missingIds.isEmpty()) {
-            UserBulkChangingModel missingInfo = new UserBulkChangingModel();
-            missingInfo.setMessage("User(s) not found count: " + missingIds.size());
-            result.add(missingInfo);
+
+        if (!updatedUsers.isEmpty()) {
+            userAdapter.saveAllUsers(updatedUsers);
+            updatedCount = updatedUsers.size();
         }
+
         if (isRedisEnabled) {
             CacheEventPublisherUtil.syncReloadThenPublish(
                     publisher,
@@ -1998,82 +2050,13 @@ public class UserServiceImpl implements UserService {
         } else {
             log.info("Redis is not enabled or RedisTemplate is null. Skipping cache update bulk role reload.");
         }
+
+        BulkRoleUpdateModel result = new BulkRoleUpdateModel();
+        result.setUpdateCount(updatedCount);
+        result.setSkippedCount(skippedCount);
         return result;
     }
 
-//    @Override
-//    @Transactional
-//    public List<BulkWorkScheduleUpdateResponseDto> updateWorkSchedules(
-//            BulkWorkScheduleUpdateRequestDto requestDto,
-//            String userNameFromToken,
-//            String orgId) {
-//        String schema = TenantUtil.getCurrentTenant();
-//
-//        List<BulkWorkScheduleUpdateResponseDto> results = new ArrayList<>();
-//
-//        WorkScheduleEntity workSchedule = null;
-//        if (requestDto.getWorkScheduleId() != null) {
-//            workSchedule = workScheduleAdapter.findByScheduleId(requestDto.getWorkScheduleId(), orgId);
-//            if (workSchedule == null) {
-//                throw new ResponseStatusException(
-//                        HttpStatus.NOT_FOUND,
-//                        "WorkSchedule not found with ID: " + requestDto.getWorkScheduleId()
-//                );
-//            }
-//        }
-//
-//        log.info("Starting bulk work schedule update for scheduleId {}",
-//                workSchedule != null ? workSchedule.getScheduleId() : "null");
-//
-//        Map<String, UserEntity> userMap = userAdapter.getUsersByIds(requestDto.getMemberIds(), orgId)
-//                .stream()
-//                .collect(Collectors.toMap(UserEntity::getUserId, Function.identity()));
-//
-//        List<UserEntity> usersToUpdate = new ArrayList<>();
-//
-//        for (String memberId : requestDto.getMemberIds()) {
-//            UserEntity user = userMap.get(memberId);
-//
-//            if (user == null) {
-//                results.add(new BulkWorkScheduleUpdateResponseDto(memberId, false, "User not found"));
-//                continue;
-//            }
-//
-//            if (!orgId.equals(user.getOrganizationId())) {
-//                results.add(new BulkWorkScheduleUpdateResponseDto(memberId, false, "Unauthorized"));
-//                continue;
-//            }
-//
-//            user.setWorkSchedule(workSchedule);
-//            usersToUpdate.add(user);
-//            results.add(new BulkWorkScheduleUpdateResponseDto(memberId, true, "Work schedule updated"));
-//        }
-//
-//        if (!usersToUpdate.isEmpty()) {
-//            try {
-//                userAdapter.saveAllUsers(usersToUpdate);
-//            } catch (Exception e) {
-//                log.error("Failed to save users in batch: {}", e.getMessage());
-//            }
-//        }
-//
-//        long successCount = results.stream().filter(BulkWorkScheduleUpdateResponseDto::isSuccess).count();
-//        long failedCount = results.size() - successCount;
-//        log.info("Completed bulk work schedule update. Success count: {}, Failed count: {}", successCount, failedCount);
-//        if (isRedisEnabled) {
-//            CacheEventPublisherUtil.syncReloadThenPublish(
-//                    publisher,
-//                    cacheKeyConfig.getGroups(),
-//                    orgId,
-//                    schema,
-//                    cacheReloadHandlerRegistry
-//            );
-//            log.info("GroupCacheReloadEvent published after Group Creation");
-//        } else {
-//            log.info("Redis is not enabled or RedisTemplate is null. Skipping cache create group reload.");
-//        }
-//        return results;
-//    }
 
     @Override
     @Transactional
