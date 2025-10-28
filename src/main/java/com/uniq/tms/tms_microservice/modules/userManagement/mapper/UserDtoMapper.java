@@ -53,17 +53,13 @@ public interface UserDtoMapper {
 
     UserGroupModel toModel(AddOrUpdateGroupMembersDto dto);
 
-    UserBulkChangingModel todtoModel(BulkRoleUpdate dto);
+    BulkRoleUpdateDto toDto(BulkRoleUpdateModel model);
 
-    BulkRoleUpdate toDto(UserBulkChangingModel model);
-
-    UserBulkChangingModel toModel(UserEntity entity);
-    UserEntity toUserEntity(UserBulkChangingModel model);
+    BulkRoleUpdateModel toModel(UserEntity entity);
 
     BulkUserLocationDto toDto(BulkUserLocationModel model);
 
     BulkUserLocationModel toModel(BulkUserLocationDto dto);
-
 
     @Mapper(componentModel = "spring")
     interface CommonMapper {
@@ -86,4 +82,6 @@ public interface UserDtoMapper {
     default List<String> map (String value){
         return value != null ? List.of(value) : null;
     }
+
+    BulkRoleUpdateModel toModel(BulkRoleUpdateDto dto);
 }
