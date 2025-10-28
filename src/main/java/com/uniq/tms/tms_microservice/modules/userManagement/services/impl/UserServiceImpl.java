@@ -1127,6 +1127,7 @@ public class UserServiceImpl implements UserService {
             }
         }
             userAdapter.updateUser(existingUser);
+            userAdapter.flush();
         if (isRedisEnabled) {
             CacheEventPublisherUtil.syncReloadThenPublish(
                     publisher,
@@ -1205,7 +1206,7 @@ public class UserServiceImpl implements UserService {
                 .toList();
 
         if (!historyEntities.isEmpty()) {
-            userAdapter.saveAllUserHistories(historyEntities); // batch insert
+            userAdapter.saveAllUserHistories(historyEntities);
             log.info("Saved {} user history records in batch", historyEntities.size());
         }
 
@@ -1231,8 +1232,6 @@ public class UserServiceImpl implements UserService {
         } else {
             log.info("Redis is not enabled or RedisTemplate is null. Skipping cache reload after bulk inactivation.");
         }
-
-
         log.info("Deleted users successfully: {}", userIds.size());
     }
 
