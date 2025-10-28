@@ -112,5 +112,5 @@ public interface UserAdapter {
     List<UserNameEmailDto> findAdminAndSuperAdminNamesAndEmails();
     List<UserEntity> findByOrganizationIdAndActiveTrue(String orgId);
     int countActiveUsers(String orgId);
-
+    void flush();
 }
