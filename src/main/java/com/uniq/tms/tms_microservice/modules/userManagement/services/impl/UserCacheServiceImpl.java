@@ -150,6 +150,7 @@ public class UserCacheServiceImpl implements UserCacheService {
      * @return user profile of all the user with in the organization and cache it in redis cache key.
      */
 
+    @Override
     public CompletableFuture<Map<String, UserProfileResponseDto>> loadUsersProfile(String orgId, String schema) {
 
         log.info("Current User profile tenant:{}", schema);
@@ -173,15 +174,17 @@ public class UserCacheServiceImpl implements UserCacheService {
 
             // Fetch locations
             List<UserLocationEntity> userLocations = userLocationRepository.findByUser_UserId(userId);
-            if (userLocations.isEmpty()) {
-                log.warn("Skipping userId {} due to no locations", userId);
-                continue;
-            }
+            List<LocationDto> locationDtos;
 
-            List<LocationDto> locationDtos = userLocations.stream()
-                    .filter(ul -> ul.getLocation() != null)
-                    .map(ul -> locationDtoMapper.toDto(ul.getLocation()))
-                    .toList();
+            if (userLocations.isEmpty()) {
+                log.warn("No locations found for userId {}", userId);
+                locationDtos = Collections.emptyList();
+            } else {
+                locationDtos = userLocations.stream()
+                        .filter(ul -> ul.getLocation() != null)
+                        .map(ul -> locationDtoMapper.toDto(ul.getLocation()))
+                        .toList();
+            }
 
             // Fetch groups
             List<UserGroupEntity> userGroups = userRepository.findUserByOrganizationIdAndUserId(orgId, userId);

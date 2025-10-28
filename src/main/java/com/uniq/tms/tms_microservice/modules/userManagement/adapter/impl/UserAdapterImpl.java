@@ -566,5 +566,8 @@ public class UserAdapterImpl implements UserAdapter {
         return Math.toIntExact(count);
     }
 
-
+    @Override
+    public void flush() {
+        userRepository.flush();
+    }
 }
