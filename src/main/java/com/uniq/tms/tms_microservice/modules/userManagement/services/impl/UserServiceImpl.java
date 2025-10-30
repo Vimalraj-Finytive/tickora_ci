@@ -285,7 +285,8 @@ public class UserServiceImpl implements UserService {
                     "secondaryusername", "secondarymobile", "secondaryemail", "relation", "groupname", "workschedule"
             );
             log.info("Fetched {} headers {}", expectedHeaders.size(), expectedHeaders);
-
+            long currentCount = userAdapter.getCurrentUserCount(orgId);
+            long maxUsers = userAdapter.getSubscribedUserLimit(orgId);
             try (CSVReader reader = new CSVReader(new InputStreamReader(inputStream))) {
                 String[] headerRow = reader.readNext();
                 if (headerRow == null) throw new RuntimeException("Missing header row");
@@ -304,6 +305,27 @@ public class UserServiceImpl implements UserService {
                         continue;
                     }
 
+                    long remainingSlots = maxUsers - currentCount - uploadedCount;
+                    if (remainingSlots <= 0) {
+
+                        skippedRows.add(Map.of(
+                                "rowNumber", rowNumber,
+                                "data", Arrays.asList(row),
+                                "reason", "Subscription limit reached. Cannot add more users."
+                        ));
+                        skippedCount++;
+                        while ((row = reader.readNext()) != null) {
+                            skippedRows.add(Map.of(
+                                    "rowNumber", ++rowNumber,
+                                    "data", Arrays.asList(row),
+                                    "reason", "Subscription limit reached. Cannot add more users."
+                            ));
+                            skippedCount++;
+                        }
+
+                        log.info("Subscription limit reached. Stopping further uploads.");
+                        break;
+                    }
                     String username = row[0].trim();
                     String email = row[1].trim();
                     String mobile = row[2].trim();
@@ -548,7 +570,6 @@ public class UserServiceImpl implements UserService {
                     emailRequests.add(new EmailData(email, userDto.getUserName(), defaultPass, userDto.isRegisterUser(), userDto.getRoleId()));
 
                     uploadedCount++;
-
                     existingEmails.add(email);
                     existingMobiles.add(mobile);
 
@@ -1170,27 +1191,6 @@ public class UserServiceImpl implements UserService {
         }
         return userEntityMapper.toMiddleware(existingUser);
     }
-
-    @Override
-    @Transactional
-    public boolean UpdateCalendar(UserCalendarRequestDto updates) {
-        try {
-            List<UserEntity> users = userAdapter.getUsersByIds(updates.getUserIds());
-            if (users.isEmpty()) {
-                log.warn("No users found for given IDs: {}", updates.getUserIds());
-                return false;
-            }
-            CalendarEntity calendar = calendarAdapter.getById(updates.getCalendarId());
-            users.forEach(user ->
-                    user.setCalendar(calendar));
-            userAdapter.saveAllUsers(users);
-            return true;
-        } catch (Exception e) {
-            log.error("Error updating calendar for users: {}", e.getMessage(), e);
-            return false;
-        }
-    }
-
 
     @Override
     public List<UserResponseDto> getUsers(String orgId, String role) {
