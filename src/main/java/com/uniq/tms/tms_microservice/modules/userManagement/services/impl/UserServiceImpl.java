@@ -1,6 +1,8 @@
 package com.uniq.tms.tms_microservice.modules.userManagement.services.impl;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.CalendarAdapter;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.CalendarEntity;
 import com.uniq.tms.tms_microservice.modules.locationManagement.adapter.LocationAdapter;
 import com.uniq.tms.tms_microservice.modules.locationManagement.dto.LocationDto;
 import com.uniq.tms.tms_microservice.modules.locationManagement.entity.UserLocationEntity;
@@ -88,6 +90,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
 import com.opencsv.CSVReader;
 import static com.uniq.tms.tms_microservice.shared.util.TextUtil.isBlank;
 
@@ -98,6 +102,7 @@ public class UserServiceImpl implements UserService {
     private final UserAdapter userAdapter;
     private final TimesheetAdapter timesheetAdapter;
     private final UserEntityMapper userEntityMapper;
+    private final CalendarAdapter calendarAdapter;
     private final OrganizationRepository organizationRepository;
     private final RoleRepository roleRepository;
     private final LocationRepository locationRepository;
@@ -124,8 +129,8 @@ public class UserServiceImpl implements UserService {
     private final LocationAdapter locationAdapter;
     private final OrganizationEntityMapper organizationEntityMapper;
 
-    public UserServiceImpl( Validator validator, UserAdapter userAdapter, TimesheetAdapter timesheetAdapter,
-                           UserEntityMapper userEntityMapper, OrganizationRepository organizationRepository,
+    public UserServiceImpl(Validator validator, UserAdapter userAdapter, TimesheetAdapter timesheetAdapter,
+                           UserEntityMapper userEntityMapper, CalendarAdapter calendarAdapter, OrganizationRepository organizationRepository,
                            RoleRepository roleRepository, LocationRepository locationRepository, EmailHelper emailHelper,
                            UserDtoMapper userDtoMapper, SecondaryDetailsMapper secondaryDetailsMapper,
                            @Nullable RedisTemplate<String, Object> redisTemplate,
@@ -138,6 +143,7 @@ public class UserServiceImpl implements UserService {
         this.userAdapter = userAdapter;
         this.timesheetAdapter = timesheetAdapter;
         this.userEntityMapper = userEntityMapper;
+        this.calendarAdapter = calendarAdapter;
         this.organizationRepository = organizationRepository;
         this.roleRepository = roleRepository;
         this.locationRepository = locationRepository;
@@ -301,6 +307,16 @@ public class UserServiceImpl implements UserService {
                     String username = row[0].trim();
                     String email = row[1].trim();
                     String mobile = row[2].trim();
+                    if (!username.matches("^[A-Za-z ]+$")) {
+                        skippedRows.add(Map.of(
+                                "rowNumber", rowNumber,
+                                "data", Arrays.asList(row),
+                                "reason", "Username must contain only letters and spaces"
+                        ));
+                        skippedCount++;
+                        rowNumber++;
+                        continue;
+                    }
                     String roleName = row[3].trim();
                     String locationName = row[4].trim();
                     String doj = row[5].trim();
@@ -558,6 +574,9 @@ public class UserServiceImpl implements UserService {
             List<UserEntity> savedUsers = userAdapter.saveAllUsers(userEntities);
             List<SecondaryDetailsEntity> savedSecondaryDetails = userAdapter.saveAllSecondaryDetails(secondaryDetailsEntities);
 
+            Map<String, UserEntity> userByEmail = savedUsers.stream()
+                    .collect(Collectors.toMap(UserEntity::getEmail, Function.identity()));
+
             if (savedUsers != null) {
                 log.info("Creating user mapping for all saved users in bulk upload");
                 List<UserSchemaMappingEntity> mappings = savedUsers.stream()
@@ -585,25 +604,34 @@ public class UserServiceImpl implements UserService {
             }
             // Persist user-group mappings
             List<UserGroupEntity> groupEntities = userGroupMappings.entrySet().stream()
-                    .flatMap(entry -> entry.getValue().stream()
-                            .map(groupIds -> {
-                                UserGroupEntity ug = new UserGroupEntity();
-                                ug.setUser(entry.getKey());
-                                ug.setGroup(new GroupEntity(groupIds));
-                                return ug;
-                            }))
+                    .flatMap(entry -> {
+                        UserEntity savedUser = userByEmail.get(entry.getKey().getEmail());
+                        if (savedUser == null) return Stream.empty();
+                        return entry.getValue().stream().map(groupId -> {
+                            UserGroupEntity ug = new UserGroupEntity();
+                            ug.setUser(savedUser);
+                            ug.setGroup(new GroupEntity(groupId));
+                            return ug;
+                        });
+                    })
                     .toList();
 
             //user-location mapping
             List<UserLocationEntity> userLocationEntities = userLocationMappings.entrySet().stream()
-                    .flatMap(entry -> entry.getValue().stream()
-                            .map(locationIds -> {
-                                UserLocationEntity ul = new UserLocationEntity();
-                                ul.setUser(entry.getKey());
-                                ul.setLocation(new LocationEntity(locationIds));
-                                return ul;
-                            }))
+                    .flatMap(entry -> {
+                        UserEntity savedUser = userByEmail.get(entry.getKey().getEmail());
+                        if (savedUser == null) return Stream.empty();
+                        return entry.getValue().stream().map(locationId -> {
+                            UserLocationEntity ul = new UserLocationEntity();
+                            ul.setUser(savedUser);
+                            ul.setLocation(new LocationEntity(locationId));
+                            return ul;
+                        });
+                    })
                     .toList();
+
+
+
             log.info("Saving all user groups");
             userAdapter.saveAllUserGroups(groupEntities);
             log.info("Saving all user groups");
@@ -1142,6 +1170,27 @@ public class UserServiceImpl implements UserService {
         }
         return userEntityMapper.toMiddleware(existingUser);
     }
+
+    @Override
+    @Transactional
+    public boolean UpdateCalendar(UserCalendarRequestDto updates) {
+        try {
+            List<UserEntity> users = userAdapter.getUsersByIds(updates.getUserIds());
+            if (users.isEmpty()) {
+                log.warn("No users found for given IDs: {}", updates.getUserIds());
+                return false;
+            }
+            CalendarEntity calendar = calendarAdapter.getById(updates.getCalendarId());
+            users.forEach(user ->
+                    user.setCalendar(calendar));
+            userAdapter.saveAllUsers(users);
+            return true;
+        } catch (Exception e) {
+            log.error("Error updating calendar for users: {}", e.getMessage(), e);
+            return false;
+        }
+    }
+
 
     @Override
     public List<UserResponseDto> getUsers(String orgId, String role) {
