@@ -21,6 +21,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
+
+import java.time.LocalDateTime;
 import java.util.*;
 
 @Component
@@ -572,6 +574,9 @@ public class UserAdapterImpl implements UserAdapter {
     }
 
     @Override
+    public long getUserCount(String organizationId, LocalDateTime start, LocalDateTime end) {
+        return userRepository.countUsersByOrgAndCreatedAtBetween(organizationId, start, end);
+    }
     public Set<String> getAllMappedEmails(String orgId) {
         return userSchemaMapperRepository.findAllMappedEmailsByOrgId(orgId);
     }

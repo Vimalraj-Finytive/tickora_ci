@@ -3,16 +3,13 @@ package com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.imp
 import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.OrganizationAdapter;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.OrganizationDetailsDto;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.OrganizationSummaryDto;
-import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.OrganizationEntity;
-import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.OrganizationTypeEntity;
-import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.PrivilegeEntity;
-import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.RoleEntity;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.*;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.mapper.OrganizationEntityMapper;
-import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.OrganizationRepository;
-import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.OrganizationTypeRepository;
-import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.PrivilegeRepository;
-import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.RoleRepository;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.*;
 import org.springframework.stereotype.Component;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,13 +23,15 @@ public class OrganizationAdapterImpl implements OrganizationAdapter {
     private final PrivilegeRepository privilegeRepository;
     private final OrganizationTypeRepository organizationTypeRepository;
     private final OrganizationEntityMapper organizationEntityMapper;
+    private final SubscriptionRepository subscriptionRepository;
 
-    public OrganizationAdapterImpl(RoleRepository roleRepository, OrganizationRepository organizationRepository, PrivilegeRepository privilegeRepository, OrganizationTypeRepository organizationTypeRepository, OrganizationEntityMapper organizationEntityMapper) {
+    public OrganizationAdapterImpl(RoleRepository roleRepository, OrganizationRepository organizationRepository, PrivilegeRepository privilegeRepository, OrganizationTypeRepository organizationTypeRepository, OrganizationEntityMapper organizationEntityMapper, SubscriptionRepository subscriptionRepository) {
         this.roleRepository = roleRepository;
         this.organizationRepository = organizationRepository;
         this.privilegeRepository = privilegeRepository;
         this.organizationTypeRepository = organizationTypeRepository;
         this.organizationEntityMapper = organizationEntityMapper;
+        this.subscriptionRepository = subscriptionRepository;
     }
 
     @Override
@@ -133,6 +132,32 @@ public class OrganizationAdapterImpl implements OrganizationAdapter {
         Optional<OrganizationEntity> organizationOpt = organizationRepository.findSummaryById(orgId);
         List<OrganizationEntity> orgList = organizationOpt.map(List::of).orElse(List.of());
         return organizationEntityMapper.toMiddleware(orgList);
+    }
+
+    @Override
+    public long countOrganizationsBetweenDates(LocalDateTime from, LocalDateTime to) {
+        return organizationRepository.countOrganizationsBetweenDates(from, to);
+    }
+
+    @Override
+    public List<Object[]> countOrganizationsByType() {
+        return organizationRepository.countOrganizationsByType();
+    }
+
+    @Override
+    public List<Object[]> countOrganizationsByTypeBetweenDates(LocalDateTime from, LocalDateTime to) {
+        return organizationRepository.countOrganizationsByTypeBetweenDates(from, to);
+    }
+
+    @Override
+    public Optional<String> findOrgTypeNameById(String orgTypeId) {
+        return organizationTypeRepository.findById(orgTypeId)
+                .map(OrganizationTypeEntity::getOrgTypeName);
+    }
+
+    @Override
+    public List<SubscriptionEntity> getAllSubscriptionsForOrgBetweenDates(String orgId, LocalDate fromDate, LocalDate toDate) {
+        return subscriptionRepository.findByOrgIdAndStartDateBetween(orgId, fromDate.atStartOfDay(), toDate.atTime(23, 59, 59));
     }
 
 }

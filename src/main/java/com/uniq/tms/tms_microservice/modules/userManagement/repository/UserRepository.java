@@ -15,6 +15,8 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -235,4 +237,11 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
     int bulkUpdateWorkSchedule(@Param("workSchedule") WorkScheduleEntity workSchedule,
                                @Param("userIds") List<String> userIds,
                                @Param("orgId") String orgId);
+
+    @Query("SELECT COUNT(u) FROM UserEntity u " +
+            "WHERE u.organizationId = :orgId " +
+            "AND u.createdAt BETWEEN :start AND :end")
+    long countUsersByOrgAndCreatedAtBetween(@Param("orgId") String orgId,
+                                            @Param("start") LocalDateTime start,
+                                            @Param("end") LocalDateTime end);
 }
