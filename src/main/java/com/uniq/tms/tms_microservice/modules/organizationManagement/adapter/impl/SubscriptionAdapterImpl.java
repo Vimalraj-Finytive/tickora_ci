@@ -6,6 +6,7 @@ import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.Subs
 import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.PlanDto;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.SubscriptionDto;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.UpgradePlanDto;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.OrganizationEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.PaymentEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.PlanEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.SubscriptionEntity;
@@ -16,6 +17,7 @@ import com.uniq.tms.tms_microservice.modules.organizationManagement.mapper.PlanE
 import com.uniq.tms.tms_microservice.modules.organizationManagement.mapper.SubscriptionDtoMapper;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.mapper.SubscriptionEntityMapper;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.model.Plan;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.OrganizationRepository;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.PaymentRepository;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.PlanRepository;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.SubscriptionRepository;
@@ -25,7 +27,9 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -42,8 +46,9 @@ public class SubscriptionAdapterImpl implements SubscriptionAdapter {
     private final PlanEntityMapper planEntityMapper;
     private final PlanDtoMapper planDtoMapper;
     private final IdGenerationService idGenerationService;
+    private final OrganizationRepository organizationRepository;
 
-    public SubscriptionAdapterImpl(PaymentRepository paymentRepository, SubscriptionRepository subscriptionRepository, SubscriptionEntityMapper subscriptionEntityMapper, SubscriptionDtoMapper subscriptionDtoMapper, PlanRepository planRepository, PlanEntityMapper planEntityMapper, PlanDtoMapper planDtoMapper, IdGenerationService idGenerationService) {
+    public SubscriptionAdapterImpl(PaymentRepository paymentRepository, SubscriptionRepository subscriptionRepository, SubscriptionEntityMapper subscriptionEntityMapper, SubscriptionDtoMapper subscriptionDtoMapper, PlanRepository planRepository, PlanEntityMapper planEntityMapper, PlanDtoMapper planDtoMapper, IdGenerationService idGenerationService, OrganizationRepository organizationRepository) {
         this.paymentRepository = paymentRepository;
         this.subscriptionRepository = subscriptionRepository;
         this.subscriptionEntityMapper = subscriptionEntityMapper;
@@ -52,6 +57,7 @@ public class SubscriptionAdapterImpl implements SubscriptionAdapter {
         this.planEntityMapper = planEntityMapper;
         this.planDtoMapper = planDtoMapper;
         this.idGenerationService = idGenerationService;
+        this.organizationRepository = organizationRepository;
     }
 
     @Override
@@ -82,6 +88,7 @@ public class SubscriptionAdapterImpl implements SubscriptionAdapter {
                         dto.setPlanName(plan.getPlanName());
                         dto.setBillingCycle(plan.getBillingCycle());
                     });
+                    dto.setStatus(model.getStatus());
                     return dto;
                 })
                 .orElseGet(() -> {
@@ -221,5 +228,21 @@ public class SubscriptionAdapterImpl implements SubscriptionAdapter {
             return false;
         }
     }
+
+
+    @Override
+    public List<SubscriptionEntity> getAllSubscriptionsBetweenDates(LocalDate fromDate, LocalDate toDate) {
+        return subscriptionRepository.findAllByStartDateBetween(
+                fromDate.atStartOfDay(),
+                toDate.atTime(23, 59, 59)
+        );
+    }
+
+    @Override
+    public List<SubscriptionEntity> getAllSubscriptionsForOrgBetweenDates(String orgId, LocalDate fromDate, LocalDate toDate) {
+        return subscriptionRepository.findByOrgIdAndStartDateBetween(orgId, fromDate.atStartOfDay(), toDate.atTime(23, 59, 59));
+    }
+
+
 
 }

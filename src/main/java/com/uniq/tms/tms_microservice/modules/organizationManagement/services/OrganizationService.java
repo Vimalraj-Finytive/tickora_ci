@@ -1,10 +1,10 @@
 package com.uniq.tms.tms_microservice.modules.organizationManagement.services;
 
-import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.OrgSetupValidationResponse;
-import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.OrganizationDetailsDto;
-import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.OrganizationSummaryDto;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.*;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.OrganizationTypeEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.model.*;
+
+import java.time.LocalDateTime;
 import java.util.List;
 
 public interface OrganizationService {
@@ -28,4 +28,12 @@ public interface OrganizationService {
     OrganizationSummaryDto getOrgSummary(String orgId);
 
     List<OrganizationDetailsDto> getAllOrganizationDetails();
+
+//    OrganizationUserCountResponse getUserCountsForOrganization(String orgId, LocalDate fromDate, LocalDate toDate);
+
+    OrganizationCountResponseDto getOrganizationCount(DateRangeRequestDto request);
+
+    List<OrganizationTypeCountDto> calculateOrganizationTypeCounts(LocalDateTime from, LocalDateTime to);
+
+
 }

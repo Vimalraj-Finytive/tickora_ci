@@ -8,6 +8,11 @@ public class SubscriptionDto {
     private String status;
     private String nextInvoiceDate;
     private String billingCycle;
+    private Integer subscribedUsers;
+
+    public Integer getSubscribedUsers() { return subscribedUsers; }
+
+    public void setSubscribedUsers(Integer subscribedUsers) { this.subscribedUsers = subscribedUsers; }
 
     public String getSubscriptionId() {
         return subscriptionId;
