@@ -570,4 +570,15 @@ public class UserAdapterImpl implements UserAdapter {
     public void flush() {
         userRepository.flush();
     }
+
+    @Override
+    public Set<String> getAllMappedEmails(String orgId) {
+        return userSchemaMapperRepository.findAllMappedEmailsByOrgId(orgId);
+    }
+
+    @Override
+    public Set<String> getAllMappedMobiles(String orgId) {
+        return userSchemaMapperRepository.findAllMappedMobilesByOrgId(orgId);
+    }
+
 }

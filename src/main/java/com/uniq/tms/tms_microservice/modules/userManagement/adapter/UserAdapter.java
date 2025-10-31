@@ -113,4 +113,6 @@ public interface UserAdapter {
     List<UserEntity> findByOrganizationIdAndActiveTrue(String orgId);
     int countActiveUsers(String orgId);
     void flush();
+    Set<String> getAllMappedEmails(String orgId);
+    Set<String> getAllMappedMobiles(String orgId);
 }
