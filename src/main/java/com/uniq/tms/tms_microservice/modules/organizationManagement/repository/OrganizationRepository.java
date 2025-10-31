@@ -1,9 +1,12 @@
 package com.uniq.tms.tms_microservice.modules.organizationManagement.repository;
 
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.OrganizationEntity;
+import io.lettuce.core.dynamic.annotation.Param;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
+
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -37,4 +40,17 @@ public interface OrganizationRepository extends JpaRepository<OrganizationEntity
     )
 
     boolean tableExists( String schemaName,  String tableName);
+
+    @Query("SELECT COUNT(o) FROM OrganizationEntity o WHERE o.createdAt BETWEEN :start AND :end")
+    long countOrganizationsBetweenDates(@Param("start") LocalDateTime start,
+                                        @Param("end") LocalDateTime end);
+
+    @Query("SELECT o.orgType, COUNT(o) FROM OrganizationEntity o GROUP BY o.orgType")
+    List<Object[]> countOrganizationsByType();
+
+    @Query("SELECT o.orgType, COUNT(o) FROM OrganizationEntity o " +
+            "WHERE o.createdAt BETWEEN :from AND :to " +
+            "GROUP BY o.orgType")
+    List<Object[]> countOrganizationsByTypeBetweenDates(@Param("from") LocalDateTime from,
+                                                        @Param("to") LocalDateTime to);
 }

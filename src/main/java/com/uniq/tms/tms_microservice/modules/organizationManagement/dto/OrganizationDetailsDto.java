@@ -1,6 +1,7 @@
 package com.uniq.tms.tms_microservice.modules.organizationManagement.dto;
 
 import java.time.LocalDate;
+import java.util.List;
 
 public class OrganizationDetailsDto {
 
@@ -14,7 +15,16 @@ public class OrganizationDetailsDto {
         private LocalDate createdAt;
         private int activeUsers;
         private int inactiveUsers;
+        private SubscriptionDto subscriptionSummary;
 
+
+        public SubscriptionDto getSubscriptionSummary() {
+                return subscriptionSummary;
+        }
+
+        public void setSubscriptionSummary(SubscriptionDto subscriptionSummary) {
+                this.subscriptionSummary = subscriptionSummary;
+        }
         public String getOrganizationId() { return organizationId; }
         public void setOrganizationId(String organizationId) { this.organizationId = organizationId; }
 
@@ -44,6 +54,9 @@ public class OrganizationDetailsDto {
 
         public int getInactiveUsers() { return inactiveUsers; }
         public void setInactiveUsers(int inactiveUsers) { this.inactiveUsers = inactiveUsers; }
+
+
+
     }
 
 

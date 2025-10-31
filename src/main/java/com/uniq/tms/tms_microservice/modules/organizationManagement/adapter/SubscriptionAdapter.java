@@ -8,6 +8,7 @@ import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.Subsc
 import com.uniq.tms.tms_microservice.modules.organizationManagement.enums.PaymentStatus;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -24,6 +25,9 @@ public interface SubscriptionAdapter {
     Optional <SubscriptionEntity>findSubscriptionDetails(String subscriptionId);
     List<SubscriptionEntity> findAllSubscriptionsByOrgId(String orgId);
     boolean updateSubscription(SubscriptionEntity subscription);
+    List<SubscriptionEntity> getAllSubscriptionsBetweenDates(LocalDate fromDate, LocalDate toDate);
+    List<SubscriptionEntity> getAllSubscriptionsForOrgBetweenDates(String orgId, LocalDate fromDate, LocalDate toDate);
+
 
 
 }

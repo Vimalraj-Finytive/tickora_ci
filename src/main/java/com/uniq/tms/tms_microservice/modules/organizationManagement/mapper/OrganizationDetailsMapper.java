@@ -1,8 +1,10 @@
 package com.uniq.tms.tms_microservice.modules.organizationManagement.mapper;
 
 import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.OrganizationDetailsDto;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.SubscriptionDto;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.OrganizationEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.model.OrganizationDetailsModel;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.model.Subscription;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.ReportingPolicy;
@@ -29,4 +31,7 @@ public interface OrganizationDetailsMapper {
     default LocalDateTime map(LocalDate date) {
         return date != null ? date.atStartOfDay() : null;
     }
+    Subscription subscriptionDtoToModel(SubscriptionDto dto);
+
+    SubscriptionDto subscriptionToDto(Subscription model);
 }
