@@ -355,7 +355,7 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
 
         // 2. Prevent deletion of default work schedule
         if (Boolean.TRUE.equals(workSchedule.getDefault())) {
-            throw new IllegalStateException("Default Work Schedule cannot be deactivated");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Default Work Schedule cannot be deactivated");
         }
 
         // 3. Get the default work schedule for this org

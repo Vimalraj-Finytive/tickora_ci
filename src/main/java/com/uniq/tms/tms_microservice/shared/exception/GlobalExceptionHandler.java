@@ -79,6 +79,34 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(new ApiResponse(400, "User not found", false));
     }
 
+    @ExceptionHandler(CommonExceptionHandler.BadRequestException.class)
+    public ResponseEntity<ApiResponse> handleCustomBadRequest(CommonExceptionHandler.BadRequestException ex) {
+        log.error("BadRequestException: {}", ex.getMessage(), ex);
+        ApiResponse response = new ApiResponse(400, sanitizeMessage(ex.getMessage()), null);
+        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(CommonExceptionHandler.DuplicateUserException.class)
+    public ResponseEntity<ApiResponse> handleDuplicateUserException(CommonExceptionHandler.DuplicateUserException ex) {
+        log.error("DuplicateUserException: {}", ex.getMessage(), ex);
+        ApiResponse response = new ApiResponse(409, sanitizeMessage(ex.getMessage()), null);
+        return new ResponseEntity<>(response, HttpStatus.CONFLICT);
+    }
+
+    @ExceptionHandler(CommonExceptionHandler.NoUserLocationAssignedException.class)
+    public ResponseEntity<ApiResponse> handleNoUserLocation(CommonExceptionHandler.NoUserLocationAssignedException ex) {
+        log.error("NoUserLocationAssignedException: {}", ex.getMessage(), ex);
+        ApiResponse response = new ApiResponse(404, sanitizeMessage(ex.getMessage()), null);
+        return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler(CommonExceptionHandler.SchemaNotFoundException.class)
+    public ResponseEntity<ApiResponse> handleSchemaNotFound(CommonExceptionHandler.SchemaNotFoundException ex) {
+        log.error("SchemaNotFoundException: {}", ex.getMessage(), ex);
+        ApiResponse response = new ApiResponse(404, sanitizeMessage(ex.getMessage()), null);
+        return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+    }
+
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<Object> handleRuntimeException(RuntimeException ex) {
         log.error("Runtime exception: {}", ex.getMessage(), ex);
