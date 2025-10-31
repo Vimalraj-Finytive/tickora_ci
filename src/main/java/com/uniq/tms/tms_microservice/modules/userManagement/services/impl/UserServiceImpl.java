@@ -19,6 +19,7 @@ import com.uniq.tms.tms_microservice.modules.organizationManagement.services.Org
 import com.uniq.tms.tms_microservice.modules.userManagement.dto.*;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.*;
 import com.uniq.tms.tms_microservice.modules.userManagement.model.*;
+import com.uniq.tms.tms_microservice.shared.helper.UserHelper;
 import com.uniq.tms.tms_microservice.shared.util.*;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.adapter.TimesheetAdapter;
 import com.uniq.tms.tms_microservice.modules.authenticationManagement.model.EmailData;
@@ -50,6 +51,7 @@ import com.uniq.tms.tms_microservice.modules.identityManagement.service.IdGenera
 import com.uniq.tms.tms_microservice.modules.userManagement.enums.UserRole;
 import com.uniq.tms.tms_microservice.modules.userManagement.repository.SecondaryDetailsRepository;
 import com.uniq.tms.tms_microservice.modules.userManagement.services.UserService;
+import io.micrometer.common.util.StringUtils;
 import jakarta.annotation.Nullable;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Validator;
@@ -88,6 +90,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
 import com.opencsv.CSVReader;
 import static com.uniq.tms.tms_microservice.shared.util.TextUtil.isBlank;
 
@@ -124,7 +128,7 @@ public class UserServiceImpl implements UserService {
     private final LocationAdapter locationAdapter;
     private final OrganizationEntityMapper organizationEntityMapper;
 
-    public UserServiceImpl( Validator validator, UserAdapter userAdapter, TimesheetAdapter timesheetAdapter,
+    public UserServiceImpl(Validator validator, UserAdapter userAdapter, TimesheetAdapter timesheetAdapter,
                            UserEntityMapper userEntityMapper, OrganizationRepository organizationRepository,
                            RoleRepository roleRepository, LocationRepository locationRepository, EmailHelper emailHelper,
                            UserDtoMapper userDtoMapper, SecondaryDetailsMapper secondaryDetailsMapper,
@@ -214,55 +218,35 @@ public class UserServiceImpl implements UserService {
         }
     }
 
+    @Transactional
     public ApiResponse processCsvFile(InputStream inputStream, String originalFileName, String orgId, String userId) {
 
-        String schema = TenantUtil.getCurrentTenant();
-        UserEntity userFromToken = userAdapter.findUserByOrgIdAndUserId(orgId, userId);
-        log.info("Starting processing for file: {}", originalFileName);
         long startTime = System.currentTimeMillis();
+        log.info("Bulk upload started for orgId={}, file={}", orgId, originalFileName);
 
+        UserEntity userFromToken = userAdapter.findUserByOrgIdAndUserId(orgId, userId);
+        String schema = TenantUtil.getCurrentTenant();
+
+        List<Map<String, Object>> skippedRows = new ArrayList<>();
         List<UserEntity> userEntities = new ArrayList<>();
         List<SecondaryDetailsEntity> secondaryDetailsEntities = new ArrayList<>();
         List<EmailData> emailRequests = new ArrayList<>();
         List<String> successList = new ArrayList<>();
-        Map<UserEntity, List<Long>> userGroupMappings = new HashMap<>();
-        Map<UserEntity, List<Long>> userLocationMappings = new HashMap<>();
-
-        int uploadedCount = 0, skippedCount = 0;
-
-        List<Map<String, Object>> skippedRows = new ArrayList<>();
-        int rowNumber = 1;
 
         try {
-            log.info("Fetching existing mobile numbers for orgId: {}", orgId);
-            Set<String> existingMobiles = userAdapter.getAllMobileNumbers(orgId);
-            log.info("Fetched {} existing mobile numbers: {}", existingMobiles.size(), existingMobiles);
 
-            log.info("Fetching existing email addresses for orgId: {}", orgId);
             Set<String> existingEmails = userAdapter.getAllEmails(orgId);
-            log.info("Fetched {} existing emails: {}", existingEmails.size(), existingEmails);
-
-            log.info("Fetching existing secondary mobile numbers for orgId: {}", orgId);
-            Set<String> existingSecMobiles = userAdapter.getAllSecondaryMobile(orgId);
-            log.info("Fetched {} secondary mobile numbers: {}", existingSecMobiles.size(), existingSecMobiles);
-
-            log.info("Fetching existing secondary emails for orgId: {}", orgId);
+            Set<String> existingMobiles = userAdapter.getAllMobileNumbers(orgId);
             Set<String> existingSecEmails = userAdapter.getAllSecondaryEmail(orgId);
-            log.info("Fetched {} secondary emails: {}", existingSecEmails.size(), existingSecEmails);
+            Set<String> existingSecMobiles = userAdapter.getAllSecondaryMobile(orgId);
 
-            log.info("Fetching role name to ID map for orgId: {}", orgId);
+            Set<String> schemaEmails = userAdapter.getAllMappedEmails(orgId);
+            Set<String> schemaMobiles = userAdapter.getAllMappedMobiles(orgId);
+
             Map<String, Long> roleMap = organizationAdapter.getRoleNameIdMap();
-            log.info("Fetched {} role entries: {}", roleMap.size(), roleMap);
-
-            log.info("Fetching location name to ID map for orgId: {}", orgId);
             Map<String, Long> locationMap = locationAdapter.getLocationNameToIdMap(orgId);
-            log.info("Fetched {} location entries: {}", locationMap.size(), locationMap);
-
-            log.info("Fetching group name to ID map for orgId: {}", orgId);
             Map<String, Long> groupMap = userAdapter.getGroupNameIdMap(orgId);
-            log.info("Fetched {} group entries: {}", groupMap.size(), groupMap);
 
-            log.info("Fetching work schedule map for orgId: {}", orgId);
             Map<String, String> workScheduleMap = workScheduleAdapter.getAllSchedules(orgId)
                     .entrySet()
                     .stream()
@@ -270,378 +254,251 @@ public class UserServiceImpl implements UserService {
                             e -> e.getKey().toLowerCase(),
                             Map.Entry::getValue
                     ));
-            log.info("Fetched {} work schedules: {}", workScheduleMap.size(), workScheduleMap);
 
-            UserEntity userEntity = new UserEntity();
-            log.info("Fetched {} userEntity: {}",userEntity);
             List<String> expectedHeaders = List.of(
                     "username", "email", "mobilenumber", "rolename", "locationname", "dateofjoining",
                     "secondaryusername", "secondarymobile", "secondaryemail", "relation", "groupname", "workschedule"
             );
-            log.info("Fetched {} headers {}", expectedHeaders.size(), expectedHeaders);
+
+            List<UserHelper> allRecords = new ArrayList<>();
+            Set<String> fileEmails = new HashSet<>();
+            Set<String> fileMobiles = new HashSet<>();
+            int rowNumber = 1;
 
             try (CSVReader reader = new CSVReader(new InputStreamReader(inputStream))) {
                 String[] headerRow = reader.readNext();
-                if (headerRow == null) throw new RuntimeException("Missing header row");
+                if (headerRow == null)
+                    throw new RuntimeException("Missing header row");
                 validateFixedHeaders(headerRow, expectedHeaders);
 
                 String[] row;
                 while ((row = reader.readNext()) != null) {
-                    if (row.length < expectedHeaders.size()) {
-                        skippedRows.add(Map.of(
-                                "rowNumber", rowNumber,
-                                "data", Arrays.asList(row),
-                                "reason", "Incomplete row"
-                        ));
-                        skippedCount++;
-                        rowNumber++;
-                        continue;
-                    }
+                    rowNumber++;
+                    UserHelper record = new UserHelper(rowNumber, row);
 
                     String username = row[0].trim();
-                    String email = row[1].trim();
+                    String email = row[1].trim().toLowerCase();
                     String mobile = row[2].trim();
-                    String roleName = row[3].trim();
+                    String roleName = row[3].trim().toLowerCase();
                     String locationName = row[4].trim();
                     String doj = row[5].trim();
                     String secName = row[6].trim();
                     String secMobile = row[7].trim();
-                    String secEmail = row[8].trim();
+                    String secEmail = row[8].trim().toLowerCase();
                     String relation = row[9].trim();
                     String groupName = row[10].trim();
                     String workSchedule = row[11].trim().toLowerCase();
-                    log.info("Role fetch");
 
-                    Long roleId = roleMap.get(roleName.toLowerCase());
-                    log.info("RL ID:{}", roleId);
-                    String scheduleId = workScheduleMap.get(workSchedule.toLowerCase());
-                    log.info("WorkSchedule ID from map: {}", scheduleId);
-
-                    if (isBlank(workSchedule)) {
-                        skippedRows.add(Map.of(
-                                "rowNumber", rowNumber,
-                                "data", Arrays.asList(row),
-                                "reason", "WorkSchedule is missing"
-                        ));
-                        skippedCount++;
-                        rowNumber++;
+                    if (Stream.of(username, email, mobile, roleName, locationName, doj, workSchedule).anyMatch(StringUtils::isBlank)) {
+                        record.invalidate("Mandatory fields missing");
+                        allRecords.add(record);
                         continue;
                     }
 
+                    if (!username.matches("^[A-Za-z ]+$")) {
+                        record.invalidate("Username must contain only letters and spaces");
+                        allRecords.add(record);
+                        continue;
+                    }
+
+                    if (!fileEmails.add(email) || !fileMobiles.add(mobile)) {
+                        record.invalidate("Duplicate email or mobile within file");
+                        allRecords.add(record);
+                        continue;
+                    }
+
+                    if (existingEmails.contains(email) || existingMobiles.contains(mobile) ||
+                            schemaEmails.contains(email) || schemaMobiles.contains(mobile)) {
+                        record.invalidate("Email or mobile already exists");
+                        allRecords.add(record);
+                        continue;
+                    }
+
+                    Long roleId = roleMap.get(roleName);
+                    if (roleId == null) {
+                        record.invalidate("Invalid role: " + roleName);
+                        allRecords.add(record);
+                        continue;
+                    }
+
+                    String scheduleId = workScheduleMap.get(workSchedule);
                     if (scheduleId == null) {
-                        skippedRows.add(Map.of(
-                                "rowNumber", rowNumber,
-                                "data", Arrays.asList(row),
-                                "reason", "WorkSchedule not found: " + workSchedule
-                        ));
-                        skippedCount++;
-                        rowNumber++;
-                        continue;
-                    }
-                    WorkScheduleEntity workScheduleEntity = workScheduleAdapter.findByScheduleId(scheduleId, orgId);
-
-                    Long locationId = null;
-                    List<Long> locationIds = new ArrayList<>();
-
-                    if (isBlank(locationName)) {
-                        skippedRows.add(Map.of(
-                                "rowNumber", rowNumber,
-                                "data", Arrays.asList(row),
-                                "reason", "Location is missing"
-                        ));
-                        skippedCount++;
-                        rowNumber++;
+                        record.invalidate("Invalid work schedule: " + workSchedule);
+                        allRecords.add(record);
                         continue;
                     }
 
                     String[] locationList = locationName.split(",");
-                    boolean invalidLocationFound = false;
-
-                    for (String location : locationList) {
-                        String trimmedLocation = location.trim().toLowerCase();
-                        Long locationsId = locationMap.get(trimmedLocation);
-
-                        if (locationsId == null) {
-                            invalidLocationFound = true;
-                            log.warn("Invalid location found: {}", trimmedLocation);
-                            break;
-                        }
-                        locationIds.add(locationsId);
+                    List<Long> validLocIds = new ArrayList<>();
+                    for (String loc : locationList) {
+                        Long locId = locationMap.get(loc.trim().toLowerCase());
+                        if (locId != null) validLocIds.add(locId);
                     }
-
-                    if (invalidLocationFound || locationIds.isEmpty()) {
-                        skippedRows.add(Map.of(
-                                "rowNumber", rowNumber,
-                                "data", Arrays.asList(row),
-                                "reason", "Invalid or missing location(s): " + locationName
-                        ));
-                        skippedCount++;
-                        rowNumber++;
+                    if (validLocIds.isEmpty()) {
+                        record.invalidate("Invalid location(s): " + locationName);
+                        allRecords.add(record);
                         continue;
                     }
 
-                    Long groupId = null;
-                    List<Long> groupIds = new ArrayList<>();
-                    if (!isBlank(groupName)) {
-                        String[] groupList = groupName.split(",");
-                        log.info("groupList" + ":" + groupList);
-                        for (String group : groupList) {
-                            String trimmedGroup = group.trim().toLowerCase();
-                            groupId = groupMap.get(trimmedGroup);
-                            if (isBlank(groupId)) {
-                                skippedRows.add(Map.of(
-                                        "rowNumber", rowNumber,
-                                        "data", Arrays.asList(row),
-                                        "reason", "Group not found" + trimmedGroup
-                                ));
-                                continue;
-                            }
-                            groupIds.add(groupId);
-                        }
-                    }
-
-                    if (isBlank(workSchedule)) {
-                        skippedRows.add(Map.of(
-                                "rowNumber", rowNumber,
-                                "data", Arrays.asList(row),
-                                "reason", "WorkSchedule is missing"
-                        ));
-                        skippedCount++;
-                        rowNumber++;
-                        continue;
-                    }
-
-                    String workScheduleKey = workSchedule.trim().toLowerCase();
-                    String schedulesId = workScheduleMap.get(workScheduleKey);
-
-                    if (schedulesId == null) {
-                        skippedRows.add(Map.of(
-                                "rowNumber", rowNumber,
-                                "data", Arrays.asList(row),
-                                "reason", "WorkSchedule not found: " + workSchedule
-                        ));
-                        skippedCount++;
-                        rowNumber++;
-                        continue;
-                    }
-
-                    if (isBlank(email) || isBlank(mobile) || isBlank(roleId) || isBlank(doj)
-                            ||isBlank(locationName) || isBlank(workSchedule)) {
-                        skippedRows.add(Map.of(
-                                "rowNumber", rowNumber,
-                                "data", Arrays.asList(row),
-                                "reason", "Mandatory fields  are missing"
-                        ));
-                        skippedCount++;
-                        rowNumber++;
-                        continue;
-                    }
-
-                    log.info("Rolename in csv", roleName);
-                    String key = organizationCacheService.getPrivilegeKey(PrivilegeConstants.HAVE_SECONDARY_DETAILS);
-                    boolean hasSecondaryDetailsPrivilege = rolePrivilegeHelper.roleHasPrivilege(roleName, key);
-
-                    // Validate primary email/mobile
-                    if (existingEmails.contains(email) || existingMobiles.contains(mobile)) {
-                        skippedRows.add(Map.of(
-                                "rowNumber", rowNumber,
-                                "data", Arrays.asList(row),
-                                "reason", "Email or mobile number already exists"
-                        ));
-                        skippedCount++;
-                        continue;
-                    }
-
-                    if (hasSecondaryDetailsPrivilege) {
-                        // Skip if any of the required secondary fields are missing
-                        if (isBlank(secMobile) || isBlank(relation)) {
-                            skippedRows.add(Map.of(
-                                    "rowNumber", rowNumber,
-                                    "data", Arrays.asList(row),
-                                    "reason", "Secondary fields are missing"
-                            ));
-                            skippedCount++;
-                            rowNumber++;
+                    if (StringUtils.isNotBlank(secName) || StringUtils.isNotBlank(secMobile) || StringUtils.isNotBlank(secEmail)) {
+                        if (existingSecEmails.contains(secEmail) || existingSecMobiles.contains(secMobile)) {
+                            record.invalidate("Secondary email or mobile already exists");
+                            allRecords.add(record);
                             continue;
                         }
-
-                        // Skip if all secondary fields are empty
-                        if (isBlank(secMobile) && isBlank(relation)) {
-                            skippedRows.add(Map.of(
-                                    "rowNumber", rowNumber,
-                                    "data", Arrays.asList(row),
-                                    "reason", "All Secondary fields are missing"
-                            ));
-                            skippedCount++;
-                            rowNumber++;
-                            continue;
-                        }
-
-                        // Check secondary mobile/email duplication
-                        if (existingMobiles.contains(secMobile) || existingSecMobiles.contains(secMobile)
-                                || existingEmails.contains(secEmail) || existingSecEmails.contains(secEmail)) {
-                            skippedRows.add(Map.of(
-                                    "rowNumber", rowNumber,
-                                    "data", Arrays.asList(row),
-                                    "reason", "Secondary email or mobile number already exists"
-                            ));
-                            skippedCount++;
-                            rowNumber++;
-                            continue;
-                        }
-
-                        // Check if student and secondary mobile are same
-                        if (mobile.equals(secMobile)) {
-                            skippedRows.add(Map.of(
-                                    "rowNumber", rowNumber,
-                                    "data", Arrays.asList(row),
-                                    "reason", "Same primary and secondary mobile number"
-                            ));
-                            skippedCount++;
-                            rowNumber++;
-                            continue;
-                        }
-                    }
-                    // Create and validate user DTO
-                    UserDto userDto = new UserDto();
-                    userDto.setUserName(username);
-                    userDto.setEmail(email);
-                    userDto.setMobileNumber(mobile);
-                    userDto.setRoleId(roleId);
-                    userDto.setWorkSchedule(workScheduleEntity.getScheduleId());
-                    userDto.setIsRegisterUser(false);
-                    userDto.setDateOfJoining(parseDate(doj));
-                    userDto.setUserId(idGenerationService.generateNextUserId(orgId));
-
-                    if (!validator.validate(userDto).isEmpty()) {
-                        skippedRows.add(Map.of(
-                                "rowNumber", rowNumber,
-                                "data", Arrays.asList(row),
-                                "reason", "Invalid data"
-                        ));
-                        skippedCount++;
-                        rowNumber++;
-                        continue;
+                        record.markHasSecondary(secName, secMobile, secEmail, relation);
                     }
 
-                    // Create and store user
-                    String defaultPass = PasswordUtil.generateDefaultPassword();
-                    userEntity = createUserEntity(userDto, orgId, defaultPass);
-                    userEntities.add(userEntity);
-                    successList.add(username);
-                    emailRequests.add(new EmailData(email, userDto.getUserName(), defaultPass, userDto.isRegisterUser(), userDto.getRoleId()));
+                    record.markValid(email,roleId, validLocIds, scheduleId, groupName,
+                            secName, secMobile, secEmail, relation);
+                    allRecords.add(record);
+                }
+            }
 
-                    uploadedCount++;
+            long currentCount = userAdapter.getCurrentUserCount(orgId);
+            long maxUsers = userAdapter.getSubscribedUserLimit(orgId);
+            long remainingSlots = maxUsers - currentCount;
 
-                    existingEmails.add(email);
-                    existingMobiles.add(mobile);
+            List<UserHelper> validRecords = allRecords.stream()
+                    .filter(UserHelper::isValid)
+                    .toList();
 
-                    // Group mapping
-                    userGroupMappings.computeIfAbsent(userEntity, k -> new ArrayList<>())
-                            .addAll(groupIds);
+            List<UserHelper> invalidRecords = new ArrayList<>(allRecords.stream()
+                    .filter(r -> !r.isValid())
+                    .toList());
 
-                    //Location Mapping
-                    userLocationMappings.computeIfAbsent(userEntity, k -> new ArrayList<>())
-                            .addAll(locationIds);
-                    // Save secondary details if student
-                    if (hasSecondaryDetailsPrivilege) {
-                        String secondaryEmail = TextUtil.trim(secEmail);
-                        SecondaryDetailsEntity secDetails = createSecondaryDetails(userEntity, secMobile, secondaryEmail, secName, relation);
-                        secondaryDetailsEntities.add(secDetails);
-                        existingSecMobiles.add(secMobile);
-                        existingSecEmails.add(secondaryEmail);
+            if (remainingSlots <= 0) {
+                invalidRecords.addAll(validRecords.stream()
+                        .peek(r -> r.invalidate("Subscription limit reached"))
+                        .toList());
+                validRecords = List.of();
+            } else if (validRecords.size() > remainingSlots) {
+                List<UserHelper> allowed = validRecords.subList(0, (int) remainingSlots);
+                List<UserHelper> excess = validRecords.subList((int) remainingSlots, validRecords.size());
+                excess.forEach(r -> r.invalidate("Subscription limit reached"));
+                invalidRecords.addAll(excess);
+                validRecords = allowed;
+            }
+
+            for (UserHelper record : validRecords) {
+                UserDto userDto = record.toUserDto(orgId, idGenerationService);
+                String defaultPass = PasswordUtil.generateDefaultPassword();
+
+                UserEntity userEntity = createUserEntity(userDto, orgId, defaultPass);
+                userEntities.add(userEntity);
+                emailRequests.add(new EmailData(userDto.getEmail(), userDto.getUserName(), defaultPass,
+                        userDto.isRegisterUser(), userDto.getRoleId()));
+                successList.add(userDto.getUserName());
+            }
+
+            userAdapter.saveAllUsers(userEntities);
+
+            Map<String, UserEntity> savedUserByEmail = userEntities.stream()
+                    .collect(Collectors.toMap(
+                            u -> u.getEmail().trim().toLowerCase(),
+                            Function.identity(),
+                            (u1, u2) -> u1
+                    ));
+
+            List<UserGroupEntity> groupEntities = validRecords.stream()
+                    .filter(r -> StringUtils.isNotBlank(r.getEmail()))
+                    .filter(r -> StringUtils.isNotBlank(r.getGroupName()) && !"-".equals(r.getGroupName().trim()))
+                    .flatMap(record -> {
+                        String key = record.getEmail().trim().toLowerCase();
+                        UserEntity savedUser = savedUserByEmail.get(key);
+                        if (savedUser == null) {
+                            log.warn("No saved user found for email (group mapping): {}", record.getEmail());
+                            return Stream.empty();
+                        }
+
+                        return Arrays.stream(record.getGroupName().split(","))
+                                .map(String::trim)
+                                .filter(StringUtils::isNotBlank)
+                                .map(String::toLowerCase)
+                                .map(groupMap::get)
+                                .filter(Objects::nonNull)
+                                .map(gId -> {
+                                    UserGroupEntity ug = new UserGroupEntity();
+                                    ug.setUser(savedUser);
+                                    ug.setGroup(new GroupEntity(gId));
+                                    return ug;
+                                });
+                    })
+                    .toList();
+
+            userAdapter.saveAllUserGroups(groupEntities);
+
+            List<UserLocationEntity> userLocationEntities = validRecords.stream()
+                    .filter(r -> StringUtils.isNotBlank(r.getEmail()))
+                    .flatMap(record -> {
+                        String key = record.getEmail().trim().toLowerCase();
+                        UserEntity savedUser = savedUserByEmail.get(key);
+                        if (savedUser == null) {
+                            log.warn("No saved user found for email (location mapping): {}", record.getEmail());
+                            return Stream.empty();
+                        }
+
+                        List<Long> locIds = Optional.ofNullable(record.getLocationIds()).orElse(Collections.emptyList());
+                        return locIds.stream().map(locId -> {
+                            UserLocationEntity ul = new UserLocationEntity();
+                            ul.setUser(savedUser);
+                            ul.setLocation(new LocationEntity(locId));
+                            return ul;
+                        });
+                    })
+                    .toList();
+
+            locationAdapter.saveUserLocation(userLocationEntities);
+
+            for (UserHelper record : validRecords) {
+                if (record.hasSecondary()) {
+                    UserEntity savedUser = savedUserByEmail.get(record.getEmail());
+                    if (savedUser != null) {
+                        SecondaryDetailsEntity secondaryEntity = createSecondaryDetails(
+                                savedUser,
+                                record.getSecondaryMobile(),
+                                record.getSecondaryEmail(),
+                                record.getSecondaryName(),
+                                record.getRelation()
+                        );
+                        secondaryDetailsEntities.add(secondaryEntity);
                     }
                 }
             }
 
-            // Persist users and secondary details
-            List<UserEntity> savedUsers = userAdapter.saveAllUsers(userEntities);
-            List<SecondaryDetailsEntity> savedSecondaryDetails = userAdapter.saveAllSecondaryDetails(secondaryDetailsEntities);
-
-            if (savedUsers != null) {
-                log.info("Creating user mapping for all saved users in bulk upload");
-                List<UserSchemaMappingEntity> mappings = savedUsers.stream()
-                        .map(u -> organizationEntityMapper.toSchema(
-                                u.getEmail(),
-                                u.getMobileNumber(),
-                                orgId,
-                                TenantContext.getCurrentTenant()))
-                        .toList();
-
-                userAdapter.saveAllMappings(mappings);
-            }
-            if (savedSecondaryDetails != null) {
-                log.info("Creating user mapping for all saved secondary users in bulk upload");
-                List<UserSchemaMappingEntity> secondaryMappings = savedSecondaryDetails.stream()
-                        .map(su -> organizationEntityMapper.toSchema(
-                                su.getEmail(),
-                                su.getMobile(),
-                                orgId,
-                                TenantContext.getCurrentTenant()
-                        ))
-                        .toList();
-
-                userAdapter.saveAllSecondaryMappings(secondaryMappings);
-            }
-            // Persist user-group mappings
-            List<UserGroupEntity> groupEntities = userGroupMappings.entrySet().stream()
-                    .flatMap(entry -> entry.getValue().stream()
-                            .map(groupIds -> {
-                                UserGroupEntity ug = new UserGroupEntity();
-                                ug.setUser(entry.getKey());
-                                ug.setGroup(new GroupEntity(groupIds));
-                                return ug;
-                            }))
-                    .toList();
-
-            //user-location mapping
-            List<UserLocationEntity> userLocationEntities = userLocationMappings.entrySet().stream()
-                    .flatMap(entry -> entry.getValue().stream()
-                            .map(locationIds -> {
-                                UserLocationEntity ul = new UserLocationEntity();
-                                ul.setUser(entry.getKey());
-                                ul.setLocation(new LocationEntity(locationIds));
-                                return ul;
-                            }))
-                    .toList();
-            log.info("Saving all user groups");
-            userAdapter.saveAllUserGroups(groupEntities);
-            log.info("Saving all user groups");
-            log.info("Save all user locations");
-            locationAdapter.saveUserLocation(userLocationEntities);
-            log.info("Sending emails to all users");
+            userAdapter.saveAllSecondaryDetails(secondaryDetailsEntities);
+            int uploadedCount = userEntities.size();
+            int skippedCount = invalidRecords.size();
+            log.info("Before emailHelper: uploadedCount={}, skippedCount={}, userEntities.size()={}, invalidRecords.size()={}",
+                    uploadedCount, skippedCount, userEntities.size(), invalidRecords.size());
             sendEmailsAsync(emailRequests);
-            log.info("Emails sent to all users");
+
+            for (UserHelper rec : invalidRecords) {
+                skippedRows.add(Map.of(
+                        "rowNumber", rec.getRowNumber(),
+                        "data", Arrays.asList(rec.getRow()),
+                        "reason", rec.getReason()
+                ));
+            }
+
+            emailHelper.sendSuccessEmail(userFromToken.getEmail(), userFromToken.getUserName(),
+                    uploadedCount, skippedCount);
+
+            if (isRedisEnabled) {
+                CacheEventPublisherUtil.syncReloadThenPublish(
+                        publisher, cacheKeyConfig.getUsers(), orgId, schema, cacheReloadHandlerRegistry);
+            }
+
+            log.info("Upload complete. Uploaded={}, Skipped={}, Time={}ms",
+                    uploadedCount, skippedCount, (System.currentTimeMillis() - startTime));
+
+            return new ApiResponse(200,
+                    uploadedCount + " users created. " + skippedCount + " skipped.",
+                    null);
 
         } catch (Exception e) {
             throw new RuntimeException("Error processing CSV: " + e.getMessage(), e);
         }
-
-        log.info("Uploaded: {}, Skipped: {}, Time: {} ms", uploadedCount, skippedCount, (System.currentTimeMillis() - startTime));
-
-        Map<String, Object> response = new HashMap<>();
-        log.info("uploadedUsers: {}", successList);
-        log.info("uploadedCount: {}", uploadedCount);
-        log.info("skippedCount: {}", skippedCount);
-        log.info("skippedRows: {}", skippedRows);
-
-        String message = String.format(" %d Users created. Duplicate/invalid users were skipped.", uploadedCount);
-        log.info("useremail: {} , username: {}", userFromToken.getEmail(), userFromToken.getUserName());
-        emailHelper.sendSuccessEmail(userFromToken.getEmail(), userFromToken.getUserName(), uploadedCount, skippedCount);
-        if (isRedisEnabled) {
-            CacheEventPublisherUtil.syncReloadThenPublish(
-                    publisher,
-                    cacheKeyConfig.getUsers(),
-                    orgId,
-                    schema,
-                    cacheReloadHandlerRegistry
-            );
-            log.info("UserCacheReloadEvent published after User bulk creation");
-        } else {
-            log.info("Redis is not enabled or RedisTemplate is null. Skipping cache Bulk reload.");
-        }
-        return new ApiResponse(200, message, response);
-
     }
 
     public String saveCsvToLocal(MultipartFile file) throws IOException {
@@ -652,6 +509,7 @@ public class UserServiceImpl implements UserService {
         String baseName = FilenameUtils.getBaseName(originalFilename);
         String extension = FilenameUtils.getExtension(originalFilename);
 
+        assert originalFilename != null;
         Path destinationPath = tempDirPath.resolve(originalFilename);
         int count = 1;
 
@@ -710,13 +568,7 @@ public class UserServiceImpl implements UserService {
         return header.trim().toLowerCase().replaceAll("[ _]", "");
     }
 
-    private LocalDate parseDate(String dateStr) {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
-        return LocalDate.parse(dateStr, formatter);
-    }
-
     @Async
-    @Transactional
     public void sendEmailsAsync(List<EmailData> emailRequests) {
         int successCount = 0;
         int failureCount = 0;
