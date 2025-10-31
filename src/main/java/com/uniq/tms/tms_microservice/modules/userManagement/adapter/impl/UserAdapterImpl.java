@@ -577,4 +577,13 @@ public class UserAdapterImpl implements UserAdapter {
     public long getUserCount(String organizationId, LocalDateTime start, LocalDateTime end) {
         return userRepository.countUsersByOrgAndCreatedAtBetween(organizationId, start, end);
     }
+    public Set<String> getAllMappedEmails(String orgId) {
+        return userSchemaMapperRepository.findAllMappedEmailsByOrgId(orgId);
+    }
+
+    @Override
+    public Set<String> getAllMappedMobiles(String orgId) {
+        return userSchemaMapperRepository.findAllMappedMobilesByOrgId(orgId);
+    }
+
 }
