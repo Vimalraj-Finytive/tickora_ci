@@ -590,6 +590,10 @@ public class TimesheetServiceImpl implements TimesheetService {
         timesheet = timesheetAdapter.save(timesheet);
 
         LocationEntity locationEntity = locationAdapter.findDefaultLocationByOrgId(orgId);
+
+        log.info("LastClockOut value: {}", timesheet.getLastClockOut());
+        log.info("Type: {}", (timesheet.getLastClockOut() == null ? "NULL" : timesheet.getLastClockOut().getClass()));
+
         if (isNew) {
             if (request.getFirstClockIn() != null) {
                 TimesheetHistoryEntity clockInHistory = new TimesheetHistoryEntity();
@@ -610,6 +614,19 @@ public class TimesheetServiceImpl implements TimesheetService {
                 clockOutHistory.setLocationId(locationEntity.getLocationId());
                 clockOutHistory.setLoggedTimestamp(LocalDateTime.now());
                 timesheetAdapter.saveTimesheetHistory(clockOutHistory);
+            }
+        } else if(request.getLastClockOut() != null){
+            TimesheetHistoryEntity clockOutHistory = new TimesheetHistoryEntity();
+            clockOutHistory.setTimesheet(timesheet);
+            clockOutHistory.setLogTime(request.getLastClockOut());
+            clockOutHistory.setLogType(LogType.CLOCK_OUT);
+            clockOutHistory.setLogFrom(LogFrom.MANUAL_ENTRY);
+            clockOutHistory.setLocationId(locationEntity.getLocationId());
+            clockOutHistory.setLoggedTimestamp(LocalDateTime.now());
+            timesheetAdapter.saveTimesheetHistory(clockOutHistory);
+            if (timesheet.getFirstClockIn() != null && request.getFirstClockIn() != null) {
+                timesheetAdapter.updateTimesheetHistory(
+                        timesheet.getId(), LogType.CLOCK_IN, request.getFirstClockIn());
             }
         } else {
             if (request.getFirstClockIn() != null) {

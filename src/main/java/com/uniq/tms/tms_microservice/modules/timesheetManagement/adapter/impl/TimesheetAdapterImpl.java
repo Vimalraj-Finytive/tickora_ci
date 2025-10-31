@@ -442,15 +442,15 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
 
             Duration worked = timesheet.getTrackedHours() != null ? timesheet.getTrackedHours() : Duration.ZERO;
             Duration overtimeThreshold = scheduledHours.plusMinutes(extraWorkedMinutes);
-
+            log.info("threshold:{}",overtimeThreshold);
             if (worked.compareTo(overtimeThreshold) > 0) {
+                log.info("Reached if conditions");
                 timesheet.setWorkStatus(TimesheetWorkStatusEnum.OVERTIME.getLabel());
             } else if (worked.compareTo(scheduledHours) >= 0) {
                 timesheet.setWorkStatus(TimesheetWorkStatusEnum.SUFFICIENT_HOURS.getLabel());
             } else {
                 timesheet.setWorkStatus(TimesheetWorkStatusEnum.LESS_WORKED_HOURS.getLabel());
             }
-
             timesheet.setStatus(TimesheetStatusEnum.PRESENT.getLabel());
         }
         else {
@@ -460,25 +460,47 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
     }
 
     private void handleFixedSchedule(TimesheetDto timesheet, ScheduleTypeInfo scheduleInfo) {
-        LocalTime fixedStartTime = scheduleInfo.getStartTime();
-        LocalTime fixedEndTime = scheduleInfo.getEndTime();
+
+        LocalDate date = timesheet.getDate();
+
+        LocalDateTime fixedStartTime = LocalDateTime.of(date, scheduleInfo.getStartTime());
+        LocalDateTime fixedEndTime = LocalDateTime.of(date, scheduleInfo.getEndTime());
+        LocalDateTime actualStart = LocalDateTime.of(date, timesheet.getFirstClockIn());
+        LocalDateTime actualEnd = LocalDateTime.of(date, timesheet.getLastClockOut());
         Duration scheduledHours = scheduleInfo.getDuration();
+
+        if (fixedEndTime.isBefore(fixedStartTime)) {
+            fixedEndTime = fixedEndTime.plusDays(1);
+        }
+        if (actualEnd.isBefore(actualStart)) {
+            actualEnd = actualEnd.plusDays(1);
+        }
 
         log.info("Processing Fixed schedule - Start: {}, End: {}", fixedStartTime, fixedEndTime);
 
-        LocalTime actualStart = timesheet.getFirstClockIn();
-        LocalTime actualEnd = timesheet.getLastClockOut();
-
         if (actualStart != null && actualEnd != null && fixedStartTime != null && fixedEndTime != null) {
+            log.info("===== Work Status Calculation Start =====");
+            log.info("Actual Start: {}", actualStart);
+            log.info("Actual End: {}", actualEnd);
+            log.info("Fixed Start Time: {}", fixedStartTime);
+            log.info("Fixed End Time: {}", fixedEndTime);
+
             boolean isLateClockIn = actualStart.isAfter(fixedStartTime);
             boolean isEarlyClockOut = actualEnd.isBefore(fixedEndTime);
-            Duration worked = timesheet.getTrackedHours() != null ? timesheet.getTrackedHours() : Duration.ZERO;
-            boolean hasOvertimeHours = worked.compareTo(scheduledHours) > 0;
             boolean isOvertime = actualEnd.isAfter(fixedEndTime.plusMinutes(30));
+            Duration worked = Duration.between(actualStart, actualEnd);
+            boolean hasOvertimeHours = worked.compareTo(Duration.between(fixedStartTime, fixedEndTime)) > 0;
 
+            log.info("isLateClockIn: {}", isLateClockIn);
+            log.info("isEarlyClockOut: {}", isEarlyClockOut);
+            log.info("Tracked Hours: {}", worked);
+            log.info("Scheduled Hours: {}", scheduledHours);
+            log.info("hasOvertimeHours: {}", hasOvertimeHours);
+            log.info("isOvertime: {}", isOvertime);
 
             if (!isLateClockIn && isOvertime && hasOvertimeHours) {
                 timesheet.setWorkStatus(TimesheetWorkStatusEnum.OVERTIME.getLabel());
+                log.info("Work Status set to: {}", TimesheetWorkStatusEnum.OVERTIME.getLabel());
             } else if (isLateClockIn && isEarlyClockOut) {
                 timesheet.setWorkStatus(TimesheetWorkStatusEnum.IRREGULAR_WORK_TIME.getLabel());
             } else if (isLateClockIn) {
