@@ -113,6 +113,7 @@ public interface UserAdapter {
     List<UserEntity> findByOrganizationIdAndActiveTrue(String orgId);
     int countActiveUsers(String orgId);
     void flush();
+    long getUserCount(String organizationId, java.time.LocalDateTime start, java.time.LocalDateTime end);
     Set<String> getAllMappedEmails(String orgId);
     Set<String> getAllMappedMobiles(String orgId);
 }

@@ -34,4 +34,16 @@ public interface SubscriptionRepository extends JpaRepository<SubscriptionEntity
     Optional<SubscriptionEntity> findActiveSubscriptionByOrgId(@Param("orgId") String orgId);
 
     Optional<SubscriptionEntity> findById(String subscriptionId);
+
+//    List<SubscriptionEntity> findByOrgIdAndStartDateBetween(String orgId, LocalDateTime start, LocalDateTime end);
+
+//    List<SubscriptionEntity> findByStartDateBetween(LocalDateTime start, LocalDateTime end);
+
+    @Query("SELECT s FROM SubscriptionEntity s WHERE s.startDate BETWEEN :start AND :end")
+    List<SubscriptionEntity> findAllByStartDateBetween(@Param("start") LocalDateTime start,
+                                                       @Param("end") LocalDateTime end);
+
+    List<SubscriptionEntity> findByOrgIdAndStartDateBetween(String orgId, LocalDateTime start, LocalDateTime end);
+
+
 }

@@ -3,15 +3,14 @@ package com.uniq.tms.tms_microservice.modules.organizationManagement.services.im
 import com.uniq.tms.tms_microservice.modules.locationManagement.adapter.LocationAdapter;
 import com.uniq.tms.tms_microservice.modules.locationManagement.entity.LocationEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.OrganizationAdapter;
-import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.OrganizationDetailsDto;
-import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.OrganizationSummaryDto;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.SubscriptionAdapter;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.*;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.*;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.mapper.OrganizationDetailsMapper;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.mapper.OrganizationEntityMapper;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.model.*;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.OrganizationRepository;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.OrganizationTypeRepository;
-import com.uniq.tms.tms_microservice.modules.organizationManagement.services.OrganizationCacheService;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.services.SubscriptionService;
 import com.uniq.tms.tms_microservice.shared.security.cache.CacheKeyConfig;
 import com.uniq.tms.tms_microservice.shared.security.cache.CacheReloadHandlerRegistry;
@@ -23,11 +22,9 @@ import com.uniq.tms.tms_microservice.modules.userManagement.enums.UserRole;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.adapter.WorkScheduleAdapter;
 import com.uniq.tms.tms_microservice.shared.security.schema.TenantContext;
 import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
-import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.OrgSetupValidationResponse;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.enums.CountryEnum;
 import com.uniq.tms.tms_microservice.shared.exception.CommonExceptionHandler;
 import com.uniq.tms.tms_microservice.shared.helper.ExceptionHelper;
-import com.uniq.tms.tms_microservice.modules.userManagement.mapper.UserEntityMapper;
 import com.uniq.tms.tms_microservice.modules.identityManagement.service.IdGenerationService;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.services.OrganizationService;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserSchemaMappingEntity;
@@ -41,17 +38,16 @@ import liquibase.database.jvm.JdbcConnection;
 import liquibase.resource.ClassLoaderResourceAccessor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import javax.sql.DataSource;
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -75,13 +71,15 @@ public class OrganizationServiceImpl implements OrganizationService {
     private final ApplicationEventPublisher publisher;
     private final LocationAdapter locationAdapter;
     private final SubscriptionService subscriptionService;
-    private final OrganizationDetailsMapper mapper;;
+    private final OrganizationDetailsMapper mapper;
+    private final SubscriptionAdapter subscriptionAdapter;
+
     public OrganizationServiceImpl(OrganizationEntityMapper organizationEntityMapper, UserAdapter userAdapter, WorkScheduleAdapter workScheduleAdapter,
                                    IdGenerationService idGenerationService, DataSource dataSource, ExceptionHelper exceptionHelper,
                                    OrganizationRepository organizationRepository, OrganizationTypeRepository organizationTypeRepository,
                                    UserService userService, OrganizationAdapter organizationAdapter, CacheKeyConfig cacheKeyConfig,
                                    CacheReloadHandlerRegistry cacheReloadHandlerRegistry, ApplicationEventPublisher publisher,
-                                   LocationAdapter locationAdapter, SubscriptionService subscriptionService, OrganizationDetailsMapper mapper ) {
+                                   LocationAdapter locationAdapter, SubscriptionService subscriptionService, OrganizationDetailsMapper mapper, SubscriptionAdapter subscriptionAdapter) {
         this.organizationEntityMapper = organizationEntityMapper;
         this.userAdapter = userAdapter;
         this.workScheduleAdapter = workScheduleAdapter;
@@ -97,18 +95,18 @@ public class OrganizationServiceImpl implements OrganizationService {
         this.publisher = publisher;
         this.locationAdapter = locationAdapter;
         this.subscriptionService = subscriptionService;
-        this.mapper=mapper;
+        this.mapper = mapper;
 
+        this.subscriptionAdapter = subscriptionAdapter;
     }
 
     @Value("${cache.redis.enabled}")
     private boolean isRedisEnabled;
-    
+
     /**
-     *
      * @param organization
-     * @Create organization and Org Superadmin
      * @return SuccessT
+     * @Create organization and Org Superadmin
      */
     @Override
     @Transactional
@@ -185,7 +183,7 @@ public class OrganizationServiceImpl implements OrganizationService {
         }
     }
 
-        private OrganizationEntity saveOrganizationPublic(OrganizationEntity entity) {
+    private OrganizationEntity saveOrganizationPublic(OrganizationEntity entity) {
         try {
             return organizationAdapter.create(entity);
         } catch (Exception e) {
@@ -237,13 +235,14 @@ public class OrganizationServiceImpl implements OrganizationService {
 
     /**
      * Validate the Organization name
+     *
      * @param organization
      */
     @Override
     public Organization validate(Organization organization) {
         OrganizationEntity organizationEntity = organizationEntityMapper.toEntity(organization);
         OrganizationEntity response = organizationAdapter.findByOrgName(organizationEntity.getOrgName());
-        if(response != null) {
+        if (response != null) {
             if (organization.getOrgName().equalsIgnoreCase(response.getOrgName())) {
                 throw new RuntimeException("Name already Exists under other organization");
             }
@@ -252,7 +251,6 @@ public class OrganizationServiceImpl implements OrganizationService {
     }
 
     /**
-     *
      * @return List of organization type
      */
     @Override
@@ -261,9 +259,7 @@ public class OrganizationServiceImpl implements OrganizationService {
     }
 
     /**
-     *
-     * @param orgId
-     * Validate Location and WorkSchedule of the organization
+     * @param orgId Validate Location and WorkSchedule of the organization
      * @return boolean based on location & WS
      */
     @Override
@@ -423,22 +419,141 @@ public class OrganizationServiceImpl implements OrganizationService {
         }
     }
 
+    //    @Override
+//    public List<OrganizationDetailsDto> getAllOrganizationDetails() {
+//        List<OrganizationEntity> organizations = organizationAdapter.findAll();
+//        List<OrganizationDetailsDto> dtoList = new ArrayList<>();
+//
+//        for (OrganizationEntity orgEntity : organizations) {
+//            OrganizationDetailsModel model = mapper.toModel(orgEntity);
+//            model.setActiveUsers(userAdapter.countActiveMembers(orgEntity.getOrganizationId()));
+//            model.setInactiveUsers(userAdapter.countInactiveMembers(orgEntity.getOrganizationId()));
+//            dtoList.add(mapper.toDto(model));
+//
+//
+//            return dtoList;
     @Override
     public List<OrganizationDetailsDto> getAllOrganizationDetails() {
-        List<OrganizationEntity> organizations = organizationAdapter.findAll();
+        List<OrganizationEntity> orgEntities = organizationAdapter.findAll();
         List<OrganizationDetailsDto> dtoList = new ArrayList<>();
 
-        for (OrganizationEntity orgEntity : organizations) {
+        for (OrganizationEntity orgEntity : orgEntities) {
             OrganizationDetailsModel model = mapper.toModel(orgEntity);
+
+            String orgTypeName = organizationAdapter.getOrgTypeNameById(model.getOrgType());
+            if (orgTypeName != null && !orgTypeName.isEmpty()) {
+                model.setOrgType(orgTypeName);
+            } else {
+                model.setOrgType(null);
+            }
             model.setActiveUsers(userAdapter.countActiveMembers(orgEntity.getOrganizationId()));
             model.setInactiveUsers(userAdapter.countInactiveMembers(orgEntity.getOrganizationId()));
-            dtoList.add(mapper.toDto(model));
+
+            SubscriptionDto activePlan = subscriptionAdapter.getActivePlan(orgEntity.getOrganizationId());
+            SubscriptionDto subscriptionDto = new SubscriptionDto();
+
+            if (activePlan != null) {
+                subscriptionDto.setPlanName(activePlan.getPlanName());
+                subscriptionDto.setStart(activePlan.getStart());
+                subscriptionDto.setActiveUntil(activePlan.getActiveUntil());
+                subscriptionDto.setBillingCycle(activePlan.getBillingCycle());
+                subscriptionDto.setStatus(activePlan.getStatus());
+                subscriptionDto.setSubscribedUsers(
+                        activePlan.getSubscribedUsers() != null ? activePlan.getSubscribedUsers() : 0
+                );
+            } else {
+                subscriptionDto.setPlanName("No active plan");
+                subscriptionDto.setStatus("Inactive");
+            }
+
+            OrganizationDetailsDto dto = mapper.toDto(model);
+            dto.setSubscriptionSummary(subscriptionDto);
+
+            dtoList.add(dto);
         }
 
         return dtoList;
     }
 
+//    @Override
+//    public OrganizationUserCountResponse getUserCountsForOrganization(String orgId, LocalDate fromDate, LocalDate toDate) {
+//
+//        OrganizationEntity org = organizationRepository.findById(orgId)
+//                .orElseThrow(() -> new RuntimeException("Organization not found: " + orgId));
+//
+//        LocalDateTime start = fromDate.atStartOfDay();
+//        LocalDateTime end = toDate.atTime(23, 59, 59);
+//
+//        // previous month period
+//        LocalDate prevFromDate = fromDate.minusMonths(1);
+//        LocalDate prevToDate = toDate.minusMonths(1);
+//        LocalDateTime prevStart = prevFromDate.atStartOfDay();
+//        LocalDateTime prevEnd = prevToDate.atTime(23, 59, 59);
+//
+//        long currentCount = userAdapter.getUserCount(orgId, start, end);
+//        long previousCount = userAdapter.getUserCount(orgId, prevStart, prevEnd);
+//
+//        return new OrganizationUserCountResponse(orgId, org.getOrgName(), currentCount, previousCount);
+//    }
+
+
+    @Override
+    public OrganizationCountResponseDto getOrganizationCount(DateRangeRequestDto request) {
+
+        // Current period
+        LocalDateTime from = request.getFromDate().atStartOfDay();
+        LocalDateTime to = request.getToDate().atTime(23, 59, 59);
+        long currentPeriodCount = organizationRepository.countOrganizationsBetweenDates(from, to);
+
+        // Calculate previous period of same length
+        long days = java.time.temporal.ChronoUnit.DAYS.between(request.getFromDate(), request.getToDate());
+        LocalDateTime prevFrom = request.getFromDate().minusDays(days + 1).atStartOfDay();
+        LocalDateTime prevTo = request.getToDate().minusDays(days + 1).atTime(23, 59, 59);
+        long previousPeriodCount = organizationRepository.countOrganizationsBetweenDates(prevFrom, prevTo);
+
+        return new OrganizationCountResponseDto(currentPeriodCount, previousPeriodCount);
+    }
+
+    @Override
+    public List<OrganizationTypeCountDto> calculateOrganizationTypeCounts(LocalDateTime from, LocalDateTime to) {
+        // Fetch raw counts from adapter
+        List<Object[]> rawCounts;
+        if (from != null && to != null) {
+            rawCounts = organizationAdapter.countOrganizationsByTypeBetweenDates(from, to);
+        } else {
+            rawCounts = organizationAdapter.countOrganizationsByType();
+        }
+
+        // Calculate total organizations for percentage
+        long totalOrgs = rawCounts.stream()
+                .mapToLong(row -> (Long) row[1])
+                .sum();
+
+        return mapToDto(rawCounts, totalOrgs);
+    }
+
+    private List<OrganizationTypeCountDto> mapToDto(List<Object[]> rawCounts, long totalOrgs) {
+        List<OrganizationTypeCountDto> result = new ArrayList<>();
+        for (Object[] row : rawCounts) {
+            String orgTypeId = (String) row[0];
+            Long count = (Long) row[1];
+
+            // Get org type name dynamically from org_type table
+            String orgTypeName = organizationAdapter.findOrgTypeNameById(orgTypeId).orElse(orgTypeId);
+
+            // Calculate percentage
+            BigDecimal percentage = totalOrgs > 0
+                    ? BigDecimal.valueOf(count * 100.0 / totalOrgs).setScale(2, BigDecimal.ROUND_HALF_UP)
+                    : BigDecimal.ZERO;
+
+            result.add(new OrganizationTypeCountDto(orgTypeId, orgTypeName, count, percentage));
+        }
+        return result;
+    }
 
 
 }
+
+
+
 
