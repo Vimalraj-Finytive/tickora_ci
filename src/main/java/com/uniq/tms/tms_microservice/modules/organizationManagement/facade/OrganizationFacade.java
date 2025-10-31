@@ -10,14 +10,13 @@ import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.*;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.mapper.OrganizationDtoMapper;
 import com.uniq.tms.tms_microservice.shared.helper.AuthHelper;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.services.OrganizationService;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.io.ByteArrayOutputStream;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -204,9 +203,21 @@ public class OrganizationFacade {
 //        return new ApiResponse<>(status.value(), message, null);
 //    }
 
+//    public OrganizationUserCountResponse getUserCounts(String orgId, LocalDate fromDate, LocalDate toDate) {
+//        return organizationService.getUserCountsForOrganization(orgId, fromDate, toDate);
+//    }
+
+    public List<PlanAnalyticsDto> getPlanAnalytics(LocalDate fromDate, LocalDate toDate) {
+        return subscriptionService.calculatePlanUsage(fromDate, toDate);
+    }
 
 
+    public OrganizationCountResponseDto getOrganizationCount(DateRangeRequestDto request) {
+        return organizationService.getOrganizationCount(request);
+    }
 
-
+    public List<OrganizationTypeCountDto> getOrganizationTypeCounts(LocalDateTime from, LocalDateTime to) {
+        return organizationService.calculateOrganizationTypeCounts(from, to);
+    }
 
 }

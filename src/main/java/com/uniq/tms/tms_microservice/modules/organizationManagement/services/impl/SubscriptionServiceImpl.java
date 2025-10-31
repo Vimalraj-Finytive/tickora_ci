@@ -1,10 +1,13 @@
 package com.uniq.tms.tms_microservice.modules.organizationManagement.services.impl;
 
+import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.OrganizationAdapter;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.PaymentAdapter;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.SubscriptionAdapter;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.PlanAnalyticsDto;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.PlanDto;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.SubscriptionDto;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.UpgradePlanDto;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.OrganizationEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.PaymentEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.PlanEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.SubscriptionEntity;
@@ -21,10 +24,14 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class SubscriptionServiceImpl implements SubscriptionService {
@@ -34,12 +41,14 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     private final PaymentService paymentService;
     private final UpgradeDtoMapper upgradeDtoMapper;
     private final PaymentAdapter paymentAdapter;
+    private final OrganizationAdapter organizationAdapter;
 
-    public SubscriptionServiceImpl(SubscriptionAdapter subscriptionAdapter, PaymentService paymentService, UpgradeDtoMapper upgradeDtoMapper, PaymentAdapter paymentAdapter){
+    public SubscriptionServiceImpl(SubscriptionAdapter subscriptionAdapter, PaymentService paymentService, UpgradeDtoMapper upgradeDtoMapper, PaymentAdapter paymentAdapter, OrganizationAdapter organizationAdapter){
         this.subscriptionAdapter = subscriptionAdapter;
         this.paymentService = paymentService;
         this.upgradeDtoMapper = upgradeDtoMapper;
         this.paymentAdapter = paymentAdapter;
+        this.organizationAdapter = organizationAdapter;
     }
 
     @Override
@@ -282,5 +291,50 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 //            return false;
 //        }
 //    }
+
+    @Override
+    public List<PlanAnalyticsDto> calculatePlanUsage(LocalDate fromDate, LocalDate toDate) {
+
+        List<OrganizationEntity> organizations = organizationAdapter.findAll();
+
+        Map<String, Long> planCountMap = new HashMap<>();
+
+        for (OrganizationEntity org : organizations) {
+            List<SubscriptionEntity> subscriptions = subscriptionAdapter.getAllSubscriptionsForOrgBetweenDates(
+                    org.getOrganizationId(), fromDate, toDate);
+
+            if (subscriptions.isEmpty()) {
+                System.out.println(" No subscriptions found for this organization in given period.");
+            } else {
+                System.out.println(" Found " + subscriptions.size() + " subscriptions:");
+            }
+
+            for (SubscriptionEntity subscription : subscriptions) {
+                planCountMap.merge(subscription.getPlanId(), 1L, Long::sum);
+            }
+        }
+
+        long totalSubscriptions = planCountMap.values().stream().mapToLong(Long::longValue).sum();
+        System.out.println("\nTotal subscriptions across all orgs: " + totalSubscriptions);
+
+        List<PlanAnalyticsDto> result = new ArrayList<>();
+
+        planCountMap.forEach((planId, count) -> {
+            String planName = subscriptionAdapter.findById(planId)
+                    .map(PlanEntity::getPlanName)
+                    .orElse(planId);
+
+            BigDecimal usagePercentage = totalSubscriptions > 0
+                    ? BigDecimal.valueOf(count * 100.0 / totalSubscriptions).setScale(2, RoundingMode.HALF_UP)
+                    : BigDecimal.ZERO;
+
+            System.out.println("Plan Summary: " + planName + " | Count: " + count + " | Usage: " + usagePercentage + "%");
+
+            result.add(new PlanAnalyticsDto(planId, planName, count, usagePercentage));
+        });
+
+        return result;
+    }
+
 
 }

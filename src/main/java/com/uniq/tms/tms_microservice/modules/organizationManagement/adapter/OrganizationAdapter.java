@@ -1,11 +1,10 @@
 package com.uniq.tms.tms_microservice.modules.organizationManagement.adapter;
 
 import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.OrganizationSummaryDto;
-import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.OrganizationEntity;
-import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.OrganizationTypeEntity;
-import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.PrivilegeEntity;
-import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.RoleEntity;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.*;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -29,4 +28,10 @@ public interface OrganizationAdapter {
     String getOrgTypeNameById(String type);
     String getOrgName(String orgId);
     List<OrganizationEntity> findAll();
+    long countOrganizationsBetweenDates(LocalDateTime from, LocalDateTime to);
+    List<Object[]> countOrganizationsByType();
+    List<Object[]> countOrganizationsByTypeBetweenDates(LocalDateTime from, LocalDateTime to);
+    Optional<String> findOrgTypeNameById(String orgTypeId);
+    List<SubscriptionEntity> getAllSubscriptionsForOrgBetweenDates(String orgId, LocalDate fromDate, LocalDate toDate);
+
 }
