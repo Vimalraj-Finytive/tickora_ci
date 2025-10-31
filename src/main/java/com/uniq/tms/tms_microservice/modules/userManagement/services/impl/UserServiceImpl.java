@@ -235,6 +235,7 @@ public class UserServiceImpl implements UserService {
 
         try {
 
+            // ==== Fetch existing DB and schema data ====
             Set<String> existingEmails = userAdapter.getAllEmails(orgId);
             Set<String> existingMobiles = userAdapter.getAllMobileNumbers(orgId);
             Set<String> existingSecEmails = userAdapter.getAllSecondaryEmail(orgId);
@@ -289,31 +290,36 @@ public class UserServiceImpl implements UserService {
                     String groupName = row[10].trim();
                     String workSchedule = row[11].trim().toLowerCase();
 
+                    // ====== MANDATORY FIELD CHECK ======
                     if (Stream.of(username, email, mobile, roleName, locationName, doj, workSchedule).anyMatch(StringUtils::isBlank)) {
                         record.invalidate("Mandatory fields missing");
                         allRecords.add(record);
                         continue;
                     }
 
+                    // ====== VALIDATE USERNAME ======
                     if (!username.matches("^[A-Za-z ]+$")) {
                         record.invalidate("Username must contain only letters and spaces");
                         allRecords.add(record);
                         continue;
                     }
 
+                    // ====== DUPLICATE WITHIN FILE ======
                     if (!fileEmails.add(email) || !fileMobiles.add(mobile)) {
                         record.invalidate("Duplicate email or mobile within file");
                         allRecords.add(record);
                         continue;
                     }
 
-                    if (existingEmails.contains(email) || existingMobiles.contains(mobile) ||
-                            schemaEmails.contains(email) || schemaMobiles.contains(mobile)) {
+                    // ====== EXISTING EMAIL/MOBILE IN DB OR SCHEMA ======
+                    if (existingEmails.contains(email) || existingMobiles.contains(mobile)
+                            || schemaEmails.contains(email) || schemaMobiles.contains(mobile)) {
                         record.invalidate("Email or mobile already exists");
                         allRecords.add(record);
                         continue;
                     }
 
+                    // ====== VALIDATE ROLE ======
                     Long roleId = roleMap.get(roleName);
                     if (roleId == null) {
                         record.invalidate("Invalid role: " + roleName);
@@ -321,6 +327,7 @@ public class UserServiceImpl implements UserService {
                         continue;
                     }
 
+                    // ====== VALIDATE WORK SCHEDULE ======
                     String scheduleId = workScheduleMap.get(workSchedule);
                     if (scheduleId == null) {
                         record.invalidate("Invalid work schedule: " + workSchedule);
@@ -328,6 +335,7 @@ public class UserServiceImpl implements UserService {
                         continue;
                     }
 
+                    // ====== VALIDATE LOCATIONS ======
                     String[] locationList = locationName.split(",");
                     List<Long> validLocIds = new ArrayList<>();
                     for (String loc : locationList) {
@@ -340,32 +348,62 @@ public class UserServiceImpl implements UserService {
                         continue;
                     }
 
-                    if (StringUtils.isNotBlank(secName) || StringUtils.isNotBlank(secMobile) || StringUtils.isNotBlank(secEmail)) {
-                        if (existingSecEmails.contains(secEmail) || existingSecMobiles.contains(secMobile)) {
+                    // ====== VALIDATE SECONDARY DETAILS ======
+                    String privilegeKey = organizationCacheService.getPrivilegeKey(PrivilegeConstants.HAVE_SECONDARY_DETAILS);
+                    boolean hasSecondaryPrivilege = rolePrivilegeHelper.roleHasPrivilege(roleName, privilegeKey);
+
+                    boolean anySecondaryFilled = Stream.of(secName, secMobile, secEmail, relation).anyMatch(StringUtils::isNotBlank);
+                    boolean allSecondaryFilled = Stream.of(secName, secMobile, secEmail, relation).allMatch(StringUtils::isNotBlank);
+
+                    if (hasSecondaryPrivilege) {
+                        if (anySecondaryFilled && !allSecondaryFilled) {
+                            record.invalidate("All secondary fields (name, mobile, email, relation) must be filled if one is provided");
+                            allRecords.add(record);
+                            continue;
+                        }
+
+                        if (!anySecondaryFilled) {
+                            record.invalidate("Secondary details are mandatory for this role");
+                            allRecords.add(record);
+                            continue;
+                        }
+
+                        if (existingSecEmails.contains(secEmail) || existingSecMobiles.contains(secMobile)
+                                || existingEmails.contains(secEmail) || existingMobiles.contains(secMobile)) {
                             record.invalidate("Secondary email or mobile already exists");
                             allRecords.add(record);
                             continue;
                         }
+
+                        if (mobile.equals(secMobile)) {
+                            record.invalidate("Primary and secondary mobile numbers cannot be the same");
+                            allRecords.add(record);
+                            continue;
+                        }
+
                         record.markHasSecondary(secName, secMobile, secEmail, relation);
+                    } else {
+                        if (anySecondaryFilled) {
+                            record.invalidate("Secondary details are not required for this role. Please leave them blank.");
+                            allRecords.add(record);
+                            continue;
+                        }
                     }
 
-                    record.markValid(email,roleId, validLocIds, scheduleId, groupName,
+                    // ====== MARK VALID RECORD ======
+                    record.markValid(email, roleId, validLocIds, scheduleId, groupName,
                             secName, secMobile, secEmail, relation);
                     allRecords.add(record);
                 }
             }
 
+            // ====== SUBSCRIPTION LIMIT CHECK ======
             long currentCount = userAdapter.getCurrentUserCount(orgId);
             long maxUsers = userAdapter.getSubscribedUserLimit(orgId);
             long remainingSlots = maxUsers - currentCount;
 
-            List<UserHelper> validRecords = allRecords.stream()
-                    .filter(UserHelper::isValid)
-                    .toList();
-
-            List<UserHelper> invalidRecords = new ArrayList<>(allRecords.stream()
-                    .filter(r -> !r.isValid())
-                    .toList());
+            List<UserHelper> validRecords = allRecords.stream().filter(UserHelper::isValid).toList();
+            List<UserHelper> invalidRecords = new ArrayList<>(allRecords.stream().filter(r -> !r.isValid()).toList());
 
             if (remainingSlots <= 0) {
                 invalidRecords.addAll(validRecords.stream()
@@ -380,10 +418,10 @@ public class UserServiceImpl implements UserService {
                 validRecords = allowed;
             }
 
+            // ====== SAVE VALID USERS ======
             for (UserHelper record : validRecords) {
                 UserDto userDto = record.toUserDto(orgId, idGenerationService);
                 String defaultPass = PasswordUtil.generateDefaultPassword();
-
                 UserEntity userEntity = createUserEntity(userDto, orgId, defaultPass);
                 userEntities.add(userEntity);
                 emailRequests.add(new EmailData(userDto.getEmail(), userDto.getUserName(), defaultPass,
@@ -400,16 +438,11 @@ public class UserServiceImpl implements UserService {
                             (u1, u2) -> u1
                     ));
 
+            // ====== GROUP MAPPING ======
             List<UserGroupEntity> groupEntities = validRecords.stream()
-                    .filter(r -> StringUtils.isNotBlank(r.getEmail()))
-                    .filter(r -> StringUtils.isNotBlank(r.getGroupName()) && !"-".equals(r.getGroupName().trim()))
                     .flatMap(record -> {
-                        String key = record.getEmail().trim().toLowerCase();
-                        UserEntity savedUser = savedUserByEmail.get(key);
-                        if (savedUser == null) {
-                            log.warn("No saved user found for email (group mapping): {}", record.getEmail());
-                            return Stream.empty();
-                        }
+                        UserEntity savedUser = savedUserByEmail.get(record.getEmail().trim().toLowerCase());
+                        if (savedUser == null || StringUtils.isBlank(record.getGroupName())) return Stream.empty();
 
                         return Arrays.stream(record.getGroupName().split(","))
                                 .map(String::trim)
@@ -423,64 +456,44 @@ public class UserServiceImpl implements UserService {
                                     ug.setGroup(new GroupEntity(gId));
                                     return ug;
                                 });
-                    })
-                    .toList();
+                    }).toList();
 
             userAdapter.saveAllUserGroups(groupEntities);
 
+            // ====== LOCATION MAPPING ======
             List<UserLocationEntity> userLocationEntities = validRecords.stream()
-                    .filter(r -> StringUtils.isNotBlank(r.getEmail()))
                     .flatMap(record -> {
-                        String key = record.getEmail().trim().toLowerCase();
-                        UserEntity savedUser = savedUserByEmail.get(key);
-                        if (savedUser == null) {
-                            log.warn("No saved user found for email (location mapping): {}", record.getEmail());
-                            return Stream.empty();
-                        }
-
-                        List<Long> locIds = Optional.ofNullable(record.getLocationIds()).orElse(Collections.emptyList());
-                        return locIds.stream().map(locId -> {
+                        UserEntity savedUser = savedUserByEmail.get(record.getEmail().trim().toLowerCase());
+                        if (savedUser == null) return Stream.empty();
+                        return record.getLocationIds().stream().map(locId -> {
                             UserLocationEntity ul = new UserLocationEntity();
                             ul.setUser(savedUser);
                             ul.setLocation(new LocationEntity(locId));
                             return ul;
                         });
-                    })
-                    .toList();
+                    }).toList();
 
             locationAdapter.saveUserLocation(userLocationEntities);
 
+            // ====== SECONDARY DETAILS ======
             for (UserHelper record : validRecords) {
                 if (record.hasSecondary()) {
                     UserEntity savedUser = savedUserByEmail.get(record.getEmail());
                     if (savedUser != null) {
-                        SecondaryDetailsEntity secondaryEntity = createSecondaryDetails(
-                                savedUser,
-                                record.getSecondaryMobile(),
-                                record.getSecondaryEmail(),
-                                record.getSecondaryName(),
-                                record.getRelation()
-                        );
-                        secondaryDetailsEntities.add(secondaryEntity);
+                        SecondaryDetailsEntity secEntity = createSecondaryDetails(savedUser,
+                                record.getSecondaryMobile(), record.getSecondaryEmail(),
+                                record.getSecondaryName(), record.getRelation());
+                        secondaryDetailsEntities.add(secEntity);
                     }
                 }
             }
 
             userAdapter.saveAllSecondaryDetails(secondaryDetailsEntities);
+
             int uploadedCount = userEntities.size();
             int skippedCount = invalidRecords.size();
-            log.info("Before emailHelper: uploadedCount={}, skippedCount={}, userEntities.size()={}, invalidRecords.size()={}",
-                    uploadedCount, skippedCount, userEntities.size(), invalidRecords.size());
+
             sendEmailsAsync(emailRequests);
-
-            for (UserHelper rec : invalidRecords) {
-                skippedRows.add(Map.of(
-                        "rowNumber", rec.getRowNumber(),
-                        "data", Arrays.asList(rec.getRow()),
-                        "reason", rec.getReason()
-                ));
-            }
-
             emailHelper.sendSuccessEmail(userFromToken.getEmail(), userFromToken.getUserName(),
                     uploadedCount, skippedCount);
 
