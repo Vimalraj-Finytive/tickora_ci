@@ -12,6 +12,7 @@ import com.uniq.tms.tms_microservice.modules.organizationManagement.model.*;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.OrganizationRepository;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.OrganizationTypeRepository;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.services.SubscriptionService;
+import com.uniq.tms.tms_microservice.modules.timesheetManagement.adapter.TimesheetAdapter;
 import com.uniq.tms.tms_microservice.shared.security.cache.CacheKeyConfig;
 import com.uniq.tms.tms_microservice.shared.security.cache.CacheReloadHandlerRegistry;
 import com.uniq.tms.tms_microservice.shared.util.CacheEventPublisherUtil;
@@ -48,6 +49,7 @@ import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -73,13 +75,14 @@ public class OrganizationServiceImpl implements OrganizationService {
     private final SubscriptionService subscriptionService;
     private final OrganizationDetailsMapper mapper;
     private final SubscriptionAdapter subscriptionAdapter;
+    private final TimesheetAdapter timesheetAdapter;
 
     public OrganizationServiceImpl(OrganizationEntityMapper organizationEntityMapper, UserAdapter userAdapter, WorkScheduleAdapter workScheduleAdapter,
                                    IdGenerationService idGenerationService, DataSource dataSource, ExceptionHelper exceptionHelper,
                                    OrganizationRepository organizationRepository, OrganizationTypeRepository organizationTypeRepository,
                                    UserService userService, OrganizationAdapter organizationAdapter, CacheKeyConfig cacheKeyConfig,
                                    CacheReloadHandlerRegistry cacheReloadHandlerRegistry, ApplicationEventPublisher publisher,
-                                   LocationAdapter locationAdapter, SubscriptionService subscriptionService, OrganizationDetailsMapper mapper, SubscriptionAdapter subscriptionAdapter) {
+                                   LocationAdapter locationAdapter, SubscriptionService subscriptionService, OrganizationDetailsMapper mapper, SubscriptionAdapter subscriptionAdapter, TimesheetAdapter timesheetAdapter) {
         this.organizationEntityMapper = organizationEntityMapper;
         this.userAdapter = userAdapter;
         this.workScheduleAdapter = workScheduleAdapter;
@@ -98,6 +101,7 @@ public class OrganizationServiceImpl implements OrganizationService {
         this.mapper = mapper;
 
         this.subscriptionAdapter = subscriptionAdapter;
+        this.timesheetAdapter = timesheetAdapter;
     }
 
     @Value("${cache.redis.enabled}")
@@ -446,6 +450,7 @@ public class OrganizationServiceImpl implements OrganizationService {
             } else {
                 model.setOrgType(null);
             }
+
             model.setActiveUsers(userAdapter.countActiveMembers(orgEntity.getOrganizationId()));
             model.setInactiveUsers(userAdapter.countInactiveMembers(orgEntity.getOrganizationId()));
 
@@ -549,6 +554,53 @@ public class OrganizationServiceImpl implements OrganizationService {
             result.add(new OrganizationTypeCountDto(orgTypeId, orgTypeName, count, percentage));
         }
         return result;
+    }
+
+    @Override
+    public OrganizationUsageResponseDto calculateOrganizationUsage(DateRangeRequestDto request) {
+
+        LocalDate fromDate = request.getFromDate();
+        LocalDate toDate = request.getToDate();
+
+        long days = java.time.temporal.ChronoUnit.DAYS.between(fromDate, toDate);
+        LocalDate prevFrom = fromDate.minusDays(days + 1);
+        LocalDate prevTo = toDate.minusDays(days + 1);
+
+        List<OrganizationEntity> organizations = organizationRepository.findAll();
+        List<OrganizationUsageDto> usageList = new ArrayList<>();
+        BigDecimal totalCurrent = BigDecimal.ZERO;
+        BigDecimal totalPrevious = BigDecimal.ZERO;
+
+        for (OrganizationEntity org : organizations) {
+            long totalUsers = userAdapter.countTotalMembers(org.getOrganizationId());
+            long currentActive = timesheetAdapter.countActiveUsers(org.getOrganizationId(), fromDate, toDate);
+            long previousActive = timesheetAdapter.countActiveUsers(org.getOrganizationId(), prevFrom, prevTo);
+            log.info("totalusers:{}",totalUsers);
+            log.info("current activeusers:{}",currentActive);
+            log.info("previousActive:{}",previousActive);
+
+            BigDecimal currentPercentage = totalUsers > 0
+                    ? BigDecimal.valueOf(currentActive * 100.0 / totalUsers).setScale(2, BigDecimal.ROUND_HALF_UP)
+                    : BigDecimal.ZERO;
+
+            BigDecimal previousPercentage = totalUsers > 0
+                    ? BigDecimal.valueOf(previousActive * 100.0 / totalUsers).setScale(2, BigDecimal.ROUND_HALF_UP)
+                    : BigDecimal.ZERO;
+
+            usageList.add(new OrganizationUsageDto(org.getOrganizationId(), org.getOrgName(), currentPercentage, previousPercentage));
+            totalCurrent = totalCurrent.add(currentPercentage);
+            totalPrevious = totalPrevious.add(previousPercentage);
+        }
+
+        BigDecimal overallCurrentAverage = organizations.size() > 0
+                ? totalCurrent.divide(BigDecimal.valueOf(organizations.size()), 2, BigDecimal.ROUND_HALF_UP)
+                : BigDecimal.ZERO;
+
+        BigDecimal overallPreviousAverage = organizations.size() > 0
+                ? totalPrevious.divide(BigDecimal.valueOf(organizations.size()), 2, BigDecimal.ROUND_HALF_UP)
+                : BigDecimal.ZERO;
+
+        return new OrganizationUsageResponseDto(usageList, overallCurrentAverage, overallPreviousAverage);
     }
 
 

@@ -35,5 +35,8 @@ public interface OrganizationService {
 
     List<OrganizationTypeCountDto> calculateOrganizationTypeCounts(LocalDateTime from, LocalDateTime to);
 
+    OrganizationUsageResponseDto calculateOrganizationUsage(DateRangeRequestDto request);
+
+
 
 }

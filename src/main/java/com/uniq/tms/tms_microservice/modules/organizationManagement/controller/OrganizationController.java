@@ -217,7 +217,7 @@ public class OrganizationController {
 
 
 //    @PostMapping("analytics/user-count")
-//    public OrganizationUserCountResponse getUserStats(@RequestBody UserCountRequest request) {
+//    public OrganizationUserCountResponse getUserStatus(@RequestBody UserCountRequest request) {
 //        return organizationFacade.getUserCounts(
 //                request.getOrgId(),
 //                request.getFromDate(),
@@ -247,6 +247,11 @@ public class OrganizationController {
 
         List<OrganizationTypeCountDto> typeCounts = organizationFacade.getOrganizationTypeCounts(from, to);
         return ResponseEntity.ok(typeCounts);
+    }
+
+    @PostMapping("analytics/organization-users-usage")
+    public ResponseEntity<OrganizationUsageResponseDto> getOrganizationUsage(@RequestBody DateRangeRequestDto request) {
+        return ResponseEntity.ok(organizationFacade.getOrganizationUsage(request));
     }
 
 }
