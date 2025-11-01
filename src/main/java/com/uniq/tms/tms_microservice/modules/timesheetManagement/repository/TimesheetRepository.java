@@ -93,4 +93,17 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
                                           @Param("date") LocalDate date,
                                           @Param("statusId") String statusId);
 
+
+    @Query("SELECT COUNT(DISTINCT t.user.userId) " +
+            "FROM TimesheetEntity t " +
+            "WHERE t.user.organizationId = :orgId " +
+            "AND t.date BETWEEN :fromDate AND :toDate " +
+            "AND t.status.id IN ('TSS001','TSS007','TSS006')")
+    long countUsersWithTimesheetsBetweenDates(@Param("orgId") String orgId,
+                                              @Param("fromDate") LocalDate fromDate,
+                                              @Param("toDate") LocalDate toDate);
+
+
+
+
 }

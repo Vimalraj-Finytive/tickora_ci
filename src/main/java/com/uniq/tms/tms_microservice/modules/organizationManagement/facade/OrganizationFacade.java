@@ -220,4 +220,8 @@ public class OrganizationFacade {
         return organizationService.calculateOrganizationTypeCounts(from, to);
     }
 
+    public OrganizationUsageResponseDto getOrganizationUsage(DateRangeRequestDto request) {
+        return organizationService.calculateOrganizationUsage(request);
+    }
+
 }

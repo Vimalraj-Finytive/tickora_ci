@@ -977,5 +977,10 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
         return timesheetRepository.countByUserIdsAndDateAndStatusId(userIds, date, statusId);
     }
 
+    @Override
+    public long countActiveUsers(String organizationId, LocalDate fromDate, LocalDate toDate) {
+        return timesheetRepository.countUsersWithTimesheetsBetweenDates(organizationId, fromDate, toDate);
+    }
+
 
 }
