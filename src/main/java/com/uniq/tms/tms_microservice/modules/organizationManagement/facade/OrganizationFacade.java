@@ -1,6 +1,7 @@
 package com.uniq.tms.tms_microservice.modules.organizationManagement.facade;
 
 import com.uniq.tms.tms_microservice.modules.authenticationManagement.services.AuthService;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.enums.PlanStatus;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.mapper.PlanDtoMapper;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.model.*;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.services.PaymentService;
@@ -14,7 +15,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ResponseStatusException;
-
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -118,13 +118,10 @@ public class OrganizationFacade {
     public ApiResponse<SubscriptionDto> getActivePlan() {
         String orgId = authHelper.getOrgId();
         SubscriptionDto response = subscriptionService.getActivePlan(orgId);
-
-        if ("EXPIRED".equalsIgnoreCase(response.getStatus())) {
+        if (PlanStatus.EXPIRED.getPlanStatus().equalsIgnoreCase(response.getStatus())) {
             return new ApiResponse<>(HttpStatus.OK.value(), "No active plan — showing latest expired plan", response);
         }
-
         return new ApiResponse<>(HttpStatus.OK.value(), "Active subscription fetched successfully", response);
-
     }
 
     public ApiResponse<SubscriptionDto> getPlanHistory() {
@@ -177,8 +174,9 @@ public class OrganizationFacade {
 
 
     public ApiResponse<List<OrganizationDetailsDto>> getAllOrganizationDetails() {
-        List<OrganizationDetailsDto> dtoList = organizationService.getAllOrganizationDetails();
-        return new ApiResponse<>(HttpStatus.OK.value(), "Organization Details Fetched Successfully", dtoList);
+        List<OrganizationDetailsModel> modelList = organizationService.getAllOrganizationDetails();
+        List<OrganizationDetailsDto> dto = organizationDtoMapper.toOrganizationDtos(modelList);
+        return new ApiResponse<>(HttpStatus.OK.value(), "Organization Details Fetched Successfully", dto);
     }
 
 //
@@ -208,7 +206,7 @@ public class OrganizationFacade {
 //    }
 
     public List<PlanAnalyticsDto> getPlanAnalytics(LocalDate fromDate, LocalDate toDate) {
-        return subscriptionService.calculatePlanUsage(fromDate, toDate);
+        return organizationDtoMapper.toPlanAnalyticsDtos(subscriptionService.calculatePlanUsage(fromDate, toDate));
     }
 
 
@@ -218,6 +216,10 @@ public class OrganizationFacade {
 
     public List<OrganizationTypeCountDto> getOrganizationTypeCounts(LocalDateTime from, LocalDateTime to) {
         return organizationService.calculateOrganizationTypeCounts(from, to);
+    }
+
+    public OrganizationUsageResponseDto getOrganizationUsage(DateRangeRequestDto request) {
+        return organizationService.calculateOrganizationUsage(request);
     }
 
 }

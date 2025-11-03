@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.enums.LogFrom;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.enums.LogType;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 public class TimesheetHistoryDto {
 
@@ -20,8 +21,10 @@ public class TimesheetHistoryDto {
     private String userId;
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private LocalDate date;
+    private LocalDateTime loggedTimestamp;
 
-    public TimesheetHistoryDto(Long timesheetHistoryId, String locationName, String logTime, LogType logType, LogFrom logFrom) {
+    public TimesheetHistoryDto(Long timesheetHistoryId, String locationName, String logTime, LogType logType,
+                               LogFrom logFrom) {
         this.timesheetHistoryId = timesheetHistoryId;
         this.locationName = locationName;
         this.logTime = logTime;
@@ -95,5 +98,13 @@ public class TimesheetHistoryDto {
 
     public void setLocationId(Long locationId) {
         this.locationId = locationId;
+    }
+
+    public LocalDateTime getLoggedTimestamp() {
+        return loggedTimestamp;
+    }
+
+    public void setLoggedTimestamp(LocalDateTime loggedTimestamp) {
+        this.loggedTimestamp = loggedTimestamp;
     }
 }

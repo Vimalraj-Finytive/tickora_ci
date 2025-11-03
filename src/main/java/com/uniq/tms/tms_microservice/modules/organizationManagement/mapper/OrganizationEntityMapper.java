@@ -10,13 +10,11 @@ import com.uniq.tms.tms_microservice.modules.organizationManagement.model.Organi
 import com.uniq.tms.tms_microservice.modules.organizationManagement.model.Privilege;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.model.Role;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserSchemaMappingEntity;
-import com.uniq.tms.tms_microservice.modules.userManagement.mapper.UserEntityMapper;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.ReportingPolicy;
-
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -38,7 +36,6 @@ public interface OrganizationEntityMapper {
     OrganizationType toModel(OrganizationTypeEntity organizationType);
 
     UserSchemaMappingEntity toSchema(String email, String mobile, String orgId, String schemaName);
-
 
     @Mapping(target = "organizationId", source = "organizationId")
     @Mapping(target = "name", source = "orgName")

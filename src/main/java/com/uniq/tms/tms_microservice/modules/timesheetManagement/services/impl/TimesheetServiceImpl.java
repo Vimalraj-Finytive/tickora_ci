@@ -16,7 +16,6 @@ import com.uniq.tms.tms_microservice.modules.locationManagement.entity.UserLocat
 import com.uniq.tms.tms_microservice.modules.userManagement.enums.PrivilegeConstants;
 import com.uniq.tms.tms_microservice.modules.userManagement.enums.RoleName;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.adapter.WorkScheduleAdapter;
-import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.WorkScheduleTypeEntity;
 import com.uniq.tms.tms_microservice.shared.helper.RolePrivilegeHelper;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.mapper.TimesheetDtoMapper;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.mapper.TimesheetEntityMapper;
@@ -492,7 +491,7 @@ public class TimesheetServiceImpl implements TimesheetService {
             history.setTimesheet(timesheet);
 
             history.setLogTime(LocalTime.now(ZoneId.of("Asia/Kolkata")));
-            history.setLoggedTimestamp(LocalDateTime.now());
+            history.setLoggedTimestamp(LocalDateTime.now(ZoneId.of("Asia/Kolkata")));
             savedEntities.add(timesheetAdapter.saveTimesheetHistory(history));
 
             if (history.getLogType() == LogType.CLOCK_IN && timesheet.getFirstClockIn() == null) {

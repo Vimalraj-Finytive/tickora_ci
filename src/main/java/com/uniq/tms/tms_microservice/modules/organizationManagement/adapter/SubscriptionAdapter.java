@@ -26,7 +26,7 @@ public interface SubscriptionAdapter {
     List<SubscriptionEntity> findAllSubscriptionsByOrgId(String orgId);
     boolean updateSubscription(SubscriptionEntity subscription);
     List<SubscriptionEntity> getAllSubscriptionsBetweenDates(LocalDate fromDate, LocalDate toDate);
-    List<SubscriptionEntity> getAllSubscriptionsForOrgBetweenDates(String orgId, LocalDate fromDate, LocalDate toDate);
+    List<SubscriptionEntity> getAllSubscriptionsForOrgBetweenDates(LocalDate fromDate, LocalDate toDate);
 
 
 

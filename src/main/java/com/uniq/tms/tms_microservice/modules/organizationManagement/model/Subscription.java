@@ -10,6 +10,7 @@ public class Subscription {
     private String status;
     private String nextInvoiceAmount;
     private LocalDateTime nextInvoiceDate;
+    private Integer subscribedUsers;
 
     public String getSubscriptionId() {
         return subscriptionId;
@@ -65,5 +66,13 @@ public class Subscription {
 
     public void setNextInvoiceDate(LocalDateTime nextInvoiceDate) {
         this.nextInvoiceDate = nextInvoiceDate;
+    }
+
+    public Integer getSubscribedUsers() {
+        return subscribedUsers;
+    }
+
+    public void setSubscribedUsers(Integer subscribedUsers) {
+        this.subscribedUsers = subscribedUsers;
     }
 }
