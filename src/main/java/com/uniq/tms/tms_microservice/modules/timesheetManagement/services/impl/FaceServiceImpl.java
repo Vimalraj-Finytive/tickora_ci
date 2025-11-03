@@ -8,7 +8,6 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.uniq.tms.tms_microservice.modules.locationManagement.adapter.LocationAdapter;
 import com.uniq.tms.tms_microservice.modules.locationManagement.dto.LocationDto;
 import com.uniq.tms.tms_microservice.modules.locationManagement.services.LocationService;
-import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.RoleEntity;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.adapter.FaceAdapter;
 import com.uniq.tms.tms_microservice.modules.userManagement.dto.UserValidationDto;
 import com.uniq.tms.tms_microservice.modules.userManagement.mapper.UserEntityMapper;
@@ -27,7 +26,6 @@ import com.uniq.tms.tms_microservice.modules.timesheetManagement.services.FaceSe
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.services.TimesheetService;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.*;
@@ -373,10 +371,6 @@ public class FaceServiceImpl implements FaceService {
                 return new ApiResponse<>(400, "Face comparison failed: empty response", null);
             }
 
-
-
-
-
             UserClockStatusDto userClockStatusDto = responseDto.getData().getFirst();
 
             if (!userClockStatusDto.isFaceMatch()) {
@@ -396,7 +390,7 @@ public class FaceServiceImpl implements FaceService {
             int faceUserHierarchy = faceUser.getRole().getHierarchyLevel();
             int tokenUserHierarchy = tokenUser.getRole().getHierarchyLevel();
             log.info("Hierarchy comparison: FaceUserLevel={} TokenUserLevel={}", faceUserHierarchy, tokenUserHierarchy);
-            if (faceUserHierarchy >= tokenUserHierarchy) {
+            if (faceUserHierarchy <= tokenUserHierarchy) {
                 return new ApiResponse<>(400, "Access denied", null);
             }
             if(userClockStatusDto.getUserId() != null){

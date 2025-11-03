@@ -32,6 +32,6 @@ public interface OrganizationAdapter {
     List<Object[]> countOrganizationsByType();
     List<Object[]> countOrganizationsByTypeBetweenDates(LocalDateTime from, LocalDateTime to);
     Optional<String> findOrgTypeNameById(String orgTypeId);
-    List<SubscriptionEntity> getAllSubscriptionsForOrgBetweenDates(String orgId, LocalDate fromDate, LocalDate toDate);
+    List<SubscriptionEntity> getAllSubscriptionsForOrgBetweenDates(LocalDate fromDate, LocalDate toDate);
 
 }

@@ -1,7 +1,7 @@
 package com.uniq.tms.tms_microservice.modules.organizationManagement.dto;
 
-import java.time.LocalDate;
-import java.util.List;
+import com.fasterxml.jackson.annotation.JsonFormat;
+import java.time.LocalDateTime;
 
 public class OrganizationDetailsDto {
 
@@ -12,7 +12,8 @@ public class OrganizationDetailsDto {
         private String country;
         private String schemaName;
         private String timeZone;
-        private LocalDate createdAt;
+        @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
+        private LocalDateTime createdAt;
         private int activeUsers;
         private int inactiveUsers;
         private SubscriptionDto subscriptionSummary;
@@ -46,8 +47,8 @@ public class OrganizationDetailsDto {
         public String getTimeZone() { return timeZone; }
         public void setTimeZone(String timeZone) { this.timeZone = timeZone; }
 
-        public LocalDate getCreatedAt() { return createdAt; }
-        public void setCreatedAt(LocalDate createdAt) { this.createdAt = createdAt; }
+        public LocalDateTime getCreatedAt() { return createdAt; }
+        public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 
         public int getActiveUsers() { return activeUsers; }
         public void setActiveUsers(int activeUsers) { this.activeUsers = activeUsers; }

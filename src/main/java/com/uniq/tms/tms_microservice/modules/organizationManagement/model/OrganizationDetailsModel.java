@@ -1,9 +1,9 @@
 package com.uniq.tms.tms_microservice.modules.organizationManagement.model;
 
-import java.time.LocalDate;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.SubscriptionDto;
+import java.time.LocalDateTime;
 
 public class OrganizationDetailsModel {
-
 
     private String organizationId;
     private String orgName;
@@ -12,9 +12,10 @@ public class OrganizationDetailsModel {
     private String country;
     private String schemaName;
     private String timeZone;
-    private LocalDate createdAt;
+    private LocalDateTime createdAt;
     private int activeUsers;
     private int inactiveUsers;
+    private SubscriptionDto subscriptionSummary;
 
     public String getOrganizationId() { return organizationId; }
     public void setOrganizationId(String organizationId) { this.organizationId = organizationId; }
@@ -37,13 +38,26 @@ public class OrganizationDetailsModel {
     public String getTimeZone() { return timeZone; }
     public void setTimeZone(String timeZone) { this.timeZone = timeZone; }
 
-    public LocalDate getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDate createdAt) { this.createdAt = createdAt; }
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
 
     public int getActiveUsers() { return activeUsers; }
     public void setActiveUsers(int activeUsers) { this.activeUsers = activeUsers; }
 
     public int getInactiveUsers() { return inactiveUsers; }
     public void setInactiveUsers(int inactiveUsers) { this.inactiveUsers = inactiveUsers; }
+
+    public SubscriptionDto getSubscriptionSummary() {
+        return subscriptionSummary;
+    }
+
+    public void setSubscriptionSummary(SubscriptionDto subscriptionSummary) {
+        this.subscriptionSummary = subscriptionSummary;
+    }
 }
 
