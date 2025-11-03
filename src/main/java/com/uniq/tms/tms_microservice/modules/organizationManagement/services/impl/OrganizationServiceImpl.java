@@ -99,7 +99,6 @@ public class OrganizationServiceImpl implements OrganizationService {
         this.locationAdapter = locationAdapter;
         this.subscriptionService = subscriptionService;
         this.mapper = mapper;
-
         this.subscriptionAdapter = subscriptionAdapter;
         this.timesheetAdapter = timesheetAdapter;
     }
@@ -436,48 +435,21 @@ public class OrganizationServiceImpl implements OrganizationService {
 //
 //
 //            return dtoList;
+
     @Override
-    public List<OrganizationDetailsDto> getAllOrganizationDetails() {
+    public List<OrganizationDetailsModel> getAllOrganizationDetails() {
         List<OrganizationEntity> orgEntities = organizationAdapter.findAll();
-        List<OrganizationDetailsDto> dtoList = new ArrayList<>();
-
-        for (OrganizationEntity orgEntity : orgEntities) {
-            OrganizationDetailsModel model = mapper.toModel(orgEntity);
-
+        return orgEntities.stream().map(org -> {
+            TenantUtil.setCurrentTenant(org.getSchemaName());
+            OrganizationDetailsModel model = mapper.toModel(org);
             String orgTypeName = organizationAdapter.getOrgTypeNameById(model.getOrgType());
-            if (orgTypeName != null && !orgTypeName.isEmpty()) {
-                model.setOrgType(orgTypeName);
-            } else {
-                model.setOrgType(null);
-            }
-
-            model.setActiveUsers(userAdapter.countActiveMembers(orgEntity.getOrganizationId()));
-            model.setInactiveUsers(userAdapter.countInactiveMembers(orgEntity.getOrganizationId()));
-
-            SubscriptionDto activePlan = subscriptionAdapter.getActivePlan(orgEntity.getOrganizationId());
-            SubscriptionDto subscriptionDto = new SubscriptionDto();
-
-            if (activePlan != null) {
-                subscriptionDto.setPlanName(activePlan.getPlanName());
-                subscriptionDto.setStart(activePlan.getStart());
-                subscriptionDto.setActiveUntil(activePlan.getActiveUntil());
-                subscriptionDto.setBillingCycle(activePlan.getBillingCycle());
-                subscriptionDto.setStatus(activePlan.getStatus());
-                subscriptionDto.setSubscribedUsers(
-                        activePlan.getSubscribedUsers() != null ? activePlan.getSubscribedUsers() : 0
-                );
-            } else {
-                subscriptionDto.setPlanName("No active plan");
-                subscriptionDto.setStatus("Inactive");
-            }
-
-            OrganizationDetailsDto dto = mapper.toDto(model);
-            dto.setSubscriptionSummary(subscriptionDto);
-
-            dtoList.add(dto);
-        }
-
-        return dtoList;
+            model.setOrgType((orgTypeName != null && !orgTypeName.isEmpty()) ? orgTypeName : null);
+            model.setActiveUsers(userAdapter.countActiveMembers(org.getOrganizationId()));
+            model.setInactiveUsers(userAdapter.countInactiveMembers(org.getOrganizationId()));
+            SubscriptionDto activePlan = subscriptionAdapter.getActivePlan(org.getOrganizationId());
+            model.setSubscriptionSummary(activePlan);
+            return model;
+        }).toList();
     }
 
 //    @Override
@@ -602,7 +574,6 @@ public class OrganizationServiceImpl implements OrganizationService {
 
         return new OrganizationUsageResponseDto(usageList, overallCurrentAverage, overallPreviousAverage);
     }
-
 
 }
 

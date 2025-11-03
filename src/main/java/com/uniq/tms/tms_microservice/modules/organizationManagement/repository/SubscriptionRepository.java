@@ -5,10 +5,8 @@ import io.lettuce.core.dynamic.annotation.Param;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
-
 import java.time.*;
 import java.util.*;
-
 
 @Repository
 public interface SubscriptionRepository extends JpaRepository<SubscriptionEntity, String> {
@@ -43,7 +41,7 @@ public interface SubscriptionRepository extends JpaRepository<SubscriptionEntity
     List<SubscriptionEntity> findAllByStartDateBetween(@Param("start") LocalDateTime start,
                                                        @Param("end") LocalDateTime end);
 
-    List<SubscriptionEntity> findByOrgIdAndStartDateBetween(String orgId, LocalDateTime start, LocalDateTime end);
+    List<SubscriptionEntity> findByStartDateBetween(LocalDateTime start, LocalDateTime end);
 
 
 }
