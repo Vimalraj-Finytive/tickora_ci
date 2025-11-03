@@ -7,13 +7,10 @@ import com.uniq.tms.tms_microservice.modules.organizationManagement.constant.Org
 import com.uniq.tms.tms_microservice.modules.organizationManagement.facade.OrganizationFacade;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
-
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -114,7 +111,7 @@ public class OrganizationController {
     }
 
     @GetMapping("/subscription/current")
-    public ResponseEntity<ApiResponse> getActivePlan(
+    public ResponseEntity<ApiResponse<SubscriptionDto>> getActivePlan(
             @RequestHeader("Authorization") String token) {
         String orgId = authHelper.getOrgId();
         if (orgId == null || orgId.isBlank()) {
@@ -196,7 +193,7 @@ public class OrganizationController {
     }
 
     @GetMapping("/analytics/orgDetails")
-    public ResponseEntity<ApiResponse<List<OrganizationDetailsDto>>> getAllOrgDetails() {
+    public ResponseEntity<ApiResponse<List<OrganizationDetailsDto>>> getAllOrgDetails(@RequestHeader ("Authorization") String token) {
         ApiResponse<List<OrganizationDetailsDto>> response = organizationFacade.getAllOrganizationDetails();
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }

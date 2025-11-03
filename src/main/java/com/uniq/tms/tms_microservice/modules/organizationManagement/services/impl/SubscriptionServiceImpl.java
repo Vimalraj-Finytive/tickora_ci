@@ -16,10 +16,15 @@ import com.uniq.tms.tms_microservice.modules.organizationManagement.enums.Paymen
 import com.uniq.tms.tms_microservice.modules.organizationManagement.enums.PlanFeaturesEnum;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.enums.PlaneName;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.mapper.UpgradeDtoMapper;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.model.PlanAnalyticsModel;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.model.PlanStatusModel;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.model.UpgradePlan;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.services.PaymentService;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.services.SubscriptionService;
+import com.uniq.tms.tms_microservice.shared.util.TenantUtil;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.PersistenceContextType;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
@@ -50,6 +55,9 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         this.paymentAdapter = paymentAdapter;
         this.organizationAdapter = organizationAdapter;
     }
+
+    @PersistenceContext(type = PersistenceContextType.TRANSACTION)
+    private EntityManager entityManager;
 
     @Override
     public long getSubscribedUserCount(String orgId) {
@@ -82,13 +90,10 @@ public class SubscriptionServiceImpl implements SubscriptionService {
                 request.getSubscribedUserCount(),
                 request.getTotalSubscriptionAmount()
         );
-
         if (!isValid) {
             return false;
         }
-
         return true;
-
     }
 
     @Override
@@ -293,7 +298,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 //    }
 
     @Override
-    public List<PlanAnalyticsDto> calculatePlanUsage(LocalDate fromDate, LocalDate toDate) {
+    public List<PlanAnalyticsModel> calculatePlanUsage(LocalDate fromDate, LocalDate toDate) {
 
         List<OrganizationEntity> organizations = organizationAdapter.findAll();
 
@@ -301,7 +306,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
         for (OrganizationEntity org : organizations) {
             List<SubscriptionEntity> subscriptions = subscriptionAdapter.getAllSubscriptionsForOrgBetweenDates(
-                    org.getOrganizationId(), fromDate, toDate);
+                    fromDate, toDate);
 
             if (subscriptions.isEmpty()) {
                 System.out.println(" No subscriptions found for this organization in given period.");
@@ -317,7 +322,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         long totalSubscriptions = planCountMap.values().stream().mapToLong(Long::longValue).sum();
         System.out.println("\nTotal subscriptions across all orgs: " + totalSubscriptions);
 
-        List<PlanAnalyticsDto> result = new ArrayList<>();
+        List<PlanAnalyticsModel> result = new ArrayList<>();
 
         planCountMap.forEach((planId, count) -> {
             String planName = subscriptionAdapter.findById(planId)
@@ -330,7 +335,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
             System.out.println("Plan Summary: " + planName + " | Count: " + count + " | Usage: " + usagePercentage + "%");
 
-            result.add(new PlanAnalyticsDto(planId, planName, count, usagePercentage));
+            result.add(new PlanAnalyticsModel(planId, planName, count, usagePercentage));
         });
 
         return result;

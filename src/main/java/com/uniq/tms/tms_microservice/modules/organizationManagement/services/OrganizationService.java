@@ -3,7 +3,6 @@ package com.uniq.tms.tms_microservice.modules.organizationManagement.services;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.*;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.OrganizationTypeEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.model.*;
-
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -27,7 +26,7 @@ public interface OrganizationService {
 
     OrganizationSummaryDto getOrgSummary(String orgId);
 
-    List<OrganizationDetailsDto> getAllOrganizationDetails();
+    List<OrganizationDetailsModel> getAllOrganizationDetails();
 
 //    OrganizationUserCountResponse getUserCountsForOrganization(String orgId, LocalDate fromDate, LocalDate toDate);
 

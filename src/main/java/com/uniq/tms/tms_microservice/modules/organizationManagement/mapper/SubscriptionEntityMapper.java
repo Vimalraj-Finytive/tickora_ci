@@ -1,13 +1,10 @@
 package com.uniq.tms.tms_microservice.modules.organizationManagement.mapper;
 
-import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.PaymentEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.SubscriptionEntity;
-import com.uniq.tms.tms_microservice.modules.organizationManagement.model.PaymentModel;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.model.Subscription;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.ReportingPolicy;
-
 import java.util.List;
 
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)

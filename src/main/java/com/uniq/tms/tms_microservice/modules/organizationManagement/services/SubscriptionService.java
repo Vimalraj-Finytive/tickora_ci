@@ -1,11 +1,10 @@
 package com.uniq.tms.tms_microservice.modules.organizationManagement.services;
 
-import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.PlanAnalyticsDto;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.PlanDto;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.SubscriptionDto;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.UpgradePlanDto;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.model.PlanAnalyticsModel;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.model.PlanStatusModel;
-
 import java.time.LocalDate;
 import java.util.List;
 
@@ -19,6 +18,6 @@ public interface SubscriptionService {
     PlanStatusModel getCurrentPlanStatus(String orgId);
 //    double calculateProratedAmount(int additionalUsers,String orgId);
 //    boolean addSubscribedUsers(String orgId, String orgSchema, UpgradePlanDto dto);
-     List<PlanAnalyticsDto> calculatePlanUsage(LocalDate fromDate, LocalDate toDate);
+     List<PlanAnalyticsModel> calculatePlanUsage(LocalDate fromDate, LocalDate toDate);
 
 }

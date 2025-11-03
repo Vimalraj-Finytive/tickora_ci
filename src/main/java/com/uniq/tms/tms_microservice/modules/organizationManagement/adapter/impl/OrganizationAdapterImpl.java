@@ -156,8 +156,8 @@ public class OrganizationAdapterImpl implements OrganizationAdapter {
     }
 
     @Override
-    public List<SubscriptionEntity> getAllSubscriptionsForOrgBetweenDates(String orgId, LocalDate fromDate, LocalDate toDate) {
-        return subscriptionRepository.findByOrgIdAndStartDateBetween(orgId, fromDate.atStartOfDay(), toDate.atTime(23, 59, 59));
+    public List<SubscriptionEntity> getAllSubscriptionsForOrgBetweenDates(LocalDate fromDate, LocalDate toDate) {
+        return subscriptionRepository.findByStartDateBetween(fromDate.atStartOfDay(), toDate.atTime(23, 59, 59));
     }
 
 }
