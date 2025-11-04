@@ -28,10 +28,8 @@ public interface OrganizationAdapter {
     String getOrgTypeNameById(String type);
     String getOrgName(String orgId);
     List<OrganizationEntity> findAll();
-    long countOrganizationsBetweenDates(LocalDateTime from, LocalDateTime to);
-    List<Object[]> countOrganizationsByType();
-    List<Object[]> countOrganizationsByTypeBetweenDates(LocalDateTime from, LocalDateTime to);
     Optional<String> findOrgTypeNameById(String orgTypeId);
     List<SubscriptionEntity> getAllSubscriptionsForOrgBetweenDates(LocalDate fromDate, LocalDate toDate);
-
+    List<OrganizationEntity> findByCreatedAtBetween(LocalDateTime from, LocalDateTime to);
+    List<OrganizationTypeEntity> findAllOrgType();
 }

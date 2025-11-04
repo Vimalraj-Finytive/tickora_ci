@@ -45,12 +45,6 @@ public interface OrganizationRepository extends JpaRepository<OrganizationEntity
     long countOrganizationsBetweenDates(@Param("start") LocalDateTime start,
                                         @Param("end") LocalDateTime end);
 
-    @Query("SELECT o.orgType, COUNT(o) FROM OrganizationEntity o GROUP BY o.orgType")
-    List<Object[]> countOrganizationsByType();
 
-    @Query("SELECT o.orgType, COUNT(o) FROM OrganizationEntity o " +
-            "WHERE o.createdAt BETWEEN :from AND :to " +
-            "GROUP BY o.orgType")
-    List<Object[]> countOrganizationsByTypeBetweenDates(@Param("from") LocalDateTime from,
-                                                        @Param("to") LocalDateTime to);
+    List<OrganizationEntity> findByCreatedAtBetween(LocalDateTime from, LocalDateTime to);
 }
