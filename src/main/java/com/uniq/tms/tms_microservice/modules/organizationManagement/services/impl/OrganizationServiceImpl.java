@@ -16,6 +16,7 @@ import com.uniq.tms.tms_microservice.modules.timesheetManagement.adapter.Timeshe
 import com.uniq.tms.tms_microservice.shared.security.cache.CacheKeyConfig;
 import com.uniq.tms.tms_microservice.shared.security.cache.CacheReloadHandlerRegistry;
 import com.uniq.tms.tms_microservice.shared.util.CacheEventPublisherUtil;
+import com.uniq.tms.tms_microservice.shared.util.DateUtil;
 import com.uniq.tms.tms_microservice.shared.util.TenantUtil;
 import com.uniq.tms.tms_microservice.modules.userManagement.adapter.UserAdapter;
 import com.uniq.tms.tms_microservice.modules.userManagement.enums.RoleName;
@@ -42,17 +43,20 @@ import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import javax.sql.DataSource;
+import java.lang.reflect.MalformedParameterizedTypeException;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class OrganizationServiceImpl implements OrganizationService {
@@ -475,57 +479,51 @@ public class OrganizationServiceImpl implements OrganizationService {
 
 
     @Override
-    public OrganizationCountResponseDto getOrganizationCount(DateRangeRequestDto request) {
-
-        // Current period
-        LocalDateTime from = request.getFromDate().atStartOfDay();
-        LocalDateTime to = request.getToDate().atTime(23, 59, 59);
-        long currentPeriodCount = organizationRepository.countOrganizationsBetweenDates(from, to);
-
-        // Calculate previous period of same length
-        long days = java.time.temporal.ChronoUnit.DAYS.between(request.getFromDate(), request.getToDate());
-        LocalDateTime prevFrom = request.getFromDate().minusDays(days + 1).atStartOfDay();
-        LocalDateTime prevTo = request.getToDate().minusDays(days + 1).atTime(23, 59, 59);
-        long previousPeriodCount = organizationRepository.countOrganizationsBetweenDates(prevFrom, prevTo);
-
-        return new OrganizationCountResponseDto(currentPeriodCount, previousPeriodCount);
+    public List<OrganizationCountResponseModel> getOrganizationCounts(LocalDateTime fromDate, LocalDateTime toDate) {
+        Pair<LocalDateTime, LocalDateTime> prevRange = DateUtil.computePreviousRange(fromDate, toDate);
+        LocalDateTime prevFrom = prevRange.getFirst();
+        LocalDateTime prevTo = prevRange.getSecond();
+        List<OrganizationEntity> orgs = organizationAdapter.findByCreatedAtBetween(prevFrom, toDate);
+        long currentCount = orgs.stream()
+                .filter(org -> !org.getCreatedAt().isBefore(fromDate))
+                .count();
+        long previousCount = orgs.stream()
+                .filter(org -> org.getCreatedAt().isBefore(fromDate))
+                .count();
+        long total = currentCount + previousCount;
+        BigDecimal currentPercentage = DateUtil.calculatePercentage(currentCount,total);
+        BigDecimal previousPercentage = DateUtil.calculatePercentage(previousCount,total);
+        OrganizationCountResponseModel model = new OrganizationCountResponseModel(
+                currentCount,
+                previousCount,
+                currentPercentage,
+                previousPercentage);
+        return List.of(model);
     }
 
     @Override
-    public List<OrganizationTypeCountDto> calculateOrganizationTypeCounts(LocalDateTime from, LocalDateTime to) {
-        // Fetch raw counts from adapter
-        List<Object[]> rawCounts;
-        if (from != null && to != null) {
-            rawCounts = organizationAdapter.countOrganizationsByTypeBetweenDates(from, to);
-        } else {
-            rawCounts = organizationAdapter.countOrganizationsByType();
-        }
+    public List<OrganizationTypeCountModel> getOrgCountByOrgType(LocalDateTime from, LocalDateTime to) {
+        List<OrganizationEntity> orgInRange = organizationAdapter.findByCreatedAtBetween(from,to);
 
-        // Calculate total organizations for percentage
-        long totalOrgs = rawCounts.stream()
-                .mapToLong(row -> (Long) row[1])
-                .sum();
+        Map<String,Long> orgTypeCount = orgInRange.stream().collect(
+                Collectors.groupingBy(OrganizationEntity::getOrgType,Collectors.counting())
+        );
 
-        return mapToDto(rawCounts, totalOrgs);
-    }
+        Map<String, String> orgTypeNameMap = organizationAdapter.findAllOrgType()
+                .stream()
+                .collect(Collectors.toMap(OrganizationTypeEntity::getOrgType, OrganizationTypeEntity::getOrgTypeName));
 
-    private List<OrganizationTypeCountDto> mapToDto(List<Object[]> rawCounts, long totalOrgs) {
-        List<OrganizationTypeCountDto> result = new ArrayList<>();
-        for (Object[] row : rawCounts) {
-            String orgTypeId = (String) row[0];
-            Long count = (Long) row[1];
+        long totalOrgCount = orgTypeCount.values().stream().mapToLong(Long::longValue).sum();
 
-            // Get org type name dynamically from org_type table
-            String orgTypeName = organizationAdapter.findOrgTypeNameById(orgTypeId).orElse(orgTypeId);
-
-            // Calculate percentage
-            BigDecimal percentage = totalOrgs > 0
-                    ? BigDecimal.valueOf(count * 100.0 / totalOrgs).setScale(2, BigDecimal.ROUND_HALF_UP)
-                    : BigDecimal.ZERO;
-
-            result.add(new OrganizationTypeCountDto(orgTypeId, orgTypeName, count, percentage));
-        }
-        return result;
+        return orgTypeCount.entrySet().stream()
+                .map(entry -> {
+                    String orgType = entry.getKey();
+                    Long count = entry.getValue();
+                    String orgTypeName = orgTypeNameMap.getOrDefault(orgType,null);
+                    BigDecimal percentage = DateUtil.calculatePercentage(count,totalOrgCount);
+                    return new OrganizationTypeCountModel(orgTypeName,count,percentage);
+                })
+                .toList();
     }
 
     @Override
