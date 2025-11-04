@@ -1,14 +1,14 @@
-package com.uniq.tms.tms_microservice.modules.organizationManagement.dto;
+package com.uniq.tms.tms_microservice.modules.organizationManagement.model;
 
 import java.math.BigDecimal;
 
-public class OrganizationTypeCountDto {
+public class OrganizationTypeCountModel {
 
     private String orgTypeName;
     private long count;
     private BigDecimal percentage;
 
-    public OrganizationTypeCountDto(String orgTypeName, long count, BigDecimal percentage) {
+    public OrganizationTypeCountModel(String orgTypeName, long count, BigDecimal percentage) {
         this.orgTypeName = orgTypeName;
         this.count = count;
         this.percentage = percentage;

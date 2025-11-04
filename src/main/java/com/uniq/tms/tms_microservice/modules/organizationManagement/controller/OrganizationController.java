@@ -5,6 +5,8 @@ import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.*;
 import com.uniq.tms.tms_microservice.shared.helper.AuthHelper;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.constant.OrganizationConstant;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.facade.OrganizationFacade;
+import com.uniq.tms.tms_microservice.shared.util.DateUtil;
+import org.checkerframework.checker.units.qual.A;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -12,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import java.time.LocalDateTime;
+import java.util.Date;
 import java.util.List;
 
 @RestController
@@ -222,28 +225,31 @@ public class OrganizationController {
 //        );
 //    }
 
-    @PostMapping("analytics/plans-summary")
-    public ResponseEntity<List<PlanAnalyticsDto>> getPlanSummary(@RequestBody DateRangeRequestDto request) {
-        List<PlanAnalyticsDto> analytics = organizationFacade.getPlanAnalytics(request.getFromDate(), request.getToDate());
-        return ResponseEntity.ok(analytics);
+    @PostMapping("analytics/onboardCount/plans")
+    public ResponseEntity<ApiResponse<List<PlanAnalyticsDto>>> getPlanSummary(@RequestHeader("Authorization") String token,
+                                                                   @RequestBody DateRangeRequestDto request) {
+        ApiResponse<List<PlanAnalyticsDto>> analytics = organizationFacade.getPlanAnalytics(request.getFromDate(), request.getToDate());
+        return ResponseEntity.status(analytics.getStatusCode()).body(analytics);
     }
 
-    @PostMapping("analytics/organization-count")
-    public ResponseEntity<OrganizationCountResponseDto> getOrganizationCount(
-            @RequestBody DateRangeRequestDto request) {
-        OrganizationCountResponseDto response = organizationFacade.getOrganizationCount(request);
-        return ResponseEntity.ok(response);
-    }
-
-    @PostMapping("analytics/organization-type-counts")
-    public ResponseEntity<List<OrganizationTypeCountDto>> getOrganizationTypeCounts(
+    @PostMapping("analytics/onboardCount/summary")
+    public ResponseEntity<ApiResponse<List<OrganizationCountResponseDto>>> getOrganizationCount(
+            @RequestHeader("Authorization") String token,
             @RequestBody DateRangeRequestDto dateRange) {
+        LocalDateTime from = DateUtil.toStartDate(dateRange.getFromDate());
+        LocalDateTime to = DateUtil.toEndDate(dateRange.getToDate());
+        ApiResponse<List<OrganizationCountResponseDto>> response = organizationFacade.getOrganizationCounts(from,to);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
 
-        LocalDateTime from = dateRange.getFromDate() != null ? dateRange.getFromDate().atStartOfDay() : null;
-        LocalDateTime to = dateRange.getToDate() != null ? dateRange.getToDate().atTime(23, 59, 59) : null;
-
-        List<OrganizationTypeCountDto> typeCounts = organizationFacade.getOrganizationTypeCounts(from, to);
-        return ResponseEntity.ok(typeCounts);
+    @PostMapping("analytics/onboardCount/orgType")
+    public ResponseEntity<ApiResponse<List<OrganizationTypeCountDto>>> getOrganizationTypeCounts(
+            @RequestHeader("Authorization") String token,
+            @RequestBody DateRangeRequestDto dateRange) {
+        LocalDateTime from = DateUtil.toStartDate(dateRange.getFromDate());
+        LocalDateTime to = DateUtil.toEndDate(dateRange.getToDate());
+        ApiResponse<List<OrganizationTypeCountDto>> typeCounts = organizationFacade.getOrganizationTypeCounts(from, to);
+        return ResponseEntity.status(typeCounts.getStatusCode()).body(typeCounts);
     }
 
     @PostMapping("analytics/organization-users-usage")

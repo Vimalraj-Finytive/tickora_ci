@@ -19,4 +19,7 @@ public interface PlanRepository extends JpaRepository<PlanEntity, String> {
 
     Optional<PlanEntity> findByPlanId(String planId);
 
+    @Query("SELECT e.planId FROM PlanEntity e")
+    List<String> getAllPlanIds();
+
 }

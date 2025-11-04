@@ -205,17 +205,20 @@ public class OrganizationFacade {
 //        return organizationService.getUserCountsForOrganization(orgId, fromDate, toDate);
 //    }
 
-    public List<PlanAnalyticsDto> getPlanAnalytics(LocalDate fromDate, LocalDate toDate) {
-        return organizationDtoMapper.toPlanAnalyticsDtos(subscriptionService.calculatePlanUsage(fromDate, toDate));
+    public ApiResponse<List<PlanAnalyticsDto>> getPlanAnalytics(LocalDate fromDate, LocalDate toDate) {
+        List<PlanAnalyticsDto> dto = organizationDtoMapper.toPlanAnalyticsDtos(subscriptionService.calculatePlanUsage(fromDate, toDate));
+        return  new ApiResponse<>(200,"Fetched Organization Onboard details plans Successfully",dto);
     }
 
 
-    public OrganizationCountResponseDto getOrganizationCount(DateRangeRequestDto request) {
-        return organizationService.getOrganizationCount(request);
+    public  ApiResponse<List<OrganizationCountResponseDto>>  getOrganizationCounts(LocalDateTime from, LocalDateTime to) {
+        List<OrganizationCountResponseDto> dto = organizationDtoMapper.toSummaryDto(organizationService.getOrganizationCounts(from,to));
+        return  new ApiResponse<>(200,"Fetched Organization Onboard details Summary Successfully",dto);
     }
 
-    public List<OrganizationTypeCountDto> getOrganizationTypeCounts(LocalDateTime from, LocalDateTime to) {
-        return organizationService.calculateOrganizationTypeCounts(from, to);
+    public ApiResponse<List<OrganizationTypeCountDto>> getOrganizationTypeCounts(LocalDateTime from, LocalDateTime to) {
+        List<OrganizationTypeCountDto> dto = organizationDtoMapper.toDto(organizationService.getOrgCountByOrgType(from, to));
+        return new ApiResponse<>(200,"Fetched Organization Onboard details by OrgType Successfully",dto);
     }
 
     public OrganizationUsageResponseDto getOrganizationUsage(DateRangeRequestDto request) {

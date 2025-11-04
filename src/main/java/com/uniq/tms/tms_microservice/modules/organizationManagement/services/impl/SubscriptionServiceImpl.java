@@ -48,7 +48,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     private final PaymentAdapter paymentAdapter;
     private final OrganizationAdapter organizationAdapter;
 
-    public SubscriptionServiceImpl(SubscriptionAdapter subscriptionAdapter, PaymentService paymentService, UpgradeDtoMapper upgradeDtoMapper, PaymentAdapter paymentAdapter, OrganizationAdapter organizationAdapter){
+    public SubscriptionServiceImpl(SubscriptionAdapter subscriptionAdapter, PaymentService paymentService, UpgradeDtoMapper upgradeDtoMapper, PaymentAdapter paymentAdapter, OrganizationAdapter organizationAdapter) {
         this.subscriptionAdapter = subscriptionAdapter;
         this.paymentService = paymentService;
         this.upgradeDtoMapper = upgradeDtoMapper;
@@ -119,7 +119,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
                             model.getOrderId(), payment.getPaymentId(), payment);
                     log.info("Subscription activated for Order ID: {} | Plan ID: {}",
                             model.getOrderId(), model.getPlanId());
-                    PaymentStatus isSubscribed = subscriptionAdapter.updatePlan(orgId,orgSchema,model.getPlanId(), model.getSubscribedUserCount(), payment.getPaymentId());
+                    PaymentStatus isSubscribed = subscriptionAdapter.updatePlan(orgId, orgSchema, model.getPlanId(), model.getSubscribedUserCount(), payment.getPaymentId());
                     if (PaymentStatus.SUCCESS.equals(isSubscribed)) {
                         log.info("Subscription update successful for Org ID: {} | Payment ID: {}", orgId, payment.getPaymentId());
                         return true;
@@ -299,47 +299,47 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
     @Override
     public List<PlanAnalyticsModel> calculatePlanUsage(LocalDate fromDate, LocalDate toDate) {
-
-        List<OrganizationEntity> organizations = organizationAdapter.findAll();
-
-        Map<String, Long> planCountMap = new HashMap<>();
-
-        for (OrganizationEntity org : organizations) {
-            List<SubscriptionEntity> subscriptions = subscriptionAdapter.getAllSubscriptionsForOrgBetweenDates(
-                    fromDate, toDate);
-
-            if (subscriptions.isEmpty()) {
-                System.out.println(" No subscriptions found for this organization in given period.");
-            } else {
-                System.out.println(" Found " + subscriptions.size() + " subscriptions:");
+        try {
+            List<OrganizationEntity> organizations = organizationAdapter.findAll();
+            Map<String, Long> planCountMap = new HashMap<>();
+            for (OrganizationEntity org : organizations) {
+                try {
+                    TenantUtil.clearTenant();
+                    TenantUtil.setCurrentTenant(org.getSchemaName());
+                    entityManager.clear();
+                    List<SubscriptionEntity> subscriptions = subscriptionAdapter.getAllSubscriptionsForOrgBetweenDates(
+                            fromDate, toDate);
+                    if (subscriptions.isEmpty()) {
+                        System.out.println(" No subscriptions found for this organization in given period.");
+                    } else {
+                        System.out.println(" Found " + subscriptions.size() + " subscriptions:");
+                    }
+                for (SubscriptionEntity subscription : subscriptions) {
+                    planCountMap.merge(subscription.getPlanId(), 1L, Long::sum);
+                }
+                }catch (Exception e){
+                    continue;
+                }
             }
-
-            for (SubscriptionEntity subscription : subscriptions) {
-                planCountMap.merge(subscription.getPlanId(), 1L, Long::sum);
-            }
+            long totalSubscriptions = planCountMap.values().stream().mapToLong(Long::longValue).sum();
+            System.out.println("\nTotal subscriptions across all orgs: " + totalSubscriptions);
+            List<PlanAnalyticsModel> result = new ArrayList<>();
+            List<String> planEntities = subscriptionAdapter.getAllPlanIds();
+            planEntities.forEach((planId) -> {
+                String planName = subscriptionAdapter.findById(planId)
+                        .map(PlanEntity::getPlanName)
+                        .orElse(planId);
+                Long count = planCountMap.getOrDefault(planId, 0L);
+                BigDecimal usagePercentage = totalSubscriptions > 0 && count >0
+                        ? BigDecimal.valueOf(count * 100.0 / totalSubscriptions).setScale(2, RoundingMode.HALF_UP)
+                        : BigDecimal.ZERO;
+                System.out.println("Plan Summary: " + planName + " | Count: " + count + " | Usage: " + usagePercentage + "%");
+                result.add(new PlanAnalyticsModel(planName, count, usagePercentage));
+            });
+            return result;
+        } catch (Exception e) {
+            log.info("Skipping schema due to missing tables");
+            return null;
         }
-
-        long totalSubscriptions = planCountMap.values().stream().mapToLong(Long::longValue).sum();
-        System.out.println("\nTotal subscriptions across all orgs: " + totalSubscriptions);
-
-        List<PlanAnalyticsModel> result = new ArrayList<>();
-
-        planCountMap.forEach((planId, count) -> {
-            String planName = subscriptionAdapter.findById(planId)
-                    .map(PlanEntity::getPlanName)
-                    .orElse(planId);
-
-            BigDecimal usagePercentage = totalSubscriptions > 0
-                    ? BigDecimal.valueOf(count * 100.0 / totalSubscriptions).setScale(2, RoundingMode.HALF_UP)
-                    : BigDecimal.ZERO;
-
-            System.out.println("Plan Summary: " + planName + " | Count: " + count + " | Usage: " + usagePercentage + "%");
-
-            result.add(new PlanAnalyticsModel(planId, planName, count, usagePercentage));
-        });
-
-        return result;
     }
-
-
 }
