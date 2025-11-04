@@ -1,15 +1,15 @@
-package com.uniq.tms.tms_microservice.modules.organizationManagement.dto;
+package com.uniq.tms.tms_microservice.modules.organizationManagement.model;
 
 import java.math.BigDecimal;
 
-public class OrganizationCountResponseDto {
+public class OrganizationCountResponseModel {
 
     private long currentMonthCount;
     private long previousMonthCount;
     private BigDecimal currentMonthPercentage;
     private BigDecimal previousMonthPercentage;
 
-    public OrganizationCountResponseDto(long currentMonthCount, long previousMonthCount, BigDecimal currentMonthPercentage, BigDecimal previousMonthPercentage) {
+    public OrganizationCountResponseModel(long currentMonthCount, long previousMonthCount, BigDecimal currentMonthPercentage, BigDecimal previousMonthPercentage) {
         this.currentMonthCount = currentMonthCount;
         this.previousMonthCount = previousMonthCount;
         this.currentMonthPercentage = currentMonthPercentage;
@@ -47,5 +47,5 @@ public class OrganizationCountResponseDto {
     public void setPreviousMonthPercentage(BigDecimal previousMonthPercentage) {
         this.previousMonthPercentage = previousMonthPercentage;
     }
-}
 
+}

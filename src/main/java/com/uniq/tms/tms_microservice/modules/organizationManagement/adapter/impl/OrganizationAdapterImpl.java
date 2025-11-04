@@ -135,21 +135,6 @@ public class OrganizationAdapterImpl implements OrganizationAdapter {
     }
 
     @Override
-    public long countOrganizationsBetweenDates(LocalDateTime from, LocalDateTime to) {
-        return organizationRepository.countOrganizationsBetweenDates(from, to);
-    }
-
-    @Override
-    public List<Object[]> countOrganizationsByType() {
-        return organizationRepository.countOrganizationsByType();
-    }
-
-    @Override
-    public List<Object[]> countOrganizationsByTypeBetweenDates(LocalDateTime from, LocalDateTime to) {
-        return organizationRepository.countOrganizationsByTypeBetweenDates(from, to);
-    }
-
-    @Override
     public Optional<String> findOrgTypeNameById(String orgTypeId) {
         return organizationTypeRepository.findById(orgTypeId)
                 .map(OrganizationTypeEntity::getOrgTypeName);
@@ -160,4 +145,13 @@ public class OrganizationAdapterImpl implements OrganizationAdapter {
         return subscriptionRepository.findByStartDateBetween(fromDate.atStartOfDay(), toDate.atTime(23, 59, 59));
     }
 
+    @Override
+    public List<OrganizationEntity> findByCreatedAtBetween(LocalDateTime from , LocalDateTime to){
+        return organizationRepository.findByCreatedAtBetween(from,to);
+    }
+
+    @Override
+    public List<OrganizationTypeEntity> findAllOrgType() {
+        return organizationTypeRepository.findAll();
+    }
 }

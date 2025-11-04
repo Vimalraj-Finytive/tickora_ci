@@ -4,24 +4,14 @@ import java.math.BigDecimal;
 
 public class PlanAnalyticsModel {
 
-    private String planId;
     private String planName;
     private long planCount;
     private BigDecimal usagePercentage;
 
-    public PlanAnalyticsModel(String planId, String planName, Long count, BigDecimal usagePercentage) {
-        this.planId = planId;
+    public PlanAnalyticsModel(String planName, Long count, BigDecimal usagePercentage) {
         this.planName = planName;
         this.planCount = count;
         this.usagePercentage = usagePercentage;
-    }
-
-    public String getPlanId() {
-        return planId;
-    }
-
-    public void setPlanId(String planId) {
-        this.planId = planId;
     }
 
     public String getPlanName() {

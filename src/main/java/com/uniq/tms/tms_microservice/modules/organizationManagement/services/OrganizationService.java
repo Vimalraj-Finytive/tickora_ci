@@ -30,12 +30,9 @@ public interface OrganizationService {
 
 //    OrganizationUserCountResponse getUserCountsForOrganization(String orgId, LocalDate fromDate, LocalDate toDate);
 
-    OrganizationCountResponseDto getOrganizationCount(DateRangeRequestDto request);
-
-    List<OrganizationTypeCountDto> calculateOrganizationTypeCounts(LocalDateTime from, LocalDateTime to);
+    List<OrganizationCountResponseModel> getOrganizationCounts(LocalDateTime from, LocalDateTime to);
 
     OrganizationUsageResponseDto calculateOrganizationUsage(DateRangeRequestDto request);
 
-
-
+    List<OrganizationTypeCountModel> getOrgCountByOrgType(LocalDateTime from, LocalDateTime to);
 }

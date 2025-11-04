@@ -210,12 +210,14 @@ public class OrganizationFacade {
     }
 
 
-    public OrganizationCountResponseDto getOrganizationCount(DateRangeRequestDto request) {
-        return organizationService.getOrganizationCount(request);
+    public  ApiResponse<List<OrganizationCountResponseDto>>  getOrganizationCounts(LocalDateTime from, LocalDateTime to) {
+        List<OrganizationCountResponseDto> dto = organizationDtoMapper.toSummaryDto(organizationService.getOrganizationCounts(from,to));
+        return  new ApiResponse<>(200,"Fetched Organization Onboard details Summary Successfully",dto);
     }
 
-    public List<OrganizationTypeCountDto> getOrganizationTypeCounts(LocalDateTime from, LocalDateTime to) {
-        return organizationService.calculateOrganizationTypeCounts(from, to);
+    public ApiResponse<List<OrganizationTypeCountDto>> getOrganizationTypeCounts(LocalDateTime from, LocalDateTime to) {
+        List<OrganizationTypeCountDto> dto = organizationDtoMapper.toDto(organizationService.getOrgCountByOrgType(from, to));
+        return new ApiResponse<>(200,"Fetched Organization Onboard details by OrgType Successfully",dto);
     }
 
     public OrganizationUsageResponseDto getOrganizationUsage(DateRangeRequestDto request) {
