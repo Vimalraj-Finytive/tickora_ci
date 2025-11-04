@@ -205,8 +205,9 @@ public class OrganizationFacade {
 //        return organizationService.getUserCountsForOrganization(orgId, fromDate, toDate);
 //    }
 
-    public List<PlanAnalyticsDto> getPlanAnalytics(LocalDate fromDate, LocalDate toDate) {
-        return organizationDtoMapper.toPlanAnalyticsDtos(subscriptionService.calculatePlanUsage(fromDate, toDate));
+    public ApiResponse<List<PlanAnalyticsDto>> getPlanAnalytics(LocalDate fromDate, LocalDate toDate) {
+        List<PlanAnalyticsDto> dto = organizationDtoMapper.toPlanAnalyticsDtos(subscriptionService.calculatePlanUsage(fromDate, toDate));
+        return  new ApiResponse<>(200,"Fetched Organization Onboard details plans Successfully",dto);
     }
 
 

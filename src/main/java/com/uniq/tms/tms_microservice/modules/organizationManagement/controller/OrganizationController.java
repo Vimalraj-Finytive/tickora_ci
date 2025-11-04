@@ -6,6 +6,7 @@ import com.uniq.tms.tms_microservice.shared.helper.AuthHelper;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.constant.OrganizationConstant;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.facade.OrganizationFacade;
 import com.uniq.tms.tms_microservice.shared.util.DateUtil;
+import org.checkerframework.checker.units.qual.A;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -225,10 +226,10 @@ public class OrganizationController {
 //    }
 
     @PostMapping("analytics/onboardCount/plans")
-    public ResponseEntity<List<PlanAnalyticsDto>> getPlanSummary( @RequestHeader("Authorization") String token,
-                                                                  @RequestBody DateRangeRequestDto request) {
-        List<PlanAnalyticsDto> analytics = organizationFacade.getPlanAnalytics(request.getFromDate(), request.getToDate());
-        return ResponseEntity.ok(analytics);
+    public ResponseEntity<ApiResponse<List<PlanAnalyticsDto>>> getPlanSummary(@RequestHeader("Authorization") String token,
+                                                                   @RequestBody DateRangeRequestDto request) {
+        ApiResponse<List<PlanAnalyticsDto>> analytics = organizationFacade.getPlanAnalytics(request.getFromDate(), request.getToDate());
+        return ResponseEntity.status(analytics.getStatusCode()).body(analytics);
     }
 
     @PostMapping("analytics/onboardCount/summary")

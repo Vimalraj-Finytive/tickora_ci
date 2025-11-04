@@ -229,20 +229,15 @@ public class SubscriptionAdapterImpl implements SubscriptionAdapter {
         }
     }
 
-
-    @Override
-    public List<SubscriptionEntity> getAllSubscriptionsBetweenDates(LocalDate fromDate, LocalDate toDate) {
-        return subscriptionRepository.findAllByStartDateBetween(
-                fromDate.atStartOfDay(),
-                toDate.atTime(23, 59, 59)
-        );
-    }
-
     @Override
     public List<SubscriptionEntity> getAllSubscriptionsForOrgBetweenDates(LocalDate fromDate, LocalDate toDate) {
         return subscriptionRepository.findByStartDateBetween(fromDate.atStartOfDay(), toDate.atTime(23, 59, 59));
     }
 
+    @Override
+    public List<String> getAllPlanIds() {
+        return planRepository.getAllPlanIds();
+    }
 
 
 }
