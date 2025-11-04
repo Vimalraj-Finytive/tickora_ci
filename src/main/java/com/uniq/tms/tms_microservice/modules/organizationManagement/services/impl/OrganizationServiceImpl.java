@@ -444,16 +444,27 @@ public class OrganizationServiceImpl implements OrganizationService {
     public List<OrganizationDetailsModel> getAllOrganizationDetails() {
         List<OrganizationEntity> orgEntities = organizationAdapter.findAll();
         return orgEntities.stream().map(org -> {
-            TenantUtil.setCurrentTenant(org.getSchemaName());
-            OrganizationDetailsModel model = mapper.toModel(org);
-            String orgTypeName = organizationAdapter.getOrgTypeNameById(model.getOrgType());
-            model.setOrgType((orgTypeName != null && !orgTypeName.isEmpty()) ? orgTypeName : null);
-            model.setActiveUsers(userAdapter.countActiveMembers(org.getOrganizationId()));
-            model.setInactiveUsers(userAdapter.countInactiveMembers(org.getOrganizationId()));
-            SubscriptionDto activePlan = subscriptionAdapter.getActivePlan(org.getOrganizationId());
-            model.setSubscriptionSummary(activePlan);
-            return model;
-        }).toList();
+            try {
+                TenantUtil.setCurrentTenant(org.getSchemaName());
+                OrganizationDetailsModel model = mapper.toModel(org);
+                String orgTypeName = organizationAdapter.getOrgTypeNameById(model.getOrgType());
+                model.setOrgType((orgTypeName != null && !orgTypeName.isEmpty()) ? orgTypeName : null);
+                model.setActiveUsers(userAdapter.countActiveMembers(org.getOrganizationId()));
+                model.setInactiveUsers(userAdapter.countInactiveMembers(org.getOrganizationId()));
+                SubscriptionDto activePlan = subscriptionAdapter.getActivePlan(org.getOrganizationId());
+                model.setSubscriptionSummary(activePlan);
+                TenantUtil.clearTenant();
+                return model;
+            } catch (Exception e) {
+                log.warn("Skipping organization '{}': Schema '{}' not found or inaccessible. Reason: {}",
+                        org.getOrganizationId(), org.getSchemaName(), e.getMessage());
+                return null;
+            }finally {
+                TenantUtil.clearTenant();
+            }
+        })
+                .filter(Objects::nonNull)
+                .toList();
     }
 
 //    @Override
