@@ -1016,13 +1016,11 @@ public class UserServiceImpl implements UserService {
     private List<UserResponseDto> fetchActiveUsers(String orgId, String role) {
         String schema = TenantUtil.getCurrentTenant();
         log.info("Fetching active users | tenant: {}", schema);
-
         String userCacheKey = cacheKeyUtil.getMemberKey(orgId, schema);
         String roleField = role.toLowerCase();
         log.info("Fetching from cache key: {}, field: {}", userCacheKey, roleField);
-
         try {
-            // 1. Try fetching from Redis first
+            //Try fetching from Redis first
             if (redisTemplate != null) {
                 Object cachedObj = redisTemplate.opsForHash().get(userCacheKey, roleField);
 
@@ -1035,23 +1033,17 @@ public class UserServiceImpl implements UserService {
             } else {
                 log.warn("RedisTemplate is null, skipping cache fetch for key: {}, field: {}", userCacheKey, roleField);
             }
-
-            // 2. Cache miss OR empty cache → Fetch from DB & reload cache
+            // Cache miss OR empty cache → Fetch from DB & reload cache
             log.info("Loading fresh users from DB for orgId={}, role={}", orgId, role);
             Map<String, List<UserResponseDto>> roleMap = userCacheService.loadAllUsers(orgId, schema).get();
-
             List<UserResponseDto> freshUsers = roleMap.get(role.toUpperCase());
-
             if (freshUsers != null && !freshUsers.isEmpty()) {
                 log.info("Returning fresh users from DB for orgId={}, role={}", orgId, role);
                 return freshUsers;
             }
-
         } catch (Exception e) {
             log.error("Failed to fetch users | orgId={}, role={}. Error: {}", orgId, role, e.getMessage(), e);
         }
-
-        // 3. If everything fails → Throw exception
         throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No users found for this organization");
     }
 
