@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 
 @Component
@@ -59,6 +60,16 @@ public class PaymentAdapterImpl implements PaymentAdapter {
     public PaymentEntity getPaymentByOrderId(String orderId) {
         return paymentRepository.findByOrderId(orderId)
                 .orElse(null);
+    }
+
+    @Override
+    public List<Object[]> getMonthlyAmountWithShortMonthName(int year) {
+        return paymentRepository.getMonthlyAmountWithFullMonthName(year);
+    }
+
+    @Override
+    public BigDecimal getTotalAmountByYear(int year) {
+        return paymentRepository.getTotalAmountByYear(year);
     }
 
 }
