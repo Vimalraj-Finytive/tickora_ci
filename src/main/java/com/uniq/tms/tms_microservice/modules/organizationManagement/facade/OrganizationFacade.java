@@ -2,6 +2,7 @@ package com.uniq.tms.tms_microservice.modules.organizationManagement.facade;
 
 import com.uniq.tms.tms_microservice.modules.authenticationManagement.services.AuthService;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.enums.PlanStatus;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.mapper.PaymentDtoMapper;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.mapper.PlanDtoMapper;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.model.*;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.services.PaymentService;
@@ -30,8 +31,9 @@ public class OrganizationFacade {
     private final OrganizationDtoMapper organizationDtoMapper;
     private final PaymentService paymentService;
     private final PlanDtoMapper planDtoMapper;
+    private final PaymentDtoMapper paymentDtoMapper;
 
-    public OrganizationFacade(OrganizationService organizationService, SubscriptionService subscriptionService, AuthHelper authHelper, AuthService authService, OrganizationDtoMapper organizationDtoMapper, PaymentService paymentService, PlanDtoMapper planDtoMapper) {
+    public OrganizationFacade(OrganizationService organizationService, SubscriptionService subscriptionService, AuthHelper authHelper, AuthService authService, OrganizationDtoMapper organizationDtoMapper, PaymentService paymentService, PlanDtoMapper planDtoMapper, PaymentDtoMapper paymentDtoMapper) {
         this.organizationService = organizationService;
         this.subscriptionService = subscriptionService;
         this.authHelper = authHelper;
@@ -39,6 +41,7 @@ public class OrganizationFacade {
         this.organizationDtoMapper = organizationDtoMapper;
         this.paymentService = paymentService;
         this.planDtoMapper = planDtoMapper;
+        this.paymentDtoMapper = paymentDtoMapper;
     }
 
     public ApiResponse createOrg(OrganizationDto organizationDto) {
@@ -223,6 +226,16 @@ public class OrganizationFacade {
 
     public OrganizationUsageResponseDto getOrganizationUsage(DateRangeRequestDto request) {
         return organizationService.calculateOrganizationUsage(request);
+    }
+
+    public ApiResponse<List<MonthlyPaymentDto>> getOrganizationsales(int year){
+        List<MonthlyPaymentDto> dto = paymentDtoMapper.toMonthlyPaymentDtoList(paymentService.getOrganizationSales(year));
+        return  new ApiResponse<>(200,"Fetched Organization Onboard details Sales Successfully",dto);
+    }
+
+    public ApiResponse<List<TopCustomersDto>> getOrganizationTopCustomers(int year){
+        List<TopCustomersDto> dto  =  paymentDtoMapper.toTopCustomersDtoList(paymentService.getOrganizationTopCustomers(year));
+        return  new ApiResponse<>(200,"Fetched Organization Onboard details TopCustomers Successfully",dto);
     }
 
 }
