@@ -13,6 +13,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
+
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
@@ -255,6 +257,20 @@ public class OrganizationController {
     @PostMapping("analytics/organization-users-usage")
     public ResponseEntity<OrganizationUsageResponseDto> getOrganizationUsage(@RequestBody DateRangeRequestDto request) {
         return ResponseEntity.ok(organizationFacade.getOrganizationUsage(request));
+    }
+
+    @GetMapping("analytics/onboardCount/sales")
+    public ResponseEntity<ApiResponse<List<MonthlyPaymentDto>>> getOrganizationSales(@RequestHeader("Authorization") String token,
+                                                       @RequestParam("year")int year){
+        ApiResponse<List<MonthlyPaymentDto>> sales = organizationFacade.getOrganizationsales(year);
+        return ResponseEntity.status(sales.getStatusCode()).body(sales);
+    }
+
+    @GetMapping("analytics/onboardCount/topCustomers")
+    public ResponseEntity<ApiResponse<List<TopCustomersDto>>> getOrganizationTopCustomers(@RequestHeader("Authorization") String token,
+                                     @RequestParam("year")int year){
+        ApiResponse<List<TopCustomersDto>> topCustomers= organizationFacade.getOrganizationTopCustomers(year);
+        return ResponseEntity.status(topCustomers.getStatusCode()).body(topCustomers);
     }
 
 }
