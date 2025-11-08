@@ -15,7 +15,6 @@ import com.uniq.tms.tms_microservice.shared.security.user.CustomUserDetails;
 import com.uniq.tms.tms_microservice.shared.util.TimesheetLogParserUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ResponseStatusException;
@@ -178,8 +177,7 @@ public class TimesheetFacade {
     }
 
     public ApiResponse<UserValidationDto> validateUser(String userId) {
-        String orgSchema = authHelper.getSchema();
-        return faceService.validateUser(userId);
+        return faceService.validateUserLocation(userId);
     }
 
     public List<DashboardSummaryDto> getDashboardSummary(DashboardSummaryRequest request) {

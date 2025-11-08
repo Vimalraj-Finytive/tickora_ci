@@ -19,7 +19,7 @@ import com.uniq.tms.tms_microservice.modules.organizationManagement.services.Org
 import com.uniq.tms.tms_microservice.modules.userManagement.dto.*;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.*;
 import com.uniq.tms.tms_microservice.modules.userManagement.model.*;
-import com.uniq.tms.tms_microservice.shared.helper.UserHelper;
+import com.uniq.tms.tms_microservice.shared.helper.BulkUserHelper;
 import com.uniq.tms.tms_microservice.shared.util.*;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.adapter.TimesheetAdapter;
 import com.uniq.tms.tms_microservice.modules.authenticationManagement.model.EmailData;
@@ -261,7 +261,7 @@ public class UserServiceImpl implements UserService {
                     "secondaryusername", "secondarymobile", "secondaryemail", "relation", "groupname", "workschedule"
             );
 
-            List<UserHelper> allRecords = new ArrayList<>();
+            List<BulkUserHelper> allRecords = new ArrayList<>();
             Set<String> fileEmails = new HashSet<>();
             Set<String> fileMobiles = new HashSet<>();
             int rowNumber = 1;
@@ -275,7 +275,7 @@ public class UserServiceImpl implements UserService {
                 String[] row;
                 while ((row = reader.readNext()) != null) {
                     rowNumber++;
-                    UserHelper record = new UserHelper(rowNumber, row);
+                    BulkUserHelper record = new BulkUserHelper(rowNumber, row);
 
                     String username = row[0].trim();
                     String email = row[1].trim().toLowerCase();
@@ -402,8 +402,8 @@ public class UserServiceImpl implements UserService {
             long maxUsers = userAdapter.getSubscribedUserLimit(orgId);
             long remainingSlots = maxUsers - currentCount;
 
-            List<UserHelper> validRecords = allRecords.stream().filter(UserHelper::isValid).toList();
-            List<UserHelper> invalidRecords = new ArrayList<>(allRecords.stream().filter(r -> !r.isValid()).toList());
+            List<BulkUserHelper> validRecords = allRecords.stream().filter(BulkUserHelper::isValid).toList();
+            List<BulkUserHelper> invalidRecords = new ArrayList<>(allRecords.stream().filter(r -> !r.isValid()).toList());
 
             if (remainingSlots <= 0) {
                 invalidRecords.addAll(validRecords.stream()
@@ -411,15 +411,15 @@ public class UserServiceImpl implements UserService {
                         .toList());
                 validRecords = List.of();
             } else if (validRecords.size() > remainingSlots) {
-                List<UserHelper> allowed = validRecords.subList(0, (int) remainingSlots);
-                List<UserHelper> excess = validRecords.subList((int) remainingSlots, validRecords.size());
+                List<BulkUserHelper> allowed = validRecords.subList(0, (int) remainingSlots);
+                List<BulkUserHelper> excess = validRecords.subList((int) remainingSlots, validRecords.size());
                 excess.forEach(r -> r.invalidate("Subscription limit reached"));
                 invalidRecords.addAll(excess);
                 validRecords = allowed;
             }
 
             // ====== SAVE VALID USERS ======
-            for (UserHelper record : validRecords) {
+            for (BulkUserHelper record : validRecords) {
                 UserDto userDto = record.toUserDto(orgId, idGenerationService);
                 String defaultPass = PasswordUtil.generateDefaultPassword();
                 UserEntity userEntity = createUserEntity(userDto, orgId, defaultPass);
@@ -476,7 +476,7 @@ public class UserServiceImpl implements UserService {
             locationAdapter.saveUserLocation(userLocationEntities);
 
             // ====== SECONDARY DETAILS ======
-            for (UserHelper record : validRecords) {
+            for (BulkUserHelper record : validRecords) {
                 if (record.hasSecondary()) {
                     UserEntity savedUser = savedUserByEmail.get(record.getEmail());
                     if (savedUser != null) {
@@ -2178,6 +2178,4 @@ public class UserServiceImpl implements UserService {
         }
         return toModel;
     }
-
-
 }

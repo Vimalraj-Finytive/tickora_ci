@@ -5,18 +5,14 @@ import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.*;
 import com.uniq.tms.tms_microservice.shared.helper.AuthHelper;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.constant.OrganizationConstant;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.facade.OrganizationFacade;
-import com.uniq.tms.tms_microservice.shared.util.DateUtil;
-import org.checkerframework.checker.units.qual.A;
+import com.uniq.tms.tms_microservice.shared.util.DateTimeUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
-
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Date;
 import java.util.List;
 
 @RestController
@@ -238,8 +234,8 @@ public class OrganizationController {
     public ResponseEntity<ApiResponse<List<OrganizationCountResponseDto>>> getOrganizationCount(
             @RequestHeader("Authorization") String token,
             @RequestBody DateRangeRequestDto dateRange) {
-        LocalDateTime from = DateUtil.toStartDate(dateRange.getFromDate());
-        LocalDateTime to = DateUtil.toEndDate(dateRange.getToDate());
+        LocalDateTime from = DateTimeUtil.toStartDate(dateRange.getFromDate());
+        LocalDateTime to = DateTimeUtil.toEndDate(dateRange.getToDate());
         ApiResponse<List<OrganizationCountResponseDto>> response = organizationFacade.getOrganizationCounts(from,to);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
@@ -248,8 +244,8 @@ public class OrganizationController {
     public ResponseEntity<ApiResponse<List<OrganizationTypeCountDto>>> getOrganizationTypeCounts(
             @RequestHeader("Authorization") String token,
             @RequestBody DateRangeRequestDto dateRange) {
-        LocalDateTime from = DateUtil.toStartDate(dateRange.getFromDate());
-        LocalDateTime to = DateUtil.toEndDate(dateRange.getToDate());
+        LocalDateTime from = DateTimeUtil.toStartDate(dateRange.getFromDate());
+        LocalDateTime to = DateTimeUtil.toEndDate(dateRange.getToDate());
         ApiResponse<List<OrganizationTypeCountDto>> typeCounts = organizationFacade.getOrganizationTypeCounts(from, to);
         return ResponseEntity.status(typeCounts.getStatusCode()).body(typeCounts);
     }

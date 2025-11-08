@@ -345,45 +345,43 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
     @Override
     @Transactional
     public void deleteWorkSchedule(String orgId, String scheduleId) {
-        String schema = TenantUtil.getCurrentTenant();
-        WorkScheduleEntity workSchedule = workScheduleAdapter.findByScheduleId(scheduleId, orgId);
-
-        // 1. Validate organization ownership
-        if (!workSchedule.getOrganizationEntity().getOrganizationId().equals(orgId)) {
-            throw new RuntimeException("Unauthorized : Invalid Organization");
-        }
-
-        // 2. Prevent deletion of default work schedule
-        if (Boolean.TRUE.equals(workSchedule.getDefault())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Default Work Schedule cannot be deactivated");
-        }
-
-        // 3. Get the default work schedule for this org
-        WorkScheduleEntity defaultSchedule = workScheduleAdapter.findDefaultScheduleByOrgId(orgId);
-        if (defaultSchedule == null) {
-            throw new IllegalStateException("No default Work Schedule found for organization");
-        }
-
-        // 4. Update users having the current schedule to the default one
-        userAdapter.updateUserWorkSchedule(scheduleId, defaultSchedule.getScheduleId());
-        userAdapter.updateGroupWorkSchedule(scheduleId, defaultSchedule.getScheduleId());
-        // 5. Mark current schedule as inactive
-        workSchedule.setActive(false);
-        workScheduleAdapter.saveWorkSchedule(workSchedule);
-
-        if (isRedisEnabled) {
-            CacheEventPublisherUtil.syncReloadThenPublish(
-                    publisher,
-                    cacheKeyConfig.getWorkSchedule(),
-                    orgId,
-                    schema,
-                    cacheReloadHandlerRegistry
-            );
-            log.info("WorkSchedule deleted and references updated. Cache reloaded.");
-        }
-        else {
-                log.info("Redis is not enabled or RedisTemplate is null. Skipping cache WS delete reload.");
+        try {
+            String schema = TenantUtil.getCurrentTenant();
+            WorkScheduleEntity workSchedule = workScheduleAdapter.findByScheduleId(scheduleId, orgId);
+            if (workSchedule == null) {
+                throw new IllegalArgumentException("Work Schedule not found");
             }
+            if (!workSchedule.getOrganizationEntity().getOrganizationId().equals(orgId)) {
+                throw new IllegalArgumentException("Unauthorized : Invalid Organization");
+            }
+            if (Boolean.TRUE.equals(workSchedule.getDefault())) {
+                throw new IllegalArgumentException("Default Work Schedule cannot be deactivated");
+            }
+            WorkScheduleEntity defaultSchedule = workScheduleAdapter.findDefaultScheduleByOrgId(orgId);
+            if (defaultSchedule == null) {
+                throw new IllegalStateException("No default Work Schedule found for organization");
+            }
+            userAdapter.updateUserWorkSchedule(scheduleId, defaultSchedule.getScheduleId());
+            userAdapter.updateGroupWorkSchedule(scheduleId, defaultSchedule.getScheduleId());
+            workSchedule.setActive(false);
+            workScheduleAdapter.saveWorkSchedule(workSchedule);
+            if (isRedisEnabled) {
+                CacheEventPublisherUtil.syncReloadThenPublish(
+                        publisher,
+                        cacheKeyConfig.getWorkSchedule(),
+                        orgId,
+                        schema,
+                        cacheReloadHandlerRegistry
+                );
+                log.info("WorkSchedule deleted and references updated. Cache reloaded.");
+            } else {
+                log.info("Redis is not enabled. Skipping cache WS delete reload.");
+            }
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException("Unexpected error deleting work schedule", e);
+        }
     }
 
     @Override

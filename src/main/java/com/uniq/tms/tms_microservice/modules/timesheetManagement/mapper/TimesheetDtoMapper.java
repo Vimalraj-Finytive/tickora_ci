@@ -6,9 +6,9 @@ import com.uniq.tms.tms_microservice.modules.timesheetManagement.entity.Timeshee
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.model.TimesheetHistory;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.model.TimesheetStatus;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.projection.TimesheetProjection;
+import com.uniq.tms.tms_microservice.modules.timesheetManagement.projection.TimesheetUserProjection;
 import com.uniq.tms.tms_microservice.modules.userManagement.projections.UserDashboard;
 import org.mapstruct.*;
-
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -23,7 +23,6 @@ public interface TimesheetDtoMapper {
     @Mapping(source = "status.statusName", target = "status")
     TimesheetDto toDto(TimesheetEntity entity);
 
-    // Custom conversion from LocalTime to Duration
     @Named("localTimeToDuration")
     default Duration localTimeToDuration(LocalTime localTime) {
         if (localTime == null) {
@@ -82,4 +81,8 @@ public interface TimesheetDtoMapper {
                 .plusSeconds(localTime.getSecond());
     }
 
+    @Named("defaultMapping")
+    @Mapping(target = "firstClockInTime", expression = "java(formatTime(projection.getFirstClockIn()))")
+    @Mapping(target = "lastClockOutTime", expression = "java(formatTime(projection.getLastClockOut()))")
+    TimesheetDto toDto(TimesheetUserProjection projection);
 }

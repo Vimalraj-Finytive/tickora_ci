@@ -1,6 +1,5 @@
 package com.uniq.tms.tms_microservice.shared.helper;
 
-import com.uniq.tms.tms_microservice.modules.timesheetManagement.adapter.impl.TimesheetAdapterImpl;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.adapter.WorkScheduleAdapter;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.FixedWorkScheduleEntity;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.FlexibleWorkScheduleEntity;
@@ -107,7 +106,6 @@ public class TimesheetHelper {
             Map<String, Map<DayOfWeek, FlexibleWorkScheduleEntity>> flexMap
     ) {
         DayOfWeek day = date.getDayOfWeek();
-
         if (fixedMap.containsKey(userId) && fixedMap.get(userId).containsKey(day)) {
             FixedWorkScheduleEntity fixed = fixedMap.get(userId).get(day);
             return ScheduleTypeInfo.fixed(
@@ -115,13 +113,11 @@ public class TimesheetHelper {
                     fixed.getEndTime().toLocalTime()
             );
         }
-
         if (flexMap.containsKey(userId) && flexMap.get(userId).containsKey(day)) {
             FlexibleWorkScheduleEntity flex = flexMap.get(userId).get(day);
             Duration duration = Duration.ofMinutes((long) (flex.getDuration() * 60));
             return ScheduleTypeInfo.flexible(duration);
         }
-
         return null;
     }
 }

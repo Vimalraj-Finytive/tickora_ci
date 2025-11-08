@@ -4,6 +4,7 @@ import com.uniq.tms.tms_microservice.modules.locationManagement.entity.LocationE
 import com.uniq.tms.tms_microservice.modules.locationManagement.repository.LocationRepository;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.adapter.TimesheetAdapter;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.dto.*;
+import com.uniq.tms.tms_microservice.modules.timesheetManagement.projection.TimesheetUserProjection;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.repository.TimesheetStatusRepository;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.enums.LogFrom;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.enums.LogType;
@@ -24,6 +25,7 @@ import com.uniq.tms.tms_microservice.modules.userManagement.projections.UserGrou
 import com.uniq.tms.tms_microservice.modules.userManagement.repository.UserRepository;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.FixedWorkScheduleEntity;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.FlexibleWorkScheduleEntity;
+import com.uniq.tms.tms_microservice.shared.util.DateTimeUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -33,12 +35,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
-import java.sql.Date;
-import java.sql.Time;
-import java.sql.Timestamp;
 import java.time.DayOfWeek;
 import java.time.Duration;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -167,6 +165,8 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
                 .collect(Collectors.toSet());
 
         Map<Long, List<TimesheetHistoryDto>> historyMap = fetchTimesheetHistoryMap(timesheetIdSet);
+        historyMap.values().forEach(list ->
+                list.sort(Comparator.comparing(TimesheetHistoryDto::getTimesheetHistoryId)));
         log.info("Return main projections");
         return mainProjections.stream()
                 .map(p -> {
@@ -460,9 +460,7 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
     }
 
     private void handleFixedSchedule(TimesheetDto timesheet, ScheduleTypeInfo scheduleInfo) {
-
         LocalDate date = timesheet.getDate();
-
         LocalDateTime fixedStartTime = LocalDateTime.of(date, scheduleInfo.getStartTime());
         LocalDateTime fixedEndTime = LocalDateTime.of(date, scheduleInfo.getEndTime());
         LocalDateTime actualStart = LocalDateTime.of(date, timesheet.getFirstClockIn());
@@ -608,64 +606,6 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
         return dto;
     }
 
-    private Long toLong(Object obj) {
-        try {
-            return obj != null ? Long.parseLong(obj.toString()) : null;
-        } catch (NumberFormatException e) {
-            return null;
-        }
-    }
-
-    private String toString(Object obj) {
-        try {
-            return obj != null ? obj.toString() : null;
-        } catch (NumberFormatException e) {
-            return null;
-        }
-    }
-
-    private LocalDate toLocalDate(Object obj) {
-        if (obj instanceof Date) {
-            return ((Date) obj).toLocalDate();
-        } else if (obj instanceof Instant) {
-            return ((Instant) obj).atZone(ZoneId.systemDefault()).toLocalDate();
-        }
-        return null;
-    }
-
-    private LocalTime toLocalTime(Object obj) {
-        if (obj instanceof Time) {
-            return ((Time) obj).toLocalTime();
-        }
-        return null;
-    }
-
-    private LocalDateTime toLocalDateTime(Object obj) {
-        if (obj instanceof Timestamp) {
-            return ((Timestamp) obj).toLocalDateTime();
-        }
-        return null;
-    }
-
-    private Duration parseTimeToDuration(Object timeObj, String label) {
-        if (timeObj == null) return Duration.ZERO;
-
-        try {
-            if (timeObj instanceof String) {
-                String intervalStr = (String) timeObj;
-                // Parse PostgreSQL INTERVAL string format: "01:30:00"
-                LocalTime lt = LocalTime.parse(intervalStr);
-                return Duration.ofHours(lt.getHour()).plusMinutes(lt.getMinute()).plusSeconds(lt.getSecond());
-            } else {
-                System.err.println("Unexpected type for " + label + ": " + timeObj.getClass());
-            }
-        } catch (Exception e) {
-            System.err.println("Error parsing " + label + ": " + timeObj);
-            e.printStackTrace();
-        }
-        return Duration.ZERO;
-    }
-
     private String formatDuration(Duration duration) {
         if (duration == null || duration.isZero()) {
             return "00h 00m";
@@ -704,50 +644,50 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
 
     @Override
     public void calculateTrackedAndBreakHours(List<TimesheetHistoryEntity> savedLogs) {
+        if (savedLogs == null || savedLogs.isEmpty()) return;
         Map<Long, List<TimesheetHistoryEntity>> groupedLogs = savedLogs.stream()
                 .filter(log -> log.getTimesheet() != null)
                 .collect(Collectors.groupingBy(log -> log.getTimesheet().getId()));
-
+        Set<Long> timesheetIds = groupedLogs.keySet();
+        Map<Long, TimesheetEntity> timesheetMap = timesheetRepository.findAllById(timesheetIds)
+                .stream()
+                .collect(Collectors.toMap(TimesheetEntity::getId, t -> t));
         for (Map.Entry<Long, List<TimesheetHistoryEntity>> entry : groupedLogs.entrySet()) {
-            Long timesheetId = entry.getKey();
+            TimesheetEntity timesheet = timesheetMap.get(entry.getKey());
+            if (timesheet == null) continue;
             List<TimesheetHistoryEntity> historyLogs = entry.getValue();
-
             historyLogs.sort(Comparator.comparing(TimesheetHistoryEntity::getLoggedTimestamp));
-
-            TimesheetEntity timesheet = timesheetRepository.findById(timesheetId)
-                    .orElseThrow(() -> new RuntimeException("Timesheet not found for ID: " + timesheetId));
-
-            long trackedSeconds = Optional.ofNullable(timesheet.getTrackedHours()).orElse(LocalTime.MIN).toSecondOfDay();
-            long breakSeconds = Optional.ofNullable(timesheet.getTotalBreakHours()).orElse(LocalTime.MIN).toSecondOfDay();
-            long regularSeconds = trackedSeconds;
-
-            LocalTime lastClockIn = Optional.ofNullable(timesheet.getFirstClockIn()).orElse(null);
-            LocalTime lastClockOut = Optional.ofNullable(timesheet.getLastClockOut()).orElse(null);
-
+            long trackedSeconds = DateTimeUtil.toSeconds(timesheet.getTrackedHours());
+            long breakSeconds = DateTimeUtil.toSeconds(timesheet.getTotalBreakHours());
+            LocalTime lastClockIn = timesheet.getFirstClockIn();
+            LocalTime lastClockOut = timesheet.getLastClockOut();
             for (TimesheetHistoryEntity log : historyLogs) {
-                if (log.getLogType() == LogType.CLOCK_IN) {
-                    if (lastClockOut != null) {
-                        long breakTime = Duration.between(lastClockOut, log.getLogTime()).getSeconds();
-                        if (breakTime > 0) {
-                            breakSeconds += breakTime;
+                LocalTime logTime = log.getLogTime();
+                if (logTime == null) continue;
+                switch (log.getLogType()) {
+                    case CLOCK_IN -> {
+                        if (lastClockOut != null) {
+                            long breakTime = Duration.between(lastClockOut, logTime).getSeconds();
+                            if (breakTime > 0) breakSeconds += breakTime;
                         }
+                        lastClockIn = logTime;
                     }
-                    lastClockIn = log.getLogTime();
-                } else if (log.getLogType() == LogType.CLOCK_OUT && lastClockIn != null) {
-                    long trackedTime = Duration.between(lastClockIn, log.getLogTime()).getSeconds();
-                    if (trackedTime > 0) {
-                        trackedSeconds += trackedTime;
-                        regularSeconds += trackedTime;
+                    case CLOCK_OUT -> {
+                        if (lastClockIn != null) {
+                            long trackedTime = Duration.between(lastClockIn, logTime).getSeconds();
+                            if (trackedTime > 0) trackedSeconds += trackedTime;
+                        }
+                        lastClockOut = logTime;
                     }
-                    lastClockOut = log.getLogTime();
+                    default -> {}
                 }
             }
-            timesheet.setTrackedHours(LocalTime.ofSecondOfDay(trackedSeconds));
-            timesheet.setRegularHours(LocalTime.ofSecondOfDay(regularSeconds));
-            timesheet.setTotalBreakHours(LocalTime.ofSecondOfDay(breakSeconds));
+            timesheet.setTrackedHours(DateTimeUtil.toLocalTime(trackedSeconds));
+            timesheet.setRegularHours(DateTimeUtil.toLocalTime(trackedSeconds));
+            timesheet.setTotalBreakHours(DateTimeUtil.toLocalTime(breakSeconds));
             timesheet.setLastClockOut(lastClockOut);
-            timesheetRepository.save(timesheet);
         }
+        timesheetRepository.saveAll(timesheetMap.values());
     }
 
     @Override
@@ -785,8 +725,7 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
     @Override
     public List<UserTimesheetDto> fetchUserTimesheetsWithHistory(LocalDate startDate, LocalDate endDate, List<String> userIds, String orgId) {
         String[] userIdArray = userIds.toArray(new String[0]);
-        // Fetch users
-        List<TimesheetProjection> pagedUser = userRepository.findUsersByUserIds(userIdArray);
+        List<TimesheetUserProjection> pagedUser = userRepository.findUserByUserIds(userIdArray);
         log.info("Found {} users", pagedUser.size());
         pagedUser.forEach(u -> log.info("User: {}, Name: {}", u.getUserId(), u.getUserName()));
         if(startDate == null) {
@@ -794,20 +733,17 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
             startDate = pagedUser.getFirst().getDate();
             log.info("Startdate:{}", startDate);
         }
-        //Fetch main timesheets
-        List<TimesheetProjection> resultList = timesheetRepository.fetchMainTimesheets(startDate, endDate, userIdArray);
-
-        // Prepare helper maps
-        Set<Long> timesheetIdSet = resultList.stream().map(TimesheetProjection::getId).collect(Collectors.toSet());
+        List<TimesheetUserProjection> resultList = timesheetRepository.fetchMainTimesheetsUsers(startDate, endDate, userIdArray);
+        Set<Long> timesheetIdSet = resultList.stream().map(TimesheetUserProjection::getId).collect(Collectors.toSet());
         Map<Long, List<TimesheetHistoryDto>> historyMap = fetchTimesheetHistoryMap(timesheetIdSet);
+        historyMap.values().forEach(list ->
+                list.sort(Comparator.comparing(TimesheetHistoryDto::getTimesheetHistoryId)));
         log.info("Fetching Ws");
         TimesheetHelper.WorkScheduleResult scheduleResult = timesheetHelper.fetchWorkSchedulesAndDays(userIdArray);
-        log.info("Mapping Schules");
+        log.info("Mapping Schedules");
         Map<String, Map<DayOfWeek, FixedWorkScheduleEntity>> fixedMap = scheduleResult.getFixedMap();
         Map<String, Map<DayOfWeek, FlexibleWorkScheduleEntity>> flexMap = scheduleResult.getFlexMap();
         Map<String, Set<DayOfWeek>> userWorkingDaysMap = scheduleResult.getUserWorkingDaysMap();
-
-        // Map projections to DTOs grouped by userId
         log.info("Mapping mobile projections to Dtos");
         Map<String, List<TimesheetDto>> userTimesheetMap = resultList.stream()
                 .map(p -> {
@@ -820,12 +756,9 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
                     return dto;
                 })
                 .collect(Collectors.groupingBy(TimesheetDto::getUserId));
-
-        // Build complete list including defaults for missing dates
         List<UserTimesheetDto> finalResponse = new ArrayList<>();
-        for (TimesheetProjection user : pagedUser) {
+        for (TimesheetUserProjection user : pagedUser) {
             String userId = user.getUserId();
-
             List<TimesheetDto> userTimesheets = getUsersTimesheetsWithDefaults(
                     user,
                     userTimesheetMap.getOrDefault(userId, new ArrayList<>()),
@@ -835,7 +768,6 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
                     fixedMap,
                     flexMap
             );
-
             for (TimesheetDto t : userTimesheets) {
                 finalResponse.add(new UserTimesheetDto(user.getUserName(), t));
             }
@@ -846,27 +778,21 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
         /**
          * Maps projection to DTO with history
          */
-    private TimesheetDto mapToTimesheetDto(
-            TimesheetProjection projection,
-            Map<Long, List<TimesheetHistoryDto>> historyMap
-    ) {
-        log.info("Maps to Dtos");
-        TimesheetDto dto = timesheetDtoMapper.toDto(projection);
-        log.info("Mapped ClockIn={}, ClockOut={} → {} / {}",
-                projection.getFirstClockIn(),
-                projection.getLastClockOut(),
-                dto.getFirstClockInTime(),
-                dto.getLastClockOutTime());
-
-        dto.setHistory(historyMap.getOrDefault(projection.getId(), Collections.emptyList()));
-        return dto;
-    }
+        private TimesheetDto mapToTimesheetDto(
+                TimesheetUserProjection projection,
+                Map<Long, List<TimesheetHistoryDto>> historyMap
+        ) {
+            log.info("Maps to Dtos");
+            TimesheetDto dto = timesheetDtoMapper.toDto(projection);
+            dto.setHistory(historyMap.getOrDefault(projection.getId(), Collections.emptyList()));
+            return dto;
+        }
 
     /**
      * Gets user timesheets with default records if none exist for flutter
      */
     private List<TimesheetDto> getUsersTimesheetsWithDefaults(
-            TimesheetProjection user,
+            TimesheetUserProjection user,
             List<TimesheetDto> existingTimesheets,
             LocalDate startDate,
             LocalDate endDate,
@@ -878,13 +804,10 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
                 .collect(Collectors.toMap(TimesheetDto::getDate, Function.identity(),(a,b) -> a));
         log.info("User: {}, Start: {}, End: {}, Existing count: {}",
                 user.getUserId(), startDate, endDate, existingTimesheets.size());
-
         LocalDate effectiveStart = startDate.isBefore(user.getDate())
                 ? user.getDate()
                 : startDate;
-
         log.info("Effective start: {}, User join date: {}", effectiveStart, user.getDate());
-
         if (effectiveStart.isAfter(endDate)) {
             log.info("User joined after requested range ({} > {}), returning empty timesheet list", effectiveStart, endDate);
             return Collections.emptyList();
@@ -894,7 +817,6 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
                     TimesheetDto existing = existingTimesheet.get(date);
                     if (existing != null) return existing;
                     log.info("Existing timesheet for {} on {} -> {}", user.getUserId(), date, existing);
-
                     return createDefaultTimesheetForUserDate(
                             user,
                             date,
@@ -915,7 +837,7 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
      * Creates a single default timesheet record for a specific date
      */
     private TimesheetDto createDefaultTimesheetForUserDate(
-            TimesheetProjection user,
+            TimesheetUserProjection user,
             LocalDate date,
             LocalDate today,
             Set<DayOfWeek> workingDays,
@@ -929,7 +851,6 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
 
         timesheet.setDate(date);
         timesheet.setUserName(user.getUserName());
-        timesheet.setWorkScheduleName(user.getWorkScheduleName() != null ? user.getWorkScheduleName() : "null");
         timesheet.setFirstClockInTime("00:00");
         timesheet.setLastClockOutTime("00:00");
         timesheet.setTrackedHoursDuration("00h 00m");
@@ -942,8 +863,8 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
     }
 
     @Override
-    public void updateTimesheetHistory(Long id, LogType logType, LocalTime firstClockIn) {
-        timesheetHistoryRepository.updateTimesheetHistory(id, logType, firstClockIn);
+    public void updateTimesheetHistory(Long id, LogType logType, LocalTime firstClockIn,LogFrom logFrom) {
+        timesheetHistoryRepository.updateTimesheetHistory(id, logType, firstClockIn, logFrom);
     }
 
     @Override
@@ -1003,6 +924,5 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
     public long countActiveUsers(String organizationId, LocalDate fromDate, LocalDate toDate) {
         return timesheetRepository.countUsersWithTimesheetsBetweenDates(organizationId, fromDate, toDate);
     }
-
 
 }
