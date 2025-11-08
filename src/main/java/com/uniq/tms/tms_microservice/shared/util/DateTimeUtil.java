@@ -10,7 +10,7 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 
-public class DateUtil {
+public class DateTimeUtil {
 
     private static final ZoneId ZONE_ID = ZoneId.of("Asia/Kolkata");
 
@@ -46,5 +46,15 @@ public class DateUtil {
     public static BigDecimal calculatePercentage(Long counts, Long totalCounts) {
         return totalCounts > 0 ? BigDecimal.valueOf((counts * 100.0) / totalCounts)
                 .setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO;
+    }
+
+    public static long toSeconds(LocalTime time) {
+        return time != null ? time.toSecondOfDay() : 0;
+    }
+
+    public static LocalTime toLocalTime(long seconds) {
+        seconds = Math.max(seconds, 0);
+        seconds = Math.min(seconds, 24 * 3600 - 1);
+        return LocalTime.ofSecondOfDay(seconds);
     }
 }

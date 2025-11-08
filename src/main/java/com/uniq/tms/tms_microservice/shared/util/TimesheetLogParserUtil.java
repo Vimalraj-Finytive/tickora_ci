@@ -15,16 +15,27 @@ import java.util.Collections;
 import java.util.List;
 
 public class TimesheetLogParserUtil {
+
     private static final ObjectMapper objectMapper = new ObjectMapper();
     private static final Logger log = LoggerFactory.getLogger(TimesheetLogParserUtil.class);
+
     static {
         objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         objectMapper.registerModule(new JavaTimeModule());
     }
 
+    public static ObjectMapper getObjectMapper() {
+        return objectMapper;
+    }
+
     public static List<TimesheetHistoryDto> parseLogs(String timesheetLogsJson) {
+        if (timesheetLogsJson == null || timesheetLogsJson.isBlank()) {
+            log.warn("Empty or null timesheetLogsJson received");
+            return Collections.emptyList();
+        }
+
         try {
-            TypeReference<List<TimesheetHistoryDto>> typeRef = new TypeReference<List<TimesheetHistoryDto>>() {};
+            TypeReference<List<TimesheetHistoryDto>> typeRef = new TypeReference<>() {};
             return objectMapper.readValue(timesheetLogsJson, typeRef);
         } catch (JsonProcessingException e) {
             log.error("Failed to parse timesheet logs JSON: {}", timesheetLogsJson, e);
@@ -37,18 +48,14 @@ public class TimesheetLogParserUtil {
         resp.setStatusCode(200);
         resp.setMessage("Success");
         resp.setUserTimesheetResponseDtos(Collections.emptyList());
-
         PaginationDto paginationDto = new PaginationDto();
         paginationDto.setPageIndex(pageIndex);
         paginationDto.setPageSize(pageSize);
         paginationDto.setTotalElements(0);
         paginationDto.setTotalPages(0);
         paginationDto.setLast(true);
-
         resp.setPaginationDto(paginationDto);
-
         return resp;
     }
-
 
 }

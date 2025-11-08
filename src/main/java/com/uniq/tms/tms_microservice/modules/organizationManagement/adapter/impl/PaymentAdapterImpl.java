@@ -4,17 +4,15 @@ import com.uniq.tms.tms_microservice.modules.identityManagement.service.IdGenera
 import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.PaymentAdapter;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.PaymentEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.enums.PaymentStatus;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.enums.PlaneName;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.PaymentRepository;
-import com.uniq.tms.tms_microservice.modules.organizationManagement.services.impl.SubscriptionServiceImpl;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
-
 
 @Component
 @ConditionalOnProperty(name = "database.type", havingValue = "postgres")
@@ -50,7 +48,13 @@ public class PaymentAdapterImpl implements PaymentAdapter {
         }
     }
 
-    public PaymentEntity getPaymentById(String paymentId) {
+    public PaymentEntity getPaymentById(String paymentId, String planId) {
+        if (paymentId == null && planId.equals(PlaneName.BASIC_PLAN.getPlanId())) {
+            throw new IllegalArgumentException("The Basic Plan is a free trial and does not have any payment details.");
+        }
+        if (paymentId == null) {
+            throw new IllegalArgumentException("Payment ID cannot be null for non-free plans.");
+        }
         return paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new RuntimeException("Payment not found for ID: " + paymentId));
     }

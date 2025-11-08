@@ -6,7 +6,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
-public class UserHelper {
+public class BulkUserHelper {
 
     private int rowNumber;
     private String[] row;
@@ -24,7 +24,7 @@ public class UserHelper {
     private String relation;
     private boolean hasSecondary;
 
-    public UserHelper(int rowNumber, String[] row) {
+    public BulkUserHelper(int rowNumber, String[] row) {
         this.rowNumber = rowNumber;
         this.row = row;
     }

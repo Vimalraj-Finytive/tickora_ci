@@ -1,5 +1,6 @@
 package com.uniq.tms.tms_microservice.modules.userManagement.repository;
 
+import com.uniq.tms.tms_microservice.modules.timesheetManagement.projection.TimesheetUserProjection;
 import com.uniq.tms.tms_microservice.modules.userManagement.dto.UserNameEmailDto;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserGroupEntity;
@@ -15,7 +16,6 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -244,4 +244,16 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
     long countUsersByOrgAndCreatedAtBetween(@Param("orgId") String orgId,
                                             @Param("start") LocalDateTime start,
                                             @Param("end") LocalDateTime end);
+
+    @Query(value = """
+    SELECT 
+        u.user_id AS userId,
+        u.date_of_joining AS date,
+        u.user_name AS userName
+    FROM users u
+    WHERE u.user_id = ANY(:userIds)
+      AND u.active = true
+    """, nativeQuery = true)
+    List<TimesheetUserProjection> findUserByUserIds(@Param("userIds") String[] userIds);
+
 }

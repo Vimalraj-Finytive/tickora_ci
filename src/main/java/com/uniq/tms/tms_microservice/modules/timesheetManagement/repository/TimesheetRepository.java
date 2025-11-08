@@ -4,6 +4,7 @@ import com.uniq.tms.tms_microservice.modules.timesheetManagement.dto.UserAttenda
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.entity.TimesheetEntity;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.projection.TimesheetHistoryProjection;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.projection.TimesheetProjection;
+import com.uniq.tms.tms_microservice.modules.timesheetManagement.projection.TimesheetUserProjection;
 import com.uniq.tms.tms_microservice.modules.userManagement.projections.UserDashboard;
 import com.uniq.tms.tms_microservice.modules.userManagement.projections.UserGroupProjection;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -103,7 +104,15 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
                                               @Param("fromDate") LocalDate fromDate,
                                               @Param("toDate") LocalDate toDate);
 
-
+    @Query(
+            value = "SELECT * FROM fetch_main_timesheets_users(:startDate, :endDate, :userIds)",
+            nativeQuery = true
+    )
+    List<TimesheetUserProjection> fetchMainTimesheetsUsers(
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate,
+            @Param("userIds") String[] userIds
+    );
 
 
 }
