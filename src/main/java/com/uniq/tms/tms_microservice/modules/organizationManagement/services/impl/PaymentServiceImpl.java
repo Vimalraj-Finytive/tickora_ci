@@ -7,10 +7,8 @@ import com.razorpay.RazorpayException;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.OrganizationAdapter;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.PaymentAdapter;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.SubscriptionAdapter;
-import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.MonthlyPaymentDto;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.PaymentDetailsDto;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.PaymentDto;
-import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.TopCustomersDto;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.OrganizationEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.PaymentEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.PlanEntity;
@@ -42,8 +40,6 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static java.util.stream.Collectors.toList;
-
 @Slf4j
 @Service
 public class PaymentServiceImpl implements PaymentService {
@@ -53,7 +49,6 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Value("${razorpay.key.secret}")
     private String razorpayKeySecret;
-
 
     private final PaymentAdapter paymentAdapter;
     private final SubscriptionAdapter subscriptionAdapter;
@@ -105,7 +100,6 @@ public class PaymentServiceImpl implements PaymentService {
         return paymentAdapter.createPayment(orgId,orderId,amount,billingCycle,status,orgSchema);
     }
 
-
     @Override
     public PaymentDto getPaymentDetailsBySubscriptionId(String subscriptionId) {
         PaymentDto paymentDto = new PaymentDto();
@@ -113,8 +107,7 @@ public class PaymentServiceImpl implements PaymentService {
             SubscriptionEntity subscriptionEntity = subscriptionAdapter
                     .findSubscriptionDetails(subscriptionId)
                     .orElseThrow(() -> new RuntimeException("Subscription not found"));
-
-            PaymentEntity paymentEntity = paymentAdapter.getPaymentById(subscriptionEntity.getPaymentId());
+            PaymentEntity paymentEntity = paymentAdapter.getPaymentById(subscriptionEntity.getPaymentId(), subscriptionEntity.getPlanId());
             PlanEntity plan = subscriptionAdapter.findById(subscriptionEntity.getPlanId()).orElse(null);
             RazorpayClient client = new RazorpayClient(razorpayKeyId, razorpayKeySecret);
             Payment payment = null;

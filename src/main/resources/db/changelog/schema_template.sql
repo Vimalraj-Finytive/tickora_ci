@@ -815,3 +815,43 @@ BEGIN
     WHERE u.user_id = ANY(p_user_ids);
 END;
 $$;
+
+--changeset system:create-fetch-main-timesheets-users endDelimiter://
+CREATE OR REPLACE FUNCTION ${schemaName}.fetch_main_timesheets_users(
+    p_start_date DATE,
+    p_end_date DATE DEFAULT NULL,
+    p_user_ids VARCHAR[] DEFAULT NULL
+)
+RETURNS TABLE (
+        id BIGINT,
+        userId VARCHAR,
+        date DATE,
+        userName VARCHAR,
+        firstClockIn TIME,
+        lastClockOut TIME,
+        trackedHours TIME,
+        regularHours TIME,
+        status VARCHAR
+)
+LANGUAGE plpgsql
+AS $BODY$
+BEGIN
+    RETURN QUERY
+    SELECT
+                t.id,
+                u.user_id AS userId,
+                t.date,
+                u.user_name AS userName,
+                t.first_clock_in AS firstClockIn,
+                t.last_clock_out AS lastClockOut,
+                t.tracked_hours AS trackedHours,
+                t.regular_hours AS regularHours,
+                ts.status_name AS status
+    FROM ${schemaName}.timesheet t
+    JOIN ${schemaName}.users u ON t.user_id = u.user_id
+    LEFT JOIN ${schemaName}.timesheet_status ts ON t.status_id = ts.status_id
+    WHERE t.date BETWEEN p_start_date AND COALESCE(p_end_date, CURRENT_DATE)
+      AND (p_user_ids IS NULL OR array_length(p_user_ids, 1) = 0 OR u.user_id = ANY(p_user_ids))
+    ORDER BY t.date ASC;
+END;
+$BODY$;

@@ -1,5 +1,6 @@
 package com.uniq.tms.tms_microservice.modules.timesheetManagement.adapter;
 
+import com.uniq.tms.tms_microservice.modules.timesheetManagement.enums.LogFrom;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.enums.LogType;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.dto.PaginationResponseDto;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.dto.UserAttendanceDto;
@@ -28,7 +29,7 @@ public interface TimesheetAdapter {
     List<TimesheetEntity> getLatestLogsByTimesheetIds(List<String> memberIds, String orgId, LocalDate date);
     List<UserAttendanceDto> findAttendanceForUserInRange(List<String> userId, LocalDate fromDate, LocalDate toDate);
     List<UserTimesheetDto> fetchUserTimesheetsWithHistory(LocalDate startDate, LocalDate endDate, List<String> userIds, String orgId);
-    void updateTimesheetHistory(Long id, LogType logType, LocalTime firstClockIn);
+    void updateTimesheetHistory(Long id, LogType logType, LocalTime firstClockIn, LogFrom logFrom);
     void saveAllTimesheetHistories(List<TimesheetHistoryEntity> historyEntries);
     List<UserDashboard> getDashboard(String orgId, List<String> userIds, LocalDate fromDate, LocalDate toDate);
     List<TimesheetStatusEntity> getStatus();

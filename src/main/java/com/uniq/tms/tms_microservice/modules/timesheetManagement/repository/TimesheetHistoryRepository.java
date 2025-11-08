@@ -1,5 +1,6 @@
 package com.uniq.tms.tms_microservice.modules.timesheetManagement.repository;
 
+import com.uniq.tms.tms_microservice.modules.timesheetManagement.enums.LogFrom;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.enums.LogType;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.entity.TimesheetEntity;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.entity.TimesheetHistoryEntity;
@@ -25,9 +26,10 @@ public interface TimesheetHistoryRepository extends JpaRepository<TimesheetHisto
 
     @Modifying
     @Transactional
-    @Query("UPDATE TimesheetHistoryEntity th SET th.logTime = :logTime WHERE th.timesheet.id = :timesheetId AND th.logType = :logType")
+    @Query("UPDATE TimesheetHistoryEntity th SET th.logTime = :logTime WHERE th.timesheet.id = :timesheetId AND th.logType = :logType AND th.logFrom = :logFrom")
     void updateTimesheetHistory(@Param("timesheetId") Long timesheetId,
                                @Param("logType") LogType logType,
-                               @Param("logTime") LocalTime logTime);
+                               @Param("logTime") LocalTime logTime,
+                                @Param("logFrom") LogFrom logFrom);
 
 }
