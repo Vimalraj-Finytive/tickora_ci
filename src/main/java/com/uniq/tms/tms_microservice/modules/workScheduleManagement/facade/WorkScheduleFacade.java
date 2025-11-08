@@ -52,17 +52,18 @@ public class WorkScheduleFacade {
         return new ApiResponse(200, "WorkSchedule Updated Successfully", true);
     }
 
-    public void deleteSchedule( String scheduleId) {
-
+    public void deleteSchedule(String scheduleId) {
         try {
             String orgId = authHelper.getOrgId();
             if (orgId == null) {
-                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,"Unauthorized - Invalid Organization");
+                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized - Invalid Organization");
             }
             workScheduleService.deleteWorkSchedule(orgId, scheduleId);
-        } catch (RuntimeException e) {
-            log.error("Error occurred while updating work schedule: {}", e.getMessage(), e);
-            throw new RuntimeException( "Update failed: " + e.getMessage());
+        } catch (IllegalArgumentException | IllegalStateException | ResponseStatusException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Unexpected error while deleting work schedule: {}", e.getMessage(), e);
+            throw new RuntimeException("Unexpected error while deleting work schedule", e);
         }
     }
 

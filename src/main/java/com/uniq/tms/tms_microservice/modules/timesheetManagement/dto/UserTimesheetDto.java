@@ -2,7 +2,6 @@ package com.uniq.tms.tms_microservice.modules.timesheetManagement.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -42,14 +41,8 @@ public class UserTimesheetDto {
         this.regularHoursDuration = t.getRegularHoursDuration();
         this.history = t.getHistory();
         this.status = t.getStatus();
-        this.workScheduleName = t.getWorkScheduleName();
     }
 
-    public UserTimesheetDto() {
-
-    }
-
-    // Getters & Setters
     public String getUserId() { return userId; }
     public void setUserId(String userId) { this.userId = userId; }
 

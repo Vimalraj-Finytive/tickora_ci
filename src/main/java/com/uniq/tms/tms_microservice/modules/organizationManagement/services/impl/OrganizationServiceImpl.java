@@ -16,7 +16,7 @@ import com.uniq.tms.tms_microservice.modules.timesheetManagement.adapter.Timeshe
 import com.uniq.tms.tms_microservice.shared.security.cache.CacheKeyConfig;
 import com.uniq.tms.tms_microservice.shared.security.cache.CacheReloadHandlerRegistry;
 import com.uniq.tms.tms_microservice.shared.util.CacheEventPublisherUtil;
-import com.uniq.tms.tms_microservice.shared.util.DateUtil;
+import com.uniq.tms.tms_microservice.shared.util.DateTimeUtil;
 import com.uniq.tms.tms_microservice.shared.util.TenantUtil;
 import com.uniq.tms.tms_microservice.modules.userManagement.adapter.UserAdapter;
 import com.uniq.tms.tms_microservice.modules.userManagement.enums.RoleName;
@@ -47,9 +47,7 @@ import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import javax.sql.DataSource;
-import java.lang.reflect.MalformedParameterizedTypeException;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -491,7 +489,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 
     @Override
     public List<OrganizationCountResponseModel> getOrganizationCounts(LocalDateTime fromDate, LocalDateTime toDate) {
-        Pair<LocalDateTime, LocalDateTime> prevRange = DateUtil.computePreviousRange(fromDate, toDate);
+        Pair<LocalDateTime, LocalDateTime> prevRange = DateTimeUtil.computePreviousRange(fromDate, toDate);
         LocalDateTime prevFrom = prevRange.getFirst();
         LocalDateTime prevTo = prevRange.getSecond();
         List<OrganizationEntity> orgs = organizationAdapter.findByCreatedAtBetween(prevFrom, toDate);
@@ -502,8 +500,8 @@ public class OrganizationServiceImpl implements OrganizationService {
                 .filter(org -> org.getCreatedAt().isBefore(fromDate))
                 .count();
         long total = currentCount + previousCount;
-        BigDecimal currentPercentage = DateUtil.calculatePercentage(currentCount,total);
-        BigDecimal previousPercentage = DateUtil.calculatePercentage(previousCount,total);
+        BigDecimal currentPercentage = DateTimeUtil.calculatePercentage(currentCount,total);
+        BigDecimal previousPercentage = DateTimeUtil.calculatePercentage(previousCount,total);
         OrganizationCountResponseModel model = new OrganizationCountResponseModel(
                 currentCount,
                 previousCount,
@@ -531,7 +529,7 @@ public class OrganizationServiceImpl implements OrganizationService {
                     String orgType = entry.getKey();
                     Long count = entry.getValue();
                     String orgTypeName = orgTypeNameMap.getOrDefault(orgType,null);
-                    BigDecimal percentage = DateUtil.calculatePercentage(count,totalOrgCount);
+                    BigDecimal percentage = DateTimeUtil.calculatePercentage(count,totalOrgCount);
                     return new OrganizationTypeCountModel(orgTypeName,count,percentage);
                 })
                 .toList();

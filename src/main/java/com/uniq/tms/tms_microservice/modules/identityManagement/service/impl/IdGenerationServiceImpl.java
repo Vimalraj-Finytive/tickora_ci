@@ -46,7 +46,7 @@ public class IdGenerationServiceImpl implements IdGenerationService {
 
     @Override
     public String generateNextId(IdGenerationTypeEnum type) {
-        return generateNextId(type, 1).get(0);
+        return generateNextId(type, 1).getFirst();
     }
 
     @Override

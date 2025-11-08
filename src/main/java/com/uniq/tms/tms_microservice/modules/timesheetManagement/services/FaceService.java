@@ -13,6 +13,6 @@ public interface FaceService {
 
     ApiResponse<RegisterDto> compareMultiFace(FaceDto faceDto, String orgSchema,String UserIdFromToken);
 
-    ApiResponse<UserValidationDto> validateUser(String userId);
+    ApiResponse<UserValidationDto> validateUserLocation(String userId);
 
 }
