@@ -200,6 +200,16 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(response);
     }
 
+    @ExceptionHandler(CommonExceptionHandler.DefaultLocationNotFoundException.class)
+    public ResponseEntity<Object> handleDefaultLocationNotFound(CommonExceptionHandler.DefaultLocationNotFoundException ex) {
+        log.error("Default location missing: {}", ex.getMessage());
+        Map<String, Object> body = new HashMap<>();
+        body.put("statusCode", HttpStatus.NOT_FOUND.value());
+        body.put("message", ex.getMessage());
+        body.put("data", null);
+        return new ResponseEntity<>(body, HttpStatus.NOT_FOUND);
+    }
+
     /**
      * Sanitize error messages to remove sensitive information
      */
@@ -214,7 +224,7 @@ public class GlobalExceptionHandler {
                 .replaceAll("(?i)column \".*?\"", "field")
                 .trim();
 
-        if (sanitized.isEmpty() || sanitized.length() < 10) {
+        if (sanitized.length() < 10) {
             return "An error occurred while processing your request";
         }
 
