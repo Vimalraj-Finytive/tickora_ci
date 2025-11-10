@@ -3,10 +3,7 @@ package com.uniq.tms.tms_microservice.modules.organizationManagement.services.im
 import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.OrganizationAdapter;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.PaymentAdapter;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.SubscriptionAdapter;
-import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.PlanAnalyticsDto;
-import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.PlanDto;
-import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.SubscriptionDto;
-import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.UpgradePlanDto;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.*;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.OrganizationEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.PaymentEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.PlanEntity;
@@ -15,10 +12,9 @@ import com.uniq.tms.tms_microservice.modules.organizationManagement.enums.Organi
 import com.uniq.tms.tms_microservice.modules.organizationManagement.enums.PaymentStatus;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.enums.PlanFeaturesEnum;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.enums.PlaneName;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.mapper.SubscriptionEntityMapper;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.mapper.UpgradeDtoMapper;
-import com.uniq.tms.tms_microservice.modules.organizationManagement.model.PlanAnalyticsModel;
-import com.uniq.tms.tms_microservice.modules.organizationManagement.model.PlanStatusModel;
-import com.uniq.tms.tms_microservice.modules.organizationManagement.model.UpgradePlan;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.model.*;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.services.PaymentService;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.services.SubscriptionService;
 import com.uniq.tms.tms_microservice.shared.util.TenantUtil;
@@ -47,13 +43,15 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     private final UpgradeDtoMapper upgradeDtoMapper;
     private final PaymentAdapter paymentAdapter;
     private final OrganizationAdapter organizationAdapter;
+    private final SubscriptionEntityMapper subscriptionEntityMapper;
 
-    public SubscriptionServiceImpl(SubscriptionAdapter subscriptionAdapter, PaymentService paymentService, UpgradeDtoMapper upgradeDtoMapper, PaymentAdapter paymentAdapter, OrganizationAdapter organizationAdapter) {
+    public SubscriptionServiceImpl(SubscriptionAdapter subscriptionAdapter, PaymentService paymentService, UpgradeDtoMapper upgradeDtoMapper, PaymentAdapter paymentAdapter, OrganizationAdapter organizationAdapter, SubscriptionEntityMapper subscriptionEntityMapper) {
         this.subscriptionAdapter = subscriptionAdapter;
         this.paymentService = paymentService;
         this.upgradeDtoMapper = upgradeDtoMapper;
         this.paymentAdapter = paymentAdapter;
         this.organizationAdapter = organizationAdapter;
+        this.subscriptionEntityMapper = subscriptionEntityMapper;
     }
 
     @PersistenceContext(type = PersistenceContextType.TRANSACTION)
@@ -194,108 +192,79 @@ public class SubscriptionServiceImpl implements SubscriptionService {
                 .build();
     }
 
-//    @Override
-//    public double calculateProratedAmount(int additionalUsers, String orgId) {
-//        SubscriptionEntity subscription = subscriptionAdapter.findActiveSubscriptionByOrgId(orgId)
-//                .orElseThrow(() -> new RuntimeException("No active or expired subscription found for org: " + orgId));
-//
-//        PlanEntity plan = subscriptionAdapter.findById(subscription.getPlanId())
-//                .orElseThrow(() -> new RuntimeException("Plan not found for planId: " + subscription.getPlanId()));
-//
-//        double pricePerUser = plan.getPricePerUser().doubleValue();
-//
-//        LocalDate today = LocalDate.now();
-//        LocalDate endDate = subscription.getEndDate().toLocalDate();
-//
-//        if (!today.isBefore(endDate)) {
-//            throw new RuntimeException("Subscription has already expired");
-//        }
-//
-//        long remainingDays = ChronoUnit.DAYS.between(today, endDate);
-//
-//        long months = remainingDays / 30;
-//        long extraDays = remainingDays % 30;
-//
-//        double amountForMonths = additionalUsers * pricePerUser * months;
-//        double amountForExtraDays = additionalUsers * pricePerUser * ((double) extraDays / 30);
-//
-//        double totalAmount = amountForMonths + amountForExtraDays;
-//
-//        return totalAmount;
-//    }
-//
-//    @Override
-//    public boolean addSubscribedUsers(String orgId, String orgSchema, UpgradePlanDto dto) {
-//        boolean isUpdated = false;
-//        PaymentStatus historyStatus;
-//
-//        try {
-//            SubscriptionEntity subscription = subscriptionAdapter.findActiveSubscriptionByOrgId(orgId)
-//                    .orElse(null);
-//
-//            if (subscription == null) {
-//                log.warn("No active subscription found for orgID: {}", orgId);
-//                historyStatus = PaymentStatus.FAILED;
-//            } else {
-//                if (Boolean.TRUE.equals(dto.getStatus())) {
-//
-//                    int totalSubscribedUsers = subscription.getSubscribedUsers() + dto.getSubscribedUserCount();
-//                    subscription.setSubscribedUsers(totalSubscribedUsers);
-//                    subscription.setUpdatedAt(LocalDateTime.now());
-//
-//                    boolean updated = subscriptionAdapter.updateSubscription(subscription);
-//
-//                    if (updated) {
-//                        isUpdated = true;
-//                        historyStatus = PaymentStatus.SUCCESS;
-//                        log.info("Subscribed users updated successfully for orgID: {} | SubscriptionID: {} | New Count: {}",
-//                                orgId, subscription.getSubId(), totalSubscribedUsers);
-//                    } else {
-//                        historyStatus = PaymentStatus.FAILED;
-//                        log.warn("Failed to update subscribed users for orgID: {}", orgId);
-//                    }
-//
-//                } else {
-//                    historyStatus = PaymentStatus.FAILED;
-//                    log.info("dto.status is FALSE — skipping subscribed user update.");
-//                }
-//            }
-//
-//            PaymentEntity paymentHistory = paymentAdapter.createPayment(
-//                    orgId,
-//                    dto.getOrderID(),
-//                    dto.getTotalSubscriptionAmount(),
-//                    subscriptionAdapter.getBillingCycle(dto.getPlanId()),
-//                    historyStatus,
-//                    orgSchema
-//            );
-//
-//            log.info("Payment history saved for orgID: {} | PaymentHistoryID: {} | Status: {}",
-//                    orgId, paymentHistory.getPaymentId(), historyStatus.getDisplayValue());
-//
-//            return isUpdated;
-//
-//        } catch (Exception e) {
-//            log.error("Error while adding subscribed users for orgID: {} | Error: {}", orgId, e.getMessage(), e);
-//
-//            try {
-//                PaymentEntity paymentHistory = paymentAdapter.createPayment(
-//                        orgId,
-//                        dto.getOrderID(),
-//                        dto.getTotalSubscriptionAmount(),
-//                        subscriptionAdapter.getBillingCycle(dto.getPlanId()),
-//                        PaymentStatus.FAILED,
-//                        orgSchema
-//                );
-//                log.info("Payment history saved with FAILED status for orgID: {} | PaymentHistoryID: {}",
-//                        orgId, paymentHistory.getPaymentId());
-//            } catch (Exception ex) {
-//                log.error("Failed to save payment history after exception for orgID: {} | Error: {}", orgId, ex.getMessage(), ex);
-//            }
-//
-//            return false;
-//        }
-//    }
+
+    @Override
+    public boolean addSubscribedUsers(String orgId, String orgSchema, UpgradePlanDto dto) {
+        boolean isUpdated = false;
+        PaymentStatus historyStatus;
+
+        try {
+            SubscriptionEntity subscription = subscriptionAdapter.findActiveSubscriptionByOrgId(orgId)
+                    .orElse(null);
+
+            if (subscription == null) {
+                log.warn("No active subscription found for orgID: {}", orgId);
+                historyStatus = PaymentStatus.FAILED;
+            } else {
+                if (Boolean.TRUE.equals(dto.getStatus())) {
+
+                    int totalSubscribedUsers = subscription.getSubscribedUsers() + dto.getSubscribedUserCount();
+                    subscription.setSubscribedUsers(totalSubscribedUsers);
+                    subscription.setUpdatedAt(LocalDateTime.now());
+
+                    boolean updated = subscriptionAdapter.updateSubscription(subscription);
+
+                    if (updated) {
+                        isUpdated = true;
+                        historyStatus = PaymentStatus.SUCCESS;
+                        log.info("Subscribed users updated successfully for orgID: {} | SubscriptionID: {} | New Count: {}",
+                                orgId, subscription.getSubId(), totalSubscribedUsers);
+                    } else {
+                        historyStatus = PaymentStatus.FAILED;
+                        log.warn("Failed to update subscribed users for orgID: {}", orgId);
+                    }
+
+                } else {
+                    historyStatus = PaymentStatus.FAILED;
+                    log.info("dto.status is FALSE — skipping subscribed user update.");
+                }
+            }
+
+            PaymentEntity paymentHistory = paymentAdapter.createPayment(
+                    orgId,
+                    dto.getOrderID(),
+                    dto.getTotalSubscriptionAmount(),
+                    subscriptionAdapter.getBillingCycle(dto.getPlanId()),
+                    historyStatus,
+                    orgSchema
+            );
+
+            log.info("Payment history saved for orgID: {} | PaymentHistoryID: {} | Status: {}",
+                    orgId, paymentHistory.getPaymentId(), historyStatus.getDisplayValue());
+
+            return isUpdated;
+
+        } catch (Exception e) {
+            log.error("Error while adding subscribed users for orgID: {} | Error: {}", orgId, e.getMessage(), e);
+
+            try {
+                PaymentEntity paymentHistory = paymentAdapter.createPayment(
+                        orgId,
+                        dto.getOrderID(),
+                        dto.getTotalSubscriptionAmount(),
+                        subscriptionAdapter.getBillingCycle(dto.getPlanId()),
+                        PaymentStatus.FAILED,
+                        orgSchema
+                );
+                log.info("Payment history saved with FAILED status for orgID: {} | PaymentHistoryID: {}",
+                        orgId, paymentHistory.getPaymentId());
+            } catch (Exception ex) {
+                log.error("Failed to save payment history after exception for orgID: {} | Error: {}", orgId, ex.getMessage(), ex);
+            }
+
+            return false;
+        }
+    }
 
     @Override
     public List<PlanAnalyticsModel> calculatePlanUsage(LocalDate fromDate, LocalDate toDate) {
@@ -342,4 +311,81 @@ public class SubscriptionServiceImpl implements SubscriptionService {
             return null;
         }
     }
+
+    @Override
+    public CalculatedAmountDto calculateProratedAmount(int additionalUsers, String orgId) {
+
+        SubscriptionEntity subscriptionEntity = subscriptionAdapter.findActiveSubscriptionByOrgId(orgId)
+                .orElseThrow(() -> new RuntimeException("No active or expired subscription found for org: " + orgId));
+
+        Subscription subscriptionModel = subscriptionEntityMapper.toModel(subscriptionEntity);
+
+        PlanEntity plan = subscriptionAdapter.findById(subscriptionModel.getPlanName())
+                .orElseThrow(() -> new RuntimeException("Plan not found for planId: " + subscriptionModel.getPlanName()));
+
+        double pricePerUser = plan.getPricePerUser().doubleValue();
+
+        LocalDate today = LocalDate.now();
+        LocalDate endDate = subscriptionModel.getEndDate().toLocalDate();
+
+        if (!today.isBefore(endDate)) {
+            throw new RuntimeException("Subscription has already expired");
+        }
+
+        long remainingDays = ChronoUnit.DAYS.between(today, endDate);
+
+        long months = remainingDays / 30;
+        long extraDays = remainingDays % 30;
+
+        double amountForMonths = additionalUsers * pricePerUser * months;
+        double amountForExtraDays = additionalUsers * pricePerUser * ((double) extraDays / 30);
+
+        double totalAmount = amountForMonths + amountForExtraDays;
+
+        BigDecimal roundedAmount = BigDecimal.valueOf(totalAmount).setScale(2, RoundingMode.HALF_UP);
+
+        return new CalculatedAmountDto(roundedAmount.doubleValue());
+    }
+
+
+    @Override
+    public boolean updateSubscription(String orgId, String orgSchema, UpdatePlanDto dto) {
+
+        UpdatePlan model = upgradeDtoMapper.toModel(dto);
+
+        SubscriptionEntity subscription = subscriptionAdapter.findActiveSubscriptionByOrgId(orgId)
+                .orElse(null);
+        int totalSubscribedUsers = subscription.getSubscribedUsers() + dto.getSubscribedUserCount();
+
+        PaymentStatus paymentStatus = model.getSuccess() ? PaymentStatus.SUCCESS : PaymentStatus.FAILED;
+
+        String billingCycle=subscriptionAdapter.getBillingCycle(subscription.getPlanId());
+
+        PaymentEntity payment = paymentService.createPayment(
+                orgId,
+                model.getOrderId(),
+                model.getAmount(),
+                billingCycle,
+                orgSchema,
+                paymentStatus
+        );
+
+        if (payment == null || payment.getPaymentId() == null) {
+            return false;
+        }
+        if (!model.getSuccess()) {
+            return false;
+        }
+
+        PaymentStatus updated = subscriptionAdapter.updateExistingPlan(
+                orgId,
+                orgSchema,
+                subscription.getPlanId(),
+                totalSubscribedUsers,
+                payment.getPaymentId()
+        );
+
+        return PaymentStatus.SUCCESS.equals(updated);
+    }
+
 }

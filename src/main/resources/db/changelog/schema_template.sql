@@ -480,18 +480,13 @@ CREATE TABLE payment (
     schema_name VARCHAR(255) NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP
---    CONSTRAINT fk_payment_subscription FOREIGN KEY (subscription_id)
---        REFERENCES subscription(subscription_id)
---        ON DELETE CASCADE
 );
-
 -- ===========================================================
 -- Table: subscription
 -- ===========================================================
 --changeset system:create-subscription
 CREATE TABLE subscription (
     subscription_id VARCHAR(20) PRIMARY KEY,
-    payment_id VARCHAR(20),
     start_date TIMESTAMP NOT NULL,
     end_date TIMESTAMP NOT NULL,
     organization_id VARCHAR(20) NOT NULL,
@@ -509,7 +504,19 @@ CREATE TABLE subscription (
         ON DELETE RESTRICT
 );
 
+CREATE TABLE subscription_mapping (
+    subscription_mapping_id SERIAL PRIMARY KEY,
+    subscription_id VARCHAR(20) NOT NULL,
+    payment_id VARCHAR(20) NOT NULL,
 
+    CONSTRAINT fk_mapping_subscription FOREIGN KEY (subscription_id)
+        REFERENCES subscription(subscription_id)
+        ON DELETE CASCADE,
+
+    CONSTRAINT fk_mapping_payment FOREIGN KEY (payment_id)
+        REFERENCES payment(payment_id)
+        ON DELETE CASCADE
+);
 
 -- ===========================================================
 -- Table: user_history

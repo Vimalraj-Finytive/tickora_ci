@@ -49,9 +49,6 @@ public class PaymentAdapterImpl implements PaymentAdapter {
     }
 
     public PaymentEntity getPaymentById(String paymentId, String planId) {
-        if (paymentId == null && planId.equals(PlaneName.BASIC_PLAN.getPlanId())) {
-            throw new IllegalArgumentException("The Basic Plan is a free trial and does not have any payment details.");
-        }
         if (paymentId == null) {
             throw new IllegalArgumentException("Payment ID cannot be null for non-free plans.");
         }
@@ -66,6 +63,7 @@ public class PaymentAdapterImpl implements PaymentAdapter {
                 .orElse(null);
     }
 
+
     @Override
     public List<Object[]> getMonthlyAmountWithShortMonthName(int year) {
         return paymentRepository.getMonthlyAmountWithFullMonthName(year);
@@ -76,4 +74,9 @@ public class PaymentAdapterImpl implements PaymentAdapter {
         return paymentRepository.getTotalAmountByYear(year);
     }
 
+    @Override
+    public PaymentEntity getPaymentById(String paymentId) {
+        return paymentRepository.findById(paymentId)
+                .orElseThrow(() -> new RuntimeException("Payment not found for ID: " + paymentId));
+    }
 }

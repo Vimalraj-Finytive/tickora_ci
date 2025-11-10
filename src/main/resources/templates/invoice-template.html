@@ -61,62 +61,40 @@
             text-align: left;
         }
 
-        th {
-            background-color: #f3f3f3;
-            font-weight: bold;
-        }
+        th { background-color: #f3f3f3; font-weight: bold; }
 
-        .total {
-            text-align: right;
-            font-size: 16px;
-            font-weight: bold;
-            margin-top: 10px;
-        }
+        .total { text-align: right; font-size: 16px; font-weight: bold; margin-top: 10px; }
 
-        .footer {
-            margin-top: 40px;
-            text-align: center;
-            font-size: 13px;
-            color: #555;
-        }
-
-        .note, .payment {
+        .payment, .note {
             margin-top: 20px;
             font-size: 14px;
         }
 
-        .highlight {
-            font-weight: bold;
+        .member, .note {
+            margin-top: 20px;
+            font-size: 14px;
         }
 
-        .header-title{margin-top: 20px;
-            font-size: 8px;}
-
+        .header-title{margin-top: 20px; font-size: 8px;}
     </style>
 </head>
 <body>
 <div class="invoice-box">
     <div style="width: 100%; display: table; margin-bottom: 20px; vertical-align: middle;">
-        <!-- Left column: Logo -->
+
         <div style="display: table-cell; vertical-align: middle; width: 150px;">
             <img src="{{logo}}" alt="Tickora" style="width: 120px; height: auto; display: block;" />
         </div>
 
-        <!-- Right column: Invoice details -->
         <div style="display: table-cell; text-align: right; vertical-align: middle;">
-            <div class="header-title" style="margin: 0;">
-                <p style="margin: 0; font-size: 14px;"><strong>Date:</strong> {{invoiceDate}}</p>
-            </div>
-            <div class="header-title" style="margin: 0;">
-                <p style="margin: 0; font-size: 14px;"><strong>Invoice No:</strong> {{invoiceId}}</p>
-            </div>
-
+            <p style="margin: 0; font-size: 14px;"><strong>Date:</strong> {{invoiceDate}}</p>
+            <p style="margin: 0; font-size: 14px;"><strong>Invoice No:</strong> {{invoiceId}}</p>
         </div>
     </div>
 
-
     <hr>
     <div class="title">ACKNOWLEDGEMENT RECEIPT</div>
+
     <div class="info">
         <p><strong>Billed to:</strong></p>
         <p>{{orgName}}</p>
@@ -128,22 +106,21 @@
         <thead>
         <tr>
             <th>Subscription</th>
-            <th>Member</th>
+            <th>Paid At</th>
             <th>Billing Cycle</th>
             <th>Amount</th>
         </tr>
         </thead>
         <tbody>
-        <tr>
-            <td>{{planName}}</td>
-            <td>{{subscribedUser}}</td>
-            <td>{{billingCycle}}</td>
-            <td>₹ {{amount}}</td>
-        </tr>
+        {{paymentRows}}
         </tbody>
     </table>
 
-    <div class="total">Total: ₹ {{amount}}</div>
+    <div class="total">Total: ₹ {{totalAmount}}</div>
+
+    <div class="member">
+        <p><strong>Total Members:</strong> {{subscribedUser}}</p>
+    </div>
 
     <div class="payment">
         <p><strong>Payment method:</strong> {{method}}</p>
@@ -153,8 +130,6 @@
         <p><strong>Status:</strong> {{paymentStatus}} </p>
     </div>
 
-
-    <!-- Footer image -->
     <div style="margin-top: 30px; text-align: center;">
         <img src="{{footerImage}}" alt="Footer" style="width: 100%; height: auto; display: block;" />
     </div>

@@ -33,10 +33,6 @@ public interface SubscriptionRepository extends JpaRepository<SubscriptionEntity
 
     Optional<SubscriptionEntity> findById(String subscriptionId);
 
-//    List<SubscriptionEntity> findByOrgIdAndStartDateBetween(String orgId, LocalDateTime start, LocalDateTime end);
-
-//    List<SubscriptionEntity> findByStartDateBetween(LocalDateTime start, LocalDateTime end);
-
     List<SubscriptionEntity> findByStartDateBetween(LocalDateTime start, LocalDateTime end);
 
 

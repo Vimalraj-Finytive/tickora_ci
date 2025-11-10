@@ -1,5 +1,7 @@
 package com.uniq.tms.tms_microservice.modules.organizationManagement.dto;
 
+import java.util.List;
+
 public class PaymentDto {
     private String planName;
     private String status;
@@ -7,7 +9,7 @@ public class PaymentDto {
     private String end;
     private Integer subscribedUser;
     private String billingCycle;
-    private PaymentDetailsDto payment;
+    private List<PaymentDetailsDto> payments;
 
     public String getPlanName() {
         return planName;
@@ -57,11 +59,18 @@ public class PaymentDto {
         this.billingCycle = billingCycle;
     }
 
-    public PaymentDetailsDto getPayment() {
-        return payment;
+    public List<PaymentDetailsDto> getPayments() {
+        return payments;
     }
 
-    public void setPayment(PaymentDetailsDto payment) {
-        this.payment = payment;
-}
+    public void setPayments(List<PaymentDetailsDto> payments) {
+        this.payments = payments;
+    }
+//    public PaymentDetailsDto getPayment() {
+//        return payment;
+//    }
+//
+//    public void setPayment(PaymentDetailsDto payment) {
+//        this.payment = payment;
+//}
 }

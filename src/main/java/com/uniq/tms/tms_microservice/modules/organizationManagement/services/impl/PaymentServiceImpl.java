@@ -7,13 +7,18 @@ import com.razorpay.RazorpayException;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.OrganizationAdapter;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.PaymentAdapter;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.SubscriptionAdapter;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.SubscriptionMappingAdapter;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.PaymentDetailsDto;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.PaymentDto;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.OrganizationEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.PaymentEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.PlanEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.SubscriptionEntity;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.SubscriptionMappingEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.enums.PaymentStatus;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.mapper.SubscriptionEntityMapper;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.model.Subscription;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.SubscriptionMappingRepository;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.model.MonthlyPaymentModel;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.model.TopCustomersModel;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.services.PaymentService;
@@ -36,6 +41,8 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -53,11 +60,15 @@ public class PaymentServiceImpl implements PaymentService {
     private final PaymentAdapter paymentAdapter;
     private final SubscriptionAdapter subscriptionAdapter;
     private final OrganizationAdapter organizationAdapter;
+    private final SubscriptionEntityMapper subscriptionEntityMapper;
+    private final SubscriptionMappingAdapter subscriptionMappingAdapter;
 
-    public PaymentServiceImpl(PaymentAdapter paymentAdapter, SubscriptionAdapter subscriptionAdapter, OrganizationAdapter organizationAdapter) {
+    public PaymentServiceImpl(PaymentAdapter paymentAdapter, SubscriptionAdapter subscriptionAdapter, OrganizationAdapter organizationAdapter, SubscriptionEntityMapper subscriptionEntityMapper, SubscriptionMappingAdapter subscriptionMappingAdapter) {
         this.paymentAdapter = paymentAdapter;
         this.subscriptionAdapter = subscriptionAdapter;
         this.organizationAdapter = organizationAdapter;
+        this.subscriptionEntityMapper = subscriptionEntityMapper;
+        this.subscriptionMappingAdapter = subscriptionMappingAdapter;
     }
 
     @PersistenceContext(type = PersistenceContextType.TRANSACTION)
@@ -102,57 +113,75 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     public PaymentDto getPaymentDetailsBySubscriptionId(String subscriptionId) {
-        PaymentDto paymentDto = new PaymentDto();
-        try {
-            SubscriptionEntity subscriptionEntity = subscriptionAdapter
-                    .findSubscriptionDetails(subscriptionId)
-                    .orElseThrow(() -> new RuntimeException("Subscription not found"));
-            PaymentEntity paymentEntity = paymentAdapter.getPaymentById(subscriptionEntity.getPaymentId(), subscriptionEntity.getPlanId());
-            PlanEntity plan = subscriptionAdapter.findById(subscriptionEntity.getPlanId()).orElse(null);
-            RazorpayClient client = new RazorpayClient(razorpayKeyId, razorpayKeySecret);
-            Payment payment = null;
-            try {
-                payment = client.payments.fetch(paymentEntity.getOrderId());
-            } catch (RazorpayException e) {
-                if (e.getMessage().contains("BAD_REQUEST_ERROR")) {
-                    // Payment ID not found, log and fallback to database values
-                    log.warn("Payment ID not found in Razorpay: " + paymentEntity.getPaymentId());
-                } else {
-                    throw e;
-                }
-            }
-            JSONObject p = payment != null ? payment.toJson() : new JSONObject();
 
-            PaymentDetailsDto paymentDetails = new PaymentDetailsDto();
-            paymentDetails.setPaymentStatus(p.optString("status", paymentEntity.getPaymentStatus()));
-            paymentDetails.setPaidAt(p.has("created_at") ? convertEpochToDate(p.getLong("created_at")) : paymentEntity.getPaymentDate().toString());
-            paymentDetails.setInvoiceId(p.optString("invoice_id", null));
-            paymentDetails.setCreatedAt(p.has("created_at") ? p.getLong("created_at") : null);
-            paymentDetails.setBank(p.optString("bank", null));
-            paymentDetails.setAmount(p.has("amount") ? p.getInt("amount") / 100.0 : paymentEntity.getAmount().doubleValue());
-            paymentDetails.setMethod(p.optString("method", null));
-            paymentDetails.setPaymentId(p.optString("id", paymentEntity.getPaymentId()));
-            paymentDetails.setContact(p.optString("contact", null));
-            paymentDetails.setCurrency(p.optString("currency", null));
-            paymentDetails.setEmail(p.optString("email", null));
-            paymentDetails.setStatus(p.optString("status", null));
+        SubscriptionEntity subscription = subscriptionAdapter
+                .findSubscriptionDetails(subscriptionId)
+                .orElseThrow(() -> new RuntimeException("Subscription not found"));
 
-            paymentDto.setStatus(subscriptionEntity.getStatus());
-            paymentDto.setStart(subscriptionEntity.getStartDate().toLocalDate().toString());
-            paymentDto.setEnd(subscriptionEntity.getEndDate().toLocalDate().toString());
-            paymentDto.setSubscribedUser(subscriptionEntity.getSubscribedUsers());
-            paymentDto.setBillingCycle(paymentEntity.getBillingPeriod());
-            paymentDto.setPayment(paymentDetails);
+        List<SubscriptionMappingEntity> mappings =
+                subscriptionMappingAdapter.findBySubscriptionId(subscription.getSubId());
 
-            String planName = (plan != null) ? plan.getPlanName() : "Unknown Plan";
-            paymentDto.setPlanName(planName);
-
-        } catch (RazorpayException e) {
-            throw new RuntimeException("Error fetching payment from Razorpay: " + e.getMessage());
+        if (mappings.isEmpty()) {
+            throw new IllegalArgumentException("The Basic Plan is a free trial and does not have any payment details.");
         }
 
-        return paymentDto;
+        paymentAdapter.getPaymentById(mappings.getFirst().getPaymentId(),subscription.getPlanId());
+
+        if (mappings.isEmpty()) {
+            throw new RuntimeException("No payments found for subscription: " + subscriptionId);
+        }
+
+        List<PaymentDetailsDto> paymentDetailsList = new ArrayList<>();
+
+        String billingCycle = null;
+
+        for (SubscriptionMappingEntity mapping : mappings) {
+
+            PaymentEntity paymentEntity = paymentAdapter.getPaymentById(mapping.getPaymentId());
+
+            if (billingCycle == null) {
+                billingCycle = paymentEntity.getBillingPeriod();
+            }
+
+            Payment payment = null;
+            try {
+                RazorpayClient client = new RazorpayClient(razorpayKeyId, razorpayKeySecret);
+                payment = client.payments.fetch(paymentEntity.getOrderId());
+            } catch (RazorpayException e) {
+                log.warn("Razorpay fetch failed → fallback to DB for Payment ID: {}", paymentEntity.getPaymentId());
+            }
+
+            JSONObject p = payment != null ? payment.toJson() : new JSONObject();
+
+            PaymentDetailsDto details = new PaymentDetailsDto();
+            details.setPaymentStatus(p.optString("status", paymentEntity.getPaymentStatus()));
+            details.setPaidAt(p.has("created_at") ? convertEpochToDate(p.getLong("created_at")) : paymentEntity.getPaymentDate().toString());
+            details.setInvoiceId(p.optString("invoice_id", null));
+            details.setAmount(p.has("amount") ? p.getInt("amount") / 100.0 : paymentEntity.getAmount().doubleValue());
+            details.setMethod(p.optString("method", null));
+            details.setPaymentId(paymentEntity.getPaymentId());
+
+            paymentDetailsList.add(details);
+        }
+
+        Subscription subscriptionModel = subscriptionEntityMapper.toModel(subscription);
+
+        PlanEntity plan = subscriptionAdapter.findById(subscriptionModel.getPlanName())
+                .orElseThrow(() -> new RuntimeException("Plan not found for id: " + subscriptionModel.getPlanName()));
+
+        PaymentDto dto = new PaymentDto();
+        dto.setPlanName(plan.getPlanName());
+        dto.setStatus(subscriptionModel.getStatus());
+        dto.setStart(subscriptionModel.getStartDate().toLocalDate().toString());
+        dto.setEnd(subscriptionModel.getEndDate().toLocalDate().toString());
+        dto.setSubscribedUser(subscriptionModel.getSubscribedUsers());
+        dto.setBillingCycle(billingCycle);
+        dto.setPayments(paymentDetailsList);
+
+        return dto;
     }
+
+
 
     private String convertEpochToDate(Long epochSeconds) {
         if (epochSeconds == null) return null;
@@ -162,7 +191,7 @@ public class PaymentServiceImpl implements PaymentService {
         return zonedDateTime.format(formatter);
     }
 
-    @Override
+   @Override
     public ResponseEntity<byte[]> getPaymentDetailsPdfBySubscriptionId(String subscriptionId, String orgId) {
         PaymentDto paymentDetails = getPaymentDetailsBySubscriptionId(subscriptionId);
         String OrgName =organizationAdapter.getOrgName(orgId);
