@@ -45,8 +45,6 @@ public class FaceServiceImpl implements FaceService {
 
     private static final Logger log = LogManager.getLogger(FaceServiceImpl.class);
 
-    private final Map<String, List<LocationDto>> locationCache = new ConcurrentHashMap<>();
-
     private final UserAdapter userAdapter;
     private final RestTemplate restTemplate;
     private final UserFaceEntityMapper userFaceEntityMapper;
@@ -56,6 +54,7 @@ public class FaceServiceImpl implements FaceService {
     private final UserEntityMapper userEntityMapper;
     private final LocationService locationService;
     private final UserValidationHelper userValidationHelper;
+    private final Map<String, List<LocationDto>> locationCache;
 
     @Value("${external.python.service.register.url}")
     private String faceRegisterServiceUrl;
@@ -66,10 +65,11 @@ public class FaceServiceImpl implements FaceService {
     @Value("${external.python.service.multiFaceComparison.url}")
     private String multiFaceComparisonUrl;
 
-    public FaceServiceImpl(UserAdapter userAdapter, RestTemplate restTemplate, UserFaceEntityMapper userFaceEntityMapper,
+    public FaceServiceImpl(Map<String, List<LocationDto>> locationCache, UserAdapter userAdapter, RestTemplate restTemplate, UserFaceEntityMapper userFaceEntityMapper,
                            TimesheetService timesheetService, TimesheetEntityMapper timesheetEntityMapper,
-                           FaceAdapter faceAdapter,UserEntityMapper userEntityMapper,
+                           FaceAdapter faceAdapter, UserEntityMapper userEntityMapper,
                            LocationService locationService, UserValidationHelper userValidationHelper) {
+        this.locationCache = locationCache;
         this.userAdapter = userAdapter;
         this.restTemplate = restTemplate;
         this.userFaceEntityMapper = userFaceEntityMapper;
