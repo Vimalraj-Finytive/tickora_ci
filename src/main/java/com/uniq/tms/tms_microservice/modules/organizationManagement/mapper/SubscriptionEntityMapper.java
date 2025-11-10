@@ -28,5 +28,4 @@ public interface SubscriptionEntityMapper {
     @Mapping(target = "status", source = "status")
     SubscriptionEntity toEntity(Subscription model);
 
-//    PaymentModel toModel(PaymentEntity entity);
 }

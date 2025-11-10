@@ -160,10 +160,25 @@ public class OrganizationFacade {
         return new ApiResponse<>(status.value(), message, null);
     }
 
-    public PaymentDto getPaymentDetailsBySubscriptionId(String subscriptionId) {
+    public ApiResponse<PaymentDto> getPaymentDetailsBySubscriptionId(String subscriptionId) {
 
-        return paymentService.getPaymentDetailsBySubscriptionId(subscriptionId);
+        PaymentDto paymentDetails = paymentService.getPaymentDetailsBySubscriptionId(subscriptionId);
+
+        if (paymentDetails == null) {
+            return new ApiResponse<>(
+                    204,
+                    "No payment details found",
+                    null
+            );
+        }
+
+        return new ApiResponse<>(
+                200,
+                "Payment details fetched successfully",
+                paymentDetails
+        );
     }
+
 
         public ApiResponse<PlanStatusDto> getCurrentPlanStatus(String orgId) {
         PlanStatusModel model = subscriptionService.getCurrentPlanStatus(orgId);
@@ -175,44 +190,52 @@ public class OrganizationFacade {
         return paymentService.getPaymentDetailsPdfBySubscriptionId(subscriptionId, orgId);
     }
 
-
     public ApiResponse<List<OrganizationDetailsDto>> getAllOrganizationDetails() {
         List<OrganizationDetailsModel> modelList = organizationService.getAllOrganizationDetails();
         List<OrganizationDetailsDto> dto = organizationDtoMapper.toOrganizationDtos(modelList);
         return new ApiResponse<>(HttpStatus.OK.value(), "Organization Details Fetched Successfully", dto);
     }
 
-//
-//    public double calculateProratedAmount(int additionalUsers) {
-//        String orgId = authHelper.getOrgId();
-//        return subscriptionService.calculateProratedAmount(additionalUsers,orgId);
-//    }
-//
-//    public ApiResponse addSubscribedUsers(UpgradePlanDto dto) {
-//        String orgId = authHelper.getOrgId();
-//        String orgSchema = authHelper.getSchema();
-//        if (orgId == null || orgId.isBlank()) {
-//            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized - Invalid Organization");
-//        }
-//        boolean isUpdated = subscriptionService.addSubscribedUsers(orgId, orgSchema, dto);
-//
-//        String message = isUpdated
-//                ? "Subscribed users updated successfully."
-//                : "Failed to update subscribed users.";
-//
-//        HttpStatus status = isUpdated ? HttpStatus.OK : HttpStatus.BAD_REQUEST;
-//        return new ApiResponse<>(status.value(), message, null);
-//    }
+    public ApiResponse<CalculatedAmountDto> calculateAmount(int additionalUsers) {
+        String orgId = authHelper.getOrgId();
+        CalculatedAmountDto responseData = subscriptionService.calculateProratedAmount(additionalUsers, orgId);
 
-//    public OrganizationUserCountResponse getUserCounts(String orgId, LocalDate fromDate, LocalDate toDate) {
-//        return organizationService.getUserCountsForOrganization(orgId, fromDate, toDate);
-//    }
+        return new ApiResponse<>(
+                200,
+                "Amount calculated successfully",
+                responseData
+        );
+    }
+
+    public ApiResponse<Void> addSubscribedUsers(UpgradePlanDto dto) {
+        String orgId = authHelper.getOrgId();
+        String orgSchema = authHelper.getSchema();
+
+        if (orgId == null || orgId.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized - Invalid Organization");
+        }
+
+        boolean isUpdated = subscriptionService.addSubscribedUsers(orgId, orgSchema, dto);
+
+        if (isUpdated) {
+            return new ApiResponse<>(
+                    HttpStatus.OK.value(),
+                    "Subscribed users updated successfully.",
+                    null
+            );
+        } else {
+            return new ApiResponse<>(
+                    HttpStatus.BAD_REQUEST.value(),
+                    "Failed to update subscribed users.",
+                    null
+            );
+        }
+    }
 
     public ApiResponse<List<PlanAnalyticsDto>> getPlanAnalytics(LocalDate fromDate, LocalDate toDate) {
         List<PlanAnalyticsDto> dto = organizationDtoMapper.toPlanAnalyticsDtos(subscriptionService.calculatePlanUsage(fromDate, toDate));
         return  new ApiResponse<>(200,"Fetched Organization Onboard details plans Successfully",dto);
     }
-
 
     public  ApiResponse<List<OrganizationCountResponseDto>>  getOrganizationCounts(LocalDateTime from, LocalDateTime to) {
         List<OrganizationCountResponseDto> dto = organizationDtoMapper.toSummaryDto(organizationService.getOrganizationCounts(from,to));
@@ -226,6 +249,19 @@ public class OrganizationFacade {
 
     public OrganizationUsageResponseDto getOrganizationUsage(DateRangeRequestDto request) {
         return organizationService.calculateOrganizationUsage(request);
+    }
+
+    public ApiResponse updateSubscription(UpdatePlanDto dto) {
+        String orgId = authHelper.getOrgId();
+        String orgSchema = authHelper.getSchema();
+        try {
+            boolean result = subscriptionService.updateSubscription(orgId, orgSchema, dto);
+            return result
+                    ? new ApiResponse<>(200, "Subscription Updated Successfully...", null)
+                    : new ApiResponse<>(400, "Subscription Update Failed. Try Again.", null);
+        } catch (IllegalArgumentException e) {
+            return new ApiResponse<>(400, "Invalid Plan Id", null);
+        }
     }
 
     public ApiResponse<List<MonthlyPaymentDto>> getOrganizationsales(int year){

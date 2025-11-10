@@ -424,20 +424,6 @@ public class OrganizationServiceImpl implements OrganizationService {
         }
     }
 
-    //    @Override
-//    public List<OrganizationDetailsDto> getAllOrganizationDetails() {
-//        List<OrganizationEntity> organizations = organizationAdapter.findAll();
-//        List<OrganizationDetailsDto> dtoList = new ArrayList<>();
-//
-//        for (OrganizationEntity orgEntity : organizations) {
-//            OrganizationDetailsModel model = mapper.toModel(orgEntity);
-//            model.setActiveUsers(userAdapter.countActiveMembers(orgEntity.getOrganizationId()));
-//            model.setInactiveUsers(userAdapter.countInactiveMembers(orgEntity.getOrganizationId()));
-//            dtoList.add(mapper.toDto(model));
-//
-//
-//            return dtoList;
-
     @Override
     public List<OrganizationDetailsModel> getAllOrganizationDetails() {
         List<OrganizationEntity> orgEntities = organizationAdapter.findAll();
@@ -464,28 +450,6 @@ public class OrganizationServiceImpl implements OrganizationService {
                 .filter(Objects::nonNull)
                 .toList();
     }
-
-//    @Override
-//    public OrganizationUserCountResponse getUserCountsForOrganization(String orgId, LocalDate fromDate, LocalDate toDate) {
-//
-//        OrganizationEntity org = organizationRepository.findById(orgId)
-//                .orElseThrow(() -> new RuntimeException("Organization not found: " + orgId));
-//
-//        LocalDateTime start = fromDate.atStartOfDay();
-//        LocalDateTime end = toDate.atTime(23, 59, 59);
-//
-//        // previous month period
-//        LocalDate prevFromDate = fromDate.minusMonths(1);
-//        LocalDate prevToDate = toDate.minusMonths(1);
-//        LocalDateTime prevStart = prevFromDate.atStartOfDay();
-//        LocalDateTime prevEnd = prevToDate.atTime(23, 59, 59);
-//
-//        long currentCount = userAdapter.getUserCount(orgId, start, end);
-//        long previousCount = userAdapter.getUserCount(orgId, prevStart, prevEnd);
-//
-//        return new OrganizationUserCountResponse(orgId, org.getOrgName(), currentCount, previousCount);
-//    }
-
 
     @Override
     public List<OrganizationCountResponseModel> getOrganizationCounts(LocalDateTime fromDate, LocalDateTime toDate) {

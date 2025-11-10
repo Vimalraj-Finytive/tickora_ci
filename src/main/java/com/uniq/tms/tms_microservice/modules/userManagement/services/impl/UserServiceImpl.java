@@ -1807,7 +1807,6 @@ public class UserServiceImpl implements UserService {
             String planId = userAdapter.findByPlan();
             SubscriptionEntity subscriptionEntity = new SubscriptionEntity();
             subscriptionEntity.setSubId(idGenerationService.generateNextSubscriptionId(organizationId));
-            subscriptionEntity.setPaymentId(null);
             subscriptionEntity.setOrgId(organizationId);
             subscriptionEntity.setPlanId(planId);
             subscriptionEntity.setSchemaName(schemaName);

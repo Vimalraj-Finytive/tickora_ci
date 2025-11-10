@@ -27,7 +27,5 @@ public interface SubscriptionAdapter {
     boolean updateSubscription(SubscriptionEntity subscription);
     List<SubscriptionEntity> getAllSubscriptionsForOrgBetweenDates(LocalDate fromDate, LocalDate toDate);
     List<String> getAllPlanIds();
-
-
-
+    PaymentStatus updateExistingPlan(String orgId, String schema, String planId, Integer userCount, String paymentId);
 }

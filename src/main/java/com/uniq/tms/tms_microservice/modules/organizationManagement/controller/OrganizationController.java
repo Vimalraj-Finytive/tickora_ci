@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping(OrganizationConstant.ORGANIZATION_URL)
@@ -165,16 +166,13 @@ public class OrganizationController {
         return ResponseEntity.ok(organizationFacade.upgradePlan(orgId, orgSchema, upgradePlanDto));
     }
 
-
     @GetMapping("/subscription/{subscriptionId}")
-    public ResponseEntity<PaymentDto> getPaymentDetailsBySubscriptionId(@RequestHeader("Authorization") String token,@PathVariable String subscriptionId) {
-        PaymentDto paymentDetails = organizationFacade.getPaymentDetailsBySubscriptionId(subscriptionId);
+    public ResponseEntity<ApiResponse<PaymentDto>> getPaymentDetailsBySubscriptionId(
+            @RequestHeader("Authorization") String token,
+            @PathVariable String subscriptionId) {
 
-        if (paymentDetails == null) {
-            return ResponseEntity.noContent().build();
-        }
-
-        return ResponseEntity.ok(paymentDetails);
+        ApiResponse<PaymentDto> response = organizationFacade.getPaymentDetailsBySubscriptionId(subscriptionId);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
     @GetMapping("subscription/notification")
@@ -183,7 +181,6 @@ public class OrganizationController {
         ApiResponse<PlanStatusDto> response = organizationFacade.getCurrentPlanStatus(orgId);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
-
 
     @GetMapping("/invoice/{subscriptionId}")
     public ResponseEntity<byte[]> getPaymentDetailsPdfBySubscriptionId(
@@ -199,29 +196,14 @@ public class OrganizationController {
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
+    @PostMapping("/subscription/add-users")
+    public ResponseEntity<ApiResponse<Void>> addSubscribedUsers(
+            @RequestHeader("Authorization") String token,
+            @RequestBody UpgradePlanDto upgradePlanDto) {
 
-//    @PostMapping("/subscription/upgrade/amount")
-//    public ResponseEntity<Double> upgradePlan(@RequestParam int additionalUsers) {
-//        double totalAmount = organizationFacade.calculateProratedAmount(additionalUsers);
-//        return ResponseEntity.ok(totalAmount);
-//    }
-
-//    @PostMapping("/subscription/add-users")
-//    public ResponseEntity<ApiResponse> addSubscribedUsers(
-//            @RequestHeader("Authorization") String token,
-//            @RequestBody UpgradePlanDto upgradePlanDto) {
-//        return ResponseEntity.ok(organizationFacade.addSubscribedUsers(upgradePlanDto));
-//    }
-
-
-//    @PostMapping("analytics/user-count")
-//    public OrganizationUserCountResponse getUserStatus(@RequestBody UserCountRequest request) {
-//        return organizationFacade.getUserCounts(
-//                request.getOrgId(),
-//                request.getFromDate(),
-//                request.getToDate()
-//        );
-//    }
+        ApiResponse<Void> response = organizationFacade.addSubscribedUsers(upgradePlanDto);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
 
     @PostMapping("analytics/onboardCount/plans")
     public ResponseEntity<ApiResponse<List<PlanAnalyticsDto>>> getPlanSummary(@RequestHeader("Authorization") String token,
@@ -255,6 +237,22 @@ public class OrganizationController {
         return ResponseEntity.ok(organizationFacade.getOrganizationUsage(request));
     }
 
+
+    @PostMapping("/subscription/update/payment-validation")
+    public ResponseEntity<ApiResponse<CalculatedAmountDto>> upgradePlan(
+            @RequestHeader("Authorization") String token,
+            @RequestParam int additionalUsers) {
+        ApiResponse<CalculatedAmountDto> response = organizationFacade.calculateAmount(additionalUsers);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
+
+    @PostMapping("/subscription/update")
+    public ResponseEntity<ApiResponse> updateSubscription(
+            @RequestHeader("Authorization") String token,
+            @RequestBody UpdatePlanDto updatePlanDto) {
+        return ResponseEntity.ok(organizationFacade.updateSubscription(updatePlanDto));
+    }
+
     @GetMapping("analytics/onboardCount/sales")
     public ResponseEntity<ApiResponse<List<MonthlyPaymentDto>>> getOrganizationSales(@RequestHeader("Authorization") String token,
                                                        @RequestParam("year")int year){
@@ -268,6 +266,7 @@ public class OrganizationController {
         ApiResponse<List<TopCustomersDto>> topCustomers= organizationFacade.getOrganizationTopCustomers(year);
         return ResponseEntity.status(topCustomers.getStatusCode()).body(topCustomers);
     }
+
 
 }
 

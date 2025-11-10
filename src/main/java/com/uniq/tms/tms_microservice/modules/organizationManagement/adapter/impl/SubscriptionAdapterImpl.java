@@ -6,10 +6,7 @@ import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.Subs
 import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.PlanDto;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.SubscriptionDto;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.UpgradePlanDto;
-import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.OrganizationEntity;
-import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.PaymentEntity;
-import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.PlanEntity;
-import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.SubscriptionEntity;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.*;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.enums.OrganizationStatusEnum;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.enums.PaymentStatus;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.mapper.PlanDtoMapper;
@@ -17,10 +14,7 @@ import com.uniq.tms.tms_microservice.modules.organizationManagement.mapper.PlanE
 import com.uniq.tms.tms_microservice.modules.organizationManagement.mapper.SubscriptionDtoMapper;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.mapper.SubscriptionEntityMapper;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.model.Plan;
-import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.OrganizationRepository;
-import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.PaymentRepository;
-import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.PlanRepository;
-import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.SubscriptionRepository;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -47,8 +41,9 @@ public class SubscriptionAdapterImpl implements SubscriptionAdapter {
     private final PlanDtoMapper planDtoMapper;
     private final IdGenerationService idGenerationService;
     private final OrganizationRepository organizationRepository;
+    private final SubscriptionMappingRepository subscriptionMappingRepository;
 
-    public SubscriptionAdapterImpl(PaymentRepository paymentRepository, SubscriptionRepository subscriptionRepository, SubscriptionEntityMapper subscriptionEntityMapper, SubscriptionDtoMapper subscriptionDtoMapper, PlanRepository planRepository, PlanEntityMapper planEntityMapper, PlanDtoMapper planDtoMapper, IdGenerationService idGenerationService, OrganizationRepository organizationRepository) {
+    public SubscriptionAdapterImpl(PaymentRepository paymentRepository, SubscriptionRepository subscriptionRepository, SubscriptionEntityMapper subscriptionEntityMapper, SubscriptionDtoMapper subscriptionDtoMapper, PlanRepository planRepository, PlanEntityMapper planEntityMapper, PlanDtoMapper planDtoMapper, IdGenerationService idGenerationService, OrganizationRepository organizationRepository, SubscriptionMappingRepository subscriptionMappingRepository) {
         this.paymentRepository = paymentRepository;
         this.subscriptionRepository = subscriptionRepository;
         this.subscriptionEntityMapper = subscriptionEntityMapper;
@@ -58,6 +53,7 @@ public class SubscriptionAdapterImpl implements SubscriptionAdapter {
         this.planDtoMapper = planDtoMapper;
         this.idGenerationService = idGenerationService;
         this.organizationRepository = organizationRepository;
+        this.subscriptionMappingRepository = subscriptionMappingRepository;
     }
 
     @Override
@@ -138,25 +134,21 @@ public class SubscriptionAdapterImpl implements SubscriptionAdapter {
     }
 
     @Override
-    public PaymentStatus  updatePlan(String orgId,String orgSchema, String planId, Integer subscribedUserCount,String paymentId) {
+    public PaymentStatus updatePlan(String orgId, String orgSchema, String planId, Integer subscribedUserCount, String paymentId) {
         LocalDateTime now = LocalDateTime.now();
-        boolean wasUpdated = subscriptionRepository.findActiveSubscription(orgId)
-                .map(entity -> {
-                    boolean updated = false;
-                    if (!OrganizationStatusEnum.EXPIRED.getDisplayValue().equals(entity.getStatus())) {
-                        entity.setStatus(OrganizationStatusEnum.SUSPENDED.getDisplayValue());
-                        entity.setUpdatedAt(now);
-                        subscriptionRepository.save(entity);
-                        updated = true;
-                    }
-                    return updated;
-                })
-                .orElse(false);
+        subscriptionRepository.findActiveSubscription(orgId)
+                .ifPresent(entity -> {
+                    entity.setStatus(OrganizationStatusEnum.SUSPENDED.getDisplayValue());
+                    entity.setUpdatedAt(now);
+                    subscriptionRepository.save(entity);
+                });
         PlanEntity plan = planRepository.findByPlanId(planId)
                 .orElseThrow(() -> new RuntimeException("Invalid Plan ID"));
         int months = convertBillingCycleToMonths(plan.getBillingCycle());
         int durationInDays = months * 30;
+
         String newSubId = idGenerationService.generateNextSubscriptionId(orgId);
+
         try {
             SubscriptionEntity newSubscription = new SubscriptionEntity();
             newSubscription.setSubId(newSubId);
@@ -167,16 +159,25 @@ public class SubscriptionAdapterImpl implements SubscriptionAdapter {
             newSubscription.setStartDate(now);
             newSubscription.setEndDate(now.plusDays(durationInDays));
             newSubscription.setSubscribedUsers(subscribedUserCount);
-            newSubscription.setPaymentId(paymentId);
+            newSubscription.setCreatedAt(now);
+            newSubscription.setUpdatedAt(now);
 
-            log.info("Creating new subscription for Organization ID: {}", orgId);
             subscriptionRepository.save(newSubscription);
+
+            SubscriptionMappingEntity mapping = new SubscriptionMappingEntity();
+            mapping.setSubscriptionId(newSubId);
+            mapping.setPaymentId(paymentId);
+            subscriptionMappingRepository.save(mapping);
+
+            log.info("Subscription upgraded & mapping saved: subId={}, paymentId={}", newSubId, paymentId);
             return PaymentStatus.SUCCESS;
+
         } catch (Exception e) {
-            log.error("Failed to create new subscription for Organization ID: {}", orgId, e);
+            log.error("Failed to create new subscription for Org ID: {}", orgId, e);
             return PaymentStatus.FAILED;
         }
     }
+
 
     @Override
     public String getBillingCycle(String planId) {
@@ -223,7 +224,6 @@ public class SubscriptionAdapterImpl implements SubscriptionAdapter {
             subscriptionRepository.save(subscription);
             return true;
         } catch (Exception e) {
-            // You can add your logger here
             System.err.println("Failed to update subscription: " + e.getMessage());
             return false;
         }
@@ -239,5 +239,28 @@ public class SubscriptionAdapterImpl implements SubscriptionAdapter {
         return planRepository.getAllPlanIds();
     }
 
+    @Override
+    public PaymentStatus updateExistingPlan(String orgId, String schema, String planId, Integer userCount, String paymentId) {
+
+        Optional<SubscriptionEntity> subscription = subscriptionRepository.findActiveSubscriptionByOrgId(orgId);
+
+        if (subscription.isEmpty()) {
+            return PaymentStatus.FAILED;
+        }
+
+        SubscriptionEntity subscriptionEntity = subscription.get();
+
+        subscriptionEntity.setPlanId(planId);
+        subscriptionEntity.setSubscribedUsers(userCount);
+        subscriptionEntity.setUpdatedAt(LocalDateTime.now());
+        subscriptionRepository.save(subscriptionEntity);
+
+        SubscriptionMappingEntity mapping = new SubscriptionMappingEntity();
+        mapping.setSubscriptionId(subscriptionEntity.getSubId());
+        mapping.setPaymentId(paymentId);
+        subscriptionMappingRepository.save(mapping);
+
+        return PaymentStatus.SUCCESS;
+    }
 
 }
