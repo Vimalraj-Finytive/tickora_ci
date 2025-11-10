@@ -36,4 +36,10 @@ public class CommonExceptionHandler {
         }
     }
 
+    public static class DefaultLocationNotFoundException extends RuntimeException {
+        public DefaultLocationNotFoundException(String message) {
+            super(message);
+        }
+    }
+
 }
