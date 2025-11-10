@@ -1,5 +1,6 @@
 package com.uniq.tms.tms_microservice.shared.listener;
 
+import com.uniq.tms.tms_microservice.modules.locationManagement.dto.LocationDto;
 import com.uniq.tms.tms_microservice.shared.event.CacheReloadEvent;
 import com.uniq.tms.tms_microservice.shared.security.cache.CacheDependencyConfig;
 import com.uniq.tms.tms_microservice.shared.security.cache.CacheReloadHandlerRegistry;
@@ -8,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import java.util.List;
+import java.util.Map;
 
 @Component
 public class CacheReloadEventListener {
@@ -16,10 +18,13 @@ public class CacheReloadEventListener {
 
     private final CacheDependencyConfig cacheDependencyConfig;
     private final CacheReloadHandlerRegistry cacheReloadHandlerRegistry;
+    private final Map<String, List<LocationDto>> locationCache;
 
-    public CacheReloadEventListener(CacheDependencyConfig cacheDependencyConfig, CacheReloadHandlerRegistry cacheReloadHandlerRegistry) {
+    public CacheReloadEventListener(CacheDependencyConfig cacheDependencyConfig, CacheReloadHandlerRegistry cacheReloadHandlerRegistry,
+                                    Map<String, List<LocationDto>> locationCache) {
         this.cacheDependencyConfig = cacheDependencyConfig;
         this.cacheReloadHandlerRegistry = cacheReloadHandlerRegistry;
+        this.locationCache = locationCache;
     }
 
     @EventListener
@@ -34,4 +39,12 @@ public class CacheReloadEventListener {
             log.info("Reloading dependent cache: {}", dependent);
             cacheReloadHandlerRegistry.reload(dependent, orgId,schema);
         }    }
+
+    @EventListener
+    public void onCacheReload(CacheReloadEvent event) {
+        if ("location".equalsIgnoreCase(event.getCacheName())) {
+            locationCache.clear();
+            log.info("Cleared local user-location cache after Redis reload");
+        }
+    }
 }

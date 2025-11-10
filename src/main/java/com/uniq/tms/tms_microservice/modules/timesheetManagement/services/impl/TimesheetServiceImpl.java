@@ -16,6 +16,7 @@ import com.uniq.tms.tms_microservice.modules.locationManagement.entity.UserLocat
 import com.uniq.tms.tms_microservice.modules.userManagement.enums.PrivilegeConstants;
 import com.uniq.tms.tms_microservice.modules.userManagement.enums.RoleName;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.adapter.WorkScheduleAdapter;
+import com.uniq.tms.tms_microservice.shared.exception.CommonExceptionHandler;
 import com.uniq.tms.tms_microservice.shared.helper.RolePrivilegeHelper;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.mapper.TimesheetDtoMapper;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.mapper.TimesheetEntityMapper;
@@ -499,6 +500,8 @@ public class TimesheetServiceImpl implements TimesheetService {
         return allSaved.stream().map(timesheetEntityMapper::toMiddleware).toList();
     }
 
+    @Override
+    @Transactional
     public TimesheetDto updateClockInOut(
             String userIdFromToken,
             String roleName,
@@ -507,55 +510,59 @@ public class TimesheetServiceImpl implements TimesheetService {
             TimesheetDto request,
             String orgId) {
 
-        TimesheetEntity timesheet = timesheetAdapter.findUserIdAndDate(userId, date);
-        boolean isNew = false;
-
-        if (timesheet == null) {
-            isNew = true;
-            timesheet = new TimesheetEntity();
-            UserEntity user = userAdapter.findById(userId)
-                    .orElseThrow(() -> new IllegalStateException("User not found: " + userId));
-            timesheet.setUser(user);
-            timesheet.setDate(date);
-            timesheet.setCreatedAt(LocalDateTime.now());
-            timesheet.setFirstClockIn(null);
-            timesheet.setLastClockOut(null);
-            timesheet.setTrackedHours(null);
-            timesheet.setRegularHours(null);
-            timesheet.setTotalBreakHours(null);
-            TimesheetStatusEntity defaultStatus = timesheetAdapter.findByStatusName(NOT_MARKED.getLabel())
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                            "Default 'Not Marked' status not found"));
-            timesheet.setStatus(defaultStatus);
-        }
-        TimesheetStatusEntity statusEntity = null;
-        if (request.getStatusId() != null && !request.getStatusId().isEmpty()) {
-            statusEntity = timesheetAdapter.findById(request.getStatusId())
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                            "Invalid status ID: " + request.getStatusId()));
-        }
-        if (Objects.equals(timesheet.getStatus().getStatusName(), PAID_LEAVE.getLabel())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Timesheet update not allowed. User is on paid leave.");
-        }
-        if (statusEntity != null && PAID_LEAVE.getLabel().equalsIgnoreCase(statusEntity.getStatusName())) {
-            if (timesheet.getFirstClockIn() != null) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                        "Cannot apply for paid leave after clock-in.");
+        try {
+            TimesheetEntity timesheet = timesheetAdapter.findUserIdAndDate(userId, date);
+            boolean isNew = false;
+            if (timesheet == null) {
+                isNew = true;
+                timesheet = new TimesheetEntity();
+                UserEntity user = userAdapter.findById(userId)
+                        .orElseThrow(() -> new IllegalStateException("User not found: " + userId));
+                timesheet.setUser(user);
+                timesheet.setDate(date);
+                timesheet.setCreatedAt(LocalDateTime.now());
+                timesheet.setFirstClockIn(null);
+                timesheet.setLastClockOut(null);
+                timesheet.setTrackedHours(null);
+                timesheet.setRegularHours(null);
+                timesheet.setTotalBreakHours(null);
+                TimesheetStatusEntity defaultStatus = timesheetAdapter.findByStatusName(NOT_MARKED.getLabel())
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                                "Default 'Not Marked' status not found"));
+                timesheet.setStatus(defaultStatus);
             }
-            timesheet.setStatus(statusEntity);
-        } else {
-            if (request.getLastClockOut() != null && request.getFirstClockIn() == null
-                    && timesheet.getFirstClockIn() == null) {
+            TimesheetStatusEntity statusEntity = null;
+            if (request.getStatusId() != null && !request.getStatusId().isEmpty()) {
+                statusEntity = timesheetAdapter.findById(request.getStatusId())
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                                "Invalid status ID: " + request.getStatusId()));
+            }
+            if (Objects.equals(timesheet.getStatus().getStatusName(), PAID_LEAVE.getLabel())) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Timesheet update not allowed. User is on paid leave.");
+            }
+            if (statusEntity != null && PAID_LEAVE.getLabel().equalsIgnoreCase(statusEntity.getStatusName())) {
+                if (timesheet.getFirstClockIn() != null) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                            "Cannot apply for paid leave after clock-in.");
+                }
+                timesheet.setStatus(statusEntity);
+                timesheet = timesheetAdapter.save(timesheet);
+                return timesheetDtoMapper.toDto(timesheet);
+            }
+            if (request.getLastClockOut() != null &&
+                    request.getFirstClockIn() == null &&
+                    timesheet.getFirstClockIn() == null) {
                 throw new IllegalArgumentException("Cannot set clock-out without a clock-in.");
             }
-
             boolean clockInChanged = false;
             boolean clockOutChanged = false;
             if (request.getFirstClockIn() != null &&
                     !Objects.equals(request.getFirstClockIn(), timesheet.getFirstClockIn())) {
+
                 timesheet.setFirstClockIn(request.getFirstClockIn());
                 clockInChanged = true;
+
                 if (statusEntity == null) {
                     statusEntity = timesheetAdapter.findByStatusName(PRESENT.getLabel())
                             .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST,
@@ -575,7 +582,10 @@ public class TimesheetServiceImpl implements TimesheetService {
             calculateHours(timesheet);
             timesheet = timesheetAdapter.save(timesheet);
             LocationEntity locationEntity = locationAdapter.findDefaultLocationByOrgId(orgId);
-            if (isNew || clockInChanged) {
+            if(locationEntity == null){
+                throw new CommonExceptionHandler.DefaultLocationNotFoundException("Default location not found");
+            }
+            if ((isNew || clockInChanged) && request.getFirstClockIn() != null) {
                 TimesheetHistoryEntity clockInHistory = new TimesheetHistoryEntity();
                 clockInHistory.setTimesheet(timesheet);
                 clockInHistory.setLogTime(request.getFirstClockIn());
@@ -585,7 +595,7 @@ public class TimesheetServiceImpl implements TimesheetService {
                 clockInHistory.setLoggedTimestamp(LocalDateTime.now());
                 timesheetAdapter.saveTimesheetHistory(clockInHistory);
             }
-            if (isNew || clockOutChanged) {
+            if ((isNew || clockOutChanged) && request.getLastClockOut() != null) {
                 TimesheetHistoryEntity clockOutHistory = new TimesheetHistoryEntity();
                 clockOutHistory.setTimesheet(timesheet);
                 clockOutHistory.setLogTime(request.getLastClockOut());
@@ -595,9 +605,13 @@ public class TimesheetServiceImpl implements TimesheetService {
                 clockOutHistory.setLoggedTimestamp(LocalDateTime.now());
                 timesheetAdapter.saveTimesheetHistory(clockOutHistory);
             }
-        }
-        return timesheetDtoMapper.toDto(timesheet);
+            return timesheetDtoMapper.toDto(timesheet);
+    } catch (Exception e) {
+        log.error("Unhandled error in updateClockInOut", e);
+        throw e;
     }
+
+}
 
     private void calculateHours(TimesheetEntity timesheet) {
         try {
