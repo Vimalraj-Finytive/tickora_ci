@@ -125,14 +125,7 @@ public class PaymentServiceImpl implements PaymentService {
             throw new IllegalArgumentException("The Basic Plan is a free trial and does not have any payment details.");
         }
 
-        paymentAdapter.getPaymentById(mappings.getFirst().getPaymentId(),subscription.getPlanId());
-
-        if (mappings.isEmpty()) {
-            throw new RuntimeException("No payments found for subscription: " + subscriptionId);
-        }
-
         List<PaymentDetailsDto> paymentDetailsList = new ArrayList<>();
-
         String billingCycle = null;
 
         for (SubscriptionMappingEntity mapping : mappings) {
@@ -143,23 +136,42 @@ public class PaymentServiceImpl implements PaymentService {
                 billingCycle = paymentEntity.getBillingPeriod();
             }
 
-            Payment payment = null;
+            JSONObject p = new JSONObject();
+
             try {
                 RazorpayClient client = new RazorpayClient(razorpayKeyId, razorpayKeySecret);
-                payment = client.payments.fetch(paymentEntity.getOrderId());
+                Payment payment = client.payments.fetch(paymentEntity.getOrderId());
+
+                if (payment != null) {
+                    p = payment.toJson();
+                    log.info("Razorpay Payment JSON: {}", p.toString(4)); // Pretty print in logs
+                } else {
+                    log.warn("No payment found in Razorpay for ID: {}", paymentEntity.getPaymentId());
+                }
+
             } catch (RazorpayException e) {
-                log.warn("Razorpay fetch failed → fallback to DB for Payment ID: {}", paymentEntity.getPaymentId());
+                log.warn("⚠Razorpay fetch failed → fallback to DB for Payment ID: {}", paymentEntity.getPaymentId());
             }
 
-            JSONObject p = payment != null ? payment.toJson() : new JSONObject();
-
             PaymentDetailsDto details = new PaymentDetailsDto();
-            details.setPaymentStatus(p.optString("status", paymentEntity.getPaymentStatus()));
-            details.setPaidAt(p.has("created_at") ? convertEpochToDate(p.getLong("created_at")) : paymentEntity.getPaymentDate().toString());
-            details.setInvoiceId(p.optString("invoice_id", null));
-            details.setAmount(p.has("amount") ? p.getInt("amount") / 100.0 : paymentEntity.getAmount().doubleValue());
+            details.setPaymentId(p.optString("id", paymentEntity.getPaymentId()));
             details.setMethod(p.optString("method", null));
-            details.setPaymentId(paymentEntity.getPaymentId());
+            details.setEmail(p.optString("email", null));
+            details.setContact(p.optString("contact", null));
+            details.setBank(p.optString("bank", null));
+            details.setCurrency(p.optString("currency", null));
+            details.setAmount(p.has("amount") ? p.getInt("amount") / 100.0 : paymentEntity.getAmount().doubleValue());
+            details.setPaymentStatus(p.optString("status", paymentEntity.getPaymentStatus()));
+            details.setPaidAt(
+                    p.has("created_at")
+                            ? convertEpochToDate(p.getLong("created_at"))
+                            : paymentEntity.getPaymentDate().toString()
+            );
+            details.setInvoiceId(p.optString("invoice_id", null));
+
+            details.setCreatedAt(p.has("created_at") ? p.getLong("created_at") : null);
+
+
 
             paymentDetailsList.add(details);
         }
