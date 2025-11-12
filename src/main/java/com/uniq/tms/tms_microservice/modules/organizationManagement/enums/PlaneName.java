@@ -15,6 +15,10 @@ public enum PlaneName {
         this.planId = planId;
     }
 
+    public String getPlanName() {
+        return planName;
+    }
+
     public String getPlanId(){
         return planId;
     }

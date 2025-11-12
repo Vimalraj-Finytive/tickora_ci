@@ -320,8 +320,14 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
         Subscription subscriptionModel = subscriptionEntityMapper.toModel(subscriptionEntity);
 
+
         PlanEntity plan = subscriptionAdapter.findById(subscriptionModel.getPlanName())
                 .orElseThrow(() -> new RuntimeException("Plan not found for planId: " + subscriptionModel.getPlanName()));
+
+        if (plan.getPlanId().equalsIgnoreCase(PlaneName.BASIC_PLAN.getPlanId())) {
+            log.info("Skipping amount calculation for Basic plan (orgId: {})", orgId);
+            return null;
+        }
 
         double pricePerUser = plan.getPricePerUser().doubleValue();
 
@@ -355,6 +361,13 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
         SubscriptionEntity subscription = subscriptionAdapter.findActiveSubscriptionByOrgId(orgId)
                 .orElse(null);
+
+        PlanEntity plan = subscriptionAdapter.findById(subscription.getPlanId())
+                .orElseThrow(() -> new RuntimeException("Plan not found for planId: " + subscription.getPlanId()));
+
+        if (plan.getPlanId().equalsIgnoreCase(PlaneName.BASIC_PLAN.getPlanId())) {
+            throw new RuntimeException("Cannot upgrade Basic plan");
+        }
         int totalSubscribedUsers = subscription.getSubscribedUsers() + dto.getSubscribedUserCount();
 
         PaymentStatus paymentStatus = model.getSuccess() ? PaymentStatus.SUCCESS : PaymentStatus.FAILED;

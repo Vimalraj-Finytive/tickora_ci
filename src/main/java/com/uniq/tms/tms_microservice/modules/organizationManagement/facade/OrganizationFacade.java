@@ -200,6 +200,14 @@ public class OrganizationFacade {
         String orgId = authHelper.getOrgId();
         CalculatedAmountDto responseData = subscriptionService.calculateProratedAmount(additionalUsers, orgId);
 
+        if (responseData == null) {
+            return new ApiResponse<>(
+                    200,
+                    "Cannot calculate upgrade amount for Basic plan",
+                    null
+            );
+        }
+
         return new ApiResponse<>(
                 200,
                 "Amount calculated successfully",
@@ -261,6 +269,11 @@ public class OrganizationFacade {
                     : new ApiResponse<>(400, "Subscription Update Failed. Try Again.", null);
         } catch (IllegalArgumentException e) {
             return new ApiResponse<>(400, "Invalid Plan Id", null);
+        }catch (RuntimeException e) {
+            if (e.getMessage() != null && e.getMessage().contains("Basic plan")) {
+                return new ApiResponse<>(200, "Cannot upgrade Basic plan", null);
+            }
+            return new ApiResponse<>(400, e.getMessage(), null);
         }
     }
 
