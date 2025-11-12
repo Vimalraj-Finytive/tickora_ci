@@ -498,9 +498,6 @@ CREATE TABLE subscription (
     updated_at TIMESTAMP,
     CONSTRAINT fk_subscription_plan FOREIGN KEY (plan_id)
         REFERENCES plan(plan_id)
-        ON DELETE RESTRICT,
-    CONSTRAINT fk_subscription_payment FOREIGN KEY (payment_id)
-        REFERENCES payment(payment_id)
         ON DELETE RESTRICT
 );
 
