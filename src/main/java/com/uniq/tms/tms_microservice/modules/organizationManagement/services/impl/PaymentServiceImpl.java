@@ -18,7 +18,6 @@ import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.Subsc
 import com.uniq.tms.tms_microservice.modules.organizationManagement.enums.PaymentStatus;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.mapper.SubscriptionEntityMapper;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.model.Subscription;
-import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.SubscriptionMappingRepository;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.model.MonthlyPaymentModel;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.model.TopCustomersModel;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.services.PaymentService;
@@ -27,7 +26,8 @@ import com.uniq.tms.tms_microservice.shared.util.TenantUtil;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.PersistenceContextType;
-import lombok.extern.slf4j.Slf4j;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
 import org.json.JSONObject;
 import org.springframework.http.HttpHeaders;
@@ -47,10 +47,10 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-@Slf4j
 @Service
 public class PaymentServiceImpl implements PaymentService {
 
+    private static final Logger log = LogManager.getLogger(PaymentServiceImpl.class);
     @Value("${razorpay.key.id}")
     private String razorpayKeyId;
 
