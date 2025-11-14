@@ -127,6 +127,17 @@
   width: 200px;
 }
 
+@mixin global-search-icon {
+  position: absolute;
+  top: 50%;
+  left: 1rem;
+  transform: translateY(-50%);
+  color: #999;
+  pointer-events: none; /* ensures clicks go to input */
+  font-size: 14px; /* optional - control icon size */
+}
+
+
 @mixin export-file-button {
   height: 32px;
   border: 1px solid var(--success);
