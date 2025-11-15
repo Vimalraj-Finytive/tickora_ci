@@ -394,7 +394,4 @@ public class UserFacade {
         BulkUserLocationDto Dto=userDtoMapper.toDto(saveUserLocation);
         return new ApiResponse<>(200, "Locations assigned successfully", null);
     }
-
-
-
 }

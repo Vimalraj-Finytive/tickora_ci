@@ -199,4 +199,70 @@ public class IdGenerationServiceImpl implements IdGenerationService {
                     + IdGenerationTypeEnum.PAYMENT.getPrefix()
                     + String.format("%04d", latestNumber);
         }
+
+//    @Override
+//    public String generatePayrollId(String organizationId){
+//        if (organizationId == null || organizationId.isBlank()) {
+//            throw new IllegalArgumentException("organizationId cannot be null or blank");
+//        }
+//        log.info("Generating Payment ID for Organization: {}", organizationId);
+//
+//        int updated = orgUserSequenceRepository.incrementPayrollSequence(organizationId);
+//        log.info("Increment result: {}", updated);
+//
+//
+//        if (updated == 0) {
+//            OrgUserSequenceEntity sequence = new OrgUserSequenceEntity();
+//            sequence.setOrgId(organizationId);
+//            sequence.setLastPaymentId(1);
+//            orgUserSequenceRepository.save(sequence);
+//
+//            return organizationId.replaceAll("\\d", "")
+//                    + IdGenerationTypeEnum.PAYROLL.getPrefix()
+//                    + String.format("%05d", 1);
+//        }
+//
+//        // Get latest number
+//        Integer latestNumber = orgUserSequenceRepository.getLastPayrollId(organizationId);
+//        if (latestNumber == null) {
+//            orgUserSequenceRepository.updateLastPayrollId(organizationId, 1);
+//            latestNumber = 1;
+//        }
+//
+//        return organizationId.replaceAll("\\d", "")
+//                + IdGenerationTypeEnum.PAYROLL.getPrefix()
+//                + String.format("%05d", latestNumber);
+//    }
+
+    @Transactional
+    public String generatePayrollId(String organizationId) {
+        if (organizationId == null || organizationId.isBlank()) {
+            throw new IllegalArgumentException("organizationId cannot be null or blank");
+        }
+
+        log.info("Generating Payroll ID for Organization: {}", organizationId);
+
+        // Fetch last stored Payroll ID (String)
+        String lastId = orgUserSequenceRepository.getLastPayrollId(organizationId);
+
+        String payrollPrefix = IdGenerationTypeEnum.PAYROLL.getPrefix(); // "PR"
+
+        String newId;
+
+        if (lastId == null || lastId.isBlank()) {
+            newId =  payrollPrefix + String.format("%05d", 1);
+        } else {
+            // Extract only the number part from lastId
+            String number = lastId.replaceAll("\\D", "");
+            int next = Integer.parseInt(number) + 1;
+            newId =  payrollPrefix + String.format("%05d", next);
+        }
+
+        orgUserSequenceRepository.updateLastPayrollId(organizationId, newId);
+
+        return newId;
+    }
+
+
+
 }

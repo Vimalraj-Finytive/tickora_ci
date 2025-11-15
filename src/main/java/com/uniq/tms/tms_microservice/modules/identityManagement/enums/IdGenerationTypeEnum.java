@@ -15,7 +15,8 @@ public enum IdGenerationTypeEnum {
     PAYMENT("PAY"),
     CALENDAR("CL"),
     PUBLIC_HOLIDAY("PH"),
-    CALENDAR_DETAILS("CD");
+    CALENDAR_DETAILS("CD"),
+    PAYROLL("PR");
 
     private final String prefix ;
 

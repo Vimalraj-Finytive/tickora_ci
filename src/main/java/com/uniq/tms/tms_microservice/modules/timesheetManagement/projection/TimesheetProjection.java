@@ -18,6 +18,9 @@ public interface TimesheetProjection {
     LocalTime getLastClockOut();
     LocalTime getTrackedHours();
     LocalTime getRegularHours();
+    LocalTime getStartTimeDuration();
+    LocalTime getEndTimeDuration();
+    LocalTime getTotalOverTime();
     String getStatus();
     List<TimesheetHistoryProjection> getHistory();
     String getWorkStatus();

@@ -144,7 +144,7 @@ public class PaymentServiceImpl implements PaymentService {
 
                 if (payment != null) {
                     p = payment.toJson();
-                    log.info("Razorpay Payment JSON: {}", p.toString(4)); // Pretty print in logs
+                    log.info("Razorpay Payment JSON: {}", p.toString(4));
                 } else {
                     log.warn("No payment found in Razorpay for ID: {}", paymentEntity.getPaymentId());
                 }
@@ -203,7 +203,7 @@ public class PaymentServiceImpl implements PaymentService {
         return zonedDateTime.format(formatter);
     }
 
-   @Override
+    @Override
     public ResponseEntity<byte[]> getPaymentDetailsPdfBySubscriptionId(String subscriptionId, String orgId) {
         PaymentDto paymentDetails = getPaymentDetailsBySubscriptionId(subscriptionId);
         String OrgName =organizationAdapter.getOrgName(orgId);
@@ -224,7 +224,6 @@ public class PaymentServiceImpl implements PaymentService {
                     .body(("Failed to generate PDF: " + e.getMessage()).getBytes());
         }
     }
-
 
     @Override
     public List<MonthlyPaymentModel> getOrganizationSales(int year) {

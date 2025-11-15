@@ -7,6 +7,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 import java.time.*;
 import java.util.*;
+import java.time.*;
+import java.util.*;
 
 @Repository
 public interface SubscriptionRepository extends JpaRepository<SubscriptionEntity, String> {
@@ -34,6 +36,5 @@ public interface SubscriptionRepository extends JpaRepository<SubscriptionEntity
     Optional<SubscriptionEntity> findById(String subscriptionId);
 
     List<SubscriptionEntity> findByStartDateBetween(LocalDateTime start, LocalDateTime end);
-
 
 }

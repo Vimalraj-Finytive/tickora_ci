@@ -11,4 +11,5 @@ public interface IdGenerationService {
     String generateNextSecondaryUserId(String organizationId);
     String generateNextSubscriptionId(String organizationId);
     String generateNextPaymentID(String organizationId);
+    String generatePayrollId(String organizationId);
 }

@@ -4,6 +4,9 @@ import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.Orga
 import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.PaymentAdapter;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.SubscriptionAdapter;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.*;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.PlanDto;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.SubscriptionDto;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.UpgradePlanDto;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.OrganizationEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.PaymentEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.PlanEntity;
@@ -25,18 +28,20 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
-import java.util.stream.Collectors;
+import java.util.List;
 
 @Service
 public class SubscriptionServiceImpl implements SubscriptionService {
     private static final Logger log = LogManager.getLogger(SubscriptionServiceImpl.class);
+
+    @PersistenceContext(type = PersistenceContextType.TRANSACTION)
+    private EntityManager entityManager;
 
     private final SubscriptionAdapter subscriptionAdapter;
     private final PaymentService paymentService;
@@ -53,9 +58,6 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         this.organizationAdapter = organizationAdapter;
         this.subscriptionEntityMapper = subscriptionEntityMapper;
     }
-
-    @PersistenceContext(type = PersistenceContextType.TRANSACTION)
-    private EntityManager entityManager;
 
     @Override
     public long getSubscribedUserCount(String orgId) {
@@ -352,7 +354,6 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
         return new CalculatedAmountDto(roundedAmount.doubleValue());
     }
-
 
     @Override
     public boolean updateSubscription(String orgId, String orgSchema, UpdatePlanDto dto) {

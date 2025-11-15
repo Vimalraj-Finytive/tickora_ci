@@ -2,9 +2,12 @@ package com.uniq.tms.tms_microservice.modules.organizationManagement.adapter;
 
 import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.OrganizationSummaryDto;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.*;
-
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.OrganizationEntity;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.OrganizationTypeEntity;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.PrivilegeEntity;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.RoleEntity;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;

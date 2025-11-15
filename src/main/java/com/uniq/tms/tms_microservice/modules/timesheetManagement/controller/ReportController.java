@@ -7,7 +7,8 @@ import com.uniq.tms.tms_microservice.shared.helper.AuthHelper;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.facade.TimesheetFacade;
 import com.uniq.tms.tms_microservice.shared.util.ReportUtil;
 import io.jsonwebtoken.io.IOException;
-import lombok.extern.slf4j.Slf4j;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
@@ -21,10 +22,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-@Slf4j
 @RestController
 @RequestMapping(TimesheetConstant.REPORT_URL)
 public class ReportController {
+
+    private static final Logger log = LogManager.getLogger(ReportController.class);
 
     private final TimesheetFacade timesheetFacade;
     private final AuthHelper authHelper;

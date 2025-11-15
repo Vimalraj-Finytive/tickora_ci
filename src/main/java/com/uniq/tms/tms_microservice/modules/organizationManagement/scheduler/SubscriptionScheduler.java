@@ -9,7 +9,8 @@ import com.uniq.tms.tms_microservice.modules.userManagement.adapter.UserAdapter;
 import com.uniq.tms.tms_microservice.modules.userManagement.dto.UserNameEmailDto;
 import com.uniq.tms.tms_microservice.shared.helper.EmailHelper;
 import com.uniq.tms.tms_microservice.shared.util.TenantUtil;
-import lombok.extern.slf4j.Slf4j;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -17,9 +18,10 @@ import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 
-@Slf4j
 @Component
 public class SubscriptionScheduler {
+
+    private static final Logger log = LogManager.getLogger(SubscriptionScheduler.class);
 
     private final OrganizationRepository organizationRepository;
     private final EmailHelper emailHelper;

@@ -65,7 +65,6 @@ public class OrganizationController {
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
-
     @GetMapping("/getDropDowns")
     public ResponseEntity<ApiResponse<OrganizationDropdownDto>> getDropDowns() {
         ApiResponse<OrganizationDropdownDto> response = organizationFacade.getDropDowns();

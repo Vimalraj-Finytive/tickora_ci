@@ -1,6 +1,7 @@
 package com.uniq.tms.tms_microservice.modules.workScheduleManagement.repository;
 
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.FixedWorkScheduleEntity;
+import com.uniq.tms.tms_microservice.modules.workScheduleManagement.enums.DayOfWeekEnum;
 import io.lettuce.core.dynamic.annotation.Param;
 import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -21,4 +22,12 @@ public interface FixedWorkScheduleRepository extends JpaRepository<FixedWorkSche
     void deleteByScheduleId(@Param("scheduleId") String scheduleId);
 
     List<FixedWorkScheduleEntity> findByworkScheduleEntity_scheduleId(String scheduleId);
+
+    @Query("SELECT f FROM FixedWorkScheduleEntity f " +
+            "WHERE f.workScheduleEntity.scheduleId = :workScheduleId " +
+            "AND f.day = :day")
+    FixedWorkScheduleEntity findByWorkScheduleIdAndDay(
+            @Param("workScheduleId") String workScheduleId,
+            @Param("day") DayOfWeekEnum day
+    );
 }
