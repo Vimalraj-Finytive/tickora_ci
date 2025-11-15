@@ -34,6 +34,15 @@ public class TimesheetEntity {
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "HH:mm")
     private LocalTime totalBreakHours;
 
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "HH:mm")
+    private LocalTime startTimeDuration;
+
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "HH:mm")
+    private LocalTime endTimeDuration;
+
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "HH:mm")
+    private LocalTime totalOverTime;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -139,4 +148,29 @@ public class TimesheetEntity {
     public void setStatus(TimesheetStatusEntity status) {
         this.status = status;
     }
+
+    public LocalTime getStartTimeDuration() {
+        return startTimeDuration;
+    }
+
+    public void setStartTimeDuration(LocalTime startTimeDuration) {
+        this.startTimeDuration = startTimeDuration;
+    }
+
+    public LocalTime getEndTimeDuration() {
+        return endTimeDuration;
+    }
+
+    public void setEndTimeDuration(LocalTime endTimeDuration) {
+        this.endTimeDuration = endTimeDuration;
+    }
+
+    public LocalTime getTotalOverTime() {
+        return totalOverTime;
+    }
+
+    public void setTotalOverTime(LocalTime totalOverTime) {
+        this.totalOverTime = totalOverTime;
+    }
+
 }

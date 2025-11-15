@@ -27,6 +27,12 @@ public class TimesheetDto {
     private Duration trackedHours;
     @JsonIgnore
     private Duration regularHours;
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    private String startTimeDuration;
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    private String endTimeDuration;
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    private String totalOverTime;
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private LocalDateTime createdAt;
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
@@ -58,7 +64,8 @@ public class TimesheetDto {
     private String status;
     private String workScheduleName;
 
-    public TimesheetDto(TimesheetEntity timesheetEntity, List<TimesheetHistoryDto> historyDtos, String workScheduleName) {
+    public TimesheetDto(TimesheetEntity timesheetEntity, List<TimesheetHistoryDto> historyDtos, String workScheduleName,
+                        LocalTime startTimeDuration, LocalTime endTimeDuration, LocalTime totalOverTime) {
         this.id = timesheetEntity.getId();
         this.userId = timesheetEntity.getUser().getUserId();
         this.date = timesheetEntity.getDate();
@@ -72,6 +79,9 @@ public class TimesheetDto {
         this.trackedHoursDuration = formatDuration(this.trackedHours);
         this.regularHoursDuration = formatDuration(this.regularHours);
         this.history = historyDtos;
+        setStartTimeDuration(startTimeDuration);
+        setEndTimeDuration(endTimeDuration);
+        setTotalOverTime(totalOverTime);
     }
 
     public TimesheetDto() {
@@ -103,6 +113,11 @@ public class TimesheetDto {
         long hours = duration.toHours();
         long minutes = duration.toMinutes() % 60;
         return String.format("%02dh %02dm", hours, minutes); // Format as "09h 00m"
+    }
+
+    private String formatLocalTime(LocalTime time) {
+        if (time == null) return "00h 00m";
+        return String.format("%02dh %02dm", time.getHour(), time.getMinute());
     }
 
     public String getFirstClockInTime() {
@@ -310,4 +325,29 @@ public class TimesheetDto {
     public void setWorkScheduleName(String workScheduleName) {
         this.workScheduleName = workScheduleName;
     }
+
+    public String getStartTimeDuration() {
+        return startTimeDuration;
+    }
+
+    public void setStartTimeDuration(LocalTime time) {
+        this.startTimeDuration = formatLocalTime(time);
+    }
+
+    public String getEndTimeDuration() {
+        return endTimeDuration;
+    }
+
+    public void setEndTimeDuration(LocalTime time) {
+        this.endTimeDuration = formatLocalTime(time);
+    }
+
+    public String getTotalOverTime() {
+        return totalOverTime;
+    }
+
+    public void setTotalOverTime(LocalTime time) {
+        this.totalOverTime = formatLocalTime(time);
+    }
+
 }

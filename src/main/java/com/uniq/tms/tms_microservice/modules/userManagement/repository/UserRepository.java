@@ -256,4 +256,6 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
     """, nativeQuery = true)
     List<TimesheetUserProjection> findUserByUserIds(@Param("userIds") String[] userIds);
 
+    @Query("SELECT u FROM UserEntity u WHERE u.userId IN :userIds AND u.active = true")
+    List<UserEntity> findByUserIdAndActiveTrue(@Param("userIds") List<String> userIds);
 }

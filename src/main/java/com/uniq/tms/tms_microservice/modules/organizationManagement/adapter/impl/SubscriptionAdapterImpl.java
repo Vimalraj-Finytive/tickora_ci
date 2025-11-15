@@ -5,8 +5,9 @@ import com.uniq.tms.tms_microservice.modules.identityManagement.service.IdGenera
 import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.SubscriptionAdapter;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.PlanDto;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.SubscriptionDto;
-import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.UpgradePlanDto;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.*;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.PlanEntity;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.SubscriptionEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.enums.OrganizationStatusEnum;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.enums.PaymentStatus;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.mapper.PlanDtoMapper;
@@ -19,11 +20,9 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -177,7 +176,6 @@ public class SubscriptionAdapterImpl implements SubscriptionAdapter {
             return PaymentStatus.FAILED;
         }
     }
-
 
     @Override
     public String getBillingCycle(String planId) {

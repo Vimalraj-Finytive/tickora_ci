@@ -62,7 +62,6 @@ public class SubscriptionDto {
         this.status = status;
     }
 
-
     public String getNextInvoiceDate() {
         return nextInvoiceDate;
     }

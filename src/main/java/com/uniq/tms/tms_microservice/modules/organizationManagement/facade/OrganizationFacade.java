@@ -179,7 +179,6 @@ public class OrganizationFacade {
         );
     }
 
-
         public ApiResponse<PlanStatusDto> getCurrentPlanStatus(String orgId) {
         PlanStatusModel model = subscriptionService.getCurrentPlanStatus(orgId);
         PlanStatusDto dto = planDtoMapper.toDto(model);

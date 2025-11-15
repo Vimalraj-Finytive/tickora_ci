@@ -16,6 +16,9 @@ import com.uniq.tms.tms_microservice.modules.locationManagement.entity.UserLocat
 import com.uniq.tms.tms_microservice.modules.userManagement.enums.PrivilegeConstants;
 import com.uniq.tms.tms_microservice.modules.userManagement.enums.RoleName;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.adapter.WorkScheduleAdapter;
+import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.WorkScheduleTypeEntity;
+import com.uniq.tms.tms_microservice.modules.workScheduleManagement.enums.DayOfWeekEnum;
+import com.uniq.tms.tms_microservice.modules.workScheduleManagement.enums.WorkScheduleTypeEnum;
 import com.uniq.tms.tms_microservice.shared.exception.CommonExceptionHandler;
 import com.uniq.tms.tms_microservice.shared.helper.RolePrivilegeHelper;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.mapper.TimesheetDtoMapper;
@@ -38,6 +41,7 @@ import java.math.RoundingMode;
 import java.sql.Time;
 import java.text.DecimalFormat;
 import java.time.*;
+import java.time.format.TextStyle;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -509,6 +513,17 @@ public class TimesheetServiceImpl implements TimesheetService {
             LocalDate date,
             TimesheetDto request,
             String orgId) {
+        boolean isSuperAdmin = UserRoleName.SUPERADMIN.getRoleName().equalsIgnoreCase(roleName);
+
+        if (!isSuperAdmin && userIdFromToken.equals(userId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Access denied: you cannot edit your own timesheet.");
+        }
+
+        if (!isSuperAdmin) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Access denied: only superadmin can edit other users' timesheets.");
+        }
 
         try {
             TimesheetEntity timesheet = timesheetAdapter.findUserIdAndDate(userId, date);
@@ -579,7 +594,9 @@ public class TimesheetServiceImpl implements TimesheetService {
                 timesheet.setStatus(statusEntity);
             }
             timesheet.setUpdatedAt(LocalDateTime.now());
-            calculateHours(timesheet);
+                UserEntity users = timesheet.getUser();
+                WorkScheduleEntity workSchedule = users.getWorkSchedule();
+                calculateHours(timesheet, workSchedule, true);
             timesheet = timesheetAdapter.save(timesheet);
             LocationEntity locationEntity = locationAdapter.findDefaultLocationByOrgId(orgId);
             if(locationEntity == null){
@@ -613,7 +630,7 @@ public class TimesheetServiceImpl implements TimesheetService {
 
 }
 
-    private void calculateHours(TimesheetEntity timesheet) {
+private void calculateHours(TimesheetEntity timesheet, WorkScheduleEntity workSchedule, boolean isManualClockOut) {
         try {
             if (timesheet.getFirstClockIn() == null || timesheet.getLastClockOut() == null) {
                 log.warn("Clock-in or clock-out time is missing for timesheet ID: {}", timesheet.getId());
@@ -624,28 +641,96 @@ public class TimesheetServiceImpl implements TimesheetService {
             LocalTime clockOut = timesheet.getLastClockOut();
             LocalDate timesheetDate = timesheet.getDate();
             LocalDate today = LocalDate.now(ZoneId.of("Asia/Kolkata"));
-
-            boolean isPreviousDay = today.isAfter(timesheetDate);
+            boolean isPreviousDay = clockOut.isBefore(clockIn);
             Duration workedDuration;
-
+            Duration regularWorkDuration = Duration.ZERO;
+            Duration totalOverTime = Duration.ZERO;
+            Duration startTimeDuration = Duration.ZERO;
+            Duration endTimeDuration = Duration.ZERO;
             if (clockOut.isBefore(clockIn)) {
-                workedDuration = Duration.between(clockIn, clockOut);
+                workedDuration = Duration.between(clockIn, clockOut).plusHours(24);
                 log.info("Overnight Work Duration: {}", workedDuration);
-                workedDuration = workedDuration.plusHours(24);
-                log.info("ON Work Duration: {}", workedDuration);
             } else {
                 workedDuration = Duration.between(clockIn, clockOut);
                 log.info("Same-day Work Duration: {}", workedDuration);
             }
 
-            log.info("Clock-in time: {}", clockIn);
-            log.info("Clock-out time: {}", clockOut);
-            log.info("Calculated Worked Duration: {}", workedDuration);
+            DayOfWeekEnum day = DayOfWeekEnum.valueOf(timesheetDate.getDayOfWeek().name());
+
+            if (workSchedule.getType().getType() == WorkScheduleTypeEnum.FIXED) {
+
+                FixedWorkScheduleEntity fixedEntity =
+                        timesheetAdapter.findByWorkScheduleIdAndDay(workSchedule.getScheduleId(), day);
+
+                if (fixedEntity == null) {
+                    log.warn("No fixed schedule found for workScheduleId={} day={}", workSchedule.getScheduleId(), day);
+                    return;
+                }
+
+                LocalTime scheduleStart = fixedEntity.getStartTime().toLocalTime();
+                LocalTime scheduleEnd = fixedEntity.getEndTime().toLocalTime();
+
+                if (clockIn.isBefore(scheduleStart) && !(scheduleStart.isAfter(scheduleEnd) && clockIn.isBefore(scheduleEnd))) {
+                    startTimeDuration = Duration.between(clockIn, scheduleStart);
+                    totalOverTime = totalOverTime.plus(startTimeDuration);
+                }
+                if (isPreviousDay && scheduleStart.isBefore(scheduleEnd) && clockIn.isAfter(scheduleStart)) {
+                    startTimeDuration = Duration.between(clockIn, scheduleStart);
+                    startTimeDuration = startTimeDuration.plusHours(24);
+                    totalOverTime = totalOverTime.plus(startTimeDuration);
+                }
+                if (clockOut.isAfter(scheduleEnd) && !(clockIn.isBefore(clockOut) && scheduleStart.isAfter(scheduleEnd))) {
+                    endTimeDuration = Duration.between(scheduleEnd, clockOut);
+                    totalOverTime = totalOverTime.plus(endTimeDuration);
+                }
+                if (isPreviousDay && scheduleEnd.isAfter(scheduleStart) && clockOut.isBefore(scheduleEnd)) {
+                    endTimeDuration = Duration.between(scheduleEnd, clockOut);
+                    endTimeDuration = endTimeDuration.plusHours(24);
+                    totalOverTime = totalOverTime.plus(endTimeDuration);
+                }
+                log.info("Before regular hours");
+                regularWorkDuration = calculateWorkDurationWithinSchedule(clockIn, clockOut, scheduleStart, scheduleEnd, startTimeDuration, endTimeDuration, isPreviousDay);
+            }
+            else if (workSchedule.getType().getType() == FLEXIBLE) {
+
+                FlexibleWorkScheduleEntity flexibleEntity =
+                        timesheetAdapter.findByWorkScheduleIdAndDays(workSchedule.getScheduleId(), day);
+
+                if (flexibleEntity == null) {
+                    log.warn("No flexible schedule found for workScheduleId={} day={}", workSchedule.getScheduleId(), day);
+                    return;
+                }
+
+                Duration expectedDuration = Duration.ofHours(flexibleEntity.getDuration().longValue());
+                regularWorkDuration = workedDuration;
+                if (workedDuration.compareTo(expectedDuration) > 0) {
+                    totalOverTime = workedDuration.minus(expectedDuration);
+                    regularWorkDuration = expectedDuration;
+                }
+
+            }
 
             LocalTime workedTime = LocalTime.ofSecondOfDay(workedDuration.toSeconds());
-            timesheet.setRegularHours(workedTime);
             timesheet.setTrackedHours(workedTime);
+            timesheet.setRegularHours(
+                    regularWorkDuration.isZero() ? null : LocalTime.of((int)regularWorkDuration.toHours(),regularWorkDuration.toMinutesPart())
+            );
+            timesheet.setStartTimeDuration(startTimeDuration.isZero() ? null :
+                    LocalTime.of((int)startTimeDuration.toHours(),startTimeDuration.toMinutesPart()));
 
+            timesheet.setEndTimeDuration(endTimeDuration.isZero() ? null :
+                    LocalTime.of((int)endTimeDuration.toHours(),endTimeDuration.toMinutesPart()));
+
+            timesheet.setTotalOverTime(totalOverTime.isZero() ? null :
+                    LocalTime.of((int)totalOverTime.toHours(),totalOverTime.toMinutesPart()));
+
+            if (!isManualClockOut) {
+                workedTime = workedTime.minus(endTimeDuration);
+                timesheet.setTotalOverTime(startTimeDuration.isZero() ? null :
+                        LocalTime.of((int)startTimeDuration.toHours(),startTimeDuration.toMinutesPart()));
+                timesheet.setEndTimeDuration(null);
+                timesheet.setTrackedHours(workedTime);
+            }
             log.info("Regular Hours: {}", workedTime);
             log.info("Tracked Hours: {}", workedTime);
 
@@ -653,6 +738,32 @@ public class TimesheetServiceImpl implements TimesheetService {
             log.error("Error calculating hours for timesheet ID: {}", timesheet.getId(), e);
             throw new RuntimeException(e);
         }
+    }
+
+    private Duration calculateWorkDurationWithinSchedule(LocalTime clockIn, LocalTime clockOut,
+                                                                LocalTime startTime, LocalTime endTime, Duration startTimeDuration, Duration endTimeDuration, boolean isPreviousDay) {
+
+        LocalTime effectiveStart = clockIn.isBefore(startTime) ? startTime : clockIn;
+        LocalTime effectiveEnd = clockOut.isAfter(endTime) ? endTime : clockOut;
+
+        if (!isPreviousDay && startTime.isAfter(endTime) && clockIn.isBefore(startTime)) {
+            effectiveStart = clockIn;
+        }
+        if(isPreviousDay && startTime.isBefore(endTime) && clockIn.isAfter(startTime)){
+            effectiveStart = startTime;
+        }
+        if(!isPreviousDay && startTime.isAfter(endTime) && clockOut.isAfter(endTime)){
+            effectiveEnd = clockOut;
+        }
+
+        if (isPreviousDay && endTime.isAfter(startTime) && clockOut.isBefore(endTime)) {
+            effectiveEnd = endTime;
+        }
+
+        if (effectiveEnd.isBefore(effectiveStart)) {
+            return Duration.between(effectiveStart, effectiveEnd).plusHours(24);
+        }
+        return Duration.between(effectiveStart, effectiveEnd);
     }
 
     @Override
@@ -680,21 +791,17 @@ public class TimesheetServiceImpl implements TimesheetService {
                         log.info("Auto clock-out for userId={}, setting lastClockOut to 23:59", entry.getUser().getUserId());
 
                         entry.setLastClockOut(splitLocalTime.minusMinutes(1));
-                        calculateHours(entry);
-
+                        calculateHours(entry, workSchedule, false);
                         TimesheetHistoryEntity history = new TimesheetHistoryEntity();
                         history.setLocationId(location.getLocationId());
                         history.setLogTime(splitLocalTime.minusMinutes(1));
                         history.setLogType(LogType.CLOCK_OUT);
                         history.setLogFrom(LogFrom.SYSTEM_GENERATED);
                         history.setLoggedTimestamp(LocalDateTime.now());
-
                         TimesheetEntity timesheetRef = new TimesheetEntity();
                         timesheetRef.setId(entry.getId());
                         history.setTimesheet(timesheetRef);
-
                         historyEntries.add(history);
-
                         log.info("Added SYSTEM_GENERATED CLOCK_OUT history for userId={}, date={}", entry.getUser().getUserId(), entry.getDate());
                     }
                 }
@@ -715,9 +822,8 @@ public class TimesheetServiceImpl implements TimesheetService {
 
                         if (splitLocalTime != null && (currentTime.getHour() == splitLocalTime.getHour())) {
                             log.info("Auto clock-out for userId={}, setting lastClockOut to 23:59", entry.getUser().getUserId());
-
                             entry.setLastClockOut(splitLocalTime.minusMinutes(1));
-                            calculateHours(entry);
+                            calculateHours(entry, workSchedule, false);
                             log.info("Calculated Duration for Yesterday schedule");
                             TimesheetHistoryEntity history = new TimesheetHistoryEntity();
                             history.setLocationId(location.getLocationId());
@@ -725,13 +831,10 @@ public class TimesheetServiceImpl implements TimesheetService {
                             history.setLogType(LogType.CLOCK_OUT);
                             history.setLogFrom(LogFrom.SYSTEM_GENERATED);
                             history.setLoggedTimestamp(LocalDateTime.now());
-
                             TimesheetEntity timesheetRef = new TimesheetEntity();
                             timesheetRef.setId(entry.getId());
                             history.setTimesheet(timesheetRef);
-
                             historyEntries.add(history);
-
                             log.info("Added SYSTEM_GENERATED CLOCK_OUT history for userId={}, date={}", entry.getUser().getUserId(), entry.getDate());
                         }
                     }

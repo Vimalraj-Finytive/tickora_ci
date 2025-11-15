@@ -16,7 +16,6 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-
 import java.time.LocalDate;
 import java.util.List;
 
@@ -255,8 +254,4 @@ public class UserController {
         ApiResponse<BulkUserLocationDto> response = userFacade.assignLocations(dto);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
-
-
-
-
 }

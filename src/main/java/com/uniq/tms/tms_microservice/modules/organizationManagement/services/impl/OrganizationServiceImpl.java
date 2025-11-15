@@ -7,6 +7,8 @@ import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.Subs
 import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.*;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.*;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.mapper.OrganizationDetailsMapper;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.OrganizationSummaryDto;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.*;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.mapper.OrganizationEntityMapper;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.model.*;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.OrganizationRepository;
@@ -27,6 +29,7 @@ import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.enums.CountryEnum;
 import com.uniq.tms.tms_microservice.shared.exception.CommonExceptionHandler;
 import com.uniq.tms.tms_microservice.shared.helper.ExceptionHelper;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.OrgSetupValidationResponse;
 import com.uniq.tms.tms_microservice.modules.identityManagement.service.IdGenerationService;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.services.OrganizationService;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserSchemaMappingEntity;
@@ -55,6 +58,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.List;
 
 @Service
 public class OrganizationServiceImpl implements OrganizationService {
@@ -85,6 +89,7 @@ public class OrganizationServiceImpl implements OrganizationService {
                                    UserService userService, OrganizationAdapter organizationAdapter, CacheKeyConfig cacheKeyConfig,
                                    CacheReloadHandlerRegistry cacheReloadHandlerRegistry, ApplicationEventPublisher publisher,
                                    LocationAdapter locationAdapter, SubscriptionService subscriptionService, OrganizationDetailsMapper mapper, SubscriptionAdapter subscriptionAdapter, TimesheetAdapter timesheetAdapter) {
+
         this.organizationEntityMapper = organizationEntityMapper;
         this.userAdapter = userAdapter;
         this.workScheduleAdapter = workScheduleAdapter;
@@ -110,8 +115,8 @@ public class OrganizationServiceImpl implements OrganizationService {
 
     /**
      * @param organization
-     * @return SuccessT
      * @Create organization and Org Superadmin
+     * @return SuccessT
      */
     @Override
     @Transactional
@@ -240,14 +245,13 @@ public class OrganizationServiceImpl implements OrganizationService {
 
     /**
      * Validate the Organization name
-     *
      * @param organization
      */
     @Override
     public Organization validate(Organization organization) {
         OrganizationEntity organizationEntity = organizationEntityMapper.toEntity(organization);
         OrganizationEntity response = organizationAdapter.findByOrgName(organizationEntity.getOrgName());
-        if (response != null) {
+        if(response != null) {
             if (organization.getOrgName().equalsIgnoreCase(response.getOrgName())) {
                 throw new RuntimeException("Name already Exists under other organization");
             }
@@ -547,7 +551,3 @@ public class OrganizationServiceImpl implements OrganizationService {
     }
 
 }
-
-
-
-

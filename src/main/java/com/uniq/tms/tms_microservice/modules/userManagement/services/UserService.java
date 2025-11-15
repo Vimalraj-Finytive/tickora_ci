@@ -46,5 +46,4 @@ public interface UserService {
     Long getSubscribedUserLimit(String orgId);
     Long getCurrentUserCount(String orgId);
     BulkUserLocationModel assignLocations(BulkUserLocationModel model,String orgId);
-
 }

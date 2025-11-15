@@ -14,6 +14,9 @@ public class Timesheet {
     private LocalTime lastClockOut;
     private Duration trackedHours;
     private Duration regularHours;
+    private LocalTime startTimeDuration;
+    private LocalTime endTimeDuration;
+    private LocalTime totalOverTime;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private String userName;
@@ -214,4 +217,29 @@ public class Timesheet {
     public void setWorkScheduleName(String workScheduleName) {
         this.workScheduleName = workScheduleName;
     }
+
+    public LocalTime getStartTimeDuration() {
+        return startTimeDuration;
+    }
+
+    public void setStartTimeDuration(LocalTime startTimeDuration) {
+        this.startTimeDuration = startTimeDuration;
+    }
+
+    public LocalTime getEndTimeDuration() {
+        return endTimeDuration;
+    }
+
+    public void setEndTimeDuration(LocalTime endTimeDuration) {
+        this.endTimeDuration = endTimeDuration;
+    }
+
+    public LocalTime getTotalOverTime() {
+        return totalOverTime;
+    }
+
+    public void setTotalOverTime(LocalTime totalOverTime) {
+        this.totalOverTime = totalOverTime;
+    }
+
 }

@@ -4,6 +4,8 @@ import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.*;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.OrganizationTypeEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.model.*;
 import java.time.LocalDateTime;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.OrgSetupValidationResponse;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.OrganizationSummaryDto;
 import java.util.List;
 
 public interface OrganizationService {
@@ -35,4 +37,5 @@ public interface OrganizationService {
     OrganizationUsageResponseDto calculateOrganizationUsage(DateRangeRequestDto request);
 
     List<OrganizationTypeCountModel> getOrgCountByOrgType(LocalDateTime from, LocalDateTime to);
+
 }

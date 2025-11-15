@@ -2,7 +2,6 @@ package com.uniq.tms.tms_microservice.modules.organizationManagement.mapper;
 
 import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.*;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.model.*;
-import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
 import org.mapstruct.Mapper;
 import java.util.List;
 
@@ -31,4 +30,5 @@ public interface OrganizationDtoMapper {
     List<OrganizationTypeCountDto> toDto(List<OrganizationTypeCountModel> organizationTypeCountModel);
 
     List<OrganizationCountResponseDto> toSummaryDto(List<OrganizationCountResponseModel> organizationCount);
+
 }

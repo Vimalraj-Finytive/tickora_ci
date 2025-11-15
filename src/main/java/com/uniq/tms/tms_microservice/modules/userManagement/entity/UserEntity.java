@@ -2,10 +2,13 @@ package com.uniq.tms.tms_microservice.modules.userManagement.entity;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.RoleEntity;
+import com.uniq.tms.tms_microservice.modules.payrollManagement.entity.UserPayRollAmountEntity;
+import com.uniq.tms.tms_microservice.modules.payrollManagement.entity.UserPayRollEntity;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.WorkScheduleEntity;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -57,6 +60,12 @@ public class UserEntity {
 
     @OneToMany(mappedBy = "user")
     private List<UserGroupEntity> userGroups;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<UserPayRollAmountEntity> userPayrollAmounts = new ArrayList<>();
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<UserPayRollEntity> payrolls = new ArrayList<>();
 
     public UserEntity(String userId){
         this.userId = userId;
@@ -198,6 +207,13 @@ public class UserEntity {
         this.userGroups = userGroups;
     }
 
+    public List<UserPayRollEntity> getPayrolls() {
+        return payrolls;
+    }
+
+    public void setPayrolls(List<UserPayRollEntity> payrolls) {
+        this.payrolls = payrolls;
+    }
 
     @Override
     public String toString(){
