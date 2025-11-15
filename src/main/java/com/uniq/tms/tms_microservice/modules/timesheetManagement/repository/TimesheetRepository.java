@@ -114,5 +114,15 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
             @Param("userIds") String[] userIds
     );
 
+    @Query(value = "SELECT * FROM timesheet t " +
+            "WHERE t.user_id = :userId " +
+            "AND EXTRACT(YEAR FROM t.date) = :year " +
+            "AND EXTRACT(MONTH FROM t.date) = :month",
+            nativeQuery = true)
+    List<TimesheetEntity> findByUserAndMonth(
+            @Param("userId") String userId,
+            @Param("year") int year,
+            @Param("month") int month
+    );
 
 }

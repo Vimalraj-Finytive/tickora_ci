@@ -18,6 +18,4 @@ public interface SubscriptionService {
     boolean addSubscribedUsers(String orgId, String orgSchema, UpgradePlanDto dto);
      List<PlanAnalyticsModel> calculatePlanUsage(LocalDate fromDate, LocalDate toDate);
     boolean updateSubscription(String orgId, String orgSchema, UpdatePlanDto dto);
-
-
 }

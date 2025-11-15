@@ -17,7 +17,6 @@ public interface UserSchemaMapperRepository extends JpaRepository<UserSchemaMapp
     @Query("SELECT u FROM UserSchemaMappingEntity u WHERE u.mobile= :mobile AND u.orgId = :orgId")
     Optional<UserSchemaMappingEntity> findUserByMobileAndOrgId(@Param("mobile") String mobile, @Param("orgId") String orgId);
 
-
     @Query(
             "SELECT DISTINCT LOWER(u.email) " +
                     "FROM UserSchemaMappingEntity u " +

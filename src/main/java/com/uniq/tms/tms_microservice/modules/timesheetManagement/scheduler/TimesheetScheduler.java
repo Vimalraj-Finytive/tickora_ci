@@ -26,17 +26,20 @@ public class TimesheetScheduler {
 
     @Scheduled(cron = "0 0 * * * *", zone = "Asia/Kolkata")
     public void autoClockOutForAllEmployees() {
-        try{
+        try {
             List<OrganizationEntity> orgIds = organizationRepository.findAll();
-            for(OrganizationEntity orgId : orgIds) {
+            for (OrganizationEntity orgId : orgIds) {
                 TenantUtil.setCurrentTenant(orgId.getSchemaName());
-                log.info("Scheduled clock triggered for schema:{}", orgId.getSchemaName());
-                String organizationId = orgId.getOrganizationId();
-                if(organizationRepository.tableExists(orgId.getSchemaName(),"timesheet")) {
+                try {
+                    log.info("Scheduled clock triggered for schema:{}", orgId.getSchemaName());
+                    String organizationId = orgId.getOrganizationId();
                     log.info("Table exists for schema : {}", orgId.getSchemaName());
                     timesheetService.autoClockOut(organizationId);
+                } catch (Exception e) {
+                    continue;
+                } finally {
+                    TenantUtil.clearTenant();
                 }
-                TenantUtil.clearTenant();
             }
         } catch (Exception e) {
             log.error("Error while auto clock out", e);

@@ -13,8 +13,6 @@ import java.util.List;
 @Mapper(componentModel = "spring",unmappedTargetPolicy = ReportingPolicy.IGNORE, uses = {UserDtoMapper.CommonMapper.class})
 public interface UserDtoMapper {
 
-
-
     @Mapping(target = "roleId" , source = "roleId")
     @Mapping(target = "workSchedule", source = "workSchedule")
     @Mapping(target = "organizationId", ignore = true)

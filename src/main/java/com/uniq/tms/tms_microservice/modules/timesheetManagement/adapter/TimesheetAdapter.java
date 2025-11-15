@@ -10,6 +10,18 @@ import com.uniq.tms.tms_microservice.modules.locationManagement.entity.LocationE
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.entity.TimesheetEntity;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.entity.TimesheetHistoryEntity;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.entity.TimesheetStatusEntity;
+import com.uniq.tms.tms_microservice.modules.timesheetManagement.enums.LogType;
+import com.uniq.tms.tms_microservice.modules.timesheetManagement.dto.PaginationResponseDto;
+import com.uniq.tms.tms_microservice.modules.timesheetManagement.dto.UserAttendanceDto;
+import com.uniq.tms.tms_microservice.modules.timesheetManagement.dto.UserTimesheetDto;
+import com.uniq.tms.tms_microservice.modules.userManagement.projections.UserDashboard;
+import com.uniq.tms.tms_microservice.modules.locationManagement.entity.LocationEntity;
+import com.uniq.tms.tms_microservice.modules.timesheetManagement.entity.TimesheetEntity;
+import com.uniq.tms.tms_microservice.modules.timesheetManagement.entity.TimesheetHistoryEntity;
+import com.uniq.tms.tms_microservice.modules.timesheetManagement.entity.TimesheetStatusEntity;
+import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.FixedWorkScheduleEntity;
+import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.FlexibleWorkScheduleEntity;
+import com.uniq.tms.tms_microservice.modules.workScheduleManagement.enums.DayOfWeekEnum;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
@@ -40,4 +52,7 @@ public interface TimesheetAdapter {
     List<String> findUserByStatusIdNotIn(LocalDate startDate, LocalDate endDate);
     long countByUserIdsAndDateAndStatus(List<String> userIds, LocalDate date, String status);
     long countActiveUsers(String organizationId, LocalDate fromDate, LocalDate toDate);
+    FixedWorkScheduleEntity findByWorkScheduleIdAndDay(String workScheduleId, DayOfWeekEnum day);
+    FlexibleWorkScheduleEntity findByWorkScheduleIdAndDays(String workScheduleId, DayOfWeekEnum day);
+    List<TimesheetEntity> getTimesheetByUserIds(String userId, int year, int month);
 }

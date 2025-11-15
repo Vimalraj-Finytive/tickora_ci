@@ -11,6 +11,10 @@ import com.uniq.tms.tms_microservice.modules.timesheetManagement.enums.LogType;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.enums.TimesheetStatusEnum;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.enums.TimesheetWorkStatusEnum;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.model.ScheduleTypeInfo;
+import com.uniq.tms.tms_microservice.modules.workScheduleManagement.enums.DayOfWeekEnum;
+import com.uniq.tms.tms_microservice.modules.workScheduleManagement.model.ScheduleTypeInfo;
+import com.uniq.tms.tms_microservice.modules.workScheduleManagement.repository.FixedWorkScheduleRepository;
+import com.uniq.tms.tms_microservice.modules.workScheduleManagement.repository.FlexibleWorkScheduleRepository;
 import com.uniq.tms.tms_microservice.shared.helper.TimesheetHelper;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.mapper.TimesheetDtoMapper;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.entity.TimesheetEntity;
@@ -33,6 +37,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.DayOfWeek;
@@ -49,6 +54,9 @@ import java.util.stream.Collectors;
 @Component
 public class TimesheetAdapterImpl implements TimesheetAdapter {
 
+    @Value("${timesheet.extra.worked.minutes}")
+    private int extraWorkedMinutes;
+
     private final TimesheetRepository timesheetRepository;
     private final TimesheetHistoryRepository timesheetHistoryRepository;
     private final TimesheetStatusRepository timesheetStatusRepository;
@@ -56,10 +64,12 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
     private final TimesheetDtoMapper timesheetDtoMapper;
     private final UserRepository userRepository;
     private final TimesheetHelper timesheetHelper;
+    private final FixedWorkScheduleRepository fixedWorkScheduleRepository;
+    private final FlexibleWorkScheduleRepository flexibleWorkScheduleRepository;
 
     public TimesheetAdapterImpl(TimesheetRepository timesheetRepository, TimesheetHistoryRepository timesheetHistoryRepository,
                                 TimesheetStatusRepository timesheetStatusRepository, LocationRepository locationRepository,
-                                TimesheetDtoMapper timesheetDtoMapper, UserRepository userRepository, TimesheetHelper timesheetHelper) {
+                                TimesheetDtoMapper timesheetDtoMapper, UserRepository userRepository, TimesheetHelper timesheetHelper, FixedWorkScheduleRepository fixedWorkScheduleRepository, FlexibleWorkScheduleRepository flexibleWorkScheduleRepository) {
         this.timesheetRepository = timesheetRepository;
         this.timesheetHistoryRepository = timesheetHistoryRepository;
         this.timesheetStatusRepository = timesheetStatusRepository;
@@ -67,10 +77,9 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
         this.timesheetDtoMapper = timesheetDtoMapper;
         this.userRepository = userRepository;
         this.timesheetHelper = timesheetHelper;
+        this.fixedWorkScheduleRepository = fixedWorkScheduleRepository;
+        this.flexibleWorkScheduleRepository = flexibleWorkScheduleRepository;
     }
-
-    @Value("${timesheet.extra.worked.minutes}")
-    private int extraWorkedMinutes;
 
     private static final Logger log = LoggerFactory.getLogger(TimesheetAdapterImpl.class);
 
@@ -301,6 +310,9 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
         timesheet.setLastClockOutTime("00:00");
         timesheet.setTrackedHoursDuration("00h 00m");
         timesheet.setRegularHoursDuration("00h 00m");
+        timesheet.setStartTimeDuration(LocalTime.parse("00:00"));
+        timesheet.setEndTimeDuration(LocalTime.parse("00:00"));
+        timesheet.setTotalOverTime(LocalTime.parse("00:00"));
         timesheet.setHistory(Collections.emptyList());
 
         ScheduleTypeInfo scheduledHours = TimesheetHelper.getScheduledHoursForUser(user.getUserId(), date, fixedMap, flexMap);
@@ -441,10 +453,7 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
             log.info("Scheduled Hours (Flexible): {}", scheduledHours);
 
             Duration worked = timesheet.getTrackedHours() != null ? timesheet.getTrackedHours() : Duration.ZERO;
-            Duration overtimeThreshold = scheduledHours.plusMinutes(extraWorkedMinutes);
-            log.info("threshold:{}",overtimeThreshold);
-            if (worked.compareTo(overtimeThreshold) > 0) {
-                log.info("Reached if conditions");
+            if (worked.compareTo(scheduledHours) > 0) {
                 timesheet.setWorkStatus(TimesheetWorkStatusEnum.OVERTIME.getLabel());
             } else if (worked.compareTo(scheduledHours) >= 0) {
                 timesheet.setWorkStatus(TimesheetWorkStatusEnum.SUFFICIENT_HOURS.getLabel());
@@ -460,45 +469,23 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
     }
 
     private void handleFixedSchedule(TimesheetDto timesheet, ScheduleTypeInfo scheduleInfo) {
-        LocalDate date = timesheet.getDate();
-        LocalDateTime fixedStartTime = LocalDateTime.of(date, scheduleInfo.getStartTime());
-        LocalDateTime fixedEndTime = LocalDateTime.of(date, scheduleInfo.getEndTime());
-        LocalDateTime actualStart = LocalDateTime.of(date, timesheet.getFirstClockIn());
-        LocalDateTime actualEnd = LocalDateTime.of(date, timesheet.getLastClockOut());
+
+        LocalTime fixedStartTime = scheduleInfo.getStartTime();
+        LocalTime fixedEndTime = scheduleInfo.getEndTime();
         Duration scheduledHours = scheduleInfo.getDuration();
-
-        if (fixedEndTime.isBefore(fixedStartTime)) {
-            fixedEndTime = fixedEndTime.plusDays(1);
-        }
-        if (actualEnd.isBefore(actualStart)) {
-            actualEnd = actualEnd.plusDays(1);
-        }
-
         log.info("Processing Fixed schedule - Start: {}, End: {}", fixedStartTime, fixedEndTime);
+        LocalTime actualStart = timesheet.getFirstClockIn();
+        LocalTime actualEnd = timesheet.getLastClockOut();
 
         if (actualStart != null && actualEnd != null && fixedStartTime != null && fixedEndTime != null) {
-            log.info("===== Work Status Calculation Start =====");
-            log.info("Actual Start: {}", actualStart);
-            log.info("Actual End: {}", actualEnd);
-            log.info("Fixed Start Time: {}", fixedStartTime);
-            log.info("Fixed End Time: {}", fixedEndTime);
-
             boolean isLateClockIn = actualStart.isAfter(fixedStartTime);
             boolean isEarlyClockOut = actualEnd.isBefore(fixedEndTime);
-            boolean isOvertime = actualEnd.isAfter(fixedEndTime.plusMinutes(30));
-            Duration worked = Duration.between(actualStart, actualEnd);
-            boolean hasOvertimeHours = worked.compareTo(Duration.between(fixedStartTime, fixedEndTime)) > 0;
+            Duration worked = timesheet.getTrackedHours() != null ? timesheet.getTrackedHours() : Duration.ZERO;
+            boolean hasOvertimeHours = worked.compareTo(scheduledHours) > 0;
+//            boolean isOvertime = actualEnd.isAfter(fixedEndTime.plusMinutes(30));
 
-            log.info("isLateClockIn: {}", isLateClockIn);
-            log.info("isEarlyClockOut: {}", isEarlyClockOut);
-            log.info("Tracked Hours: {}", worked);
-            log.info("Scheduled Hours: {}", scheduledHours);
-            log.info("hasOvertimeHours: {}", hasOvertimeHours);
-            log.info("isOvertime: {}", isOvertime);
-
-            if (!isLateClockIn && isOvertime && hasOvertimeHours) {
+            if (!isLateClockIn  && hasOvertimeHours) {
                 timesheet.setWorkStatus(TimesheetWorkStatusEnum.OVERTIME.getLabel());
-                log.info("Work Status set to: {}", TimesheetWorkStatusEnum.OVERTIME.getLabel());
             } else if (isLateClockIn && isEarlyClockOut) {
                 timesheet.setWorkStatus(TimesheetWorkStatusEnum.IRREGULAR_WORK_TIME.getLabel());
             } else if (isLateClockIn) {
@@ -906,6 +893,7 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
     public List<String> findUserByStatusIdNotIn(LocalDate startDate, LocalDate endDate) {
         return timesheetRepository.findUserByStatusIdNotIn(startDate,endDate);
     }
+
     @Override
     public long countByUserIdsAndDateAndStatus(List<String> userIds, LocalDate date, String status) {
         String statusId;
@@ -925,4 +913,18 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
         return timesheetRepository.countUsersWithTimesheetsBetweenDates(organizationId, fromDate, toDate);
     }
 
+    @Override
+    public FixedWorkScheduleEntity findByWorkScheduleIdAndDay(String workScheduleId, DayOfWeekEnum day) {
+        return fixedWorkScheduleRepository.findByWorkScheduleIdAndDay(workScheduleId,day);
+    }
+
+    @Override
+    public FlexibleWorkScheduleEntity findByWorkScheduleIdAndDays(String workScheduleId, DayOfWeekEnum day) {
+        return flexibleWorkScheduleRepository.findByWorkScheduleIdAndDay(workScheduleId,day);
+    }
+
+    @Override
+    public List<TimesheetEntity> getTimesheetByUserIds(String userId, int year, int month) {
+        return timesheetRepository.findByUserAndMonth(userId, year, month);
+    }
 }

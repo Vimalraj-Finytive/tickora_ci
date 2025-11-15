@@ -5,13 +5,15 @@ import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.Subsc
 import com.uniq.tms.tms_microservice.modules.organizationManagement.enums.OrganizationStatusEnum;
 import com.uniq.tms.tms_microservice.modules.userManagement.enums.UserRole;
 import com.uniq.tms.tms_microservice.shared.security.user.CustomUserDetails;
-import lombok.extern.slf4j.Slf4j;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.stereotype.Component;
 import java.util.List;
 
-@Slf4j
 @Component
 public class SubscriptionValHelper {
+
+    private static final Logger log = LogManager.getLogger(SubscriptionValHelper.class);
 
     private final AuthHelper authHelper;
     private final SubscriptionAdapter subscriptionAdapter;

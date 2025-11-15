@@ -214,6 +214,133 @@ CREATE TABLE IF NOT EXISTS ${schemaName}.users (
 );
 
 -- ===========================================================
+-- Table: payroll
+-- ===========================================================
+--changeset system:create-payroll
+CREATE TABLE IF NOT EXISTS ${schemaName}.payroll (
+    id VARCHAR(255) PRIMARY KEY,
+    payroll_name VARCHAR(255) NOT NULL,
+    yearly_salary NUMERIC(19,2) NOT NULL,
+    monthly_salary NUMERIC(19,2) NOT NULL,
+    pf NUMERIC(19,2) NOT NULL,
+    others NUMERIC(19,2) NOT NULL,
+    overtime_amount NUMERIC(19,2) NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP
+);
+
+--===========================================================
+-- Table: payroll_history
+-- ===========================================================
+--changeset system:create-payroll-history
+CREATE TABLE IF NOT EXISTS ${schemaName}.payroll_history (
+    id BIGSERIAL PRIMARY KEY,
+    action_at TIMESTAMP NOT NULL,
+    action_type VARCHAR(50) NOT NULL,
+    action_by VARCHAR(100) NOT NULL,
+    payroll_id VARCHAR(50) NOT NULL,
+
+    CONSTRAINT fk_payroll_history
+        FOREIGN KEY (payroll_id)
+        REFERENCES ${schemaName}.payroll(id)
+        ON DELETE CASCADE
+);
+
+-- ===========================================================
+-- Table: payroll_setting
+-- ===========================================================
+--changeset system:create-payroll-setting
+CREATE TABLE IF NOT EXISTS ${schemaName}.payroll_settings (
+    id BIGSERIAL PRIMARY KEY,
+    payroll_calculation VARCHAR(100) NOT NULL,
+    is_overtime BOOLEAN NOT NULL
+);
+
+--changeset system:insert-payroll-setting
+INSERT INTO ${schemaName}.payroll_settings (id, payroll_calculation, is_overtime)
+SELECT * FROM (VALUES
+    (1, 'DAYS', false)
+) AS tmp
+WHERE NOT EXISTS (SELECT 1 FROM ${schemaName}.payroll_settings);
+
+--===========================================================
+-- Table: user_payroll
+-- ===========================================================
+--changeset system:create-user-payroll
+CREATE TABLE IF NOT EXISTS ${schemaName}.user_payroll (
+    id BIGSERIAL PRIMARY KEY,
+    user_id VARCHAR(20) NOT NULL,
+    payroll_id VARCHAR(50) NOT NULL,
+
+    CONSTRAINT fk_users
+        FOREIGN KEY (user_id)
+        REFERENCES ${schemaName}.users(user_id)
+        ON DELETE CASCADE,
+
+    CONSTRAINT fk_payroll
+        FOREIGN KEY (payroll_id)
+        REFERENCES ${schemaName}.payroll(id)
+        ON DELETE CASCADE
+);
+
+-- ===========================================================
+-- Table: user_payroll_amount
+-- ===========================================================
+--changeset system:create-user-payroll-amount
+CREATE TABLE IF NOT EXISTS ${schemaName}.user_payroll_amount (
+    id BIGSERIAL PRIMARY KEY,
+    user_id VARCHAR(20) NOT NULL,
+    payroll_id VARCHAR(50) NOT NULL,
+    month VARCHAR(20) NOT NULL,
+    unpaid_leave_deduction NUMERIC(19,2) NOT NULL,
+    regular_hrs NUMERIC(19,2) NOT NULL,
+    regular_days INTEGER NOT NULL,
+    overtime_hrs NUMERIC(19,2) NOT NULL,
+    total_hrs NUMERIC(19,2) NOT NULL,
+    regular_payroll_amount NUMERIC(19,2) NOT NULL,
+    overtime_payroll_amount NUMERIC(19,2) NOT NULL,
+    total_payroll_amount NUMERIC(19,2) NOT NULL,
+    total_amount NUMERIC(19,2),
+    payroll_status VARCHAR(50),
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP,
+    notes VARCHAR(500),
+        CONSTRAINT fk_users
+        FOREIGN KEY (user_id)
+        REFERENCES ${schemaName}.users(user_id)
+        ON DELETE SET NULL,
+        CONSTRAINT fk_payroll
+        FOREIGN KEY (payroll_id)
+        REFERENCES ${schemaName}.payroll(id)
+        ON DELETE CASCADE
+);
+
+-- ===========================================================
+-- Table: user_payroll_history
+-- ===========================================================
+--changeset system:create-user-payroll-history
+
+CREATE TABLE IF NOT EXISTS user_payroll_history (
+    id BIGSERIAL PRIMARY KEY,
+    action_at TIMESTAMP,
+    action_type VARCHAR(100),
+    action_by VARCHAR(100),
+    user_id VARCHAR(20) NOT NULL,
+    user_payroll_amount_id BIGINT NOT NULL,
+
+    CONSTRAINT fk_user_payroll_history_amount
+        FOREIGN KEY (user_payroll_amount_id)
+        REFERENCES ${schemaName}.user_payroll_amount(id)
+        ON DELETE CASCADE,
+
+   CONSTRAINT fk_user_history_user
+         FOREIGN KEY (user_id)
+         REFERENCES ${schemaName}.users(user_id)
+         ON DELETE CASCADE
+);
+
+-- ===========================================================
 -- Table: location
 -- ===========================================================
 --changeset system:create-location
@@ -347,6 +474,9 @@ CREATE TABLE IF NOT EXISTS ${schemaName}.timesheet (
     tracked_hours TIME,
     regular_hours TIME,
     total_break_hours TIME,
+    start_time_duration TIME,
+    end_time_duration TIME,
+    total_over_time TIME,
     created_at TIMESTAMP,
     updated_at TIMESTAMP,
     status_id VARCHAR(50),
@@ -454,7 +584,8 @@ CREATE TABLE IF NOT EXISTS ${schemaName}.org_user_sequence (
     last_user_id INTEGER NOT NULL,
     last_secondary_user_id INTEGER,
     last_subscription_id INTEGER,
-    last_payment_id INTEGER
+    last_payment_id INTEGER,
+    last_payroll_id VARCHAR(20)
 );
 
 -- ===========================================================
@@ -466,6 +597,7 @@ CREATE TABLE IF NOT EXISTS ${schemaName}.user_embedding (
     user_id VARCHAR(20) NOT NULL UNIQUE,
     embeddings TEXT
 );
+
 -- ===========================================================
 -- Table: payment
 -- ===========================================================
@@ -481,6 +613,7 @@ CREATE TABLE payment (
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP
 );
+
 -- ===========================================================
 -- Table: subscription
 -- ===========================================================
@@ -556,6 +689,131 @@ CREATE TABLE IF NOT EXISTS calendar_details (
     calendar_id VARCHAR(10) NOT NULL,
     CONSTRAINT fk_calendar_details_calendar
         FOREIGN KEY (calendar_id) REFERENCES calendar (id)
+        ON DELETE CASCADE
+);
+
+-- ===========================================================
+-- Table: timeoff_policies
+-- ===========================================================
+--changeset system:create-timeoff-policies-table
+CREATE TABLE IF NOT EXISTS timeoff_policies (
+    policy_id VARCHAR(20) PRIMARY KEY,
+    policy_name VARCHAR(255) NOT NULL,
+    compensation VARCHAR(10) CHECK (compensation IN ('PAID','UNPAID')),
+    accrual_type VARCHAR(10) CHECK (accrual_type IN ('MONTHLY','ANNUALLY')),
+    validity_start_date DATE,
+    validity_end_date DATE,
+    accrual_start_date DATE,
+    reset_frequency VARCHAR(10) CHECK (reset_frequency IN ('MONTHLY','ANNUALLY')),
+    entitled_units INT,
+    entitled_type VARCHAR(10) CHECK (entitled_type IN ('DAY','HOURS')),
+    status VARCHAR(20),
+    max_carry_forward_units INT,
+    is_carry_forward BOOLEAN,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ===========================================================
+-- Table: user_policies
+-- ===========================================================
+--changeset system:create-user-policies-table
+CREATE TABLE IF NOT EXISTS user_policies (
+    id BIGSERIAL PRIMARY KEY,
+    policy_id VARCHAR(20) NOT NULL,
+    user_id VARCHAR(20) NOT NULL,
+    valid_from DATE,
+    valid_to DATE,
+    assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_user_policies_policy
+        FOREIGN KEY (policy_id) REFERENCES timeoff_policies(policy_id)
+        ON DELETE CASCADE
+);
+
+-- ===========================================================
+-- Table: timeoff_request
+-- ===========================================================
+-- changeset system:create-timeoff-request-table
+CREATE TABLE IF NOT EXISTS timeoff_request (
+    timeoff_request_id BIGSERIAL PRIMARY KEY,
+    policy_id VARCHAR(20) NOT NULL,
+    user_id VARCHAR(20) NOT NULL,
+    request_date DATE NOT NULL,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    start_time TIME,
+    end_time TIME,
+    leave_type VARCHAR(20) CHECK (leave_type IN ('FULL_DAY','HALF_DAY')),
+    units_requested INT,
+    status VARCHAR(20) CHECK (status IN ('APPROVED','PENDING','REJECTED')),
+    reason VARCHAR(255),
+    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_timeoff_request_policy
+        FOREIGN KEY (policy_id) REFERENCES timeoff_policies(policy_id)
+        ON DELETE CASCADE
+);
+
+-- ===========================================================
+-- Table: timeoff_request_history
+-- ===========================================================
+-- changeset system:create-timeoff-request-history-table
+CREATE TABLE IF NOT EXISTS timeoff_request_history (
+    id BIGSERIAL PRIMARY KEY,
+    timeoff_request_id BIGINT NOT NULL,
+    user_id VARCHAR(20) NOT NULL,
+    action_type VARCHAR(50) NOT NULL,
+    action_by VARCHAR(50) NOT NULL,
+    action_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_history_request
+        FOREIGN KEY (timeoff_request_id) REFERENCES timeoff_request(timeoff_request_id)
+        ON DELETE CASCADE
+);
+-- ===========================================================
+-- Table: leave_balance
+-- ===========================================================
+--changeset system:create-leave-balance-table
+CREATE TABLE IF NOT EXISTS leave_balance (
+    leave_balance_id BIGSERIAL PRIMARY KEY,
+    policy_id VARCHAR(20) NOT NULL,
+    user_id VARCHAR(20) NOT NULL,
+    period_start_date DATE,
+    period_end DATE,
+    total_units INT,
+    expired_units INT DEFAULT 0,
+    leave_taken_units INT DEFAULT 0,
+    balance_units INT,
+    next_accrual_date DATE,
+    last_accrual_date DATE,
+    carry_forward_units INT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_leave_balance_policy
+        FOREIGN KEY (policy_id) REFERENCES timeoff_policies(policy_id)
+        ON DELETE CASCADE
+);
+
+-- ===========================================================
+-- Table: monthly_accrual_tracking
+-- ===========================================================
+--changeset system:create-monthly-summary-table
+CREATE TABLE IF NOT EXISTS monthly_summary (
+    id BIGSERIAL PRIMARY KEY,
+    user_id VARCHAR(20) NOT NULL,
+    policy_id VARCHAR(20) NOT NULL,
+    month INT NOT NULL,
+    year INT NOT NULL,
+    total_leaves_taken INT DEFAULT 0,
+    paid_leaves_taken INT DEFAULT 0,
+    unpaid_leaves_taken INT DEFAULT 0,
+    total_units_available INT DEFAULT 0,
+    balance_units INT DEFAULT 0,
+    half_day_units INT DEFAULT 0,
+    full_day_units INT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_monthly_user_summary_policy_id
+        FOREIGN KEY (policy_id) REFERENCES timeoff_policies(policy_id)
         ON DELETE CASCADE
 );
 
@@ -649,6 +907,9 @@ RETURNS TABLE (
     lastClockOut TIME,
     trackedHours TIME,
     regularHours TIME,
+    start_time_duration TIME,
+    end_time_duration TIME,
+    total_over_time TIME,
     status VARCHAR
 )
 LANGUAGE plpgsql
@@ -667,6 +928,9 @@ BEGIN
         t.last_clock_out,
         t.tracked_hours,
         t.regular_hours,
+        t.start_time_duration,
+        t.end_time_duration,
+        t.total_over_time,
         ts.status_name
     FROM ${schemaName}.timesheet t
     JOIN ${schemaName}.users u ON t.user_id = u.user_id
@@ -859,3 +1123,133 @@ BEGIN
     ORDER BY t.date ASC;
 END;
 $BODY$;
+
+--changeset system:create-log-user-payroll-history-function endDelimiter://
+CREATE OR REPLACE FUNCTION ${schemaName}.log_user_payroll_history()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF (TG_OP = 'INSERT') THEN
+        INSERT INTO ${schemaName}.user_payroll_history(
+            user_id, action_at, action_type, action_by, user_payroll_amount_id
+        )
+        VALUES (NEW.user_id, NOW(), 'CREATE', current_user, NEW.id);
+    ELSIF (TG_OP = 'UPDATE') THEN
+        INSERT INTO ${schemaName}.user_payroll_history(
+            user_id, action_at, action_type, action_by, user_payroll_amount_id
+        )
+        VALUES (NEW.user_id, NOW(), 'UPDATE', current_user, NEW.id);
+    ELSIF (TG_OP = 'DELETE') THEN
+        INSERT INTO ${schemaName}.user_payroll_history(
+            user_id, action_at, action_type, action_by, user_payroll_amount_id
+        )
+        VALUES (OLD.user_id, NOW(), 'DELETE', current_user, OLD.id);
+    END IF;
+
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+--changeset system:create-trg-user-payroll-history endDelimiter://
+CREATE TRIGGER trg_user_payroll_history
+AFTER INSERT OR UPDATE OR DELETE
+ON ${schemaName}.user_payroll_amount
+FOR EACH ROW
+EXECUTE FUNCTION ${schemaName}.log_user_payroll_history();
+
+--changeset system:create-log-payroll-history-function endDelimiter://
+CREATE OR REPLACE FUNCTION ${schemaName}.log_payroll_history()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF (TG_OP = 'INSERT') THEN
+        INSERT INTO ${schemaName}.payroll_history(
+            payroll_id, action_at, action_type, action_by
+        )
+        VALUES (NEW.id, NOW(), 'CREATE', current_user);
+    ELSIF (TG_OP = 'UPDATE') THEN
+        INSERT INTO ${schemaName}.payroll_history(
+            payroll_id, action_at, action_type, action_by
+        )
+        VALUES (NEW.id, NOW(), 'UPDATE', current_user);
+    ELSIF (TG_OP = 'DELETE') THEN
+        INSERT INTO ${schemaName}.payroll_history(
+            payroll_id, action_at, action_type, action_by
+        )
+        VALUES (OLD.id, NOW(), 'DELETE', current_user);
+    END IF;
+
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+--changeset system:create-trg-payroll-history endDelimiter://
+CREATE TRIGGER trg_payroll_history
+AFTER INSERT OR UPDATE OR DELETE
+ON ${schemaName}.payroll
+FOR EACH ROW
+EXECUTE FUNCTION ${schemaName}.log_payroll_history();
+--changeset system:create-log-timeoff-request-history-function endDelimiter://
+CREATE OR REPLACE FUNCTION ${schemaName}.log_timeoff_request_history()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF (TG_OP = 'INSERT') THEN
+        INSERT INTO ${schemaName}.timeoff_request_history (
+            timeoff_request_id,
+            user_id,
+            action_type,
+            action_by,
+            action_at
+        )
+        VALUES (
+            NEW.timeoff_request_id,
+            NEW.user_id,
+            'CREATE',
+            CURRENT_USER,
+            CURRENT_TIMESTAMP
+        );
+        RETURN NEW;
+
+    ELSIF (TG_OP = 'UPDATE') THEN
+        INSERT INTO ${schemaName}.timeoff_request_history (
+            timeoff_request_id,
+            user_id,
+            action_type,
+            action_by,
+            action_at
+        )
+        VALUES (
+            NEW.timeoff_request_id,
+            NEW.user_id,
+            'UPDATE',
+            CURRENT_USER,
+            CURRENT_TIMESTAMP
+        );
+        RETURN NEW;
+
+    ELSIF (TG_OP = 'DELETE') THEN
+        INSERT INTO ${schemaName}.timeoff_request_history (
+            timeoff_request_id,
+            user_id,
+            action_type,
+            action_by,
+            action_at
+        )
+        VALUES (
+            OLD.timeoff_request_id,
+            OLD.user_id,
+            'DELETE',
+            CURRENT_USER,
+            CURRENT_TIMESTAMP
+        );
+        RETURN OLD;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+--changeset system:create-trg-timeoff-request-history endDelimiter://
+DROP TRIGGER IF EXISTS trg_timeoff_request_history ON ${schemaName}.timeoff_request;
+
+CREATE TRIGGER trg_timeoff_request_history
+AFTER INSERT OR UPDATE OR DELETE
+ON ${schemaName}.timeoff_request
+FOR EACH ROW
+EXECUTE FUNCTION ${schemaName}.log_timeoff_request_history();

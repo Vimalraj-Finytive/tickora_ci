@@ -1,15 +1,20 @@
 package com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.impl;
-
 import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.OrganizationAdapter;
-import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.OrganizationDetailsDto;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.OrganizationSummaryDto;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.*;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.mapper.OrganizationEntityMapper;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.*;
 import org.springframework.stereotype.Component;
-
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.OrganizationEntity;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.OrganizationTypeEntity;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.PrivilegeEntity;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.RoleEntity;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.OrganizationRepository;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.OrganizationTypeRepository;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.PrivilegeRepository;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.RoleRepository;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,7 +30,9 @@ public class OrganizationAdapterImpl implements OrganizationAdapter {
     private final OrganizationEntityMapper organizationEntityMapper;
     private final SubscriptionRepository subscriptionRepository;
 
-    public OrganizationAdapterImpl(RoleRepository roleRepository, OrganizationRepository organizationRepository, PrivilegeRepository privilegeRepository, OrganizationTypeRepository organizationTypeRepository, OrganizationEntityMapper organizationEntityMapper, SubscriptionRepository subscriptionRepository) {
+    public OrganizationAdapterImpl(RoleRepository roleRepository, OrganizationRepository organizationRepository,
+                                   PrivilegeRepository privilegeRepository, OrganizationTypeRepository organizationTypeRepository,
+                                   OrganizationEntityMapper organizationEntityMapper, SubscriptionRepository subscriptionRepository) {
         this.roleRepository = roleRepository;
         this.organizationRepository = organizationRepository;
         this.privilegeRepository = privilegeRepository;

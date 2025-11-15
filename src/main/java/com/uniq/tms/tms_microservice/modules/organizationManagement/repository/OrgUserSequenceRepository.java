@@ -56,4 +56,33 @@ public interface OrgUserSequenceRepository extends JpaRepository<OrgUserSequence
     @Query("UPDATE OrgUserSequenceEntity s SET s.lastPaymentId = :value WHERE s.orgId = :orgId")
     void updateLastPaymentId(@Param("orgId") String orgId, @Param("value") int value);
 
+//    @Modifying
+//    @Transactional
+//    @Query("UPDATE OrgUserSequenceEntity s SET s.lastPayrollId = COALESCE(s.lastPayrollId, 0) + 1 WHERE s.orgId = :orgId")
+//    int incrementPayrollSequence(String orgId);
+//
+//
+//    @Query("SELECT s.lastPayrollId FROM OrgUserSequenceEntity s WHERE s.orgId = :orgId")
+//    Integer getLastPayrollId(@Param("orgId") String orgId);
+
+//    @Modifying
+//    @Transactional
+//    @Query("UPDATE OrgUserSequenceEntity s SET s.lastPayrollId = :value WHERE s.orgId = :orgId")
+//    void updateLastPayrollId(@Param("orgId") String orgId, @Param("value") int value);
+//
+//    @Modifying
+//    @Transactional
+//    @Query("UPDATE OrgUserSequenceEntity s SET s.lastPayrollId = s.lastPayrollId + 1 WHERE s.orgId = :orgId")
+//    int incrementPayrollSequence(@Param("orgId") String orgId);
+//
+//    @Query("SELECT s.lastPayrollId FROM OrgUserSequenceEntity s WHERE s.orgId = :orgId")
+//    Integer getLastPayrollId(@Param("orgId") String orgId);
+
+    @Query("SELECT s.lastPayrollId FROM OrgUserSequenceEntity s WHERE s.orgId = :orgId")
+    String getLastPayrollId(@Param("orgId") String orgId);
+
+    @Modifying
+    @Transactional
+    @Query("UPDATE OrgUserSequenceEntity s SET s.lastPayrollId = :value WHERE s.orgId = :orgId")
+    int updateLastPayrollId(@Param("orgId") String orgId, @Param("value") String value);
 }

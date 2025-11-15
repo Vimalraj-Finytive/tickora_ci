@@ -586,4 +586,9 @@ public class UserAdapterImpl implements UserAdapter {
         return userSchemaMapperRepository.findAllMappedMobilesByOrgId(orgId);
     }
 
+    @Override
+    public List<UserEntity> getUsersByIds(List<String> userIds) {
+        return userRepository.findByUserIdAndActiveTrue(userIds);
+    }
+
 }

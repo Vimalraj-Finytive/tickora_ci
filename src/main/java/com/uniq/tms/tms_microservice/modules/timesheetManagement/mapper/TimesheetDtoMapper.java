@@ -3,6 +3,12 @@ package com.uniq.tms.tms_microservice.modules.timesheetManagement.mapper;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.dto.*;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.entity.TimesheetEntity;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.entity.TimesheetStatusEntity;
+import com.uniq.tms.tms_microservice.modules.timesheetManagement.entity.TimesheetEntity;
+import com.uniq.tms.tms_microservice.modules.timesheetManagement.entity.TimesheetStatusEntity;
+import com.uniq.tms.tms_microservice.modules.timesheetManagement.dto.TimesheetDto;
+import com.uniq.tms.tms_microservice.modules.timesheetManagement.dto.TimesheetHistoryDto;
+import com.uniq.tms.tms_microservice.modules.timesheetManagement.dto.TimesheetStatusDto;
+import com.uniq.tms.tms_microservice.modules.timesheetManagement.dto.UserDashboardDto;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.model.TimesheetHistory;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.model.TimesheetStatus;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.projection.TimesheetProjection;
@@ -64,7 +70,6 @@ public interface TimesheetDtoMapper {
     DashboardOrganizationSummaryDto toDashboardOrgSummary(String orgId, String orgName, int presentCount, int absentCount);
 
     DashboardSummaryDto toDashboardSummary(LocalDate date, List<DashboardOrganizationSummaryDto> organizations);
-
 
     default String formatTime(LocalTime localTime) {
         if (localTime == null) return "00:00";

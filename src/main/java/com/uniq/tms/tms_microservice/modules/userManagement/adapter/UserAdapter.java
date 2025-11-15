@@ -9,7 +9,6 @@ import com.uniq.tms.tms_microservice.modules.userManagement.dto.UserNameEmailDto
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.*;
 import com.uniq.tms.tms_microservice.modules.userManagement.dto.UserNameSuggestionDto;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.WorkScheduleEntity;
-
 import java.lang.String;
 import java.util.List;
 import java.util.Map;
@@ -116,4 +115,5 @@ public interface UserAdapter {
     long getUserCount(String organizationId, java.time.LocalDateTime start, java.time.LocalDateTime end);
     Set<String> getAllMappedEmails(String orgId);
     Set<String> getAllMappedMobiles(String orgId);
+    List<UserEntity> getUsersByIds(List<String> userIds);
 }

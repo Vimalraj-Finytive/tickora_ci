@@ -1,6 +1,8 @@
 package com.uniq.tms.tms_microservice.modules.userManagement.services.impl;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.CalendarAdapter;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.CalendarEntity;
 import com.uniq.tms.tms_microservice.modules.locationManagement.adapter.LocationAdapter;
 import com.uniq.tms.tms_microservice.modules.locationManagement.dto.LocationDto;
 import com.uniq.tms.tms_microservice.modules.locationManagement.entity.UserLocationEntity;
@@ -8,6 +10,8 @@ import com.uniq.tms.tms_microservice.modules.locationManagement.mapper.LocationD
 import com.uniq.tms.tms_microservice.modules.locationManagement.repository.LocationRepository;
 import com.uniq.tms.tms_microservice.modules.locationManagement.services.LocationService;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.mapper.OrganizationEntityMapper;
+import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.WorkScheduleTypeEntity;
+import com.uniq.tms.tms_microservice.modules.workScheduleManagement.enums.WorkScheduleTypeEnum;
 import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.OrganizationAdapter;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.OrganizationEntity;
@@ -91,7 +95,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
 import com.opencsv.CSVReader;
 import static com.uniq.tms.tms_microservice.shared.util.TextUtil.isBlank;
 
@@ -102,6 +105,7 @@ public class UserServiceImpl implements UserService {
     private final UserAdapter userAdapter;
     private final TimesheetAdapter timesheetAdapter;
     private final UserEntityMapper userEntityMapper;
+    private final CalendarAdapter calendarAdapter;
     private final OrganizationRepository organizationRepository;
     private final RoleRepository roleRepository;
     private final LocationRepository locationRepository;
@@ -129,7 +133,7 @@ public class UserServiceImpl implements UserService {
     private final OrganizationEntityMapper organizationEntityMapper;
 
     public UserServiceImpl(Validator validator, UserAdapter userAdapter, TimesheetAdapter timesheetAdapter,
-                           UserEntityMapper userEntityMapper, OrganizationRepository organizationRepository,
+                           UserEntityMapper userEntityMapper, CalendarAdapter calendarAdapter, OrganizationRepository organizationRepository,
                            RoleRepository roleRepository, LocationRepository locationRepository, EmailHelper emailHelper,
                            UserDtoMapper userDtoMapper, SecondaryDetailsMapper secondaryDetailsMapper,
                            @Nullable RedisTemplate<String, Object> redisTemplate,
@@ -142,6 +146,7 @@ public class UserServiceImpl implements UserService {
         this.userAdapter = userAdapter;
         this.timesheetAdapter = timesheetAdapter;
         this.userEntityMapper = userEntityMapper;
+        this.calendarAdapter = calendarAdapter;
         this.organizationRepository = organizationRepository;
         this.roleRepository = roleRepository;
         this.locationRepository = locationRepository;
@@ -240,10 +245,8 @@ public class UserServiceImpl implements UserService {
             Set<String> existingMobiles = userAdapter.getAllMobileNumbers(orgId);
             Set<String> existingSecEmails = userAdapter.getAllSecondaryEmail(orgId);
             Set<String> existingSecMobiles = userAdapter.getAllSecondaryMobile(orgId);
-
             Set<String> schemaEmails = userAdapter.getAllMappedEmails(orgId);
             Set<String> schemaMobiles = userAdapter.getAllMappedMobiles(orgId);
-
             Map<String, Long> roleMap = organizationAdapter.getRoleNameIdMap();
             Map<String, Long> locationMap = locationAdapter.getLocationNameToIdMap(orgId);
             Map<String, Long> groupMap = userAdapter.getGroupNameIdMap(orgId);
@@ -489,10 +492,8 @@ public class UserServiceImpl implements UserService {
             }
 
             userAdapter.saveAllSecondaryDetails(secondaryDetailsEntities);
-
             int uploadedCount = userEntities.size();
             int skippedCount = invalidRecords.size();
-
             sendEmailsAsync(emailRequests);
             emailHelper.sendSuccessEmail(userFromToken.getEmail(), userFromToken.getUserName(),
                     uploadedCount, skippedCount);
@@ -1892,7 +1893,6 @@ public class UserServiceImpl implements UserService {
             userAdapter.saveAllUsers(updatedUsers);
             updatedCount = updatedUsers.size();
         }
-
         if (isRedisEnabled) {
             CacheEventPublisherUtil.syncReloadThenPublish(
                     publisher,
@@ -1905,13 +1905,85 @@ public class UserServiceImpl implements UserService {
         } else {
             log.info("Redis is not enabled or RedisTemplate is null. Skipping cache update bulk role reload.");
         }
-
         BulkRoleUpdateModel result = new BulkRoleUpdateModel();
         result.setUpdateCount(updatedCount);
         result.setSkippedCount(skippedCount);
         return result;
     }
 
+//    @Override
+//    @Transactional
+//    public List<BulkWorkScheduleUpdateResponseDto> updateWorkSchedules(
+//            BulkWorkScheduleUpdateRequestDto requestDto,
+//            String userNameFromToken,
+//            String orgId) {
+//        String schema = TenantUtil.getCurrentTenant();
+//
+//        List<BulkWorkScheduleUpdateResponseDto> results = new ArrayList<>();
+//
+//        WorkScheduleEntity workSchedule = null;
+//        if (requestDto.getWorkScheduleId() != null) {
+//            workSchedule = workScheduleAdapter.findByScheduleId(requestDto.getWorkScheduleId(), orgId);
+//            if (workSchedule == null) {
+//                throw new ResponseStatusException(
+//                        HttpStatus.NOT_FOUND,
+//                        "WorkSchedule not found with ID: " + requestDto.getWorkScheduleId()
+//                );
+//            }
+//        }
+//
+//        log.info("Starting bulk work schedule update for scheduleId {}",
+//                workSchedule != null ? workSchedule.getScheduleId() : "null");
+//
+//        Map<String, UserEntity> userMap = userAdapter.getUsersByIds(requestDto.getMemberIds(), orgId)
+//                .stream()
+//                .collect(Collectors.toMap(UserEntity::getUserId, Function.identity()));
+//
+//        List<UserEntity> usersToUpdate = new ArrayList<>();
+//
+//        for (String memberId : requestDto.getMemberIds()) {
+//            UserEntity user = userMap.get(memberId);
+//
+//            if (user == null) {
+//                results.add(new BulkWorkScheduleUpdateResponseDto(memberId, false, "User not found"));
+//                continue;
+//            }
+//
+//            if (!orgId.equals(user.getOrganizationId())) {
+//                results.add(new BulkWorkScheduleUpdateResponseDto(memberId, false, "Unauthorized"));
+//                continue;
+//            }
+//
+//            user.setWorkSchedule(workSchedule);
+//            usersToUpdate.add(user);
+//            results.add(new BulkWorkScheduleUpdateResponseDto(memberId, true, "Work schedule updated"));
+//        }
+//
+//        if (!usersToUpdate.isEmpty()) {
+//            try {
+//                userAdapter.saveAllUsers(usersToUpdate);
+//            } catch (Exception e) {
+//                log.error("Failed to save users in batch: {}", e.getMessage());
+//            }
+//        }
+//
+//        long successCount = results.stream().filter(BulkWorkScheduleUpdateResponseDto::isSuccess).count();
+//        long failedCount = results.size() - successCount;
+//        log.info("Completed bulk work schedule update. Success count: {}, Failed count: {}", successCount, failedCount);
+//        if (isRedisEnabled) {
+//            CacheEventPublisherUtil.syncReloadThenPublish(
+//                    publisher,
+//                    cacheKeyConfig.getGroups(),
+//                    orgId,
+//                    schema,
+//                    cacheReloadHandlerRegistry
+//            );
+//            log.info("GroupCacheReloadEvent published after Group Creation");
+//        } else {
+//            log.info("Redis is not enabled or RedisTemplate is null. Skipping cache create group reload.");
+//        }
+//        return results;
+//    }
 
     @Override
     @Transactional

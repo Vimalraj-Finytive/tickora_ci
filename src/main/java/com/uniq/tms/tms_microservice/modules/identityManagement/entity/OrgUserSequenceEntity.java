@@ -25,6 +25,9 @@ public class OrgUserSequenceEntity {
     @Column(name = "last_payment_id")
     private Integer lastPaymentId;
 
+    @Column(name = "last_payroll_id")
+    private String lastPayrollId;
+
     public String getOrgId() {
         return orgId;
     }
@@ -63,5 +66,13 @@ public class OrgUserSequenceEntity {
 
     public void setLastPaymentId(Integer lastPaymentId) {
         this.lastPaymentId = lastPaymentId;
+    }
+
+    public String getLastPayrollId() {
+        return lastPayrollId;
+    }
+
+    public void setLastPayrollId(String lastPayrollId) {
+        this.lastPayrollId = lastPayrollId;
     }
 }
