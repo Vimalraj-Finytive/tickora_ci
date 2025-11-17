@@ -23,7 +23,7 @@ public class PayRollSchedular {
         this.organizationRepository = organizationRepository;
     }
 
-    @Scheduled(cron = "0 0 0 * * ?", zone = "Asia/Kolkata")
+    @Scheduled(cron = "0 15 11 * * ?", zone = "Asia/Kolkata")
     public void autoCalculatePayrollAmountForAllEmployees(){
         try {
             List<OrganizationEntity> orgIds = organizationRepository.findAll();
