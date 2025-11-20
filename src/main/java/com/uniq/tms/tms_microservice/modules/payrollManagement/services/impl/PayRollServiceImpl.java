@@ -214,22 +214,19 @@ public class PayRollServiceImpl implements PayRollService {
 
     @Override
     @Transactional
-    public UserPayRollAmountModel updatePayrollAmount(UserPayRollAmountModel model) {
+    public UserPayRollAmountModel updatePayrollAmount(UserPayRollAmountModel model,String month) {
 
         Optional<UserPayRollAmountEntity> optExisting =
-                payRollAdapter.findUserPayrollAmountByUserId(model.getUserId());
+                payRollAdapter.findUserPayrollAmountByUserIdAndMonth(model.getUserId(),month);
         UserPayRollAmountEntity existing = getUserPayrollAmountEntity(model, optExisting);
 
         BigDecimal incomingTotalAmount = model.getTotalAmount();
         BigDecimal existingTotalAmount = existing.getTotalAmount();
 
-
         if (existingTotalAmount == null && incomingTotalAmount != null) {
             existing.setTotalAmount(incomingTotalAmount);
         }
-        else if (incomingTotalAmount != null
-                && existingTotalAmount != null
-                && incomingTotalAmount.compareTo(existingTotalAmount) != 0) {
+        else if (incomingTotalAmount != null && incomingTotalAmount.compareTo(existingTotalAmount) != 0) {
             existing.setTotalAmount(incomingTotalAmount);
         }
 
@@ -244,6 +241,7 @@ public class PayRollServiceImpl implements PayRollService {
         if (model.getTotalPayrollAmount() != null) {
             existing.setTotalPayrollAmount(model.getTotalPayrollAmount());
         }
+        existing.setUpdatedAt(LocalDateTime.now());
 
         UserPayRollAmountEntity saved = payRollAdapter.saveUserPayRollAmount(existing);
         return entityMapper.toModel(saved);
@@ -271,15 +269,14 @@ public class PayRollServiceImpl implements PayRollService {
         PayRollEntity payroll = payRollAdapter.findById(model.getPayrollId())
                 .orElseThrow(() -> new RuntimeException("Payroll not found"));
         payroll.setActive(model.isActive());
-
         payroll.setUpdatedAt(LocalDateTime.now());
-
         payRollAdapter.save(payroll);
 
         if (!model.isActive()) {
             payRollAdapter.deleteUserPayrollById(model.getPayrollId());
         }
     }
+
 
     private static UserPayRollAmountEntity getUserPayrollAmountEntity(UserPayRollAmountModel model, Optional<UserPayRollAmountEntity> optExisting) {
         UserPayRollAmountEntity existing = optExisting.orElseThrow(() ->

@@ -1,71 +1,48 @@
-package com.uniq.tms.tms_microservice.modules.leavemanagement.entity;
+package com.uniq.tms.tms_microservice.modules.leavemanagement.model;
 
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.AccrualType;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.Compensation;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.EntitledType;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.Status;
-import jakarta.persistence.*;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
-@Entity
-@Table(name = "timeoff_policies")
-public class TimeoffPolicyEntity {
+public class TimeoffPoliciesModel {
 
-    @Id
-    @Column(name = "policy_id", length = 20)
     private String policyId;
-
-    @Column(name = "policy_name", nullable = false, length = 255)
     private String policyName;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "compensation", length = 10)
     private Compensation compensation;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "accrual_type", length = 10)
     private AccrualType accrualType;
 
-    @Column(name = "validity_start_date")
     private LocalDate validityStartDate;
-
-    @Column(name = "validity_end_date")
     private LocalDate validityEndDate;
-
-    @Column(name = "accrual_start_date")
     private LocalDate accrualStartDate;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "reset_frequency", length = 10)
     private AccrualType resetFrequency;
 
-    @Column(name = "entitled_units")
     private Integer entitledUnits;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "entitled_type", length = 10)
     private EntitledType entitledType;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "status", length = 20)
     private Status status;
 
-    @Column(name = "max_carry_forward_units")
     private Integer maxCarryForwardUnits;
-
-    @Column(name = "is_carry_forward")
     private Boolean isCarryForward;
 
-    @Column(name = "created_at")
     private LocalDateTime createdAt;
-
-    @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    @OneToMany(mappedBy = "policy", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<UserPolicyEntity> userPolicies;
+    private List<String> assignedUsernames;
+
+    public List<String> getAssignedUsernames() {
+        return assignedUsernames;
+    }
+
+    public void setAssignedUsernames(List<String> assignedUsernames) {
+        this.assignedUsernames = assignedUsernames;
+    }
 
     public String getPolicyId() {
         return policyId;
@@ -185,13 +162,5 @@ public class TimeoffPolicyEntity {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
-    }
-
-    public List<UserPolicyEntity> getUserPolicies() {
-        return userPolicies;
-    }
-
-    public void setUserPolicies(List<UserPolicyEntity> userPolicies) {
-        this.userPolicies = userPolicies;
     }
 }

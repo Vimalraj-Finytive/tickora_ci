@@ -44,9 +44,9 @@ public class PayRollFacade {
         return new ApiResponse<>(200, "Fetched UserPayrollAmount Successfully", dto);
     }
 
-    public ApiResponse<UserPayRollUpdateDto> updatePayrollAmount(UserPayRollUpdateDto dto) {
+    public ApiResponse<UserPayRollUpdateDto> updatePayrollAmount(UserPayRollUpdateDto dto,String month) {
         UserPayRollAmountModel model = dtoMapper.toModel(dto);
-        UserPayRollAmountModel updatedModel = service.updatePayrollAmount(model);
+        UserPayRollAmountModel updatedModel = service.updatePayrollAmount(model,month);
         return new ApiResponse<>(200, "Payroll updated successfully", null);
     }
 

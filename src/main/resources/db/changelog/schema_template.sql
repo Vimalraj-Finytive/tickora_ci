@@ -727,7 +727,12 @@ CREATE TABLE IF NOT EXISTS user_policies (
     assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_user_policies_policy
         FOREIGN KEY (policy_id) REFERENCES timeoff_policies(policy_id)
-        ON DELETE CASCADE
+        ON DELETE CASCADE,
+
+           CONSTRAINT fk_user_policies_user
+                FOREIGN KEY (user_id)
+                REFERENCES users(user_id)
+                ON DELETE CASCADE
 );
 
 -- ===========================================================

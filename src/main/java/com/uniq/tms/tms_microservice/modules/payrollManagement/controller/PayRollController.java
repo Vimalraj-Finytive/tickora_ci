@@ -57,11 +57,11 @@ public class PayRollController {
         return ResponseEntity.status(payrollPayment.getStatusCode()).body(payrollPayment);
     }
 
-    @PutMapping("/userPayRoll/update")
+    @PutMapping("/userPayRoll/update/{month}")
     public ResponseEntity<ApiResponse<UserPayRollUpdateDto>> updatePayroll(
             @RequestHeader("Authorization") String token,
-            @RequestBody UserPayRollUpdateDto dto) {
-        ApiResponse<UserPayRollUpdateDto> response = facade.updatePayrollAmount(dto);
+            @RequestBody UserPayRollUpdateDto dto,@PathVariable String month) {
+        ApiResponse<UserPayRollUpdateDto> response = facade.updatePayrollAmount(dto,month);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 

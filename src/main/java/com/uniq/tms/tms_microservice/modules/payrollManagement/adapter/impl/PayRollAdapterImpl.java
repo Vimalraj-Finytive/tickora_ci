@@ -98,10 +98,12 @@ public class PayRollAdapterImpl implements PayRollAdapter {
         return payrollRepo.findAllIdAndName();
     }
 
-    public Optional<UserPayRollAmountEntity> findUserPayrollAmountByUserId(String userId) {
-        return userPayrollAmountRepository.findByUser_UserId(userId);
+    @Override
+    public Optional<UserPayRollAmountEntity> findUserPayrollAmountByUserIdAndMonth(String userId,String month) {
+        return userPayrollAmountRepository.findByUser_UserIdAndMonth(userId,month);
     }
 
+    @Override
     public UserPayRollAmountEntity saveUserPayRollAmount(UserPayRollAmountEntity entity) {
         return userPayrollAmountRepository.save(entity);
     }
