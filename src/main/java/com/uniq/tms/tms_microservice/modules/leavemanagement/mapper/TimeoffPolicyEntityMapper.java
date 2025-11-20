@@ -1,12 +1,14 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.mapper;
 
+import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeoffRequestEntity;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeOffRequest;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeoffPolicyEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeoffPoliciesModel;
 import org.mapstruct.Mapper;
 import org.mapstruct.ReportingPolicy;
 import java.util.List;
-
-
 
 @Mapper(componentModel = "spring",unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface TimeoffPolicyEntityMapper {

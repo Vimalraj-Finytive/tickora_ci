@@ -1,5 +1,16 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.facade;
 
+import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.AdminStatusUpdateDto;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.EmployeeStatusUpdateDto;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeOffRequestDto;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.mapper.TimeoffPolicyDtoMapper;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.model.AdminStatusUpdate;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.model.EmployeeStatusUpdate;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeOffRequest;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.services.TimeOffPolicyService;
+import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
+import org.springframework.stereotype.Component;
+import org.springframework.web.bind.annotation.RequestBody;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.*;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.mapper.TimeOffPolicyDtoMapper;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.*;
@@ -14,18 +25,35 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeoffPolici
 import com.uniq.tms.tms_microservice.modules.leavemanagement.services.TimeOffPolicyService;
 import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
 import org.springframework.stereotype.Component;
-
+import java.util.List;
+import java.util.stream.Collectors;
 @Component
 public class TimeOffPoliciesFacade {
 
     private final TimeOffPolicyService timeOffPolicyService;
-    private final TimeOffPolicyDtoMapper timeOffPolicyDtoMapper;
+    private final TimeoffPolicyDtoMapper timeoffPolicyDtoMapper;
 
-    public TimeOffPoliciesFacade(TimeOffPolicyService timeOffPolicyService, TimeOffPolicyDtoMapper timeOffPolicyDtoMapper) {
+    public TimeOffPoliciesFacade(TimeOffPolicyService timeOffPolicyService, TimeoffPolicyDtoMapper timeoffPolicyDtoMapper) {
         this.timeOffPolicyService = timeOffPolicyService;
-        this.timeOffPolicyDtoMapper = timeOffPolicyDtoMapper;
+        this.timeoffPolicyDtoMapper = timeoffPolicyDtoMapper;
     }
 
+    public ApiResponse createRequest(TimeOffRequestDto requestDto) {
+        TimeOffRequest request = timeoffPolicyDtoMapper.toRequestModel(requestDto);
+        timeOffPolicyService.createRequest(request);
+        return new ApiResponse<>(200,"Requested TimeOff Successfully",null);
+    }
+
+    public ApiResponse employeeUpdateStatus(EmployeeStatusUpdateDto dto){
+        EmployeeStatusUpdate model = timeoffPolicyDtoMapper.toStatusModel(dto);
+        timeOffPolicyService.employeeUpdateStatus(model);
+        return new ApiResponse<>(200,"Update TimeOff Request Successfully",null);
+    }
+
+    public ApiResponse adminUpdateStatus(AdminStatusUpdateDto dto){
+        AdminStatusUpdate model = timeoffPolicyDtoMapper.toAdminStatusModel(dto);
+        timeOffPolicyService.adminUpdateStatus(model);
+        return new ApiResponse<>(200,"Update TimeOff Request status Successfully",null);
 
     public ApiResponse<TimeOffPolicyResponseDto> createPolicy(TimeOffPolicyRequestDto requestDto) {
 
@@ -116,19 +144,6 @@ public class TimeOffPoliciesFacade {
         }
     }
 
-import java.util.List;
-import java.util.stream.Collectors;
-
-@Component
-public class TimeOffPoliciesFacade {
-
-    private final TimeOffPolicyService service;
-    private final TimeoffPolicyDtoMapper mapper;
-
-    public TimeOffPoliciesFacade(TimeOffPolicyService service, TimeoffPolicyDtoMapper mapper) {
-        this.service = service;
-        this.mapper = mapper;
-    }
 
     public ApiResponse<List<TimeoffPoliciesDto>> getAllPolicies() {
         List<TimeoffPoliciesModel> models = service.getAllPolicies();

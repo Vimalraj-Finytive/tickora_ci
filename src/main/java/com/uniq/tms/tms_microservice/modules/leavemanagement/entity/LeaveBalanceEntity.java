@@ -29,16 +29,16 @@ public class LeaveBalanceEntity {
     private LocalDate periodEnd;
 
     @Column(name = "total_units")
-    private BigDecimal  totalUnits;
+    private Double totalUnits;
 
-    @Column(name = "expired_units", columnDefinition = "NUMERIC(10,2) DEFAULT 0")
-    private BigDecimal expiredUnits ;
+    @Column(name = "expired_units")
+    private Double expiredUnits = 0.0;
 
-    @Column(name = "leave_taken_units", columnDefinition = "NUMERIC(10,2) DEFAULT 0")
-    private BigDecimal  leaveTakenUnits;
+    @Column(name = "leave_taken_units")
+    private Double leaveTakenUnits = 0.0;
 
     @Column(name = "balance_units")
-    private BigDecimal  balanceUnits;
+    private Double balanceUnits;
 
     @Column(name = "next_accrual_date")
     private LocalDate nextAccrualDate;
@@ -47,7 +47,7 @@ public class LeaveBalanceEntity {
     private LocalDate lastAccrualDate;
 
     @Column(name = "carry_forward_units")
-    private Integer carryForwardUnits = 0;
+    private Double carryForwardUnits = 0.0;
 
 
     public Long getLeaveBalanceId() {
@@ -90,35 +90,35 @@ public class LeaveBalanceEntity {
         this.periodEnd = periodEnd;
     }
 
-    public BigDecimal getTotalUnits() {
+    public Double getTotalUnits() {
         return totalUnits;
     }
 
-    public void setTotalUnits(BigDecimal totalUnits) {
+    public void setTotalUnits(Double totalUnits) {
         this.totalUnits = totalUnits;
     }
 
-    public BigDecimal getExpiredUnits() {
+    public Double getExpiredUnits() {
         return expiredUnits;
     }
 
-    public void setExpiredUnits(BigDecimal expiredUnits) {
+    public void setExpiredUnits(Double expiredUnits) {
         this.expiredUnits = expiredUnits;
     }
 
-    public BigDecimal getLeaveTakenUnits() {
+    public Double getLeaveTakenUnits() {
         return leaveTakenUnits;
     }
 
-    public void setLeaveTakenUnits(BigDecimal leaveTakenUnits) {
+    public void setLeaveTakenUnits(Double leaveTakenUnits) {
         this.leaveTakenUnits = leaveTakenUnits;
     }
 
-    public BigDecimal getBalanceUnits() {
+    public Double getBalanceUnits() {
         return balanceUnits;
     }
 
-    public void setBalanceUnits(BigDecimal balanceUnits) {
+    public void setBalanceUnits(Double balanceUnits) {
         this.balanceUnits = balanceUnits;
     }
 
@@ -138,12 +138,11 @@ public class LeaveBalanceEntity {
         this.lastAccrualDate = lastAccrualDate;
     }
 
-    public Integer getCarryForwardUnits() {
+    public Double getCarryForwardUnits() {
         return carryForwardUnits;
     }
 
-    public void setCarryForwardUnits(Integer carryForwardUnits) {
+    public void setCarryForwardUnits(Double carryForwardUnits) {
         this.carryForwardUnits = carryForwardUnits;
     }
-
 }

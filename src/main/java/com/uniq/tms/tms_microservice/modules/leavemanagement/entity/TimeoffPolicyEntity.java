@@ -11,6 +11,7 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.Status;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -41,7 +42,6 @@ public class TimeoffPolicyEntity {
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     @Column(name = "accrual_start_date")
     private LocalDate accrualStartDate;
-
 
     @Enumerated(EnumType.STRING)
     @Column(name = "reset_frequency", length = 10)
@@ -75,6 +75,8 @@ public class TimeoffPolicyEntity {
     @OneToMany(mappedBy = "policy", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<UserPolicyEntity> userPolicies;
 
+    @OneToMany(mappedBy = "policy", cascade = CascadeType.ALL)
+    private List<TimeoffRequestEntity> requests = new ArrayList<>();
     public Integer getEntitledHours() {
         return entitledHours;
     }
@@ -210,4 +212,13 @@ public class TimeoffPolicyEntity {
     public void setUserPolicies(List<UserPolicyEntity> userPolicies) {
         this.userPolicies = userPolicies;
     }
+
+    public List<TimeoffRequestEntity> getRequests() {
+        return requests;
+    }
+
+    public void setRequests(List<TimeoffRequestEntity> requests) {
+        this.requests = requests;
+    }
+
 }

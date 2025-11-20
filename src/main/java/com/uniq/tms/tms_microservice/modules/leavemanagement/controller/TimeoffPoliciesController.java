@@ -1,13 +1,19 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.controller;
 
 import com.uniq.tms.tms_microservice.modules.leavemanagement.constant.LeaveConstant;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.AdminStatusUpdateDto;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.EmployeeStatusUpdateDto;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeOffRequestDto;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.facade.TimeOffPoliciesFacade;
+import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.*;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.facade.TimeOffPoliciesFacade;
 import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.AccrualTypeEnumDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.CompensationEnumDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeoffPoliciesDto;
@@ -112,6 +118,30 @@ public class TimeoffPoliciesController {
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
+    private final TimeOffPoliciesFacade timeOffPoliciesFacade;
+
+    public TimeoffPoliciesController(TimeOffPoliciesFacade timeOffPoliciesFacade) {
+        this.timeOffPoliciesFacade = timeOffPoliciesFacade;
+    }
+
+    @PostMapping("/request/create")
+    public ResponseEntity<ApiResponse> createRequest(@RequestHeader("Authorization") String token, @RequestBody TimeOffRequestDto requestDto) {
+        ApiResponse createdRequest = timeOffPoliciesFacade.createRequest(requestDto);
+        return ResponseEntity.ok(createdRequest);
+    }
+
+    @PutMapping("/request/update")
+    public ResponseEntity<ApiResponse> employeeUpdateStatus(@RequestHeader("Authorization") String token, @RequestBody EmployeeStatusUpdateDto dto){
+        ApiResponse updateRequest = timeOffPoliciesFacade.employeeUpdateStatus(dto);
+        return ResponseEntity.ok(updateRequest);
+    }
+
+    @PatchMapping("/request/update")
+    public ResponseEntity<ApiResponse> adminUpdateStatus(@RequestHeader("Authorization") String token, @RequestBody AdminStatusUpdateDto dto){
+        ApiResponse updateRequest = timeOffPoliciesFacade.adminUpdateStatus(dto);
+        return ResponseEntity.ok(updateRequest);
+    }
+}
     @GetMapping("/user/{userId}")
     public ResponseEntity<ApiResponse<List<TimeoffPolicyDto>>> getPoliciesByUserId(
             @RequestHeader("Authorization") String token,
