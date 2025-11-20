@@ -634,6 +634,10 @@ CREATE TABLE subscription (
         ON DELETE RESTRICT
 );
 
+-- ===========================================================
+-- Table: subscription_mapping
+-- ===========================================================
+--changeset system:create-subscription_mapping
 CREATE TABLE subscription_mapping (
     subscription_mapping_id SERIAL PRIMARY KEY,
     subscription_id VARCHAR(20) NOT NULL,
@@ -706,8 +710,9 @@ CREATE TABLE IF NOT EXISTS timeoff_policies (
     accrual_start_date DATE,
     reset_frequency VARCHAR(10) CHECK (reset_frequency IN ('MONTHLY','ANNUALLY')),
     entitled_units INT,
-    entitled_type VARCHAR(10) CHECK (entitled_type IN ('DAY','HOURS')),
-    status VARCHAR(20),
+    entitled_hours INT,
+    entitled_type VARCHAR(10) CHECK (entitled_type IN ('DAY','HOURS','HALF_DAY')),
+    is_active BOOLEAN,
     max_carry_forward_units INT,
     is_carry_forward BOOLEAN,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -785,10 +790,10 @@ CREATE TABLE IF NOT EXISTS leave_balance (
     user_id VARCHAR(20) NOT NULL,
     period_start_date DATE,
     period_end DATE,
-    total_units INT,
-    expired_units INT DEFAULT 0,
-    leave_taken_units INT DEFAULT 0,
-    balance_units INT,
+    total_units NUMERIC(10,2),
+    expired_units NUMERIC(10,2)DEFAULT 0,
+    leave_taken_units NUMERIC(10,2)DEFAULT 0,
+    balance_units NUMERIC(10,2),
     next_accrual_date DATE,
     last_accrual_date DATE,
     carry_forward_units INT DEFAULT 0,

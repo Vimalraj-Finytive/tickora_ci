@@ -64,11 +64,20 @@ public class PayRollFacade {
         return new ApiResponse<>(200, "Payroll list fetched successfully", dtos);
     }
 
-    public ApiResponse<String> updatePayrollStatus(PayrollStatusUpdateDto dto) {
-        PayrollStatusUpdateModel model = payRollDtoMapper.toStatusUpdateModel(dto);
-        service.updatePayrollStatus(model);
-        return new ApiResponse<>(200,"Payroll inactivated successfully",null);
+    public ApiResponse<String> updatePayrollStatus(String payrollId, PayrollStatusUpdateDto dto) {
+
+        try {
+            PayrollStatusUpdateModel model = payRollDtoMapper.toStatusUpdateModel(dto);
+            boolean isActive = model.isActive();
+            service.updatePayrollStatus(payrollId, model);
+            String message = isActive ? "Payroll activated successfully" : "Payroll inactivated successfully";
+            return new ApiResponse<>(200, message, null);
+        } catch (Exception e) {
+            return new ApiResponse<>(400, "Failed to update payroll: " + e.getMessage(), null
+            );
+        }
     }
+
 
     public ApiResponse<List<PayRollSummaryDto>> getAllPayrollIdAndName(){
         List<PayRollSummaryDto> dto = dtoMapper.toSummaryDto(service.getAllPayrollIdAndName());
@@ -108,5 +117,16 @@ public class PayRollFacade {
     public ApiResponse updatePayroll(PayRollUpdateDto payRollUpdateDto){
         service.updatePayroll(dtoMapper.toPayRollUpdateModel(payRollUpdateDto));
         return new ApiResponse(200, "PayRoll Updated successfully",null);
+    }
+
+    public ApiResponse editPayroll(PayRollEditRequestDto payRollEditRequestDto) {
+        try {
+            service.editPayroll(dtoMapper.toEditModel(payRollEditRequestDto));
+            return new ApiResponse(200, "Payroll details saved successfully", null);
+        } catch (IllegalArgumentException e) {
+            return new ApiResponse<>(400,e.getMessage(),null);
+        } catch (Exception e) {
+            return new ApiResponse<>(404,e.getMessage(),null);
+        }
     }
 }

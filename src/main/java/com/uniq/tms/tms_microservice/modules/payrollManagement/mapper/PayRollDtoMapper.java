@@ -33,7 +33,6 @@ public interface PayRollDtoMapper {
         UserPayRollUpdateDto toDto(UserPayRollAmountModel model);
         PayRollUpdate toPayRollUpdateModel(PayRollUpdateDto dto);
         PayrollListResponseDto toListDto(PayRollListModel model);
-        @Mapping(source = "payrollId", target = "payrollId")
         PayrollStatusUpdateModel toStatusUpdateModel(PayrollStatusUpdateDto dto);
         PayrollResponseDto toDto(PayRollResponseModel model);
         PayRollSettingenumDto toDto(PayRollSettingenumModel model);
@@ -42,6 +41,15 @@ public interface PayRollDtoMapper {
         PayRollStatusEnumModel toModel(PayRollStatusEnumDto dto);
         @Mapping(target = "payrollCalculation", expression = "java(model.getPayrollCalculation().getValue())")
         PayRollSettingDto toDto(PayRollSettingModel model);
+
+//        @Mapping(target = "payrollId", source = "payrollId")
+//        @Mapping(target = "payrollName", source = "payrollName")
+//        @Mapping(target = "yearlySalary", source = "yearlySalary")
+//        @Mapping(target = "monthlySalary", source = "monthlySalary")
+//        @Mapping(target = "pf", source = "pf")
+//        @Mapping(target = "others", source = "others")
+//        @Mapping(target = "overtimeAmount", source = "overtimeAmount")
+        PayRollEditRequestModel toEditModel(PayRollEditRequestDto dto);
 
         @Named("hrsToString")
         default String hrsToString(BigDecimal hours) {

@@ -1,6 +1,6 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.entity;
 
-import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.AccuralLeaveType;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.AccrualLeaveType;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.Status;
 import jakarta.persistence.*;
 import java.time.LocalDate;
@@ -41,7 +41,7 @@ public class TimeoffRequestEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "leave_type", length = 20)
-    private AccuralLeaveType leaveType;
+    private AccrualLeaveType leaveType;
 
     @Column(name = "units_requested")
     private Integer unitsRequested;
@@ -118,11 +118,11 @@ public class TimeoffRequestEntity {
         this.endTime = endTime;
     }
 
-    public AccuralLeaveType getLeaveType() {
+    public AccrualLeaveType getLeaveType() {
         return leaveType;
     }
 
-    public void setLeaveType(AccuralLeaveType leaveType) {
+    public void setLeaveType(AccrualLeaveType leaveType) {
         this.leaveType = leaveType;
     }
 

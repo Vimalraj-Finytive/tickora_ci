@@ -264,16 +264,21 @@ public class PayRollServiceImpl implements PayRollService {
 
     @Override
     @Transactional
-    public void updatePayrollStatus(PayrollStatusUpdateModel model) {
+    public void updatePayrollStatus(String payrollId, PayrollStatusUpdateModel model) {
 
-        PayRollEntity payroll = payRollAdapter.findById(model.getPayrollId())
+        PayRollEntity payroll = payRollAdapter.findById(payrollId)
                 .orElseThrow(() -> new RuntimeException("Payroll not found"));
+
+        log.info("Updating payroll {} active -> {}", payrollId, model.isActive());
         payroll.setActive(model.isActive());
         payroll.setUpdatedAt(LocalDateTime.now());
         payRollAdapter.save(payroll);
-
         if (!model.isActive()) {
-            payRollAdapter.deleteUserPayrollById(model.getPayrollId());
+            try {
+                payRollAdapter.deleteUserPayrollById(payrollId);
+            } catch (Exception ex) {
+                log.error("Failed to delete user-payroll mappings for payrollId {}: {}", payrollId, ex.getMessage(), ex);
+            }
         }
     }
 
@@ -386,5 +391,35 @@ public class PayRollServiceImpl implements PayRollService {
         if (!toInsert.isEmpty()) {
             payRollAdapter.saveAllUserPayroll(toInsert);
         }
+    }
+
+    @Override
+    public void editPayroll(PayRollEditRequestModel editModel) {
+
+        PayRollEntity payroll = payRollAdapter.findById(editModel.getPayrollId())
+                .orElseThrow(() -> new IllegalArgumentException("Payroll not found"));
+
+        if (editModel.getPayrollName()!=null)
+            payroll.setPayrollName(editModel.getPayrollName());
+
+        if (editModel.getYearlySalary()!=null)
+            payroll.setYearlySalary(editModel.getYearlySalary());
+
+        if (editModel.getMonthlySalary()!=null)
+            payroll.setMonthlySalary(editModel.getMonthlySalary());
+
+        if (editModel.getPf()!=null)
+            payroll.setPf(editModel.getPf());
+
+        if (editModel.getOthers()!=null)
+            payroll.setOthers(editModel.getOthers());
+
+        if (editModel.getOvertimeAmount()!=null)
+            payroll.setOvertimeAmount(editModel.getOvertimeAmount());
+
+        payroll.setUpdatedAt(LocalDateTime.now());
+
+        payRollAdapter.savePayRoll(payroll);
+
     }
 }

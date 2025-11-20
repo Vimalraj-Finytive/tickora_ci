@@ -68,19 +68,23 @@ public class PayRollController {
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<PayrollResponseDto>> getPayrollById(@RequestHeader("Authorization") String token,@PathVariable String id) {
         ApiResponse<PayrollResponseDto> response = facade.getPayrollById(id);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
     @GetMapping("/amount/details")
     public ResponseEntity<ApiResponse<List<PayrollListResponseDto>>> getAllPayrolls(
             @RequestHeader("Authorization") String token) {
         ApiResponse<List<PayrollListResponseDto>> response = facade.getAllPayrolls();
-        return ResponseEntity.ok(response);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
-    @PostMapping("/inactive")
-    public ApiResponse<String> updatePayrollStatus(@RequestBody PayrollStatusUpdateDto dto) {
-        return facade.updatePayrollStatus(dto);
+    @PatchMapping("/{payrollId}/status")
+    public ResponseEntity<ApiResponse<String>> updatePayrollStatus(
+            @PathVariable String payrollId,
+            @RequestBody PayrollStatusUpdateDto dto,
+            @RequestHeader("Authorization") String token) {
+        ApiResponse<String> response = facade.updatePayrollStatus(payrollId, dto);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
     @GetMapping("/settings/status")
@@ -107,6 +111,12 @@ public class PayRollController {
     @PutMapping
     public ResponseEntity<ApiResponse> updatePayroll(@RequestHeader("Authorization") String token, @RequestBody PayRollUpdateDto payRollUpdateDto){
         ApiResponse response = facade.updatePayroll(payRollUpdateDto);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
+
+    @PutMapping("/edit")
+    public ResponseEntity<ApiResponse> editPayRoll(@RequestHeader("Authorization") String token,@RequestBody PayRollEditRequestDto payRollEditRequestDto){
+        ApiResponse response=facade.editPayroll(payRollEditRequestDto);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 

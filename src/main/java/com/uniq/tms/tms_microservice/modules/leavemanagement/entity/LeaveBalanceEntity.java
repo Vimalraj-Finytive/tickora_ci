@@ -1,6 +1,8 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.entity;
 
 import jakarta.persistence.*;
+
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -27,16 +29,16 @@ public class LeaveBalanceEntity {
     private LocalDate periodEnd;
 
     @Column(name = "total_units")
-    private Integer totalUnits;
+    private BigDecimal  totalUnits;
 
-    @Column(name = "expired_units")
-    private Integer expiredUnits = 0;
+    @Column(name = "expired_units", columnDefinition = "NUMERIC(10,2) DEFAULT 0")
+    private BigDecimal expiredUnits ;
 
-    @Column(name = "leave_taken_units")
-    private Integer leaveTakenUnits = 0;
+    @Column(name = "leave_taken_units", columnDefinition = "NUMERIC(10,2) DEFAULT 0")
+    private BigDecimal  leaveTakenUnits;
 
     @Column(name = "balance_units")
-    private Integer balanceUnits;
+    private BigDecimal  balanceUnits;
 
     @Column(name = "next_accrual_date")
     private LocalDate nextAccrualDate;
@@ -88,35 +90,35 @@ public class LeaveBalanceEntity {
         this.periodEnd = periodEnd;
     }
 
-    public Integer getTotalUnits() {
+    public BigDecimal getTotalUnits() {
         return totalUnits;
     }
 
-    public void setTotalUnits(Integer totalUnits) {
+    public void setTotalUnits(BigDecimal totalUnits) {
         this.totalUnits = totalUnits;
     }
 
-    public Integer getExpiredUnits() {
+    public BigDecimal getExpiredUnits() {
         return expiredUnits;
     }
 
-    public void setExpiredUnits(Integer expiredUnits) {
+    public void setExpiredUnits(BigDecimal expiredUnits) {
         this.expiredUnits = expiredUnits;
     }
 
-    public Integer getLeaveTakenUnits() {
+    public BigDecimal getLeaveTakenUnits() {
         return leaveTakenUnits;
     }
 
-    public void setLeaveTakenUnits(Integer leaveTakenUnits) {
+    public void setLeaveTakenUnits(BigDecimal leaveTakenUnits) {
         this.leaveTakenUnits = leaveTakenUnits;
     }
 
-    public Integer getBalanceUnits() {
+    public BigDecimal getBalanceUnits() {
         return balanceUnits;
     }
 
-    public void setBalanceUnits(Integer balanceUnits) {
+    public void setBalanceUnits(BigDecimal balanceUnits) {
         this.balanceUnits = balanceUnits;
     }
 

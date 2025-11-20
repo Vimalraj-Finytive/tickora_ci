@@ -103,4 +103,28 @@ public class OrganizationCacheServiceImpl implements OrganizationCacheService {
                 log.info("Privilege constant: {}, Privilege name: {}", key, value));
     }
 
+    public boolean isOrderIdUsed(String orderId) {
+        if (redisTemplate == null) {
+            log.warn("Redis disabled — skipping orderId replay check.");
+            return false;
+        }
+
+        String key = cacheKeyUtil.getPaymentUsedOrderKey(orderId);
+
+        return redisTemplate.hasKey(key);
+    }
+
+
+    public void markOrderIdUsed(String orderId) {
+        if (redisTemplate == null) {
+            log.warn("Redis disabled — not saving used orderId: {}", orderId);
+            return;
+        }
+
+        String key = cacheKeyUtil.getPaymentUsedOrderKey(orderId);
+
+        redisTemplate.opsForValue().set(key, "used");
+    }
+
+
 }
