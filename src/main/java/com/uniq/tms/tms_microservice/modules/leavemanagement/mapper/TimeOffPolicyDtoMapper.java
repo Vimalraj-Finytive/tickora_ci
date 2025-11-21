@@ -6,34 +6,41 @@ import org.mapstruct.Mapper;
 
 @Mapper(componentModel = "spring")
 public interface TimeOffPolicyDtoMapper {
+
     TimeOffPolicyRequestModel toRequestModel(TimeOffPolicyRequestDto dto);
 
-
-//    @Mapping(target = "validityStartDate", source = "validityStartDate")
-//    @Mapping(target = "validityEndDate", source = "validityEndDate")
-//    @Mapping(target = "userValidFrom", source = "userValidFrom")
-//    @Mapping(target = "userValidTo", source = "userValidTo")
-//    @Mapping(target = "userIds", source = "userIds")
-//    @Mapping(target = "groupIds", source = "groupIds")
-
-//    @Mapping(target = "entitledUnits", source  ="entitledUnits")
-//    @Mapping(target = "entitledHours", source = "entitledHours")
-//    @Mapping(target = "carryForward", source = "carryForward")
-//    @Mapping(target = "maxCarryForwardUnits", source = "maxCarryForwardUnits")
-//    @Mapping(target = "policyName", source = "policyName")
     TimeOffPolicyEditRequestModel toEditRequestModel(TimeOffPolicyEditRequestDto dto);
 
     TimeOffPolicyResponseDto toResponseDto(TimeOffPolicyResponseModel model);
 
     EntitledTypeDropdownDto toDto(EntitledTypeDropdownModel model);
 
-
-//    @Mapping(target = "policyIds", source = "policyIds")
-//    @Mapping(target = "userIds", source = "userIds")
-//    @Mapping(target = "groupIds", source = "groupIds")
     TimeOffPolicyBulkAssignModel toBulkAssignModel(TimeOffPolicyBulkAssignRequestDto dto);
 
-
     TimeOffPolicyInactivateModel toInactivateModel(TimeOffPolicyInactivateRequestDto dto);
+
+    TimeOffRequest toRequestModel(TimeOffRequestDto dto);
+
+    EmployeeStatusUpdate toStatusModel(EmployeeStatusUpdateDto dto);
+
+    AdminStatusUpdate toAdminStatusModel(AdminStatusUpdateDto dto);
+
+    TimeoffPoliciesDto toDto(TimeoffPoliciesModel model);
+
+    TimeoffPoliciesModel toModel(TimeoffPoliciesDto dto);
+
+    TimeoffPolicyDto toPolicyDto(TimeoffPoliciesModel model);
+
+    AccrualTypeEnumDto toDto(AccrualTypeEnumModel model);
+
+    AccrualTypeEnumModel toModel(AccrualTypeEnumDto dto);
+
+    CompensationEnumModel toModel(CompensationEnumDto dto);
+
+    CompensationEnumDto toDto(CompensationEnumModel model);
+
+//    LeaveBalanceDto toDto(LeaveBalanceModel model);
+//    LeaveBalanceModel toModel(LeaveBalanceDto dto);
+//    List<LeaveBalanceDto> toDtoList(List<LeaveBalanceModel> model);
 
 }

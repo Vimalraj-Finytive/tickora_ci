@@ -9,25 +9,18 @@ import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.*;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.facade.TimeOffPoliciesFacade;
-import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.AccrualTypeEnumDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.CompensationEnumDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeoffPoliciesDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeoffPolicyDto;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.facade.TimeOffPoliciesFacade;
-import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
 @RequestMapping(LeaveConstant.TIMEOFFPOLICIES_URL)
 public class TimeoffPoliciesController {
-       private TimeOffPoliciesFacade facade;
 
     private final TimeOffPoliciesFacade timeOffPoliciesFacade;
 
@@ -78,50 +71,39 @@ public class TimeoffPoliciesController {
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
-
-    public TimeoffPoliciesController(TimeOffPoliciesFacade facade) {
-        this.facade = facade;
-    }
-
     @GetMapping("/Policies")
     public ResponseEntity<ApiResponse<List<TimeoffPoliciesDto>>> getAllPolicies(
             @RequestHeader("Authorization") String token) {
-        ApiResponse<List<TimeoffPoliciesDto>> response = facade.getAllPolicies();
+        ApiResponse<List<TimeoffPoliciesDto>> response = timeOffPoliciesFacade.getAllPolicies();
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
     @GetMapping("/policy")
     public ResponseEntity<ApiResponse<List<TimeoffPolicyDto>>> getAllPolicy(
             @RequestHeader("Authorization")String token){
-    ApiResponse<List<TimeoffPolicyDto>> response   =facade.getAllPolicy();
+    ApiResponse<List<TimeoffPolicyDto>> response   =timeOffPoliciesFacade.getAllPolicy();
     return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
     @GetMapping("/AccrualType")
     public ResponseEntity<ApiResponse<List<AccrualTypeEnumDto>>> getAccrualStatus(
              @RequestHeader("Authorization")String token){
-        ApiResponse<List<AccrualTypeEnumDto>> response=facade.getAccrualStatus();
+        ApiResponse<List<AccrualTypeEnumDto>> response=timeOffPoliciesFacade.getAccrualStatus();
         return ResponseEntity.status(response.getStatusCode()).body(response);
 
     }
     @GetMapping("/Compensation")
     public ResponseEntity<ApiResponse<List<CompensationEnumDto>>> getCompensation(
             @RequestHeader("Authorization")String token){
-        ApiResponse<List<CompensationEnumDto>> response=facade.getCompensation();
+        ApiResponse<List<CompensationEnumDto>> response=timeOffPoliciesFacade.getCompensation();
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
     @GetMapping("/policy/{id}")
     public ResponseEntity<ApiResponse<TimeoffPoliciesDto>> getPolicyById(
             @RequestHeader("Authorization")String token,@PathVariable String id){
-        ApiResponse<TimeoffPoliciesDto> response=facade.getPolicyById(id);
+        ApiResponse<TimeoffPoliciesDto> response=timeOffPoliciesFacade.getPolicyById(id);
         return ResponseEntity.status(response.getStatusCode()).body(response);
-    }
-
-    private final TimeOffPoliciesFacade timeOffPoliciesFacade;
-
-    public TimeoffPoliciesController(TimeOffPoliciesFacade timeOffPoliciesFacade) {
-        this.timeOffPoliciesFacade = timeOffPoliciesFacade;
     }
 
     @PostMapping("/request/create")
@@ -141,12 +123,12 @@ public class TimeoffPoliciesController {
         ApiResponse updateRequest = timeOffPoliciesFacade.adminUpdateStatus(dto);
         return ResponseEntity.ok(updateRequest);
     }
-}
+
     @GetMapping("/user/{userId}")
     public ResponseEntity<ApiResponse<List<TimeoffPolicyDto>>> getPoliciesByUserId(
             @RequestHeader("Authorization") String token,
             @PathVariable("userId") String userId) {
-        ApiResponse<List<TimeoffPolicyDto>> response = facade.getPolicyByUserId(userId);
+        ApiResponse<List<TimeoffPolicyDto>> response = timeOffPoliciesFacade.getPolicyByUserId(userId);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 

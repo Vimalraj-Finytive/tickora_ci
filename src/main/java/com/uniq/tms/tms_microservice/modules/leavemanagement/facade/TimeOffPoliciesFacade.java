@@ -3,7 +3,7 @@ package com.uniq.tms.tms_microservice.modules.leavemanagement.facade;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.AdminStatusUpdateDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.EmployeeStatusUpdateDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeOffRequestDto;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.mapper.TimeoffPolicyDtoMapper;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.mapper.TimeOffPolicyEntityMapper;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.AdminStatusUpdate;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.EmployeeStatusUpdate;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeOffRequest;
@@ -18,7 +18,6 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.AccrualTypeEnum
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.CompensationEnumDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeoffPoliciesDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeoffPolicyDto;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.mapper.TimeoffPolicyDtoMapper;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.AccrualTypeEnumModel;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.CompensationEnumModel;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeoffPoliciesModel;
@@ -31,11 +30,13 @@ import java.util.stream.Collectors;
 public class TimeOffPoliciesFacade {
 
     private final TimeOffPolicyService timeOffPolicyService;
-    private final TimeoffPolicyDtoMapper timeoffPolicyDtoMapper;
+    private final TimeOffPolicyDtoMapper timeoffPolicyDtoMapper;
+    private final TimeOffPolicyEntityMapper timeOffPolicyEntityMapper;
 
-    public TimeOffPoliciesFacade(TimeOffPolicyService timeOffPolicyService, TimeoffPolicyDtoMapper timeoffPolicyDtoMapper) {
+    public TimeOffPoliciesFacade(TimeOffPolicyService timeOffPolicyService, TimeOffPolicyDtoMapper timeoffPolicyDtoMapper, TimeOffPolicyEntityMapper timeOffPolicyEntityMapper) {
         this.timeOffPolicyService = timeOffPolicyService;
         this.timeoffPolicyDtoMapper = timeoffPolicyDtoMapper;
+        this.timeOffPolicyEntityMapper = timeOffPolicyEntityMapper;
     }
 
     public ApiResponse createRequest(TimeOffRequestDto requestDto) {
@@ -50,17 +51,17 @@ public class TimeOffPoliciesFacade {
         return new ApiResponse<>(200,"Update TimeOff Request Successfully",null);
     }
 
-    public ApiResponse adminUpdateStatus(AdminStatusUpdateDto dto){
+    public ApiResponse adminUpdateStatus(AdminStatusUpdateDto dto) {
         AdminStatusUpdate model = timeoffPolicyDtoMapper.toAdminStatusModel(dto);
         timeOffPolicyService.adminUpdateStatus(model);
-        return new ApiResponse<>(200,"Update TimeOff Request status Successfully",null);
+        return new ApiResponse<>(200, "Update TimeOff Request status Successfully", null);
+    }
 
     public ApiResponse<TimeOffPolicyResponseDto> createPolicy(TimeOffPolicyRequestDto requestDto) {
-
         try {
-            TimeOffPolicyRequestModel requestModel = timeOffPolicyDtoMapper.toRequestModel(requestDto);
+            TimeOffPolicyRequestModel requestModel = timeoffPolicyDtoMapper.toRequestModel(requestDto);
             TimeOffPolicyResponseModel responseModel = timeOffPolicyService.createPolicy(requestModel);
-            TimeOffPolicyResponseDto responseDto = timeOffPolicyDtoMapper.toResponseDto(responseModel);
+            TimeOffPolicyResponseDto responseDto = timeoffPolicyDtoMapper.toResponseDto(responseModel);
 
             return new ApiResponse<>(200, "Policy Created Successfully", responseDto);
 
@@ -77,7 +78,7 @@ public class TimeOffPoliciesFacade {
 
         try {
             EntitledTypeDropdownModel model = timeOffPolicyService.getDropDowns();
-            EntitledTypeDropdownDto dto = timeOffPolicyDtoMapper.toDto(model);
+            EntitledTypeDropdownDto dto = timeoffPolicyDtoMapper.toDto(model);
 
             return new ApiResponse<>(200, "DropDowns Fetched Successfully", dto);
 
@@ -93,7 +94,7 @@ public class TimeOffPoliciesFacade {
     public ApiResponse<TimeOffPolicyResponseDto> editPolicy(TimeOffPolicyEditRequestDto requestDto) {
 
         try {
-            TimeOffPolicyEditRequestModel model = timeOffPolicyDtoMapper.toEditRequestModel(requestDto);
+            TimeOffPolicyEditRequestModel model = timeoffPolicyDtoMapper.toEditRequestModel(requestDto);
             timeOffPolicyService.editPolicy(model);
 
             return new ApiResponse<>(200, "Policy Updated Successfully", null);
@@ -108,7 +109,7 @@ public class TimeOffPoliciesFacade {
 
     public ApiResponse<String> assignPoliciesToUsers(TimeOffPolicyBulkAssignRequestDto dto) {
         try {
-            TimeOffPolicyBulkAssignModel model = timeOffPolicyDtoMapper.toBulkAssignModel(dto);
+            TimeOffPolicyBulkAssignModel model = timeoffPolicyDtoMapper.toBulkAssignModel(dto);
             timeOffPolicyService.assignPolicies(model);
 
             return new ApiResponse<>(200, "Policies assigned successfully", null);
@@ -126,11 +127,11 @@ public class TimeOffPoliciesFacade {
 
         try {
             TimeOffPolicyInactivateModel model =
-                    timeOffPolicyDtoMapper.toInactivateModel(dto);
+                    timeoffPolicyDtoMapper.toInactivateModel(dto);
 
             timeOffPolicyService.inactivatePolicy(policyId, model);
 
-            String message = model.getStatus()
+            String message = model.getActive()
                     ? "Policy activated successfully"
                     : "Policy deactivated successfully";
 
@@ -146,42 +147,42 @@ public class TimeOffPoliciesFacade {
 
 
     public ApiResponse<List<TimeoffPoliciesDto>> getAllPolicies() {
-        List<TimeoffPoliciesModel> models = service.getAllPolicies();
+        List<TimeoffPoliciesModel> models = timeOffPolicyService.getAllPolicies();
         List<TimeoffPoliciesDto> dtos =
-                models.stream().map(mapper::toDto)
+                models.stream().map(timeoffPolicyDtoMapper::toDto)
                         .toList();
         return new ApiResponse<>(200, "Policies fetched successfully", dtos);
     }
 
     public ApiResponse<List<TimeoffPolicyDto>> getAllPolicy(){
-        List<TimeoffPoliciesModel> model=service.getAllPolicy();
+        List<TimeoffPoliciesModel> model=timeOffPolicyService.getAllPolicy();
         List<TimeoffPolicyDto> dto=model.stream()
-                .map(mapper::toPolicyDto)
+                .map(timeoffPolicyDtoMapper::toPolicyDto)
                 .toList();
         return new ApiResponse<>(200,"policies fetched successfully",dto);
     }
 
     public ApiResponse<List<AccrualTypeEnumDto>> getAccrualStatus(){
-        List<AccrualTypeEnumModel> model =service.getAccrualTypeStatus();
-        List<AccrualTypeEnumDto> dto=model.stream().map(mapper::toDto).toList();
+        List<AccrualTypeEnumModel> model =timeOffPolicyService.getAccrualTypeStatus();
+        List<AccrualTypeEnumDto> dto=model.stream().map(timeoffPolicyDtoMapper::toDto).toList();
         return new ApiResponse<>(200,"AccrualType fetched successfully",dto);
     }
 
     public ApiResponse<List<CompensationEnumDto>>getCompensation(){
-        List<CompensationEnumModel> model=service.getCompensation();
-             List<CompensationEnumDto> dto = model.stream().map(mapper::toDto).toList();
+        List<CompensationEnumModel> model=timeOffPolicyService.getCompensation();
+             List<CompensationEnumDto> dto = model.stream().map(timeoffPolicyDtoMapper::toDto).toList();
               return new ApiResponse<>(200,"Compensation fetched successfully",dto);
     }
 
     public ApiResponse<TimeoffPoliciesDto>getPolicyById(String id){
-        TimeoffPoliciesDto dto=mapper.toDto(service.getPolicyById(id));
+        TimeoffPoliciesDto dto=timeoffPolicyDtoMapper.toDto(timeOffPolicyService.getPolicyById(id));
         return new ApiResponse<>(200,"policy fetched successfully",dto);
     }
 
     public ApiResponse<List<TimeoffPolicyDto>> getPolicyByUserId(String userId){
-        List<TimeoffPoliciesModel> model=service.getPolicyByUserId(userId);
+        List<TimeoffPoliciesModel> model=timeOffPolicyService.getPolicyByUserId(userId);
         List<TimeoffPolicyDto> dto = model.stream()
-                .map(mapper::toPolicyDto)
+                .map(timeoffPolicyDtoMapper::toPolicyDto)
                 .toList();
         return new ApiResponse<>(200, "Policies fetched successfully", dto);
     }

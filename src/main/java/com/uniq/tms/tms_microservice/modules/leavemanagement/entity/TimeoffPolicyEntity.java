@@ -1,13 +1,9 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.entity;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.AccruallType;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.Compensation;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.EntitledType;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.AccrualType;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.Compensation;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.EntitledType;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.Status;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -31,7 +27,7 @@ public class TimeoffPolicyEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "accrual_type", length = 10)
-    private AccruallType accrualType;
+    private AccrualType accrualType;
 
     @Column(name = "validity_start_date")
     private LocalDate validityStartDate;
@@ -45,7 +41,7 @@ public class TimeoffPolicyEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "reset_frequency", length = 10)
-    private AccruallType resetFrequency;
+    private AccrualType resetFrequency;
 
     @Column(name = "entitled_units")
     private Integer entitledUnits;
@@ -109,12 +105,16 @@ public class TimeoffPolicyEntity {
         this.compensation = compensation;
     }
 
-    public AccruallType getAccrualType() {
+    public AccrualType getAccrualType() {
         return accrualType;
     }
 
-    public void setAccrualType(AccruallType accrualType) {
+    public void setAccrualType(AccrualType accrualType) {
         this.accrualType = accrualType;
+    }
+
+    public void setResetFrequency(AccrualType resetFrequency) {
+        this.resetFrequency = resetFrequency;
     }
 
     public LocalDate getValidityStartDate() {
@@ -141,12 +141,8 @@ public class TimeoffPolicyEntity {
         this.accrualStartDate = accrualStartDate;
     }
 
-    public AccruallType getResetFrequency() {
+    public AccrualType getResetFrequency() {
         return resetFrequency;
-    }
-
-    public void setResetFrequency(AccruallType resetFrequency) {
-        this.resetFrequency = resetFrequency;
     }
 
     public Integer getEntitledUnits() {

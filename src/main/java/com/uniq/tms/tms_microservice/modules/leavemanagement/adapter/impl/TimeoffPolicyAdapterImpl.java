@@ -12,37 +12,41 @@ import com.uniq.tms.tms_microservice.modules.userManagement.repository.UserRepos
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ResponseStatusException;
+
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
 @Component
-@RequiredArgsConstructor
 public class TimeoffPolicyAdapterImpl implements TimeoffPolicyAdapter {
 
-    private final TimeoffPolicyRepository policyRepo;
+    private final TimeoffPolicyRepository timeoffPolicyRepo;
     private final UserPolicyRepository userPolicyRepo;
     private final LeaveBalanceRepository leaveBalanceRepo;
-    private final TimeoffPolicyRepository repository;
-    private final UserPolicyRepository repo;
-    private final UserRepository repos;
+    private final UserRepository userRepository;
+    private final TimeoffRequestRepository timeoffRequestRepo;
+    private final UsersRequestMappingRepository usersRequestMappingRepo;
 
-  
-    public TimeoffPolicyAdapterImpl(TimeoffPolicyRepository repository, UserPolicyRepository repo, UserRepository repos) {
-        this.repository = repository;
-        this.repo = repo;
-        this.repos = repos;
+
+    public TimeoffPolicyAdapterImpl(TimeoffPolicyRepository timeoffPolicyRepo, UserPolicyRepository userPolicyRepo, LeaveBalanceRepository leaveBalanceRepo, UserRepository userRepository, TimeoffRequestRepository timeoffRequestRepo, UsersRequestMappingRepository usersRequestMappingRepo) {
+        this.timeoffPolicyRepo = timeoffPolicyRepo;
+        this.userPolicyRepo = userPolicyRepo;
+        this.leaveBalanceRepo = leaveBalanceRepo;
+        this.userRepository = userRepository;
+        this.timeoffRequestRepo = timeoffRequestRepo;
+        this.usersRequestMappingRepo = usersRequestMappingRepo;
     }
   
     @Override
     public TimeoffPolicyEntity savePolicy(TimeoffPolicyEntity policy) {
-        return policyRepo.save(policy);
+        return timeoffPolicyRepo.save(policy);
     }
 
     @Override
     public TimeoffPolicyEntity findByPolicyId(String policyId) {
-        return policyRepo.findByPolicyId(policyId);
+        return timeoffPolicyRepo.findByPolicyId(policyId);
     }
 
 
@@ -52,31 +56,77 @@ public class TimeoffPolicyAdapterImpl implements TimeoffPolicyAdapter {
         if (policyIds == null || policyIds.isEmpty()) {
             return Collections.emptyList();
         }
-        return policyRepo.findByPolicyIdIn(policyIds);
+        return timeoffPolicyRepo.findByPolicyIdIn(policyIds);
     }
 
 
     public List<TimeoffPolicyEntity> findAll() {
-        return repository.findAll();
+        return timeoffPolicyRepo.findAll();
     }
 
     @Override
     public TimeoffPolicyEntity findById(String id) {
-        return repository.findById(id).orElseThrow(()-> new ResponseStatusException(HttpStatus.CONFLICT, "No timeoffpolicy Found"));
+        return timeoffPolicyRepo.findById(id).orElseThrow(()-> new ResponseStatusException(HttpStatus.CONFLICT, "No timeoffpolicy Found"));
     }
 
     @Override
     public List<String> findUserIdsByPolicyId(String policyId) {
-        return repo.findUserIdsByPolicyId(policyId);
+        return userPolicyRepo.findUserIdsByPolicyId(policyId);
     }
 
     @Override
     public String findUsernameByUserId(String userId) {
-        return repos.findUsernameByUserId(userId);
+        return userRepository.findUsernameByUserId(userId);
     }
+
     @Override
     public List<TimeoffPolicyEntity> findByUserId(String userId){
-        return repo.findPolicyByUserId(userId);
+        return timeoffPolicyRepo.findPolicyByUserId(userId);
+    }
+
+    @Override
+    public TimeoffPolicyEntity findPolicyById(String policyId) {
+        return timeoffPolicyRepo.findById(policyId).get();
+    }
+
+    @Override
+    public LeaveBalanceEntity findLeaveBalance(String policyId, String userId) {
+        return leaveBalanceRepo.findByPolicy_PolicyIdAndUserId(policyId, userId);
+    }
+
+    @Override
+    public boolean existsTimeoffRequest(String userId, String policyId) {
+        return timeoffRequestRepo.existsByUserIdAndPolicy_PolicyId(userId, policyId);
+    }
+
+    @Override
+    public TimeoffRequestEntity saveRequest(TimeoffRequestEntity entity) {
+        return timeoffRequestRepo.save(entity);
+    }
+
+    @Override
+    public List<UsersRequestMappingEntity> saveUsersRequestMapping(List<UsersRequestMappingEntity> entity) {
+        return usersRequestMappingRepo.saveAll(entity);
+    }
+
+    @Override
+    public TimeoffRequestEntity findByUserIdAndRequestDate(String userId, LocalDate requestDate) {
+        return timeoffRequestRepo.findByUserIdAndRequestDate(userId, requestDate);
+    }
+
+    @Override
+    public List<TimeoffRequestEntity> saveAllRequest(List<TimeoffRequestEntity> entities) {
+        return timeoffRequestRepo.saveAll(entities);
+    }
+
+    @Override
+    public List<TimeoffRequestEntity> findStartByDate(LocalDate date) {
+        return timeoffRequestRepo.findByStartDate(date);
+    }
+
+    @Override
+    public List<LeaveBalanceEntity> saveAllLeaveBalance(List<LeaveBalanceEntity> entities) {
+        return leaveBalanceRepo.saveAll(entities);
     }
 }
 
