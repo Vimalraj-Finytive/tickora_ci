@@ -8,6 +8,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
+import java.util.Set;
 
 @Repository
 public interface CalendarHolidayRepository extends JpaRepository<CalendarHolidayEntity , String> {
@@ -23,4 +24,7 @@ public interface CalendarHolidayRepository extends JpaRepository<CalendarHoliday
     @Modifying
     @Query("DELETE FROM CalendarHolidayEntity h WHERE h.id = :holidayId AND h.calendar.id = :calendarId")
     void deleteByCalendarAndHoliday(@Param("calendarId") String calendarId, @Param("holidayId") String holidayId);
+
+    @Query("SELECT h.calendar.id, h.date FROM CalendarHolidayEntity h WHERE h.calendar.id IN :calendarIds")
+    List<Object[]> findHolidayDatesByCalendarIds(@Param("calendarIds") Set<String> calendarIds);
 }

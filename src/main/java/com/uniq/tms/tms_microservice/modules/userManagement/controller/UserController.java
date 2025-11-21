@@ -254,4 +254,13 @@ public class UserController {
         ApiResponse<BulkUserLocationDto> response = userFacade.assignLocations(dto);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
+
+    @PutMapping("/updateCalendar")
+    public ResponseEntity<ApiResponse<UserCalendarRequestDto>> updateUser(
+            @RequestHeader("Authorization") String token,
+            @RequestBody UserCalendarRequestDto updates){
+        ApiResponse response = userFacade.updateCalendar(updates);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
+
 }

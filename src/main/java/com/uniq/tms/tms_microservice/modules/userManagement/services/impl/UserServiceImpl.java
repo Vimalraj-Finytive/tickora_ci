@@ -2249,4 +2249,25 @@ public class UserServiceImpl implements UserService {
         }
         return toModel;
     }
+
+    @Override
+    @Transactional
+    public boolean UpdateCalendar(UserCalendarRequestDto updates) {
+        try {
+            List<UserEntity> users = userAdapter.getUsersByIds(updates.getUserIds());
+            if (users.isEmpty()) {
+                log.warn("No users found for given IDs: {}", updates.getUserIds());
+                return false;
+            }
+            CalendarEntity calendar = calendarAdapter.getById(updates.getCalendarId());
+            users.forEach(user ->
+                    user.setCalendar(calendar));
+            userAdapter.saveAllUsers(users);
+            return true;
+        } catch (Exception e) {
+            log.error("Error updating calendar for users: {}", e.getMessage(), e);
+            return false;
+        }
+    }
+
 }

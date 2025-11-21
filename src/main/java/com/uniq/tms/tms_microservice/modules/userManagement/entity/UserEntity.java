@@ -1,6 +1,7 @@
 package com.uniq.tms.tms_microservice.modules.userManagement.entity;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.CalendarEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.RoleEntity;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.entity.UserPayRollAmountEntity;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.entity.UserPayRollEntity;
@@ -66,6 +67,10 @@ public class UserEntity {
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<UserPayRollEntity> payrolls = new ArrayList<>();
+
+    @ManyToOne
+    @JoinColumn(name = "calendar_id")
+    private CalendarEntity calendar;
 
     public UserEntity(String userId){
         this.userId = userId;
@@ -213,6 +218,14 @@ public class UserEntity {
 
     public void setPayrolls(List<UserPayRollEntity> payrolls) {
         this.payrolls = payrolls;
+    }
+
+    public CalendarEntity getCalendar() {
+        return calendar;
+    }
+
+    public void setCalendar(CalendarEntity calendar) {
+        this.calendar = calendar;
     }
 
     @Override
