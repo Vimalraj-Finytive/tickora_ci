@@ -65,7 +65,7 @@ public class TimesheetDto {
     private String workScheduleName;
 
     public TimesheetDto(TimesheetEntity timesheetEntity, List<TimesheetHistoryDto> historyDtos, String workScheduleName,
-                        LocalTime startTimeDuration, LocalTime endTimeDuration, LocalTime totalOverTime) {
+                        String startTimeDuration, String endTimeDuration, String totalOverTime) {
         this.id = timesheetEntity.getId();
         this.userId = timesheetEntity.getUser().getUserId();
         this.date = timesheetEntity.getDate();
@@ -137,10 +137,10 @@ public class TimesheetDto {
     }
 
     public String getTrackedHoursDuration() {
-            if (trackedHours == null) return "00h 00m";
-            long hours = trackedHours.toHours();
-            long minutes = trackedHours.toMinutes() % 60;
-            return String.format("%02dh %02dm", hours, minutes);
+        if (trackedHours == null) return "00h 00m";
+        long hours = trackedHours.toHours();
+        long minutes = trackedHours.toMinutes() % 60;
+        return String.format("%02dh %02dm", hours, minutes);
     }
 
     public void setTrackedHoursDuration(String trackedHoursDuration) {
@@ -148,10 +148,10 @@ public class TimesheetDto {
     }
 
     public String getRegularHoursDuration() {
-            if (regularHours == null) return "00h 00m";
-            long hours = regularHours.toHours();
-            long minutes = regularHours.toMinutes() % 60;
-            return String.format("%02dh %02dm", hours, minutes);
+        if (regularHours == null) return "00h 00m";
+        long hours = regularHours.toHours();
+        long minutes = regularHours.toMinutes() % 60;
+        return String.format("%02dh %02dm", hours, minutes);
     }
 
     public void setRegularHoursDuration(String regularHoursDuration) {
@@ -330,24 +330,23 @@ public class TimesheetDto {
         return startTimeDuration;
     }
 
-    public void setStartTimeDuration(LocalTime time) {
-        this.startTimeDuration = formatLocalTime(time);
+    public void setStartTimeDuration(String time) {
+        this.startTimeDuration = time;
     }
 
     public String getEndTimeDuration() {
         return endTimeDuration;
     }
 
-    public void setEndTimeDuration(LocalTime time) {
-        this.endTimeDuration = formatLocalTime(time);
+    public void setEndTimeDuration(String time) {
+        this.endTimeDuration = time;
     }
 
     public String getTotalOverTime() {
         return totalOverTime;
     }
 
-    public void setTotalOverTime(LocalTime time) {
-        this.totalOverTime = formatLocalTime(time);
+    public void setTotalOverTime(String time) {
+        this.totalOverTime = time;
     }
-
 }

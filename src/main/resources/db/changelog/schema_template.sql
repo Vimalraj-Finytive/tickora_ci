@@ -241,10 +241,10 @@ CREATE TABLE IF NOT EXISTS ${schemaName}.users (
     CONSTRAINT fk_work_schedule
         FOREIGN KEY (work_schedule_id)
         REFERENCES ${schemaName}.work_schedule(work_schedule_id)
-        ON DELETE SET NULL
+        ON DELETE SET NULL,
     CONSTRAINT fk_calendar
             FOREIGN KEY (calendar_id)
-            REFERENCES ${schemaName}.calendar(calendar_id)
+            REFERENCES ${schemaName}.calendar(id)
             ON DELETE RESTRICT
 );
 
@@ -628,7 +628,7 @@ CREATE TABLE IF NOT EXISTS ${schemaName}.user_payroll_amount (
 -- ===========================================================
 --changeset system:create-user-payroll-history
 
-CREATE TABLE IF NOT EXISTS user_payroll_history (
+CREATE TABLE IF NOT EXISTS ${schemaName}.user_payroll_history (
     id BIGSERIAL PRIMARY KEY,
     action_at TIMESTAMP,
     action_type VARCHAR(100),
@@ -811,7 +811,7 @@ CREATE TABLE IF NOT EXISTS leave_balance (
     total_units DOUBLE PRECISION,
     expired_units DOUBLE PRECISION DEFAULT 0.0,
     leave_taken_units DOUBLE PRECISION DEFAULT 0.0,
-    balance_units DOUBLE PRECISION
+    balance_units DOUBLE PRECISION,
     next_accrual_date DATE,
     last_accrual_date DATE,
     carry_forward_units DOUBLE PRECISION DEFAULT 0,
@@ -1153,30 +1153,58 @@ CREATE OR REPLACE FUNCTION ${schemaName}.log_user_payroll_history()
 RETURNS TRIGGER AS $$
 BEGIN
     IF (TG_OP = 'INSERT') THEN
-        INSERT INTO ${schemaName}.user_payroll_history(
-            user_id, action_at, action_type, action_by, user_payroll_amount_id
-        )
-        VALUES (NEW.user_id, NOW(), 'CREATE', current_user, NEW.id);
+        INSERT INTO ${schemaName}.user_payroll_history (
+            action_at,
+            action_type,
+            action_by,
+            user_id,
+            user_payroll_amount_id
+        ) VALUES (
+            NOW(),
+            'CREATE',
+            CURRENT_USER,
+            NEW.user_id,
+            NEW.id
+        );
+
     ELSIF (TG_OP = 'UPDATE') THEN
-        INSERT INTO ${schemaName}.user_payroll_history(
-            user_id, action_at, action_type, action_by, user_payroll_amount_id
-        )
-        VALUES (NEW.user_id, NOW(), 'UPDATE', current_user, NEW.id);
+        INSERT INTO ${schemaName}.user_payroll_history (
+            action_at,
+            action_type,
+            action_by,
+            user_id,
+            user_payroll_amount_id
+        ) VALUES (
+            NOW(),
+            'UPDATE',
+            CURRENT_USER,
+            NEW.user_id,
+            NEW.id
+        );
+
     ELSIF (TG_OP = 'DELETE') THEN
-        INSERT INTO ${schemaName}.user_payroll_history(
-            user_id, action_at, action_type, action_by, user_payroll_amount_id
-        )
-        VALUES (OLD.user_id, NOW(), 'DELETE', current_user, OLD.id);
+        INSERT INTO ${schemaName}.user_payroll_history (
+            action_at,
+            action_type,
+            action_by,
+            user_id,
+            user_payroll_amount_id
+        ) VALUES (
+            NOW(),
+            'DELETE',
+            CURRENT_USER,
+            OLD.user_id,
+            OLD.id
+        );
     END IF;
 
-    RETURN NULL;
+    RETURN NULL; -- AFTER trigger
 END;
 $$ LANGUAGE plpgsql;
 
 --changeset system:create-trg-user-payroll-history endDelimiter://
 CREATE TRIGGER trg_user_payroll_history
-AFTER INSERT OR UPDATE OR DELETE
-ON ${schemaName}.user_payroll_amount
+AFTER INSERT OR UPDATE OR DELETE ON ${schemaName}.user_payroll_amount
 FOR EACH ROW
 EXECUTE FUNCTION ${schemaName}.log_user_payroll_history();
 
@@ -1185,20 +1213,43 @@ CREATE OR REPLACE FUNCTION ${schemaName}.log_payroll_history()
 RETURNS TRIGGER AS $$
 BEGIN
     IF (TG_OP = 'INSERT') THEN
-        INSERT INTO ${schemaName}.payroll_history(
-            payroll_id, action_at, action_type, action_by
-        )
-        VALUES (NEW.id, NOW(), 'CREATE', current_user);
+        INSERT INTO ${schemaName}.payroll_history (
+            action_at,
+            action_type,
+            action_by,
+            payroll_id
+        ) VALUES (
+            NOW(),
+            'CREATE',
+            CURRENT_USER,
+            NEW.id
+        );
+
     ELSIF (TG_OP = 'UPDATE') THEN
-        INSERT INTO ${schemaName}.payroll_history(
-            payroll_id, action_at, action_type, action_by
-        )
-        VALUES (NEW.id, NOW(), 'UPDATE', current_user);
+        INSERT INTO ${schemaName}.payroll_history (
+            action_at,
+            action_type,
+            action_by,
+            payroll_id
+        ) VALUES (
+            NOW(),
+            'UPDATE',
+            CURRENT_USER,
+            NEW.id
+        );
+
     ELSIF (TG_OP = 'DELETE') THEN
-        INSERT INTO ${schemaName}.payroll_history(
-            payroll_id, action_at, action_type, action_by
-        )
-        VALUES (OLD.id, NOW(), 'DELETE', current_user);
+        INSERT INTO ${schemaName}.payroll_history (
+            action_at,
+            action_type,
+            action_by,
+            payroll_id
+        ) VALUES (
+            NOW(),
+            'DELETE',
+            CURRENT_USER,
+            OLD.id
+        );
     END IF;
 
     RETURN NULL;
@@ -1207,8 +1258,7 @@ $$ LANGUAGE plpgsql;
 
 --changeset system:create-trg-payroll-history endDelimiter://
 CREATE TRIGGER trg_payroll_history
-AFTER INSERT OR UPDATE OR DELETE
-ON ${schemaName}.payroll
+AFTER INSERT OR UPDATE OR DELETE ON ${schemaName}.payroll
 FOR EACH ROW
 EXECUTE FUNCTION ${schemaName}.log_payroll_history();
 
@@ -1223,15 +1273,13 @@ BEGIN
             action_type,
             action_by,
             action_at
-        )
-        VALUES (
+        ) VALUES (
             NEW.timeoff_request_id,
             NEW.user_id,
             'CREATE',
             CURRENT_USER,
-            CURRENT_TIMESTAMP
+            NOW()
         );
-        RETURN NEW;
 
     ELSIF (TG_OP = 'UPDATE') THEN
         INSERT INTO ${schemaName}.timeoff_request_history (
@@ -1240,15 +1288,13 @@ BEGIN
             action_type,
             action_by,
             action_at
-        )
-        VALUES (
+        ) VALUES (
             NEW.timeoff_request_id,
             NEW.user_id,
             'UPDATE',
             CURRENT_USER,
-            CURRENT_TIMESTAMP
+            NOW()
         );
-        RETURN NEW;
 
     ELSIF (TG_OP = 'DELETE') THEN
         INSERT INTO ${schemaName}.timeoff_request_history (
@@ -1257,22 +1303,21 @@ BEGIN
             action_type,
             action_by,
             action_at
-        )
-        VALUES (
+        ) VALUES (
             OLD.timeoff_request_id,
             OLD.user_id,
             'DELETE',
             CURRENT_USER,
-            CURRENT_TIMESTAMP
+            NOW()
         );
-        RETURN OLD;
     END IF;
+
+    RETURN NULL; -- AFTER trigger
 END;
 $$ LANGUAGE plpgsql;
 
 --changeset system:create-trg-timeoff-request-history endDelimiter://
 CREATE TRIGGER trg_timeoff_request_history
-AFTER INSERT OR UPDATE OR DELETE
-ON ${schemaName}.timeoff_request
+AFTER INSERT OR UPDATE OR DELETE ON ${schemaName}.timeoff_request
 FOR EACH ROW
 EXECUTE FUNCTION ${schemaName}.log_timeoff_request_history();

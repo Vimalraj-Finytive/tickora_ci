@@ -338,9 +338,9 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
         timesheet.setLastClockOutTime("00:00");
         timesheet.setTrackedHoursDuration("00h 00m");
         timesheet.setRegularHoursDuration("00h 00m");
-        timesheet.setStartTimeDuration(LocalTime.parse("00h 00m"));
-        timesheet.setEndTimeDuration(LocalTime.parse("00h 00m"));
-        timesheet.setTotalOverTime(LocalTime.parse("00h 00m"));
+        timesheet.setStartTimeDuration("00h 00m");
+        timesheet.setEndTimeDuration("00h 00m");
+        timesheet.setTotalOverTime("00h 00m");
         timesheet.setHistory(Collections.emptyList());
 
         ScheduleTypeInfo scheduledHours = TimesheetHelper.getScheduledHoursForUser(user.getUserId(), date, fixedMap, flexMap);
