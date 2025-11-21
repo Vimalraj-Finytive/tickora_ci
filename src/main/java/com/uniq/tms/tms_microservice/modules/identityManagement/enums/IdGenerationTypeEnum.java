@@ -16,7 +16,9 @@ public enum IdGenerationTypeEnum {
     CALENDAR("CL"),
     PUBLIC_HOLIDAY("PH"),
     CALENDAR_DETAILS("CD"),
-    PAYROLL("PR");
+    PAYROLL("PR"),
+    TIME_OFF_POLICY("TOP");;
+
 
     private final String prefix ;
 

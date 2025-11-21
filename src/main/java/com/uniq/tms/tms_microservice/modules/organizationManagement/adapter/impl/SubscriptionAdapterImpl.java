@@ -222,6 +222,7 @@ public class SubscriptionAdapterImpl implements SubscriptionAdapter {
             subscriptionRepository.save(subscription);
             return true;
         } catch (Exception e) {
+            // You can add your logger here
             System.err.println("Failed to update subscription: " + e.getMessage());
             return false;
         }

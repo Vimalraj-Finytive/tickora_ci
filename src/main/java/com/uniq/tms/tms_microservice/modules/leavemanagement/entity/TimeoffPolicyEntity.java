@@ -1,13 +1,13 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.entity;
 
-import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.AccuralType;
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.AccrualType;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.Compensation;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.EntitledType;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.Status;
-import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserGroupEntity;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -27,7 +27,7 @@ public class TimeoffPolicyEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "accrual_type", length = 10)
-    private AccuralType accrualType;
+    private AccrualType accrualType;
 
     @Column(name = "validity_start_date")
     private LocalDate validityStartDate;
@@ -35,23 +35,26 @@ public class TimeoffPolicyEntity {
     @Column(name = "validity_end_date")
     private LocalDate validityEndDate;
 
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     @Column(name = "accrual_start_date")
     private LocalDate accrualStartDate;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "reset_frequency", length = 10)
-    private AccuralType resetFrequency;
+    private AccrualType resetFrequency;
 
     @Column(name = "entitled_units")
     private Integer entitledUnits;
+
+    @Column(name = "entitled_hours")
+    private Integer entitledHours;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "entitled_type", length = 10)
     private EntitledType entitledType;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "status", length = 20)
-    private Status status;
+    @Column(name = "is_active")
+    private boolean is_active;
 
     @Column(name = "max_carry_forward_units")
     private Integer maxCarryForwardUnits;
@@ -67,6 +70,16 @@ public class TimeoffPolicyEntity {
 
     @OneToMany(mappedBy = "policy", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<UserPolicyEntity> userPolicies;
+
+    @OneToMany(mappedBy = "policy", cascade = CascadeType.ALL)
+    private List<TimeoffRequestEntity> requests = new ArrayList<>();
+    public Integer getEntitledHours() {
+        return entitledHours;
+    }
+
+    public void setEntitledHours(Integer entitledHours) {
+        this.entitledHours = entitledHours;
+    }
 
     public String getPolicyId() {
         return policyId;
@@ -92,12 +105,16 @@ public class TimeoffPolicyEntity {
         this.compensation = compensation;
     }
 
-    public AccuralType getAccrualType() {
+    public AccrualType getAccrualType() {
         return accrualType;
     }
 
-    public void setAccrualType(AccuralType accrualType) {
+    public void setAccrualType(AccrualType accrualType) {
         this.accrualType = accrualType;
+    }
+
+    public void setResetFrequency(AccrualType resetFrequency) {
+        this.resetFrequency = resetFrequency;
     }
 
     public LocalDate getValidityStartDate() {
@@ -124,12 +141,8 @@ public class TimeoffPolicyEntity {
         this.accrualStartDate = accrualStartDate;
     }
 
-    public AccuralType getResetFrequency() {
+    public AccrualType getResetFrequency() {
         return resetFrequency;
-    }
-
-    public void setResetFrequency(AccuralType resetFrequency) {
-        this.resetFrequency = resetFrequency;
     }
 
     public Integer getEntitledUnits() {
@@ -148,12 +161,12 @@ public class TimeoffPolicyEntity {
         this.entitledType = entitledType;
     }
 
-    public Status getStatus() {
-        return status;
+    public boolean isIs_active() {
+        return is_active;
     }
 
-    public void setStatus(Status status) {
-        this.status = status;
+    public void setIs_active(boolean is_active) {
+        this.is_active = is_active;
     }
 
     public Integer getMaxCarryForwardUnits() {
@@ -195,4 +208,13 @@ public class TimeoffPolicyEntity {
     public void setUserPolicies(List<UserPolicyEntity> userPolicies) {
         this.userPolicies = userPolicies;
     }
+
+    public List<TimeoffRequestEntity> getRequests() {
+        return requests;
+    }
+
+    public void setRequests(List<TimeoffRequestEntity> requests) {
+        this.requests = requests;
+    }
+
 }

@@ -6,5 +6,7 @@ public interface OrganizationCacheService {
     void loadAllRolesToCache(String orgId, String schema);
     void loadPrivilegesFromDB(String schema);
     String getPrivilegeKey(PrivilegeConstants constant);
+    boolean isOrderIdUsed(String orderId);
+    void markOrderIdUsed(String orderId);
 
 }

@@ -116,4 +116,6 @@ public interface UserAdapter {
     Set<String> getAllMappedEmails(String orgId);
     Set<String> getAllMappedMobiles(String orgId);
     List<UserEntity> getUsersByIds(List<String> userIds);
+    List<String> findUserIdsByGroupIds(List<Long> groupIds);
+
 }

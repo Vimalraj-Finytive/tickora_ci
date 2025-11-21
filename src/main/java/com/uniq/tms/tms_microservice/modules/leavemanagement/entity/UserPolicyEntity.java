@@ -1,5 +1,6 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.entity;
 
+import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -16,8 +17,9 @@ public class UserPolicyEntity {
     @JoinColumn(name = "policy_id", nullable = false)
     private TimeoffPolicyEntity policy;
 
-    @Column(name = "user_id", length = 20, nullable = false)
-    private String userId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn (name = "user_id", nullable = false)
+    private UserEntity user;
 
     @Column(name = "valid_from")
     private LocalDate validFrom;
@@ -44,12 +46,13 @@ public class UserPolicyEntity {
         this.policy = policy;
     }
 
-    public String getUserId() {
-        return userId;
+
+    public UserEntity getUser() {
+        return user;
     }
 
-    public void setUserId(String userId) {
-        this.userId = userId;
+    public void setUser(UserEntity user) {
+        this.user = user;
     }
 
     public LocalDate getValidFrom() {

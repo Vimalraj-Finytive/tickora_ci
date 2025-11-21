@@ -634,6 +634,10 @@ CREATE TABLE subscription (
         ON DELETE RESTRICT
 );
 
+-- ===========================================================
+-- Table: subscription_mapping
+-- ===========================================================
+--changeset system:create-subscription_mapping
 CREATE TABLE subscription_mapping (
     subscription_mapping_id SERIAL PRIMARY KEY,
     subscription_id VARCHAR(20) NOT NULL,
@@ -706,8 +710,9 @@ CREATE TABLE IF NOT EXISTS timeoff_policies (
     accrual_start_date DATE,
     reset_frequency VARCHAR(10) CHECK (reset_frequency IN ('MONTHLY','ANNUALLY')),
     entitled_units INT,
-    entitled_type VARCHAR(10) CHECK (entitled_type IN ('DAY','HOURS')),
-    status VARCHAR(20),
+    entitled_hours INT,
+    entitled_type VARCHAR(10) CHECK (entitled_type IN ('DAY','HOURS','HALF_DAY')),
+    is_active BOOLEAN,
     max_carry_forward_units INT,
     is_carry_forward BOOLEAN,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -727,7 +732,12 @@ CREATE TABLE IF NOT EXISTS user_policies (
     assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_user_policies_policy
         FOREIGN KEY (policy_id) REFERENCES timeoff_policies(policy_id)
-        ON DELETE CASCADE
+        ON DELETE CASCADE,
+
+           CONSTRAINT fk_user_policies_user
+                FOREIGN KEY (user_id)
+                REFERENCES users(user_id)
+                ON DELETE CASCADE
 );
 
 -- ===========================================================
@@ -743,9 +753,9 @@ CREATE TABLE IF NOT EXISTS timeoff_request (
     end_date DATE NOT NULL,
     start_time TIME,
     end_time TIME,
-    leave_type VARCHAR(20) CHECK (leave_type IN ('FULL_DAY','HALF_DAY')),
     units_requested INT,
-    status VARCHAR(20) CHECK (status IN ('APPROVED','PENDING','REJECTED')),
+    hours_requested INT,
+    status VARCHAR(20) CHECK (status IN ('APPROVED','PENDING','REJECTED','CANCELLED')),
     reason VARCHAR(255),
     created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -753,6 +763,19 @@ CREATE TABLE IF NOT EXISTS timeoff_request (
         FOREIGN KEY (policy_id) REFERENCES timeoff_policies(policy_id)
         ON DELETE CASCADE
 );
+
+-- ===========================================================
+-- Table: users_request_mapping
+-- ===========================================================
+-- changeset system:create-users-request-mapping-table
+CREATE TABLE IF NOT EXISTS ${schemaName}.users_request_mapping (
+    id BIGSERIAL PRIMARY KEY,
+    viewer_id VARCHAR(20) NOT NULL,
+    requester_id VARCHAR(20) NOT NULL,
+    timeoff_request_id BIGINT NOT NULL,
+    type VARCHAR(20) NOT NULL
+);
+
 
 -- ===========================================================
 -- Table: timeoff_request_history
@@ -780,13 +803,13 @@ CREATE TABLE IF NOT EXISTS leave_balance (
     user_id VARCHAR(20) NOT NULL,
     period_start_date DATE,
     period_end DATE,
-    total_units INT,
-    expired_units INT DEFAULT 0,
-    leave_taken_units INT DEFAULT 0,
-    balance_units INT,
+    total_units DOUBLE PRECISION,
+    expired_units DOUBLE PRECISION DEFAULT 0.0,
+    leave_taken_units DOUBLE PRECISION DEFAULT 0.0,
+    balance_units DOUBLE PRECISION
     next_accrual_date DATE,
     last_accrual_date DATE,
-    carry_forward_units INT DEFAULT 0,
+    carry_forward_units DOUBLE PRECISION DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_leave_balance_policy

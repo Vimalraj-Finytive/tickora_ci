@@ -26,6 +26,8 @@ public class CacheKeyUtil {
     private String otpCount;
     @Value("${cache.keys.otpKey}")
     private String otpKey;
+    @Value("${cache.keys.payment.usedOrder}")
+    private String paymentUsedOrder;
 
     private static final Logger log = LogManager.getLogger(CacheKeyUtil.class);
 
@@ -63,5 +65,9 @@ public class CacheKeyUtil {
 
     public String getOtpKey(String orgId, String schema, String mobile) {
         return otpKey + ":" + schema + ":" + orgId + ":" + mobile;
+    }
+
+    public String getPaymentUsedOrderKey(String orderId) {
+        return paymentUsedOrder + ":" + orderId;
     }
 }

@@ -1,9 +1,10 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.entity;
 
-import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.AccuralLeaveType;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.AccrualLeaveType;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.Status;
 import jakarta.persistence.*;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 
@@ -16,10 +17,12 @@ public class TimeoffRequestEntity {
     @Column(name = "timeoff_request_id")
     private Long timeoffRequestId;
 
-
     @OneToMany(mappedBy = "timeoffRequest", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<TimeoffRequestHistoryEntity> historyRecords;
 
+    @ManyToOne
+    @JoinColumn(name = "policy_id")
+    private TimeoffPolicyEntity policy;
 
     @Column(name = "user_id", length = 20, nullable = false)
     private String userId;
@@ -41,10 +44,13 @@ public class TimeoffRequestEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "leave_type", length = 20)
-    private AccuralLeaveType leaveType;
+    private AccrualLeaveType leaveType;
 
     @Column(name = "units_requested")
     private Integer unitsRequested;
+
+    @Column(name = "hours_requested")
+    private Integer hoursRequested;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 20)
@@ -52,6 +58,12 @@ public class TimeoffRequestEntity {
 
     @Column(name = "reason", length = 255)
     private String reason;
+
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
+
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
 
     public Long getTimeoffRequestId() {
         return timeoffRequestId;
@@ -61,6 +73,13 @@ public class TimeoffRequestEntity {
         this.timeoffRequestId = timeoffRequestId;
     }
 
+    public TimeoffPolicyEntity getPolicy() {
+        return policy;
+    }
+
+    public void setPolicy(TimeoffPolicyEntity policy) {
+        this.policy = policy;
+    }
 
     public String getUserId() {
         return userId;
@@ -118,11 +137,11 @@ public class TimeoffRequestEntity {
         this.endTime = endTime;
     }
 
-    public AccuralLeaveType getLeaveType() {
+    public AccrualLeaveType getLeaveType() {
         return leaveType;
     }
 
-    public void setLeaveType(AccuralLeaveType leaveType) {
+    public void setLeaveType(AccrualLeaveType leaveType) {
         this.leaveType = leaveType;
     }
 
@@ -132,6 +151,14 @@ public class TimeoffRequestEntity {
 
     public void setUnitsRequested(Integer unitsRequested) {
         this.unitsRequested = unitsRequested;
+    }
+
+    public Integer getHoursRequested() {
+        return hoursRequested;
+    }
+
+    public void setHoursRequested(Integer hoursRequested) {
+        this.hoursRequested = hoursRequested;
     }
 
     public Status getStatus() {
@@ -148,5 +175,21 @@ public class TimeoffRequestEntity {
 
     public void setReason(String reason) {
         this.reason = reason;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
     }
 }

@@ -85,4 +85,12 @@ public interface UserGroupRepository extends JpaRepository<UserGroupEntity,Long>
             "WHERE ug.user.userId IN :userIds AND ug.group.groupId IN :groupIds")
     List<UserGroupEntity> findAllByUserIdsAndGroupIds(@Param("userIds") Set<String> userIds,
                                                       @Param("groupIds") Set<Long> groupIds);
+
+    @Query("""
+    SELECT DISTINCT ug.user.userId
+    FROM UserGroupEntity ug
+    WHERE ug.group.groupId IN :groupIds
+""")
+    List<String> findUserIdsByGroupIds(@Param("groupIds") List<Long> groupIds);
+
 }
