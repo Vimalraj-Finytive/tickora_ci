@@ -46,8 +46,7 @@
       { "date": "2026-10-20", "name": "Dussehra", "countryCode": "IN", "holidayType": "Religious Holiday" },
       { "date": "2026-11-08", "name": "Diwali/Deepavali", "countryCode": "IN", "holidayType": "Festival" },
       { "date": "2026-12-25", "name": "Christmas", "countryCode": "IN", "holidayType": "Religious Holiday" }
-    ],
-    "2027": [
+    ],    "2027": [
       { "date": "2027-01-26", "name": "Republic Day", "countryCode": "IN", "holidayType": "National Holiday" },
       { "date": "2027-03-06", "name": "Maha Shivaratri/Shivaratri", "countryCode": "IN", "holidayType": "Religious Holiday" },
       { "date": "2027-03-10", "name": "Ramzan Id (Tentative Date)", "countryCode": "IN", "holidayType": "Religious Holiday" },
