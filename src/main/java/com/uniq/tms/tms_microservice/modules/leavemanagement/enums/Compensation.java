@@ -1,6 +1,15 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.enums;
 
 public enum Compensation {
-    PAID,
-    UNPAID
+    PAID("Paid"),
+    UNPAID("Unpaid");
+    private final String value;
+
+    Compensation(String value) {
+        this.value = value;
+    }
+
+    public String getValue(){
+        return value;
+    }
 }

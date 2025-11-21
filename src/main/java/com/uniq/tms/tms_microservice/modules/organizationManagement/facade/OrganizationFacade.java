@@ -150,35 +150,33 @@ public class OrganizationFacade {
     }
 
     public ApiResponse upgradePlan(String orgId, String orgSchema, UpgradePlanDto upgradePlanDto) {
-        boolean isUpgrade = subscriptionService.upgradePlan(orgId, orgSchema, upgradePlanDto);
-        Map<String, Boolean> data = Map.of("isValid", isUpgrade);
-        String message = isUpgrade
-                ? "Subscription Upgraded Successfully..."
-                : "Subscription Not Upgraded , Please try Again.";
+        try {
+            boolean isUpgrade = subscriptionService.upgradePlan(orgId, orgSchema, upgradePlanDto);
+            return new ApiResponse<>(
+                    !isUpgrade ? HttpStatus.BAD_REQUEST.value() : HttpStatus.OK.value(),
+                    !isUpgrade ? "Subscription Not Upgraded. Please try again."
+                            : "Subscription Upgraded Successfully...",
+                    null
+            );
 
-        HttpStatus status = isUpgrade ? HttpStatus.OK : HttpStatus.BAD_REQUEST;
-        return new ApiResponse<>(status.value(), message, null);
+
+        }catch (IllegalArgumentException e) {
+            return new ApiResponse<>(
+                    HttpStatus.BAD_REQUEST.value(),
+                    e.getMessage(),
+                    null
+            );
+        }
     }
 
     public ApiResponse<PaymentDto> getPaymentDetailsBySubscriptionId(String subscriptionId) {
 
         PaymentDto paymentDetails = paymentService.getPaymentDetailsBySubscriptionId(subscriptionId);
-
         if (paymentDetails == null) {
-            return new ApiResponse<>(
-                    204,
-                    "No payment details found",
-                    null
-            );
+            return new ApiResponse<>(204, "No payment details found", null);
         }
-
-        return new ApiResponse<>(
-                200,
-                "Payment details fetched successfully",
-                paymentDetails
-        );
+        return new ApiResponse<>(200, "Payment details fetched successfully", paymentDetails);
     }
-
         public ApiResponse<PlanStatusDto> getCurrentPlanStatus(String orgId) {
         PlanStatusModel model = subscriptionService.getCurrentPlanStatus(orgId);
         PlanStatusDto dto = planDtoMapper.toDto(model);
@@ -189,6 +187,7 @@ public class OrganizationFacade {
         return paymentService.getPaymentDetailsPdfBySubscriptionId(subscriptionId, orgId);
     }
 
+
     public ApiResponse<List<OrganizationDetailsDto>> getAllOrganizationDetails() {
         List<OrganizationDetailsModel> modelList = organizationService.getAllOrganizationDetails();
         List<OrganizationDetailsDto> dto = organizationDtoMapper.toOrganizationDtos(modelList);
@@ -198,44 +197,23 @@ public class OrganizationFacade {
     public ApiResponse<CalculatedAmountDto> calculateAmount(int additionalUsers) {
         String orgId = authHelper.getOrgId();
         CalculatedAmountDto responseData = subscriptionService.calculateProratedAmount(additionalUsers, orgId);
-
         if (responseData == null) {
-            return new ApiResponse<>(
-                    200,
-                    "Cannot calculate upgrade amount for Basic plan",
-                    null
-            );
+            return new ApiResponse<>(200, "Cannot calculate upgrade amount for Basic plan", null);
         }
-
-        return new ApiResponse<>(
-                200,
-                "Amount calculated successfully",
-                responseData
-        );
+        return new ApiResponse<>(200, "Amount calculated successfully", responseData);
     }
 
     public ApiResponse<Void> addSubscribedUsers(UpgradePlanDto dto) {
         String orgId = authHelper.getOrgId();
         String orgSchema = authHelper.getSchema();
-
         if (orgId == null || orgId.isBlank()) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized - Invalid Organization");
         }
-
         boolean isUpdated = subscriptionService.addSubscribedUsers(orgId, orgSchema, dto);
-
         if (isUpdated) {
-            return new ApiResponse<>(
-                    HttpStatus.OK.value(),
-                    "Subscribed users updated successfully.",
-                    null
-            );
+            return new ApiResponse<>(HttpStatus.OK.value(), "Subscribed users updated successfully.", null);
         } else {
-            return new ApiResponse<>(
-                    HttpStatus.BAD_REQUEST.value(),
-                    "Failed to update subscribed users.",
-                    null
-            );
+            return new ApiResponse<>(HttpStatus.BAD_REQUEST.value(), "Failed to update subscribed users.", null);
         }
     }
 
@@ -267,11 +245,6 @@ public class OrganizationFacade {
                     ? new ApiResponse<>(200, "Subscription Updated Successfully...", null)
                     : new ApiResponse<>(400, "Subscription Update Failed. Try Again.", null);
         } catch (IllegalArgumentException e) {
-            return new ApiResponse<>(400, "Invalid Plan Id", null);
-        }catch (RuntimeException e) {
-            if (e.getMessage() != null && e.getMessage().contains("Basic plan")) {
-                return new ApiResponse<>(200, "Cannot upgrade Basic plan", null);
-            }
             return new ApiResponse<>(400, e.getMessage(), null);
         }
     }

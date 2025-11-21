@@ -1,5 +1,7 @@
 package com.uniq.tms.tms_microservice.modules.organizationManagement.services.impl;
 
+import com.razorpay.Payment;
+import com.razorpay.RazorpayClient;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.OrganizationAdapter;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.PaymentAdapter;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.SubscriptionAdapter;
@@ -18,6 +20,7 @@ import com.uniq.tms.tms_microservice.modules.organizationManagement.enums.PlaneN
 import com.uniq.tms.tms_microservice.modules.organizationManagement.mapper.SubscriptionEntityMapper;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.mapper.UpgradeDtoMapper;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.model.*;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.services.OrganizationCacheService;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.services.PaymentService;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.services.SubscriptionService;
 import com.uniq.tms.tms_microservice.shared.util.TenantUtil;
@@ -26,6 +29,7 @@ import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.PersistenceContextType;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
@@ -49,15 +53,23 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     private final PaymentAdapter paymentAdapter;
     private final OrganizationAdapter organizationAdapter;
     private final SubscriptionEntityMapper subscriptionEntityMapper;
+    private final OrganizationCacheService organizationCacheService;
 
-    public SubscriptionServiceImpl(SubscriptionAdapter subscriptionAdapter, PaymentService paymentService, UpgradeDtoMapper upgradeDtoMapper, PaymentAdapter paymentAdapter, OrganizationAdapter organizationAdapter, SubscriptionEntityMapper subscriptionEntityMapper) {
+    public SubscriptionServiceImpl(SubscriptionAdapter subscriptionAdapter, PaymentService paymentService, UpgradeDtoMapper upgradeDtoMapper, PaymentAdapter paymentAdapter, OrganizationAdapter organizationAdapter, SubscriptionEntityMapper subscriptionEntityMapper, OrganizationCacheService organizationCacheService) {
         this.subscriptionAdapter = subscriptionAdapter;
         this.paymentService = paymentService;
         this.upgradeDtoMapper = upgradeDtoMapper;
         this.paymentAdapter = paymentAdapter;
         this.organizationAdapter = organizationAdapter;
         this.subscriptionEntityMapper = subscriptionEntityMapper;
+        this.organizationCacheService = organizationCacheService;
     }
+
+    @Value("${razorpay.key.id}")
+    private String razorpayKeyId;
+
+    @Value("${razorpay.key.secret}")
+    private String razorpayKeySecret;
 
     @Override
     public long getSubscribedUserCount(String orgId) {
@@ -104,6 +116,23 @@ public class SubscriptionServiceImpl implements SubscriptionService {
             PaymentStatus status = isSuccess ? PaymentStatus.SUCCESS : PaymentStatus.FAILED;
             log.info("Payment isSuccess:  {}",
                     isSuccess);
+
+            String orderId=model.getOrderId();
+
+            if (organizationCacheService.isOrderIdUsed(orderId)) {
+                log.warn("Replay Attack Blocked — Order ID already used: {}", orderId);
+                throw new IllegalArgumentException("Order ID already used — payment reuse is not allowed.");
+            }
+
+            if (!isOrderPaid(orderId)) {
+                log.warn("Payment NOT completed or invalid — Order ID: {}", orderId);
+                throw new IllegalArgumentException("Payment verification failed. Order is not paid.");
+            }
+
+            organizationCacheService.markOrderIdUsed(orderId);
+
+            organizationCacheService.markOrderIdUsed(orderId);
+
             PaymentEntity payment = paymentService.createPayment(
                     orgId,
                     model.getOrderId(),
@@ -138,6 +167,8 @@ public class SubscriptionServiceImpl implements SubscriptionService {
                         model.getOrderId(), model.getPlanId());
                 return false;
             }
+        }catch (IllegalArgumentException e) {
+            throw e;
         } catch (Exception e) {
             log.error("Error occurred while upgrading plan for Org ID: {} | Error: {}", orgId, e.getMessage(), e);
             return false;
@@ -364,11 +395,25 @@ public class SubscriptionServiceImpl implements SubscriptionService {
                 .orElse(null);
 
         PlanEntity plan = subscriptionAdapter.findById(subscription.getPlanId())
-                .orElseThrow(() -> new RuntimeException("Plan not found for planId: " + subscription.getPlanId()));
+                .orElseThrow(() -> new IllegalArgumentException("Plan not found for planId: " + subscription.getPlanId()));
 
         if (plan.getPlanId().equalsIgnoreCase(PlaneName.BASIC_PLAN.getPlanId())) {
-            throw new RuntimeException("Cannot upgrade Basic plan");
+            throw new IllegalArgumentException("Cannot upgrade Basic plan");
         }
+        String orderId=model.getOrderId();
+
+        if (organizationCacheService.isOrderIdUsed(orderId)) {
+            log.warn("Replay Attack Blocked — Order ID already used: {}", orderId);
+            throw new IllegalArgumentException("Order ID already used — payment reuse is not allowed.");
+        }
+
+        if (!isOrderPaid(orderId)) {
+            log.warn("Payment NOT completed or invalid — Order ID: {}", orderId);
+            throw new IllegalArgumentException("Payment verification failed. Order is not paid.");
+        }
+
+        organizationCacheService.markOrderIdUsed(orderId);
+
         int totalSubscribedUsers = subscription.getSubscribedUsers() + dto.getSubscribedUserCount();
 
         PaymentStatus paymentStatus = model.getSuccess() ? PaymentStatus.SUCCESS : PaymentStatus.FAILED;
@@ -402,4 +447,18 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         return PaymentStatus.SUCCESS.equals(updated);
     }
 
+
+    public boolean isOrderPaid(String paymentId) {
+        try {
+            RazorpayClient client = new RazorpayClient(razorpayKeyId, razorpayKeySecret);
+            Payment payment = client.payments.fetch(paymentId);
+            JSONObject json = payment.toJson();
+            System.out.println("PAYMENT JSON:\n" + json.toString(4));
+            String status = json.optString("status");
+            return "captured".equalsIgnoreCase(status)
+                    || "authorized".equalsIgnoreCase(status);
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Invalid Payment ID: " + e.getMessage());
+        }
+    }
 }

@@ -1,6 +1,8 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.entity;
 
 import jakarta.persistence.*;
+
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -27,16 +29,16 @@ public class LeaveBalanceEntity {
     private LocalDate periodEnd;
 
     @Column(name = "total_units")
-    private Integer totalUnits;
+    private Double totalUnits;
 
     @Column(name = "expired_units")
-    private Integer expiredUnits = 0;
+    private Double expiredUnits = 0.0;
 
     @Column(name = "leave_taken_units")
-    private Integer leaveTakenUnits = 0;
+    private Double leaveTakenUnits = 0.0;
 
     @Column(name = "balance_units")
-    private Integer balanceUnits;
+    private Double balanceUnits;
 
     @Column(name = "next_accrual_date")
     private LocalDate nextAccrualDate;
@@ -45,7 +47,7 @@ public class LeaveBalanceEntity {
     private LocalDate lastAccrualDate;
 
     @Column(name = "carry_forward_units")
-    private Integer carryForwardUnits = 0;
+    private Double carryForwardUnits = 0.0;
 
 
     public Long getLeaveBalanceId() {
@@ -88,35 +90,35 @@ public class LeaveBalanceEntity {
         this.periodEnd = periodEnd;
     }
 
-    public Integer getTotalUnits() {
+    public Double getTotalUnits() {
         return totalUnits;
     }
 
-    public void setTotalUnits(Integer totalUnits) {
+    public void setTotalUnits(Double totalUnits) {
         this.totalUnits = totalUnits;
     }
 
-    public Integer getExpiredUnits() {
+    public Double getExpiredUnits() {
         return expiredUnits;
     }
 
-    public void setExpiredUnits(Integer expiredUnits) {
+    public void setExpiredUnits(Double expiredUnits) {
         this.expiredUnits = expiredUnits;
     }
 
-    public Integer getLeaveTakenUnits() {
+    public Double getLeaveTakenUnits() {
         return leaveTakenUnits;
     }
 
-    public void setLeaveTakenUnits(Integer leaveTakenUnits) {
+    public void setLeaveTakenUnits(Double leaveTakenUnits) {
         this.leaveTakenUnits = leaveTakenUnits;
     }
 
-    public Integer getBalanceUnits() {
+    public Double getBalanceUnits() {
         return balanceUnits;
     }
 
-    public void setBalanceUnits(Integer balanceUnits) {
+    public void setBalanceUnits(Double balanceUnits) {
         this.balanceUnits = balanceUnits;
     }
 
@@ -136,12 +138,11 @@ public class LeaveBalanceEntity {
         this.lastAccrualDate = lastAccrualDate;
     }
 
-    public Integer getCarryForwardUnits() {
+    public Double getCarryForwardUnits() {
         return carryForwardUnits;
     }
 
-    public void setCarryForwardUnits(Integer carryForwardUnits) {
+    public void setCarryForwardUnits(Double carryForwardUnits) {
         this.carryForwardUnits = carryForwardUnits;
     }
-
 }

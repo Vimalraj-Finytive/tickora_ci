@@ -38,4 +38,6 @@ public interface UserPayRollAmountRepository extends JpaRepository<UserPayRollAm
             @Param("month") String month
     );
 
+    Optional<UserPayRollAmountEntity> findByUser_UserIdAndMonth(String userId, String month);
+
 }
