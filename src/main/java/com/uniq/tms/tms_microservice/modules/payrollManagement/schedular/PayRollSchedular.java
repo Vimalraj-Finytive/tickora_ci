@@ -30,7 +30,7 @@ public class PayRollSchedular {
             for (OrganizationEntity orgId : orgIds) {
                 TenantUtil.setCurrentTenant(orgId.getSchemaName());
                 try {
-                  log.info("Scheduled clock triggered for calculate payroll amount");
+                    log.info("Running payroll scheduler for tenant: {}", orgId.getSchemaName());
                     payRollService.calculatePayrollAmount();
                 } catch (Exception e) {
                     continue;
