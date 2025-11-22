@@ -4,13 +4,9 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.LeaveBalance
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeoffPolicyEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeoffRequestEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.UsersRequestMappingEntity;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.*;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeoffRequestUserModel;
-
 import java.util.List;
-import java.util.Map;
 import java.time.LocalDate;
-import java.util.List;
 
 public interface TimeoffPolicyAdapter {
 
@@ -32,5 +28,7 @@ public interface TimeoffPolicyAdapter {
     String findUsernameByUserId(String userId);
     List<TimeoffPolicyEntity> findByUserId(String userId);
     List<TimeoffRequestUserModel> filterWithUser(LocalDate fromDate, LocalDate toDate);
+    List<TimeoffRequestUserModel> filterWithUserAndRole(LocalDate from, LocalDate to, int minRoleLevel);
+
 
 }

@@ -1,14 +1,9 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.services;
 
-import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeoffRequestEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.AdminStatusUpdate;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.EmployeeStatusUpdate;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeOffRequest;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.EntitledTypeDropdownDto;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeOffPolicyRequestDto;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeoffPolicyEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.*;
-import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.AccrualTypeEnumModel;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.CompensationEnumModel;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeoffPoliciesModel;
@@ -32,6 +27,8 @@ public interface TimeOffPolicyService {
       List<CompensationEnumModel>getCompensation();
       TimeoffPoliciesModel getPolicyById(String id);
       List<TimeoffPoliciesModel> getPolicyByUserId(String userId);
-      List<TimeoffRequestResponseModel> getRequestsByDateRange(RequestFilterModel model);
+      List<TimeoffRequestResponseModel> getRequestsByDateRange(LocalDate fromDate, LocalDate toDate);
+      List<TimeoffRequestResponseModel> filterRequestsByRole(LocalDate fromDate, LocalDate toDate, int minRoleLevel);
+
 
 }

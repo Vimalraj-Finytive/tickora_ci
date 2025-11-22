@@ -3,15 +3,15 @@ package com.uniq.tms.tms_microservice.modules.leavemanagement.facade;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.AdminStatusUpdateDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.EmployeeStatusUpdateDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeOffRequestDto;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeoffRequestEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.mapper.TimeOffPolicyEntityMapper;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.AdminStatusUpdate;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.EmployeeStatusUpdate;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeOffRequest;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.services.TimeOffPolicyService;
+import com.uniq.tms.tms_microservice.modules.userManagement.enums.UserRole;
 import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
+import com.uniq.tms.tms_microservice.shared.helper.AuthHelper;
 import org.springframework.stereotype.Component;
-import org.springframework.web.bind.annotation.RequestBody;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.*;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.mapper.TimeOffPolicyDtoMapper;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.*;
@@ -22,9 +22,8 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeoffPolicyDt
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.AccrualTypeEnumModel;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.CompensationEnumModel;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeoffPoliciesModel;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.services.TimeOffPolicyService;
-import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
-import org.springframework.stereotype.Component;
+
+import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 @Component
@@ -33,11 +32,13 @@ public class TimeOffPoliciesFacade {
     private final TimeOffPolicyService timeOffPolicyService;
     private final TimeOffPolicyDtoMapper timeoffPolicyDtoMapper;
     private final TimeOffPolicyEntityMapper timeOffPolicyEntityMapper;
+    private final AuthHelper authHelper;
 
-    public TimeOffPoliciesFacade(TimeOffPolicyService timeOffPolicyService, TimeOffPolicyDtoMapper timeoffPolicyDtoMapper, TimeOffPolicyEntityMapper timeOffPolicyEntityMapper) {
+    public TimeOffPoliciesFacade(TimeOffPolicyService timeOffPolicyService, TimeOffPolicyDtoMapper timeoffPolicyDtoMapper, TimeOffPolicyEntityMapper timeOffPolicyEntityMapper, AuthHelper authHelper) {
         this.timeOffPolicyService = timeOffPolicyService;
         this.timeoffPolicyDtoMapper = timeoffPolicyDtoMapper;
         this.timeOffPolicyEntityMapper = timeOffPolicyEntityMapper;
+        this.authHelper = authHelper;
     }
 
     public ApiResponse createRequest(TimeOffRequestDto requestDto) {
@@ -62,7 +63,7 @@ public class TimeOffPoliciesFacade {
         try {
             TimeOffPolicyRequestModel requestModel = timeoffPolicyDtoMapper.toRequestModel(requestDto);
             timeOffPolicyService.createPolicy(requestModel);
-            return new ApiResponse<>(200, "Policy Created Successfully", null);
+            return new ApiResponse<>(201, "Policy Created Successfully", null);
 
         } catch (IllegalArgumentException ex) {
             return new ApiResponse<>(400, ex.getMessage(), null);
@@ -175,16 +176,33 @@ public class TimeOffPoliciesFacade {
         return new ApiResponse<>(200, "Policies fetched successfully", dto);
     }
 
-    public ApiResponse<List<TimeoffRequestResponseDto>> filterRequests(RequestFilterDto dto) {
+    public ApiResponse<List<TimeoffRequestResponseDto>> filterRequests(LocalDate fromDate, LocalDate toDate) {
         try {
-            RequestFilterModel model= timeoffPolicyDtoMapper.toModel(dto);
-            List<TimeoffRequestResponseModel> modelList = timeOffPolicyService.getRequestsByDateRange(model);
-            List<TimeoffRequestResponseDto> responseList = timeoffPolicyDtoMapper.toDtoList(modelList);
-                return new ApiResponse<>(200, "Requests fetched successfully", responseList);
+            List<TimeoffRequestResponseModel> modelList = timeOffPolicyService.getRequestsByDateRange(fromDate, toDate);
+            List<TimeoffRequestResponseDto> dtoList = timeoffPolicyDtoMapper.toDtoList(modelList);
+            return new ApiResponse<>(200, "Requests fetched successfully", dtoList);
         } catch (IllegalArgumentException ex) {
-                return new ApiResponse<>(400, ex.getMessage(), null);
+            return new ApiResponse<>(400, ex.getMessage(), null);
         } catch (Exception ex) {
-                return new ApiResponse<>(409, ex.getMessage(), null);
+            return new ApiResponse<>(409, ex.getMessage(), null);
         }
     }
+
+
+    public ApiResponse<List<TimeoffRequestResponseDto>> filterRequestsBasedOnRole(LocalDate fromDate, LocalDate toDate) {
+        try {
+            String roleName = authHelper.getRole();
+            int minLevel = UserRole.getLevel(roleName);
+            List<TimeoffRequestResponseModel> list = timeOffPolicyService.filterRequestsByRole(fromDate, toDate, minLevel);
+            List<TimeoffRequestResponseDto> dtoList = timeoffPolicyDtoMapper.toDtoList(list);
+
+            return new ApiResponse<>(200, "Requests fetched successfully", dtoList);
+
+        } catch (IllegalArgumentException ex) {
+            return new ApiResponse<>(400, ex.getMessage(), null);
+        } catch (Exception ex) {
+            return new ApiResponse<>(409, ex.getMessage(), null);
+        }
+    }
+
 }

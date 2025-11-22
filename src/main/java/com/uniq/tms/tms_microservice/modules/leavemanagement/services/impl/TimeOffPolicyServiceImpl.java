@@ -6,28 +6,21 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.TimeoffPoli
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.UserPolicyAdapter;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.*;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.*;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.mapper.TimeOffPolicyDtoMapper;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.mapper.TimeOffPolicyEntityMapper;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.*;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.services.TimeOffPolicyService;
 import com.uniq.tms.tms_microservice.modules.userManagement.adapter.UserAdapter;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
-import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
 import jakarta.transaction.Transactional;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.poi.ss.formula.functions.T;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
-
-import java.math.BigDecimal;
 import java.time.*;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Service
@@ -577,28 +570,20 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
     }
 
     @Override
-    public List<TimeoffRequestResponseModel> getRequestsByDateRange(RequestFilterModel model) {
-
-        if (model.getFromDate() == null || model.getToDate() == null) {
-            throw new IllegalArgumentException("fromDate and toDate are required");
-        }
-
-        List<TimeoffRequestUserModel> list =
-                timeoffPolicyAdapter.filterWithUser(model.getFromDate(), model.getToDate());
-
+    public List<TimeoffRequestResponseModel> getRequestsByDateRange(LocalDate fromDate, LocalDate toDate) {
+        if (fromDate == null || toDate == null) {
+            throw new IllegalArgumentException("fromDate and toDate are required");}
+        List<TimeoffRequestUserModel> list = timeoffPolicyAdapter.filterWithUser(fromDate, toDate);
         List<TimeoffRequestResponseModel> response = new ArrayList<>();
-
         for (TimeoffRequestUserModel item : list) {
-            TimeoffRequestResponseModel dto =
-                    timeOffPolicyEntityMapper.toModel(item.getRequest());
-
-            dto.setUserName(item.getUserName());
-
-            response.add(dto);
+            TimeoffRequestResponseModel model = timeOffPolicyEntityMapper.toModel(item.getRequest());
+            model.setUserName(item.getUserName());
+            response.add(model);
         }
 
         return response;
     }
+
 
 
     private LeaveBalanceEntity buildLeaveBalance(TimeoffPolicyEntity policy,
@@ -660,6 +645,33 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
 
         return finalUsers;
     }
+
+    @Override
+    public List<TimeoffRequestResponseModel> filterRequestsByRole(
+            LocalDate fromDate,
+            LocalDate toDate,
+            int minRoleLevel) {
+
+        if (fromDate == null || toDate == null) {
+            throw new IllegalArgumentException("fromDate and toDate are required");
+        }
+
+        List<TimeoffRequestUserModel> list =
+                timeoffPolicyAdapter.filterWithUserAndRole(fromDate, toDate, minRoleLevel);
+
+        List<TimeoffRequestResponseModel> result = new ArrayList<>();
+
+        for (TimeoffRequestUserModel item : list) {
+            TimeoffRequestResponseModel rm =
+                    timeOffPolicyEntityMapper.toModel(item.getRequest());
+
+            rm.setUserName(item.getUserName());
+            result.add(rm);
+        }
+
+        return result;
+    }
+
 
 
 }

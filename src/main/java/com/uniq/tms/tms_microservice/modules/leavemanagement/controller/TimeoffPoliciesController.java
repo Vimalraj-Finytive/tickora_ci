@@ -10,12 +10,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.*;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.*;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.AccrualTypeEnumDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.CompensationEnumDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeoffPoliciesDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeoffPolicyDto;
-import org.springframework.web.bind.annotation.*;
+
+
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -41,7 +42,7 @@ public class TimeoffPoliciesController {
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
-    @PutMapping("/edit")
+    @PostMapping("/edit")
     public ResponseEntity<ApiResponse<Void>> editPolicy(
             @RequestBody TimeOffPolicyEditRequestDto request,
             @RequestHeader("Authorization") String token) {
@@ -131,13 +132,28 @@ public class TimeoffPoliciesController {
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
-    @PostMapping("/requests/filter")
+    @GetMapping("/requests/filter/{fromDate}/{toDate}")
     public ResponseEntity<ApiResponse<List<TimeoffRequestResponseDto>>> filterRequests(
-            @RequestBody RequestFilterDto dto) {
+            @PathVariable LocalDate fromDate,
+            @PathVariable LocalDate toDate) {
 
         ApiResponse<List<TimeoffRequestResponseDto>> response =
-                timeOffPoliciesFacade.filterRequests(dto);
+                timeOffPoliciesFacade.filterRequests(fromDate, toDate);
+
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
+
+
+
+    @GetMapping("/requests/filter/role/{fromDate}/{toDate}")
+    public ResponseEntity<ApiResponse<List<TimeoffRequestResponseDto>>> filterRequestsBasedOnRole(
+            @PathVariable LocalDate fromDate,
+            @PathVariable LocalDate toDate) {
+
+        ApiResponse<List<TimeoffRequestResponseDto>> response = timeOffPoliciesFacade.filterRequestsBasedOnRole(fromDate, toDate);
+
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
+
 
 }
