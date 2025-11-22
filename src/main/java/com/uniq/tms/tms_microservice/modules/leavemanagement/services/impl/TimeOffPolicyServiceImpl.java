@@ -12,6 +12,7 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.model.*;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.services.TimeOffPolicyService;
 import com.uniq.tms.tms_microservice.modules.userManagement.adapter.UserAdapter;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
+import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.formula.functions.T;
@@ -66,11 +67,13 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
             }
         }
 
-        if (request.getEntitledType() == EntitledType.DAY && request.getEntitledUnits() == null)
-            throw new IllegalArgumentException("Enter entitledUnits for DAY");
+        if (request.getEntitledUnits() != null && request.getEntitledHours() != null) {
+            throw new IllegalArgumentException("You cannot provide both entitledUnits and entitledHours together");
+        }
 
-        if (request.getEntitledType() == EntitledType.HALF_DAY && request.getEntitledUnits() == null)
-            throw new IllegalArgumentException("Enter entitledUnits for HALF_DAY");
+        if ((request.getEntitledType() == EntitledType.DAY || request.getEntitledType() == EntitledType.HALF_DAY) && request.getEntitledUnits() == null) {
+            throw new IllegalArgumentException("Enter entitledUnits for DAY or HALF_DAY");
+        }
 
         if (request.getEntitledType() == EntitledType.HOURS && request.getEntitledHours() == null)
             throw new IllegalArgumentException("Enter entitledHours for HOURS");
@@ -97,7 +100,7 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
 
         policy.setAccrualStartDate(LocalDate.now());
         policy.setResetFrequency(policy.getAccrualType());
-        policy.setIs_active(true);
+        policy.setActive(true);
         policy.setCreatedAt(LocalDateTime.now());
         policy.setUpdatedAt(LocalDateTime.now());
 
@@ -106,15 +109,7 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
         if (request.getCompensation() == Compensation.UNPAID)
             return timeOffPolicyEntityMapper.toResponseModel(policy);
 
-        Set<String> finalUserSet = new HashSet<>();
-
-        if (request.getUserIds() != null)
-            finalUserSet.addAll(request.getUserIds());
-
-        if (request.getGroupIds() != null && !request.getGroupIds().isEmpty()) {
-            List<String> groupUsers = userAdapter.findUserIdsByGroupIds(request.getGroupIds());
-            finalUserSet.addAll(groupUsers);
-        }
+        Set<String> finalUserSet = getFinalUserSet(request.getUserIds(), request.getGroupIds());
 
         if (finalUserSet.isEmpty())
             return timeOffPolicyEntityMapper.toResponseModel(policy);
@@ -132,42 +127,13 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
                 ? request.getUserValidTo()
                 : policy.getValidityEndDate();
 
-        Double totalUnits;
-
-        if (policy.getEntitledUnits() != null) {
-            if (request.getEntitledType() == EntitledType.HALF_DAY) {
-                totalUnits = policy.getEntitledUnits() * 0.5;
-            } else {
-                totalUnits = policy.getEntitledUnits().doubleValue();
-            }
-        } else {
-            totalUnits = policy.getEntitledHours().doubleValue();
-        }
-
+        double totalUnits = calculateTotalUnits(policy, request.getEntitledType());
 
         for (String userId : finalUsers) {
 
             UserEntity userEntity = userAdapter.findById(userId).orElseThrow(() -> new UsernameNotFoundException("User ID " + userId + " not found."));
-            UserPolicyEntity up = new UserPolicyEntity();
-            up.setUser(userEntity);
-            up.setPolicy(policy);
-            up.setValidFrom(validFrom);
-            up.setValidTo(validTo);
-            up.setAssignedAt(LocalDateTime.now());
-            userPolicies.add(up);
-
-            LeaveBalanceEntity lb = new LeaveBalanceEntity();
-            lb.setUserId(userId);
-            lb.setPolicy(policy);
-            lb.setPeriodStartDate(validFrom);
-            lb.setPeriodEnd(validTo);
-            lb.setTotalUnits(totalUnits);
-            lb.setBalanceUnits(totalUnits);
-            lb.setLeaveTakenUnits(0.0);
-            lb.setCarryForwardUnits(0.0);
-            lb.setLastAccrualDate(validTo);
-            lb.setNextAccrualDate(validTo.plusDays(1));
-            leaveBalances.add(lb);
+            userPolicies.add(buildUserPolicy(policy, userEntity, validFrom, validTo));
+            leaveBalances.add(buildLeaveBalance(policy, userId, validFrom, validTo, totalUnits));
         }
 
         userPolicyAdapter.saveUserPolicies(userPolicies);
@@ -232,6 +198,10 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
             }
         }
 
+        if (request.getEntitledUnits() != null && request.getEntitledHours() != null) {
+            throw new IllegalArgumentException("You cannot provide both entitledUnits and entitledHours together");
+        }
+
         policy.setUpdatedAt(LocalDateTime.now());
         timeoffPolicyAdapter.savePolicy(policy);
 
@@ -244,19 +214,7 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
         if (assignedUsers.isEmpty())
             return;
 
-        Double totalUnits;
-
-        if (policy.getEntitledUnits() != null) {
-            if (policy.getEntitledType() == EntitledType.HALF_DAY) {
-                totalUnits = policy.getEntitledUnits() * 0.5;
-            } else {
-                totalUnits = policy.getEntitledUnits().doubleValue();
-            }
-        } else {
-            totalUnits = policy.getEntitledHours().doubleValue();
-        }
-
-
+        double totalUnits = calculateTotalUnits(policy, policy.getEntitledType());
 
         List<LeaveBalanceEntity> leaveBalances =
                 leaveBalanceAdapter.findLeaveBalancesByPolicyId(policy.getPolicyId());
@@ -265,10 +223,9 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
 
             lb.setTotalUnits(totalUnits);
 
-            Double taken = lb.getLeaveTakenUnits() != null
+            double taken = lb.getLeaveTakenUnits() != null
                     ? lb.getLeaveTakenUnits()
                     : 0.0;
-
 
             if (taken == 0.0) {
                 lb.setBalanceUnits(totalUnits);
@@ -278,13 +235,7 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
                 if (newBalance < 0.0) {
                     newBalance = 0.0;
                 }
-
                 lb.setBalanceUnits(newBalance);
-            }
-
-
-            if (!policy.getCarryForward()) {
-                lb.setCarryForwardUnits(0.0);
             }
 
             lb.setLastAccrualDate(policy.getValidityEndDate());
@@ -298,15 +249,7 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
     @Transactional
     public void assignPolicies(TimeOffPolicyBulkAssignModel request) {
 
-        Set<String> finalUsers = new HashSet<>();
-
-        if (request.getUserIds() != null)
-            finalUsers.addAll(request.getUserIds());
-
-        if (request.getGroupIds() != null && !request.getGroupIds().isEmpty()) {
-            List<String> groupUsers = userAdapter.findUserIdsByGroupIds(request.getGroupIds());
-            finalUsers.addAll(groupUsers);
-        }
+        Set<String> finalUsers = getFinalUserSet(request.getUserIds(), request.getGroupIds());
 
         if (finalUsers.isEmpty() || request.getPolicyIds().isEmpty())
             return;
@@ -324,7 +267,6 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
                     .computeIfAbsent(u.getUser().getUserId(), k -> new HashSet<>())
                     .add(u.getPolicy().getPolicyId());
         }
-
 
         List<UserPolicyEntity> assignList = new ArrayList<>();
         List<LeaveBalanceEntity> balanceList = new ArrayList<>();
@@ -348,26 +290,9 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
 
                 UserEntity userEntity = userAdapter.findById(userId).orElseThrow(() -> new UsernameNotFoundException("User ID " + userId + " not found."));
 
-                UserPolicyEntity up = new UserPolicyEntity();
-                up.setPolicy(policy);
-                up.setUser(userEntity);
-                up.setValidFrom(validFrom);
-                up.setValidTo(validTo);
-                up.setAssignedAt(LocalDateTime.now());
-                assignList.add(up);
+                assignList.add(buildUserPolicy(policy, userEntity, validFrom, validTo));
 
-                LeaveBalanceEntity lb = new LeaveBalanceEntity();
-                lb.setPolicy(policy);
-                lb.setUserId(userId);
-                lb.setPeriodStartDate(validFrom);
-                lb.setPeriodEnd(validTo);
-                lb.setTotalUnits(totalUnits);
-                lb.setBalanceUnits(totalUnits);
-                lb.setLeaveTakenUnits(0.0);
-                lb.setCarryForwardUnits(0.0);
-                lb.setLastAccrualDate(validTo);
-                lb.setNextAccrualDate(validTo.plusDays(1));
-                balanceList.add(lb);
+                balanceList.add(buildLeaveBalance(policy, userId, validFrom, validTo, totalUnits));
 
                 userPolicies.add(policy.getPolicyId());
                 existingMap.put(userId, userPolicies);
@@ -396,7 +321,7 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
             throw new IllegalArgumentException("Status cannot be null");
         }
 
-        policy.setIs_active(status);
+        policy.setActive(status);
         policy.setUpdatedAt(LocalDateTime.now());
 
         timeoffPolicyAdapter.savePolicy(policy);
@@ -650,5 +575,91 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
                 "No time-off policy found for userId");
         return timeOffPolicyEntityMapper.toModelList(entity);
     }
+
+    @Override
+    public List<TimeoffRequestResponseModel> getRequestsByDateRange(RequestFilterModel model) {
+
+        if (model.getFromDate() == null || model.getToDate() == null) {
+            throw new IllegalArgumentException("fromDate and toDate are required");
+        }
+
+        List<TimeoffRequestUserModel> list =
+                timeoffPolicyAdapter.filterWithUser(model.getFromDate(), model.getToDate());
+
+        List<TimeoffRequestResponseModel> response = new ArrayList<>();
+
+        for (TimeoffRequestUserModel item : list) {
+            TimeoffRequestResponseModel dto =
+                    timeOffPolicyEntityMapper.toModel(item.getRequest());
+
+            dto.setUserName(item.getUserName());
+
+            response.add(dto);
+        }
+
+        return response;
+    }
+
+
+    private LeaveBalanceEntity buildLeaveBalance(TimeoffPolicyEntity policy,
+                                                 String userId,
+                                                 LocalDate validFrom,
+                                                 LocalDate validTo,
+                                                 double totalUnits) {
+
+        LeaveBalanceEntity lb = new LeaveBalanceEntity();
+        lb.setUserId(userId);
+        lb.setPolicy(policy);
+        lb.setPeriodStartDate(validFrom);
+        lb.setPeriodEnd(validTo);
+        lb.setTotalUnits(totalUnits);
+        lb.setBalanceUnits(totalUnits);
+        lb.setLeaveTakenUnits(0.0);
+        lb.setCarryForwardUnits(0.0);
+        lb.setLastAccrualDate(validTo);
+        lb.setNextAccrualDate(validTo.plusDays(1));
+        return lb;
+    }
+
+    private UserPolicyEntity buildUserPolicy(TimeoffPolicyEntity policy,
+                                             UserEntity user,
+                                             LocalDate validFrom,
+                                             LocalDate validTo) {
+
+        UserPolicyEntity up = new UserPolicyEntity();
+        up.setUser(user);
+        up.setPolicy(policy);
+        up.setValidFrom(validFrom);
+        up.setValidTo(validTo);
+        up.setAssignedAt(LocalDateTime.now());
+        return up;
+    }
+
+    private double calculateTotalUnits(TimeoffPolicyEntity policy, EntitledType type) {
+
+        if (policy.getEntitledUnits() != null) {
+            return (type == EntitledType.HALF_DAY)
+                    ? policy.getEntitledUnits() * 0.5
+                    : policy.getEntitledUnits().doubleValue();
+        }
+
+        return policy.getEntitledHours().doubleValue();
+    }
+
+
+    private Set<String> getFinalUserSet(List<String> userIds, List<Long> groupIds) {
+
+        Set<String> finalUsers = new HashSet<>();
+
+        if (userIds != null)
+            finalUsers.addAll(userIds);
+
+        if (groupIds != null && !groupIds.isEmpty()) {
+            finalUsers.addAll(userAdapter.findUserIdsByGroupIds(groupIds));
+        }
+
+        return finalUsers;
+    }
+
 
 }
