@@ -1,5 +1,6 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.services;
 
+import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeoffRequestEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.AdminStatusUpdate;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.EmployeeStatusUpdate;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeOffRequest;
@@ -11,6 +12,8 @@ import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.AccrualTypeEnumModel;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.CompensationEnumModel;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeoffPoliciesModel;
+
+import java.time.LocalDate;
 import java.util.List;
 
 public interface TimeOffPolicyService {
@@ -29,4 +32,6 @@ public interface TimeOffPolicyService {
       List<CompensationEnumModel>getCompensation();
       TimeoffPoliciesModel getPolicyById(String id);
       List<TimeoffPoliciesModel> getPolicyByUserId(String userId);
+      List<TimeoffRequestResponseModel> getRequestsByDateRange(RequestFilterModel model);
+
 }

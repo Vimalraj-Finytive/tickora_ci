@@ -54,7 +54,7 @@ public class TimeoffPolicyEntity {
     private EntitledType entitledType;
 
     @Column(name = "is_active")
-    private boolean is_active;
+    private boolean isActive;
 
     @Column(name = "max_carry_forward_units")
     private Integer maxCarryForwardUnits;
@@ -161,12 +161,13 @@ public class TimeoffPolicyEntity {
         this.entitledType = entitledType;
     }
 
-    public boolean isIs_active() {
-        return is_active;
+
+    public boolean isActive() {
+        return isActive;
     }
 
-    public void setIs_active(boolean is_active) {
-        this.is_active = is_active;
+    public void setActive(boolean active) {
+        isActive = active;
     }
 
     public Integer getMaxCarryForwardUnits() {

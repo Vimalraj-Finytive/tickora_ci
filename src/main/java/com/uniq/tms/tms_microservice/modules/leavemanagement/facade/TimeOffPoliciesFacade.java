@@ -3,6 +3,7 @@ package com.uniq.tms.tms_microservice.modules.leavemanagement.facade;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.AdminStatusUpdateDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.EmployeeStatusUpdateDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeOffRequestDto;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeoffRequestEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.mapper.TimeOffPolicyEntityMapper;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.AdminStatusUpdate;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.EmployeeStatusUpdate;
@@ -57,42 +58,35 @@ public class TimeOffPoliciesFacade {
         return new ApiResponse<>(200, "Update TimeOff Request status Successfully", null);
     }
 
-    public ApiResponse<TimeOffPolicyResponseDto> createPolicy(TimeOffPolicyRequestDto requestDto) {
+    public ApiResponse<Void> createPolicy(TimeOffPolicyRequestDto requestDto) {
         try {
             TimeOffPolicyRequestModel requestModel = timeoffPolicyDtoMapper.toRequestModel(requestDto);
-            TimeOffPolicyResponseModel responseModel = timeOffPolicyService.createPolicy(requestModel);
-            TimeOffPolicyResponseDto responseDto = timeoffPolicyDtoMapper.toResponseDto(responseModel);
-
-            return new ApiResponse<>(200, "Policy Created Successfully", responseDto);
+            timeOffPolicyService.createPolicy(requestModel);
+            return new ApiResponse<>(200, "Policy Created Successfully", null);
 
         } catch (IllegalArgumentException ex) {
             return new ApiResponse<>(400, ex.getMessage(), null);
 
         } catch (Exception ex) {
-            return new ApiResponse<>(500, "An unexpected error occurred", null);
+            return new ApiResponse<>(409, ex.getMessage(), null);
         }
     }
 
-
     public ApiResponse<EntitledTypeDropdownDto> getDropDowns() {
-
         try {
             EntitledTypeDropdownModel model = timeOffPolicyService.getDropDowns();
             EntitledTypeDropdownDto dto = timeoffPolicyDtoMapper.toDto(model);
-
             return new ApiResponse<>(200, "DropDowns Fetched Successfully", dto);
 
         } catch (IllegalArgumentException ex) {
             return new ApiResponse<>(400, ex.getMessage(), null);
 
         } catch (Exception ex) {
-            return new ApiResponse<>(500, "An unexpected error occurred", null);
+            return new ApiResponse<>(409, ex.getMessage(), null);
         }
     }
 
-
-    public ApiResponse<TimeOffPolicyResponseDto> editPolicy(TimeOffPolicyEditRequestDto requestDto) {
-
+    public ApiResponse<Void> editPolicy(TimeOffPolicyEditRequestDto requestDto) {
         try {
             TimeOffPolicyEditRequestModel model = timeoffPolicyDtoMapper.toEditRequestModel(requestDto);
             timeOffPolicyService.editPolicy(model);
@@ -103,45 +97,39 @@ public class TimeOffPoliciesFacade {
             return new ApiResponse<>(400, ex.getMessage(), null);
 
         } catch (Exception ex) {
-            return new ApiResponse<>(500, "An unexpected error occurred", null);
+            return new ApiResponse<>(409, ex.getMessage(), null);
         }
     }
 
-    public ApiResponse<String> assignPoliciesToUsers(TimeOffPolicyBulkAssignRequestDto dto) {
+    public ApiResponse<Void> assignPoliciesToUsers(TimeOffPolicyBulkAssignRequestDto dto) {
         try {
             TimeOffPolicyBulkAssignModel model = timeoffPolicyDtoMapper.toBulkAssignModel(dto);
             timeOffPolicyService.assignPolicies(model);
-
             return new ApiResponse<>(200, "Policies assigned successfully", null);
 
         } catch (IllegalArgumentException ex) {
             return new ApiResponse<>(400, ex.getMessage(), null);
 
         } catch (Exception ex) {
-            return new ApiResponse<>(500, "An unexpected error occurred", null);
+            return new ApiResponse<>(409, ex.getMessage(), null);
         }
     }
 
-
-    public ApiResponse<String> inactivatePolicy(String policyId, TimeOffPolicyInactivateRequestDto dto) {
+    public ApiResponse<Void> inactivatePolicy(String policyId, TimeOffPolicyInactivateRequestDto dto) {
 
         try {
-            TimeOffPolicyInactivateModel model =
-                    timeoffPolicyDtoMapper.toInactivateModel(dto);
-
+            TimeOffPolicyInactivateModel model = timeoffPolicyDtoMapper.toInactivateModel(dto);
             timeOffPolicyService.inactivatePolicy(policyId, model);
-
             String message = model.getActive()
                     ? "Policy activated successfully"
                     : "Policy deactivated successfully";
-
             return new ApiResponse<>(200, message, null);
 
         } catch (IllegalArgumentException ex) {
             return new ApiResponse<>(400, ex.getMessage(), null);
 
         } catch (Exception ex) {
-            return new ApiResponse<>(500, "An unexpected error occurred", null);
+            return new ApiResponse<>(409, ex.getMessage(), null);
         }
     }
 
@@ -187,4 +175,16 @@ public class TimeOffPoliciesFacade {
         return new ApiResponse<>(200, "Policies fetched successfully", dto);
     }
 
+    public ApiResponse<List<TimeoffRequestResponseDto>> filterRequests(RequestFilterDto dto) {
+        try {
+            RequestFilterModel model= timeoffPolicyDtoMapper.toModel(dto);
+            List<TimeoffRequestResponseModel> modelList = timeOffPolicyService.getRequestsByDateRange(model);
+            List<TimeoffRequestResponseDto> responseList = timeoffPolicyDtoMapper.toDtoList(modelList);
+                return new ApiResponse<>(200, "Requests fetched successfully", responseList);
+        } catch (IllegalArgumentException ex) {
+                return new ApiResponse<>(400, ex.getMessage(), null);
+        } catch (Exception ex) {
+                return new ApiResponse<>(409, ex.getMessage(), null);
+        }
+    }
 }

@@ -119,7 +119,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
             String orderId=model.getOrderId();
 
-            if (organizationCacheService.isOrderIdUsed(orderId)) {
+            if (organizationCacheService.isOrderIdUsed(orgSchema,orgId,orderId)) {
                 log.warn("Replay Attack Blocked — Order ID already used: {}", orderId);
                 throw new IllegalArgumentException("Order ID already used — payment reuse is not allowed.");
             }
@@ -129,9 +129,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
                 throw new IllegalArgumentException("Payment verification failed. Order is not paid.");
             }
 
-            organizationCacheService.markOrderIdUsed(orderId);
-
-            organizationCacheService.markOrderIdUsed(orderId);
+            organizationCacheService.markOrderIdUsed(orgSchema,orgId,orderId);
 
             PaymentEntity payment = paymentService.createPayment(
                     orgId,
@@ -402,7 +400,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         }
         String orderId=model.getOrderId();
 
-        if (organizationCacheService.isOrderIdUsed(orderId)) {
+        if (organizationCacheService.isOrderIdUsed(orgSchema,orgId,orderId)) {
             log.warn("Replay Attack Blocked — Order ID already used: {}", orderId);
             throw new IllegalArgumentException("Order ID already used — payment reuse is not allowed.");
         }
@@ -412,7 +410,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
             throw new IllegalArgumentException("Payment verification failed. Order is not paid.");
         }
 
-        organizationCacheService.markOrderIdUsed(orderId);
+        organizationCacheService.markOrderIdUsed(orgSchema,orgId,orderId);
 
         int totalSubscribedUsers = subscription.getSubscribedUsers() + dto.getSubscribedUserCount();
 

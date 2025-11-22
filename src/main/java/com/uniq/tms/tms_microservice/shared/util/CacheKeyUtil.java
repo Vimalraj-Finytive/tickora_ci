@@ -67,7 +67,7 @@ public class CacheKeyUtil {
         return otpKey + ":" + schema + ":" + orgId + ":" + mobile;
     }
 
-    public String getPaymentUsedOrderKey(String orderId) {
-        return paymentUsedOrder + ":" + orderId;
+    public String getPaymentUsedOrderKey(String schema,String orgId,String orderId) {
+        return paymentUsedOrder + ":" + schema + ":" + orgId + ":" + orderId;
     }
 }

@@ -2,6 +2,7 @@ package com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.impl;
 
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.TimeoffPolicyAdapter;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.*;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeoffRequestUserModel;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -127,6 +128,11 @@ public class TimeoffPolicyAdapterImpl implements TimeoffPolicyAdapter {
     @Override
     public List<LeaveBalanceEntity> saveAllLeaveBalance(List<LeaveBalanceEntity> entities) {
         return leaveBalanceRepo.saveAll(entities);
+    }
+
+    @Override
+    public List<TimeoffRequestUserModel> filterWithUser(LocalDate from, LocalDate to) {
+        return timeoffRequestRepo.filterWithUser(from, to);
     }
 }
 
