@@ -2,11 +2,14 @@ package com.uniq.tms.tms_microservice.modules.leavemanagement.mapper;
 
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeOffPolicyRequestDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeOffPolicyResponseDto;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeoffRequestResponseDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.LeaveBalanceEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeoffPolicyEntity;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeoffRequestEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeOffPolicyRequestModel;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeOffPolicyResponseModel;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeoffPoliciesModel;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeoffRequestResponseModel;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Mappings;
@@ -22,13 +25,21 @@ public interface TimeOffPolicyEntityMapper {
 
     TimeOffPolicyResponseModel toResponseModel(TimeoffPolicyEntity entity);
 
-    TimeOffPolicyResponseDto toResponseDto(TimeoffPolicyEntity entity);
-
     TimeoffPoliciesModel toModel(TimeoffPolicyEntity entity);
 
     TimeoffPolicyEntity toEntity(TimeoffPoliciesModel model);
 
     List<TimeoffPoliciesModel> toModelList(List<TimeoffPolicyEntity> entity);
+
+    List<TimeoffRequestResponseModel> toModel(List<TimeoffRequestEntity> entityList);
+
+
+
+    @Mapping(source = "policy.policyName", target = "policyName")
+    @Mapping(source = "status", target = "status")
+    TimeoffRequestResponseModel toModel(TimeoffRequestEntity entity);
+
+    List<TimeoffRequestResponseModel> toResponseModelList(List<TimeoffRequestEntity> entities);
 
 //    @Mapping(source = "policy.policyName", target = "policyName")
 //    @Mapping(source = "user.userId", target = "userId")

@@ -29,9 +29,9 @@ public class TimeoffPoliciesController {
     }
 
     @PostMapping("/create")
-    public ResponseEntity<ApiResponse<TimeOffPolicyResponseDto>> createPolicy(@RequestBody TimeOffPolicyRequestDto request,
-                                                                              @RequestHeader("Authorization") String token) {
-        ApiResponse<TimeOffPolicyResponseDto> response = timeOffPoliciesFacade.createPolicy(request);
+    public ResponseEntity<ApiResponse<Void>> createPolicy(@RequestBody TimeOffPolicyRequestDto request,
+                                                          @RequestHeader("Authorization") String token) {
+        ApiResponse<Void> response = timeOffPoliciesFacade.createPolicy(request);
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
@@ -41,31 +41,30 @@ public class TimeoffPoliciesController {
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
-
-    @PostMapping("/edit")
-    public ResponseEntity<ApiResponse<TimeOffPolicyResponseDto>> editPolicy(
+    @PutMapping("/edit")
+    public ResponseEntity<ApiResponse<Void>> editPolicy(
             @RequestBody TimeOffPolicyEditRequestDto request,
             @RequestHeader("Authorization") String token) {
-        ApiResponse<TimeOffPolicyResponseDto> response = timeOffPoliciesFacade.editPolicy(request);
-        return ResponseEntity.ok(response);
+        ApiResponse<Void> response = timeOffPoliciesFacade.editPolicy(request);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
     @PostMapping("update/assign")
-    public ResponseEntity<ApiResponse<String>> assignPoliciesToUsers(
+    public ResponseEntity<ApiResponse<Void>> assignPoliciesToUsers(
             @RequestBody TimeOffPolicyBulkAssignRequestDto request,
             @RequestHeader("Authorization") String token) {
 
-        timeOffPoliciesFacade.assignPoliciesToUsers(request);
-        return ResponseEntity.ok(new ApiResponse<>(200, "Policies assigned successfully", null));
+        ApiResponse<Void> response =timeOffPoliciesFacade.assignPoliciesToUsers(request);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
     @PatchMapping("/status/{policyId}")
-    public ResponseEntity<ApiResponse<String>> inactivatePolicy(
+    public ResponseEntity<ApiResponse<Void>> inactivatePolicy(
             @PathVariable String policyId,
             @RequestBody TimeOffPolicyInactivateRequestDto request,
             @RequestHeader("Authorization") String token) {
 
-        ApiResponse<String> response =
+        ApiResponse<Void> response =
                 timeOffPoliciesFacade.inactivatePolicy(policyId, request);
 
         return ResponseEntity.status(response.getStatusCode()).body(response);
@@ -129,6 +128,15 @@ public class TimeoffPoliciesController {
             @RequestHeader("Authorization") String token,
             @PathVariable("userId") String userId) {
         ApiResponse<List<TimeoffPolicyDto>> response = timeOffPoliciesFacade.getPolicyByUserId(userId);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
+
+    @PostMapping("/requests/filter")
+    public ResponseEntity<ApiResponse<List<TimeoffRequestResponseDto>>> filterRequests(
+            @RequestBody RequestFilterDto dto) {
+
+        ApiResponse<List<TimeoffRequestResponseDto>> response =
+                timeOffPoliciesFacade.filterRequests(dto);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
