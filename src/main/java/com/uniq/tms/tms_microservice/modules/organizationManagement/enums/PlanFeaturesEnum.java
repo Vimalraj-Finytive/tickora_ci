@@ -7,28 +7,37 @@ public enum PlanFeaturesEnum {
     PL02("per user/month", Arrays.asList(
             "Geo Fencing",
             "Face Recognition",
-            "Multiple Location",
+            "Multiple Location Access",
             "Multiple Work Schedule",
-            "Reports And Dashboard",
-            "Mobile and Web App"
+            "Payroll Report Generation",
+            "Mobile and Web App",
+            "Real-Time Insights Dashboard",
+            "User Friendly Report Generation",
+            "Multi Group Access"
     )),
 
     PL03("per user/month", Arrays.asList(
             "Geo Fencing",
             "Face Recognition",
-            "Multiple Location",
+            "Multiple Location Access",
             "Multiple Work Schedule",
-            "Reports And Dashboard",
-            "Mobile and Web App"
+            "Payroll Report Generation",
+            "Mobile and Web App",
+            "Real-Time Insights Dashboard",
+            "User Friendly Report Generation",
+            "Multi Group Access"
     )),
 
     PL04("per user/month", Arrays.asList(
             "Geo Fencing",
             "Face Recognition",
-            "Multiple Location",
+            "Multiple Location Access",
             "Multiple Work Schedule",
-            "Reports And Dashboard",
-            "Mobile and Web App"
+            "Payroll Report Generation",
+            "Mobile and Web App",
+            "Real-Time Insights Dashboard",
+            "User Friendly Report Generation",
+            "Multi Group Access"
     ));
 
     private final String priceTerm;
