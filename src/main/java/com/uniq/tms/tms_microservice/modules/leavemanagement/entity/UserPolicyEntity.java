@@ -27,6 +27,9 @@ public class UserPolicyEntity {
     @Column(name = "valid_to")
     private LocalDate validTo;
 
+    @Column(name = "entitled_units")
+    private Integer entitledUnits;
+
     @Column(name = "assigned_at")
     private LocalDateTime assignedAt;
 
@@ -69,6 +72,14 @@ public class UserPolicyEntity {
 
     public void setValidTo(LocalDate validTo) {
         this.validTo = validTo;
+    }
+
+    public Integer getEntitledUnits() {
+        return entitledUnits;
+    }
+
+    public void setEntitledUnits(Integer entitledUnits) {
+        this.entitledUnits = entitledUnits;
     }
 
     public LocalDateTime getAssignedAt() {

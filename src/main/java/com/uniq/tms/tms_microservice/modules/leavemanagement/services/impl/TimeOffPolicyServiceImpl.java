@@ -69,6 +69,53 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
         if (request.getEntitledType() == EntitledType.HOURS && request.getEntitledHours() == null)
             throw new IllegalArgumentException("Enter entitledHours for HOURS");
 
+        ResetFrequency reset = request.getResetFrequency();
+        AccrualType accrual = request.getAccrualType();
+
+        if (accrual == AccrualType.FIXED) {
+            reset = null;
+            if (request.getUserValidFrom() == null || request.getUserValidTo() == null) {
+                throw new IllegalArgumentException("userValidFrom and userValidTo are required for FIXED accrual.");
+            }
+            if (accrual == AccrualType.FIXED) {
+
+                if (request.getEntitledType() != EntitledType.DAY) {
+                    throw new IllegalArgumentException(
+                            "For FIXED accrual, entitledType must be DAY. HALF_DAY or HOURS are not allowed."
+                    );
+                }
+            }
+        }
+        else {
+            if (reset == null) {
+                throw new IllegalArgumentException("resetFrequency is required.");
+            }
+
+            if (accrual == AccrualType.ANNUALLY && reset != ResetFrequency.ANNUALLY) {
+                throw new IllegalArgumentException("resetFrequency must be ANNUALLY for ANNUALLY accrual type.");
+            }
+
+        }
+
+        if (request.getUserValidFrom().isBefore(request.getValidityStartDate())) {
+            throw new IllegalArgumentException(
+                    "User Valid From must be on or after validity start date."
+            );
+        }
+
+        if (request.getValidityEndDate() != null && request.getUserValidTo() != null && request.getUserValidTo().isAfter(request.getValidityEndDate())) {
+            throw new IllegalArgumentException(
+                    "User Valid To must be on or before validity end date."
+            );
+        }
+
+        if (request.getUserValidTo() != null && request.getUserValidTo().isBefore(request.getUserValidFrom())) {
+            throw new IllegalArgumentException(
+                    "User Valid To cannot be earlier than user valid from."
+            );
+        }
+
+
         String policyId = idGenerationService.generateNextTimeOffPolicyId();
 
         TimeOffPolicyEntity policy = timeOffPolicyEntityMapper.toEntity(request);
@@ -76,12 +123,7 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
 
         if (request.getEntitledType() == EntitledType.DAY || request.getEntitledType() == EntitledType.HALF_DAY) {
 
-            policy.setEntitledUnits(
-                    request.getAccrualType() == AccrualType.MONTHLY?
-                            request.getEntitledUnits() * 12 :
-                            request.getEntitledUnits()
-            );
-
+            policy.setEntitledUnits(request.getEntitledUnits());
             policy.setEntitledHours(null);
 
         } else {
@@ -90,11 +132,16 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
         }
 
         policy.setAccrualStartDate(LocalDate.now());
-        policy.setResetFrequency(policy.getAccrualType());
+        if (policy.getAccrualType() == AccrualType.FIXED) {
+            policy.setResetFrequency(null);
+        } else {
+            policy.setResetFrequency(request.getResetFrequency());
+        }
+        policy.setValidityStartDate(request.getValidityStartDate());
+        policy.setValidityEndDate(request.getValidityEndDate());
         policy.setActive(true);
         policy.setCreatedAt(LocalDateTime.now());
         policy.setUpdatedAt(LocalDateTime.now());
-
         policy = timeoffPolicyAdapter.savePolicy(policy);
 
         if (request.getCompensation() == Compensation.UNPAID)
@@ -110,13 +157,9 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
         List<UserPolicyEntity> userPolicies = new ArrayList<>();
         List<LeaveBalanceEntity> leaveBalances = new ArrayList<>();
 
-        LocalDate validFrom = request.getUserValidFrom() != null
-                ? request.getUserValidFrom()
-                : policy.getValidityStartDate();
+        LocalDate validFrom = request.getUserValidFrom();
 
-        LocalDate validTo = request.getUserValidTo() != null
-                ? request.getUserValidTo()
-                : policy.getValidityEndDate();
+        LocalDate validTo = request.getUserValidTo();
 
         double totalUnits = calculateTotalUnits(policy, request.getEntitledType());
 
@@ -154,6 +197,24 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
         TimeOffPolicyEntity policy = timeoffPolicyAdapter.findByPolicyId(request.getPolicyId());
         if (policy == null) {
             throw new IllegalArgumentException("Invalid Policy ID");
+        }
+
+        if (request.getUserValidFrom().isBefore(request.getValidityStartDate())) {
+            throw new IllegalArgumentException(
+                    "User Valid From must be on or after validity start date."
+            );
+        }
+
+        if (request.getValidityEndDate() != null && request.getUserValidTo() != null && request.getUserValidTo().isAfter(request.getValidityEndDate())) {
+            throw new IllegalArgumentException(
+                    "User Valid To must be on or before validity end date."
+            );
+        }
+
+        if (request.getUserValidTo() != null && request.getUserValidTo().isBefore(request.getUserValidFrom())) {
+            throw new IllegalArgumentException(
+                    "User Valid To cannot be earlier than user valid from."
+            );
         }
 
         boolean entitlementChanged = false;
@@ -196,13 +257,20 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
         policy.setUpdatedAt(LocalDateTime.now());
         timeoffPolicyAdapter.savePolicy(policy);
 
-        if (!entitlementChanged)
-            return;
-
         List<UserPolicyEntity> assignedUsers =
                 userPolicyAdapter.findUserPoliciesByPolicyId(policy.getPolicyId());
 
         if (assignedUsers.isEmpty())
+            return;
+
+        for (UserPolicyEntity up : assignedUsers) {
+            up.setValidFrom(request.getUserValidFrom());
+            up.setValidTo(request.getUserValidTo());
+        }
+
+        userPolicyAdapter.saveUserPolicies(assignedUsers);
+
+        if (!entitlementChanged)
             return;
 
         double totalUnits = calculateTotalUnits(policy, policy.getEntitledType());
@@ -211,6 +279,11 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
                 leaveBalanceAdapter.findLeaveBalancesByPolicyId(policy.getPolicyId());
 
         for (LeaveBalanceEntity lb : leaveBalances) {
+            if (request.getValidityStartDate() != null)
+                lb.setPeriodStartDate(policy.getValidityStartDate());
+
+            if (request.getValidityEndDate() != null)
+                lb.setPeriodEnd(policy.getValidityEndDate());
 
             lb.setTotalUnits(totalUnits);
 
@@ -264,9 +337,40 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
 
         for (TimeOffPolicyEntity policy : policies) {
 
-            LocalDate validFrom = policy.getValidityStartDate();
-            LocalDate validTo = policy.getValidityEndDate();
+            LocalDate userFrom;
+            LocalDate userTo;
 
+            if (policy.getAccrualType() == AccrualType.FIXED) {
+
+                if (request.getUserValidFrom() == null) {
+                    throw new IllegalArgumentException(
+                            "User Valid From is required for FIXED accrual policies."
+                    );
+                }
+
+                userFrom = request.getUserValidFrom();
+
+                if (request.getUserValidTo() != null) {
+                    userTo = request.getUserValidTo();
+                }
+                else {
+                    ResetFrequency reset = policy.getResetFrequency();
+
+                    if (reset == ResetFrequency.MONTHLY) {
+                        userTo = userFrom.plusMonths(1);
+                    } else if (reset == ResetFrequency.ANNUALLY) {
+                        userTo = userFrom.plusYears(1);
+                    } else {
+                        throw new IllegalArgumentException(
+                                "Fixed accrual requires resetFrequency MONTHLY or ANNUALLY to auto-calculate end date."
+                        );
+                    }
+                }
+            }
+            else {
+                userFrom = request.getUserValidFrom();
+                userTo = request.getUserValidTo();
+            }
             Double totalUnits = (policy.getEntitledUnits() != null)
                     ? policy.getEntitledUnits().doubleValue()
                     : policy.getEntitledHours().doubleValue();
@@ -281,9 +385,13 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
 
                 UserEntity userEntity = userAdapter.findById(userId).orElseThrow(() -> new UsernameNotFoundException("User ID " + userId + " not found."));
 
-                assignList.add(buildUserPolicy(policy, userEntity, validFrom, validTo));
+                assignList.add(buildUserPolicy(policy, userEntity, userFrom, userTo));
 
-                balanceList.add(buildLeaveBalance(policy, userId, validFrom, validTo, totalUnits));
+                LocalDate nextSchedulerRun = LocalDate.now().plusMonths(1).withDayOfMonth(1);
+
+                if (userFrom.isBefore(nextSchedulerRun)) {
+                    balanceList.add(buildLeaveBalance(policy, userId, userFrom, userTo, totalUnits));
+                }
 
                 userPolicies.add(policy.getPolicyId());
                 existingMap.put(userId, userPolicies);
@@ -382,20 +490,26 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
         return timeOffPolicyEntityMapper.toModelList(entity);
     }
 
-
-
-
     private LeaveBalanceEntity buildLeaveBalance(TimeOffPolicyEntity policy,
                                                  String userId,
                                                  LocalDate validFrom,
                                                  LocalDate validTo,
                                                  double totalUnits) {
-
         LeaveBalanceEntity lb = new LeaveBalanceEntity();
         lb.setUserId(userId);
         lb.setPolicy(policy);
+        LocalDate computedValidTo = validTo;
+
+        if (computedValidTo == null) {
+            if (policy.getAccrualType() == AccrualType.MONTHLY) {
+                computedValidTo = validFrom.withDayOfMonth(validFrom.lengthOfMonth());
+            }
+            else if (policy.getAccrualType() == AccrualType.ANNUALLY) {
+                computedValidTo = LocalDate.of(validFrom.getYear(), 12, 31);
+            }
+        }
         lb.setPeriodStartDate(validFrom);
-        lb.setPeriodEnd(validTo);
+        lb.setPeriodEnd(computedValidTo);
         lb.setTotalUnits(totalUnits);
         lb.setBalanceUnits(totalUnits);
         lb.setLeaveTakenUnits(0.0);
@@ -416,6 +530,11 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
         up.setValidFrom(validFrom);
         up.setValidTo(validTo);
         up.setAssignedAt(LocalDateTime.now());
+        if (policy.getAccrualType() == AccrualType.FIXED) {
+            up.setEntitledUnits(policy.getEntitledUnits());
+        } else {
+            up.setEntitledUnits(null);
+        }
         return up;
     }
 
@@ -444,6 +563,5 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
 
         return finalUsers;
     }
-
 
 }

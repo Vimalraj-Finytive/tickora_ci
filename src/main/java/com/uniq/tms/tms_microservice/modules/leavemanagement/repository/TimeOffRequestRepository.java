@@ -38,4 +38,25 @@ WHERE r.startDate <= :toDate
             @Param("toDate") LocalDate toDate
     );
 
+
+    @Query("""
+SELECT new com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeOffRequestUserModel(
+    r,
+    u.userName
+)
+FROM TimeOffRequestEntity r
+JOIN UserEntity u ON u.userId = r.userId
+JOIN RoleEntity role ON role.roleId = u.role.roleId
+WHERE r.startDate <= :toDate
+  AND r.endDate >= :fromDate
+  AND role.hierarchyLevel > :minRoleLevel
+""")
+    List<TimeOffRequestUserModel> filterWithUserAndRole(
+            @Param("fromDate") LocalDate fromDate,
+            @Param("toDate") LocalDate toDate,
+            @Param("minRoleLevel") int minRoleLevel
+    );
+
+
+
 }

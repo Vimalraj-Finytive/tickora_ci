@@ -18,4 +18,5 @@ public interface TimeOffRequestAdapter {
     List<TimeOffRequestEntity> saveAllRequest(List<TimeOffRequestEntity> entities);
     List<TimeOffRequestEntity> findStartByDate(LocalDate startDate);
     List<TimeOffRequestUserModel> filterWithUser(LocalDate fromDate, LocalDate toDate);
+    List<TimeOffRequestUserModel> filterWithUserAndRole(LocalDate from, LocalDate to, int minRoleLevel);
 }

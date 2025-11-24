@@ -634,12 +634,7 @@ CREATE TABLE IF NOT EXISTS ${schemaName}.user_payroll_history (
     action_type VARCHAR(100),
     action_by VARCHAR(100),
     user_id VARCHAR(20) NOT NULL,
-    user_payroll_amount_id BIGINT NOT NULL,
-
-    CONSTRAINT fk_user_payroll_history_amount
-        FOREIGN KEY (user_payroll_amount_id)
-        REFERENCES ${schemaName}.user_payroll_amount(id)
-        ON DELETE CASCADE,
+    user_payroll_amount_id BIGINT,
 
    CONSTRAINT fk_user_history_user
          FOREIGN KEY (user_id)
@@ -1201,17 +1196,26 @@ BEGIN
             OLD.user_id,
             OLD.id
         );
+
+        RETURN OLD;
     END IF;
 
-    RETURN NULL; -- AFTER trigger
+    RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
---changeset system:create-trg-user-payroll-history endDelimiter://
-CREATE TRIGGER trg_user_payroll_history
-AFTER INSERT OR UPDATE OR DELETE ON ${schemaName}.user_payroll_amount
+--changeset system:create-trg-user-payroll-history-delete endDelimiter://
+CREATE TRIGGER trg_user_payroll_history_delete
+BEFORE DELETE ON ${schemaName}.user_payroll_amount
 FOR EACH ROW
 EXECUTE FUNCTION ${schemaName}.log_user_payroll_history();
+
+--changeset system:create-trg-user-payroll-history-ins-upd endDelimiter://
+CREATE TRIGGER trg_user_payroll_history_ins_upd
+AFTER INSERT OR UPDATE ON ${schemaName}.user_payroll_amount
+FOR EACH ROW
+EXECUTE FUNCTION ${schemaName}.log_user_payroll_history();
+
 
 --changeset system:create-log-payroll-history-function endDelimiter://
 CREATE OR REPLACE FUNCTION ${schemaName}.log_payroll_history()

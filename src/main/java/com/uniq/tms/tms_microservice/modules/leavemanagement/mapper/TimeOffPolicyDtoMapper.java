@@ -4,7 +4,6 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.*;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.*;
 import org.mapstruct.Mapper;
 import org.mapstruct.ReportingPolicy;
-
 import java.util.List;
 
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE,unmappedSourcePolicy = ReportingPolicy.IGNORE)
@@ -48,10 +47,7 @@ public interface TimeOffPolicyDtoMapper {
 
     List<LeaveBalanceDto> toDtoLeaveList(List<LeaveBalanceModel> model);
 
-   // List<TimeoffRequestResponseDto> toDtoList(List<TimeOffRequestResponseModel> models);
-    RequestFilterModel toModel(RequestFilterDto dto);
-
-    List<LeaveBalanceDto> toDtoList(List<TimeOffRequestResponseModel> model);
+    List<TimeoffRequestResponseDto> toDtoList(List<TimeOffRequestResponseModel> models);
 
     StatusEnumDto toDto (StatusEnumModel model);
 

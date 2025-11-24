@@ -6,6 +6,8 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.facade.TimeOffFacad
 import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -36,18 +38,31 @@ public class TimeOffRequestController {
         return ResponseEntity.ok(updateRequest);
     }
 
-    @PostMapping("/requests/filter")
-    public ResponseEntity<ApiResponse<List<TimeoffRequestResponseDto>>> filterRequests(
-            @RequestBody RequestFilterDto dto) {
-        ApiResponse<List<TimeoffRequestResponseDto>> response =
-                timeOffFacade.filterRequests(dto);
-        return ResponseEntity.status(response.getStatusCode()).body(response);
-    }
-
     @GetMapping("/status")
     public ResponseEntity<ApiResponse> getStatus(
             @RequestHeader("Authorization") String token) {
         ApiResponse<List<StatusEnumDto>> response = timeOffFacade.getStatus();
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
+
+    @GetMapping("/requests/filter/{fromDate}/{toDate}")
+    public ResponseEntity<ApiResponse<List<TimeoffRequestResponseDto>>> filterRequests(
+            @PathVariable LocalDate fromDate,
+            @PathVariable LocalDate toDate) {
+
+        ApiResponse<List<TimeoffRequestResponseDto>> response =
+                timeOffFacade.filterRequests(fromDate, toDate);
+
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
+
+    @GetMapping("/requests/filter/role/{fromDate}/{toDate}")
+    public ResponseEntity<ApiResponse<List<TimeoffRequestResponseDto>>> filterRequestsBasedOnRole(
+            @PathVariable LocalDate fromDate,
+            @PathVariable LocalDate toDate) {
+
+        ApiResponse<List<TimeoffRequestResponseDto>> response = timeOffFacade.filterRequestsBasedOnRole(fromDate, toDate);
+
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 

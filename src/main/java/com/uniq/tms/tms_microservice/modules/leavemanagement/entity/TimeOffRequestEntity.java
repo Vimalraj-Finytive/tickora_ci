@@ -42,10 +42,6 @@ public class TimeOffRequestEntity {
     @Column(name = "end_time")
     private LocalTime endTime;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "leave_type", length = 20)
-    private AccrualLeaveType leaveType;
-
     @Column(name = "units_requested")
     private Integer unitsRequested;
 
@@ -135,14 +131,6 @@ public class TimeOffRequestEntity {
 
     public void setEndTime(LocalTime endTime) {
         this.endTime = endTime;
-    }
-
-    public AccrualLeaveType getLeaveType() {
-        return leaveType;
-    }
-
-    public void setLeaveType(AccrualLeaveType leaveType) {
-        this.leaveType = leaveType;
     }
 
     public Integer getUnitsRequested() {

@@ -3,13 +3,16 @@ package com.uniq.tms.tms_microservice.modules.leavemanagement.facade;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.AdminStatusUpdateDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.EmployeeStatusUpdateDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeOffRequestDto;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.mapper.TimeOffPolicyEntityMapper;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.AdminStatusUpdate;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.EmployeeStatusUpdate;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeOffRequest;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.services.LeaveBalanceService;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.services.TimeOffPolicyService;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.services.TimeOffRequestService;
+import com.uniq.tms.tms_microservice.modules.userManagement.enums.UserRole;
 import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
+import com.uniq.tms.tms_microservice.shared.helper.AuthHelper;
 import org.springframework.stereotype.Component;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.*;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.mapper.TimeOffPolicyDtoMapper;
@@ -20,6 +23,8 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeoffPolicies
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeoffPolicyDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.AccrualTypeEnumModel;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.CompensationEnumModel;
+
+import java.time.LocalDate;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeOffPoliciesModel;
 import java.util.List;
 
@@ -30,12 +35,15 @@ public class TimeOffFacade {
     private final TimeOffPolicyDtoMapper timeoffPolicyDtoMapper;
     private final TimeOffRequestService timeOffRequestService;
     private final LeaveBalanceService leaveBalanceService;
+    private final AuthHelper authHelper;
 
-    public TimeOffFacade(TimeOffPolicyService timeOffPolicyService, TimeOffPolicyDtoMapper timeoffPolicyDtoMapper, TimeOffRequestService timeOffRequestService, LeaveBalanceService leaveBalanceService) {
+    public TimeOffFacade(TimeOffPolicyService timeOffPolicyService, TimeOffPolicyDtoMapper timeoffPolicyDtoMapper,
+                         TimeOffRequestService timeOffRequestService, LeaveBalanceService leaveBalanceService, AuthHelper authHelper) {
         this.timeOffPolicyService = timeOffPolicyService;
         this.timeoffPolicyDtoMapper = timeoffPolicyDtoMapper;
         this.timeOffRequestService = timeOffRequestService;
         this.leaveBalanceService = leaveBalanceService;
+        this.authHelper = authHelper;
     }
 
     public ApiResponse createRequest(TimeOffRequestDto requestDto) {
@@ -60,7 +68,7 @@ public class TimeOffFacade {
         try {
             TimeOffPolicyRequestModel requestModel = timeoffPolicyDtoMapper.toRequestModel(requestDto);
             timeOffPolicyService.createPolicy(requestModel);
-            return new ApiResponse<>(200, "Policy Created Successfully", null);
+            return new ApiResponse<>(201, "Policy Created Successfully", null);
 
         } catch (IllegalArgumentException ex) {
             return new ApiResponse<>(400, ex.getMessage(), null);
@@ -171,12 +179,36 @@ public class TimeOffFacade {
         return new ApiResponse<>(200, "policy fetched successfully", dto);
     }
 
-    public ApiResponse<List<TimeoffRequestResponseDto>> filterRequests(RequestFilterDto dto) {
+    public ApiResponse<List<TimeoffPolicyDto>> getPolicyByUserId(String userId){
+        List<TimeOffPoliciesModel> model=timeOffPolicyService.getPolicyByUserId(userId);
+        List<TimeoffPolicyDto> dto = model.stream()
+                .map(timeoffPolicyDtoMapper::toPolicyDto)
+                .toList();
+        return new ApiResponse<>(200, "Policies fetched successfully", dto);
+    }
+
+    public ApiResponse<List<TimeoffRequestResponseDto>> filterRequests(LocalDate fromDate, LocalDate toDate) {
         try {
-            RequestFilterModel model= timeoffPolicyDtoMapper.toModel(dto);
-            List<TimeOffRequestResponseModel> modelList = timeOffRequestService.getRequestsByDateRange(model);
-            List<LeaveBalanceDto> responseList = timeoffPolicyDtoMapper.toDtoList(modelList);
-            return new ApiResponse<>(200, "Requests fetched successfully", responseList);
+            List<TimeOffRequestResponseModel> modelList = timeOffRequestService.getRequestsByDateRange(fromDate, toDate);
+            List<TimeoffRequestResponseDto> dtoList = timeoffPolicyDtoMapper.toDtoList(modelList);
+            return new ApiResponse<>(200, "Requests fetched successfully", dtoList);
+        } catch (IllegalArgumentException ex) {
+            return new ApiResponse<>(400, ex.getMessage(), null);
+        } catch (Exception ex) {
+            return new ApiResponse<>(409, ex.getMessage(), null);
+        }
+    }
+
+
+    public ApiResponse<List<TimeoffRequestResponseDto>> filterRequestsBasedOnRole(LocalDate fromDate, LocalDate toDate) {
+        try {
+            String roleName = authHelper.getRole();
+            int minLevel = UserRole.getLevel(roleName);
+            List<TimeOffRequestResponseModel> list = timeOffRequestService.filterRequestsByRole(fromDate, toDate, minLevel);
+            List<TimeoffRequestResponseDto> dtoList = timeoffPolicyDtoMapper.toDtoList(list);
+
+            return new ApiResponse<>(200, "Requests fetched successfully", dtoList);
+
         } catch (IllegalArgumentException ex) {
             return new ApiResponse<>(400, ex.getMessage(), null);
         } catch (Exception ex) {
@@ -190,23 +222,13 @@ public class TimeOffFacade {
         return new ApiResponse<>(200, "Status fetched", dto);
     }
 
-    public ApiResponse<List<TimeoffPolicyDto>> getPolicyByUserId(String userId) {
-        List<TimeOffPoliciesModel> model = timeOffPolicyService.getPolicyByUserId(userId);
-        List<TimeoffPolicyDto> dto = model.stream()
-                .map(timeoffPolicyDtoMapper::toPolicyDto)
-                .toList();
-        return new ApiResponse<>(200, "leave balance fetched successfully", dto);
-        }
-
     public ApiResponse<List<UserWithLeaveBalanceDto>> getSupervisorLeave(String userId) {
-
         List<UserWithLeaveBalanceModel> modelList =
                 leaveBalanceService.getSupervisorLeave(userId);
         List<UserWithLeaveBalanceDto> dtoList = modelList.stream()
                 .map(timeoffPolicyDtoMapper::toDto)
                 .toList();
         return new ApiResponse<>( 200,"Supervisor leave balance fetched successfully", dtoList);
-
     }
 
 }

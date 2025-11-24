@@ -269,7 +269,6 @@ public class PayRollServiceImpl implements PayRollService {
         PayRollEntity payroll = payRollAdapter.findById(payrollId)
                 .orElseThrow(() -> new RuntimeException("Payroll not found"));
 
-        log.info("Updating payroll {} active -> {}", payrollId, model.isActive());
         payroll.setActive(model.isActive());
         payroll.setUpdatedAt(LocalDateTime.now());
         payRollAdapter.save(payroll);

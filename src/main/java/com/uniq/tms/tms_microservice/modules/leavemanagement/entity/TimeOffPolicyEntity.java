@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.AccrualType;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.Compensation;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.EntitledType;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.ResetFrequency;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -40,8 +41,8 @@ public class TimeOffPolicyEntity {
     private LocalDate accrualStartDate;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "reset_frequency", length = 10)
-    private AccrualType resetFrequency;
+    @Column(name = "reset_frequency", nullable = false)
+    private ResetFrequency resetFrequency;
 
     @Column(name = "entitled_units")
     private Integer entitledUnits;
@@ -113,10 +114,6 @@ public class TimeOffPolicyEntity {
         this.accrualType = accrualType;
     }
 
-    public void setResetFrequency(AccrualType resetFrequency) {
-        this.resetFrequency = resetFrequency;
-    }
-
     public LocalDate getValidityStartDate() {
         return validityStartDate;
     }
@@ -141,7 +138,7 @@ public class TimeOffPolicyEntity {
         this.accrualStartDate = accrualStartDate;
     }
 
-    public AccrualType getResetFrequency() {
+    public ResetFrequency getResetFrequency() {
         return resetFrequency;
     }
 
@@ -218,4 +215,7 @@ public class TimeOffPolicyEntity {
         this.requests = requests;
     }
 
+    public void setResetFrequency(ResetFrequency resetFrequency) {
+        this.resetFrequency = resetFrequency;
+    }
 }

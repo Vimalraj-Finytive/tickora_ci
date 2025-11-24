@@ -19,6 +19,4 @@ public interface TimeOffPolicyService {
       List<CompensationEnumModel>getCompensation();
       TimeOffPoliciesModel getPolicyById(String id);
       List<TimeOffPoliciesModel> getPolicyByUserId(String userId);
-
-
 }
