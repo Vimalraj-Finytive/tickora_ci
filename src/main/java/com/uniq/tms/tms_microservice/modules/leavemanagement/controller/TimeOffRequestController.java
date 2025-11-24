@@ -44,4 +44,11 @@ public class TimeOffRequestController {
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
+    @GetMapping("/status")
+    public ResponseEntity<ApiResponse> getStatus(
+            @RequestHeader("Authorization") String token) {
+        ApiResponse<List<StatusEnumDto>> response = timeOffFacade.getStatus();
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
+
 }

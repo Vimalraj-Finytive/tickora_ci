@@ -4,19 +4,20 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeOffPolic
 import org.springframework.data.jpa.repository.JpaRepository;
 import io.lettuce.core.dynamic.annotation.Param;
 import org.springframework.data.jpa.repository.Query;
-
+import org.springframework.stereotype.Repository;
 import java.util.List;
 
+@Repository
 public interface TimeOffPolicyRepository extends JpaRepository<TimeOffPolicyEntity, String> {
 
-    @Query("SELECT MAX(t.policyId) FROM TimeoffPolicyEntity t WHERE t.policyId LIKE CONCAT(:prefix, '%')")
+    @Query("SELECT MAX(t.policyId) FROM TimeOffPolicyEntity t WHERE t.policyId LIKE CONCAT(:prefix, '%')")
     String findMaxPolicyId(@Param("prefix") String prefix);
 
     TimeOffPolicyEntity findByPolicyId(String policyId);
 
     @Query("""
         SELECT p 
-        FROM TimeoffPolicyEntity p 
+        FROM TimeOffPolicyEntity p 
         WHERE p.policyId IN :policyIds
     """)
     List<TimeOffPolicyEntity> findByPolicyIdIn(@Param("policyIds") List<String> policyIds);

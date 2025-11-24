@@ -7,6 +7,7 @@ import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserGroupEnti
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.WorkScheduleTypeEntity;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.mapstruct.Mappings;
 import org.mapstruct.ReportingPolicy;
 import java.util.List;
 
@@ -82,4 +83,21 @@ public interface UserDtoMapper {
     }
 
     BulkRoleUpdateModel toModel(BulkRoleUpdateDto dto);
+
+    @Mappings({
+            @Mapping(source = "userId", target = "userId"),
+            @Mapping(source = "userName", target = "userName"),
+            @Mapping(source = "role", target = "role")
+    })
+    UserLevelDto toDto(UserLevelModel model);
+
+    @Mappings({
+            @Mapping(source = "userId", target = "userId"),
+            @Mapping(source = "userName", target = "userName"),
+            @Mapping(source = "role", target = "role")
+    })
+    UserLevelModel toModel(UserLevelDto dto);
+    List<UserLevelDto> toDtoList(List<UserLevelModel> models);
+    List<UserLevelModel> toModelList(List<UserLevelDto> dtos);
+
 }

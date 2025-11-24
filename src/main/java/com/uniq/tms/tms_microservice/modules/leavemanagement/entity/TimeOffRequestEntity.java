@@ -14,10 +14,10 @@ public class TimeOffRequestEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "timeoff_request_id")
-    private Long timeoffRequestId;
+    @Column(name = "timeOff_request_id")
+    private Long timeOffRequestId;
 
-    @OneToMany(mappedBy = "timeoffRequest", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "timeOffRequest", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<TimeOffRequestHistoryEntity> historyRecords;
 
     @ManyToOne
@@ -65,12 +65,12 @@ public class TimeOffRequestEntity {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    public Long getTimeoffRequestId() {
-        return timeoffRequestId;
+    public Long getTimeOffRequestId() {
+        return timeOffRequestId;
     }
 
-    public void setTimeoffRequestId(Long timeoffRequestId) {
-        this.timeoffRequestId = timeoffRequestId;
+    public void setTimeOffRequestId(Long timeOffRequestId) {
+        this.timeOffRequestId = timeOffRequestId;
     }
 
     public TimeOffPolicyEntity getPolicy() {

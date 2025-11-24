@@ -29,15 +29,15 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
     private final TimeoffPolicyAdapter timeoffPolicyAdapter;
     private final IdGenerationService idGenerationService;
     private final UserAdapter userAdapter;
-    private final TimeOffPolicyEntityMapper TimeOffPolicyEntityMapper;
+    private final TimeOffPolicyEntityMapper timeOffPolicyEntityMapper;
     private final UserPolicyAdapter userPolicyAdapter;
     private final LeaveBalanceAdapter leaveBalanceAdapter;
 
-    public TimeOffPolicyServiceImpl(TimeoffPolicyAdapter timeoffPolicyAdapter, IdGenerationService idGenerationService, UserAdapter userAdapter, TimeOffPolicyEntityMapper TimeOffPolicyEntityMapper,  UserPolicyAdapter userPolicyAdapter, LeaveBalanceAdapter leaveBalanceAdapter) {
+    public TimeOffPolicyServiceImpl(TimeoffPolicyAdapter timeoffPolicyAdapter, IdGenerationService idGenerationService, UserAdapter userAdapter, TimeOffPolicyEntityMapper timeOffPolicyEntityMapper,  UserPolicyAdapter userPolicyAdapter, LeaveBalanceAdapter leaveBalanceAdapter) {
         this.timeoffPolicyAdapter = timeoffPolicyAdapter;
         this.idGenerationService = idGenerationService;
         this.userAdapter = userAdapter;
-        this.TimeOffPolicyEntityMapper = TimeOffPolicyEntityMapper;
+        this.timeOffPolicyEntityMapper = timeOffPolicyEntityMapper;
         this.userPolicyAdapter = userPolicyAdapter;
         this.leaveBalanceAdapter = leaveBalanceAdapter;
     }
@@ -71,7 +71,7 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
 
         String policyId = idGenerationService.generateNextTimeOffPolicyId();
 
-        TimeOffPolicyEntity policy = TimeOffPolicyEntityMapper.toEntity(request);
+        TimeOffPolicyEntity policy = timeOffPolicyEntityMapper.toEntity(request);
         policy.setPolicyId(policyId);
 
         if (request.getEntitledType() == EntitledType.DAY || request.getEntitledType() == EntitledType.HALF_DAY) {
@@ -98,12 +98,12 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
         policy = timeoffPolicyAdapter.savePolicy(policy);
 
         if (request.getCompensation() == Compensation.UNPAID)
-            return TimeOffPolicyEntityMapper.toResponseModel(policy);
+            return timeOffPolicyEntityMapper.toResponseModel(policy);
 
         Set<String> finalUserSet = getFinalUserSet(request.getUserIds(), request.getGroupIds());
 
         if (finalUserSet.isEmpty())
-            return TimeOffPolicyEntityMapper.toResponseModel(policy);
+            return timeOffPolicyEntityMapper.toResponseModel(policy);
 
         List<String> finalUsers = new ArrayList<>(finalUserSet);
 
@@ -130,7 +130,7 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
         userPolicyAdapter.saveUserPolicies(userPolicies);
         leaveBalanceAdapter.saveLeaveBalances(leaveBalances);
 
-        return TimeOffPolicyEntityMapper.toResponseModel(policy);
+        return timeOffPolicyEntityMapper.toResponseModel(policy);
     }
 
 
@@ -325,7 +325,7 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "No Data Found");
         }
         return entities.stream().map(entity -> {
-                    TimeOffPoliciesModel model = TimeOffPolicyEntityMapper.toModel(entity);
+                    TimeOffPoliciesModel model = timeOffPolicyEntityMapper.toModel(entity);
                     List<String> userIds = timeoffPolicyAdapter.findUserIdsByPolicyId(entity.getPolicyId());
                     List<String> usernames = userIds.stream()
                             .map(timeoffPolicyAdapter::findUsernameByUserId)
@@ -340,7 +340,7 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
     public List<TimeOffPoliciesModel> getAllPolicy() {
         List<TimeOffPolicyEntity> entities= timeoffPolicyAdapter.findAll();
         if (entities==null||entities.isEmpty())throw new  ResponseStatusException(HttpStatus.CONFLICT, "No Data Found");
-        return entities.stream().map(TimeOffPolicyEntityMapper::toModel).toList();
+        return entities.stream().map(timeOffPolicyEntityMapper::toModel).toList();
     }
 
     @Override
@@ -370,7 +370,7 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
         if (entity==null) new ResponseStatusException(
                 HttpStatus.NOT_FOUND,
                 "No time-off policy found for userId");
-        return TimeOffPolicyEntityMapper.toModel(entity);
+        return timeOffPolicyEntityMapper.toModel(entity);
     }
 
     @Override
@@ -379,8 +379,11 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
         if (entity==null) new ResponseStatusException(
                 HttpStatus.NOT_FOUND,
                 "No time-off policy found for userId");
-        return TimeOffPolicyEntityMapper.toModelList(entity);
+        return timeOffPolicyEntityMapper.toModelList(entity);
     }
+
+
+
 
     private LeaveBalanceEntity buildLeaveBalance(TimeOffPolicyEntity policy,
                                                  String userId,

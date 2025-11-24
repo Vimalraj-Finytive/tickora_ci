@@ -73,7 +73,7 @@ public class UserPayRollAmountEntity {
     @Column(name = "notes")
     String notes;
 
-    @OneToMany(mappedBy = "userPayrollAmount", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "userPayrollAmount")
     private List<UserPayRollHistoryEntity> userPayrollHistory = new ArrayList<>();
 
     public Integer getId() {

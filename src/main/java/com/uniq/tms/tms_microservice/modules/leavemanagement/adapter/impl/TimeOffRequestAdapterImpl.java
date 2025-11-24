@@ -28,7 +28,7 @@ public class TimeOffRequestAdapterImpl implements TimeOffRequestAdapter {
 
     @Override
     public LeaveBalanceEntity findLeaveBalance(String policyId, String userId) {
-        return leaveBalanceRepository.findByPolicy_PolicyIdAndUserId(policyId, userId);
+        return leaveBalanceRepository.findByPolicy_PolicyIdAndUser_UserId(policyId, userId);
     }
 
     @Override

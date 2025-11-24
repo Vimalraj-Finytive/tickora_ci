@@ -5,16 +5,18 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeOffReques
 import io.lettuce.core.dynamic.annotation.Param;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.stereotype.Repository;
 import java.time.LocalDate;
 import java.util.List;
 
+@Repository
 public interface TimeOffRequestRepository extends JpaRepository<TimeOffRequestEntity,Long> {
 
     List<TimeOffRequestEntity> findByUserId(String userId);
     List<TimeOffRequestEntity> findByStartDate(LocalDate startDate);
     boolean existsByUserIdAndPolicy_PolicyId(String userId, String policyId);
 
-    @Query("SELECT t FROM TimeoffRequestEntity t " +
+    @Query("SELECT t FROM TimeOffRequestEntity t " +
             "WHERE t.userId = :userId " +
             "AND t.requestDate = :requestDate")
     TimeOffRequestEntity findByUserIdAndRequestDate(

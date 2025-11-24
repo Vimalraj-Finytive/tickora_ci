@@ -403,4 +403,10 @@ public class UserFacade {
         return new ApiResponse(200, "User Updated successfully",updates);
 
     }
+
+    public ApiResponse<List<UserLevelDto>> getUsersBelowHierarchy(String userId,String orgId) {
+        List<UserLevelModel> models = userService.getUsersBelowHierarchy(userId,orgId);
+        List<UserLevelDto> dtoList = userDtoMapper.toDtoList(models);
+        return new ApiResponse<>(200, "Users fetched successfully", dtoList);
+    }
 }

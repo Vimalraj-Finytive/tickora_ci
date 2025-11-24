@@ -6,8 +6,10 @@ import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.stereotype.Repository;
 import java.util.List;
 
+@Repository
 public interface UserPolicyRepository extends JpaRepository<UserPolicyEntity, Long> {
 
     @Query("SELECT up.user.userId, up.policy.policyId FROM UserPolicyEntity up WHERE up.user.userId IN :userIds")

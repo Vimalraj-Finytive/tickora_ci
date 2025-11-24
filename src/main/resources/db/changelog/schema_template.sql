@@ -819,7 +819,11 @@ CREATE TABLE IF NOT EXISTS leave_balance (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_leave_balance_policy
         FOREIGN KEY (policy_id) REFERENCES timeoff_policies(policy_id)
-        ON DELETE CASCADE
+        ON DELETE CASCADE,
+   CONSTRAINT fk_leave_balance_user
+            FOREIGN KEY (user_id) REFERENCES users(user_id)
+            ON DELETE CASCADE
+
 );
 
 -- ===========================================================
@@ -843,6 +847,7 @@ CREATE TABLE IF NOT EXISTS monthly_summary (
     CONSTRAINT fk_monthly_user_summary_policy_id
         FOREIGN KEY (policy_id) REFERENCES timeoff_policies(policy_id)
         ON DELETE CASCADE
+
 );
 
 -- ===========================================================
@@ -1321,3 +1326,5 @@ CREATE TRIGGER trg_timeoff_request_history
 AFTER INSERT OR UPDATE OR DELETE ON ${schemaName}.timeoff_request
 FOR EACH ROW
 EXECUTE FUNCTION ${schemaName}.log_timeoff_request_history();
+
+

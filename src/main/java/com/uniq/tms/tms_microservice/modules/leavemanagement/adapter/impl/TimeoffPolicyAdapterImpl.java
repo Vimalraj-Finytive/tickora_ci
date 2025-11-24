@@ -1,6 +1,8 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.impl;
 
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.TimeoffPolicyAdapter;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.LeaveBalanceEntity;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.repository.LeaveBalanceRepository;
 import org.springframework.stereotype.Component;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeOffPolicyEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.repository.TimeOffPolicyRepository;
@@ -17,12 +19,14 @@ public class TimeoffPolicyAdapterImpl implements TimeoffPolicyAdapter {
     private final TimeOffPolicyRepository timeoffPolicyRepo;
     private final UserPolicyRepository userPolicyRepo;
     private final UserRepository userRepository;
+    private final LeaveBalanceRepository leaveBalanceRepository;
 
     public TimeoffPolicyAdapterImpl(TimeOffPolicyRepository timeoffPolicyRepo, UserPolicyRepository userPolicyRepo,
-                                     UserRepository userRepository) {
+                                    UserRepository userRepository, LeaveBalanceRepository leaveBalanceRepository) {
         this.timeoffPolicyRepo = timeoffPolicyRepo;
         this.userPolicyRepo = userPolicyRepo;
         this.userRepository = userRepository;
+        this.leaveBalanceRepository = leaveBalanceRepository;
     }
 
     @Override
@@ -72,4 +76,10 @@ public class TimeoffPolicyAdapterImpl implements TimeoffPolicyAdapter {
     public TimeOffPolicyEntity findPolicyById(String policyId) {
         return timeoffPolicyRepo.findById(policyId).get();
     }
+
+    @Override
+    public List<LeaveBalanceEntity> findBalance(String userId) {
+        return leaveBalanceRepository.findLeaveBalanceByUserId( userId);
+    }
 }
+

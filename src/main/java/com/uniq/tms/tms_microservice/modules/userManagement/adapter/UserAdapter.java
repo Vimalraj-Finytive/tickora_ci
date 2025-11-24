@@ -118,4 +118,5 @@ public interface UserAdapter {
     List<UserEntity> getUsersByIds(List<String> userIds);
     List<String> findUserIdsByGroupIds(List<Long> groupIds);
 
+
 }

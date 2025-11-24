@@ -6,6 +6,7 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeOffRequestD
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.AdminStatusUpdate;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.EmployeeStatusUpdate;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeOffRequest;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.services.LeaveBalanceService;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.services.TimeOffPolicyService;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.services.TimeOffRequestService;
 import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
@@ -28,11 +29,13 @@ public class TimeOffFacade {
     private final TimeOffPolicyService timeOffPolicyService;
     private final TimeOffPolicyDtoMapper timeoffPolicyDtoMapper;
     private final TimeOffRequestService timeOffRequestService;
+    private final LeaveBalanceService leaveBalanceService;
 
-    public TimeOffFacade(TimeOffPolicyService timeOffPolicyService, TimeOffPolicyDtoMapper timeoffPolicyDtoMapper, TimeOffRequestService timeOffRequestService) {
+    public TimeOffFacade(TimeOffPolicyService timeOffPolicyService, TimeOffPolicyDtoMapper timeoffPolicyDtoMapper, TimeOffRequestService timeOffRequestService, LeaveBalanceService leaveBalanceService) {
         this.timeOffPolicyService = timeOffPolicyService;
         this.timeoffPolicyDtoMapper = timeoffPolicyDtoMapper;
         this.timeOffRequestService = timeOffRequestService;
+        this.leaveBalanceService = leaveBalanceService;
     }
 
     public ApiResponse createRequest(TimeOffRequestDto requestDto) {
@@ -157,29 +160,53 @@ public class TimeOffFacade {
               return new ApiResponse<>(200,"Compensation fetched successfully",dto);
     }
 
-    public ApiResponse<TimeoffPoliciesDto>getPolicyById(String id){
-        TimeoffPoliciesDto dto=timeoffPolicyDtoMapper.toDto(timeOffPolicyService.getPolicyById(id));
-        return new ApiResponse<>(200,"policy fetched successfully",dto);
+    public ApiResponse<List<LeaveBalanceDto>> getLeaveBalance(String userId) {
+        List<LeaveBalanceModel> model = leaveBalanceService.getLeaveBalance(userId);
+        List<LeaveBalanceDto> dto = timeoffPolicyDtoMapper.toDtoLeaveList(model);
+        return new ApiResponse<>(200, "leave balance fetched successfully", dto);
     }
 
-    public ApiResponse<List<TimeoffPolicyDto>> getPolicyByUserId(String userId){
-        List<TimeOffPoliciesModel> model=timeOffPolicyService.getPolicyByUserId(userId);
-        List<TimeoffPolicyDto> dto = model.stream()
-                .map(timeoffPolicyDtoMapper::toPolicyDto)
-                .toList();
-        return new ApiResponse<>(200, "Policies fetched successfully", dto);
+    public ApiResponse<TimeoffPoliciesDto> getPolicyById(String id) {
+        TimeoffPoliciesDto dto = timeoffPolicyDtoMapper.toDto(timeOffPolicyService.getPolicyById(id));
+        return new ApiResponse<>(200, "policy fetched successfully", dto);
     }
 
     public ApiResponse<List<TimeoffRequestResponseDto>> filterRequests(RequestFilterDto dto) {
         try {
             RequestFilterModel model= timeoffPolicyDtoMapper.toModel(dto);
             List<TimeOffRequestResponseModel> modelList = timeOffRequestService.getRequestsByDateRange(model);
-            List<TimeoffRequestResponseDto> responseList = timeoffPolicyDtoMapper.toDtoList(modelList);
-                return new ApiResponse<>(200, "Requests fetched successfully", responseList);
+            List<LeaveBalanceDto> responseList = timeoffPolicyDtoMapper.toDtoList(modelList);
+            return new ApiResponse<>(200, "Requests fetched successfully", responseList);
         } catch (IllegalArgumentException ex) {
-                return new ApiResponse<>(400, ex.getMessage(), null);
+            return new ApiResponse<>(400, ex.getMessage(), null);
         } catch (Exception ex) {
-                return new ApiResponse<>(409, ex.getMessage(), null);
+            return new ApiResponse<>(409, ex.getMessage(), null);
         }
     }
+
+    public ApiResponse<List<StatusEnumDto>> getStatus() {
+        List<StatusEnumModel> model = timeOffRequestService.getStatus();
+        List<StatusEnumDto> dto = model.stream().map(timeoffPolicyDtoMapper::toDto).toList();
+        return new ApiResponse<>(200, "Status fetched", dto);
+    }
+
+    public ApiResponse<List<TimeoffPolicyDto>> getPolicyByUserId(String userId) {
+        List<TimeOffPoliciesModel> model = timeOffPolicyService.getPolicyByUserId(userId);
+        List<TimeoffPolicyDto> dto = model.stream()
+                .map(timeoffPolicyDtoMapper::toPolicyDto)
+                .toList();
+        return new ApiResponse<>(200, "leave balance fetched successfully", dto);
+        }
+
+    public ApiResponse<List<UserWithLeaveBalanceDto>> getSupervisorLeave(String userId) {
+
+        List<UserWithLeaveBalanceModel> modelList =
+                leaveBalanceService.getSupervisorLeave(userId);
+        List<UserWithLeaveBalanceDto> dtoList = modelList.stream()
+                .map(timeoffPolicyDtoMapper::toDto)
+                .toList();
+        return new ApiResponse<>( 200,"Supervisor leave balance fetched successfully", dtoList);
+
+    }
+
 }

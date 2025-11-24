@@ -10,4 +10,5 @@ public interface TimeOffRequestService {
     void adminUpdateStatus(AdminStatusUpdate model);
     void updateLeaveBalance();
     List<TimeOffRequestResponseModel> getRequestsByDateRange(RequestFilterModel model);
+    List<StatusEnumModel> getStatus();
 }

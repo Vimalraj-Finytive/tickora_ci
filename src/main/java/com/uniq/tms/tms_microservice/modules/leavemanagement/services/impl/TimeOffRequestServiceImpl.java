@@ -6,6 +6,7 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.LeaveBalance
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeOffPolicyEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeOffRequestEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.UsersRequestMappingEntity;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.Compensation;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.EntitledType;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.Status;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.ViewerType;
@@ -101,8 +102,8 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
         TimeOffRequestEntity saved = timeOffRequestAdapter.saveRequest(entity);
         List<UsersRequestMappingEntity> usersMapping =
                 Stream.concat(
-                        Stream.of(buildMapping(ViewerType.APPROVER, request.getTo(), request.getUserId(), saved.getTimeoffRequestId())),
-                        request.getCc().stream().map(viewer -> buildMapping(ViewerType.VIEWER, viewer, request.getUserId(), saved.getTimeoffRequestId()))
+                        Stream.of(buildMapping(ViewerType.APPROVER, request.getTo(), request.getUserId(), saved.getTimeOffRequestId())),
+                        request.getCc().stream().map(viewer -> buildMapping(ViewerType.VIEWER, viewer, request.getUserId(), saved.getTimeOffRequestId()))
                 ).toList();
         List<UsersRequestMappingEntity> entities = timeOffRequestAdapter.saveUsersRequestMapping(usersMapping);
     }
@@ -241,4 +242,14 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
 
         return response;
     }
+    @Override
+    public List<StatusEnumModel> getStatus() {
+        List<StatusEnumModel> list=new ArrayList<>();
+        for(Compensation e: Compensation.values()){
+            StatusEnumModel model= new StatusEnumModel(e.name(),e.getValue());
+            list.add(model);
+        }
+        return list;
+    }
+
 }
