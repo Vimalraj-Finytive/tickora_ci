@@ -3,6 +3,8 @@ package com.uniq.tms.tms_microservice.modules.leavemanagement.dto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.AccrualType;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.Compensation;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.EntitledType;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.ResetFrequency;
+import jakarta.validation.constraints.NotNull;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -12,17 +14,22 @@ public class TimeOffPolicyRequestDto {
     private String policyName;
     private Compensation compensation;
     private AccrualType accrualType;
+
+    @NotNull
     private LocalDate validityStartDate;
+
     private LocalDate validityEndDate;
 
+    private ResetFrequency resetFrequency;
     private EntitledType entitledType;
     private Integer entitledUnits;
     private Integer entitledHours;
-
     private Boolean carryForward;
     private Integer maxCarryForwardUnits;
 
+    @NotNull
     private LocalDate userValidFrom;
+
     private LocalDate userValidTo;
 
     private List<String> userIds;
@@ -100,6 +107,14 @@ public class TimeOffPolicyRequestDto {
 
     public void setMaxCarryForwardUnits(Integer maxCarryForwardUnits) {
         this.maxCarryForwardUnits = maxCarryForwardUnits;
+    }
+
+    public ResetFrequency getResetFrequency() {
+        return resetFrequency;
+    }
+
+    public void setResetFrequency(ResetFrequency resetFrequency) {
+        this.resetFrequency = resetFrequency;
     }
 
     public LocalDate getUserValidFrom() {

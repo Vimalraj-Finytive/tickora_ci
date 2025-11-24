@@ -6,16 +6,18 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.EmployeeStatusU
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeOffRequestDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.facade.TimeOffPoliciesFacade;
 import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.*;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.*;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.AccrualTypeEnumDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.CompensationEnumDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeoffPoliciesDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeoffPolicyDto;
-import org.springframework.web.bind.annotation.*;
+
+
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -29,7 +31,7 @@ public class TimeoffPoliciesController {
     }
 
     @PostMapping("/create")
-    public ResponseEntity<ApiResponse<Void>> createPolicy(@RequestBody TimeOffPolicyRequestDto request,
+    public ResponseEntity<ApiResponse<Void>> createPolicy(@Valid @RequestBody TimeOffPolicyRequestDto request,
                                                           @RequestHeader("Authorization") String token) {
         ApiResponse<Void> response = timeOffPoliciesFacade.createPolicy(request);
         return ResponseEntity.status(HttpStatus.OK).body(response);
@@ -41,9 +43,9 @@ public class TimeoffPoliciesController {
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
-    @PutMapping("/edit")
+    @PostMapping("/edit")
     public ResponseEntity<ApiResponse<Void>> editPolicy(
-            @RequestBody TimeOffPolicyEditRequestDto request,
+            @Valid @RequestBody TimeOffPolicyEditRequestDto request,
             @RequestHeader("Authorization") String token) {
         ApiResponse<Void> response = timeOffPoliciesFacade.editPolicy(request);
         return ResponseEntity.status(response.getStatusCode()).body(response);
@@ -51,7 +53,7 @@ public class TimeoffPoliciesController {
 
     @PostMapping("update/assign")
     public ResponseEntity<ApiResponse<Void>> assignPoliciesToUsers(
-            @RequestBody TimeOffPolicyBulkAssignRequestDto request,
+            @Valid @RequestBody TimeOffPolicyBulkAssignRequestDto request,
             @RequestHeader("Authorization") String token) {
 
         ApiResponse<Void> response =timeOffPoliciesFacade.assignPoliciesToUsers(request);
@@ -131,13 +133,26 @@ public class TimeoffPoliciesController {
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
-    @PostMapping("/requests/filter")
+    @GetMapping("/requests/filter/{fromDate}/{toDate}")
     public ResponseEntity<ApiResponse<List<TimeoffRequestResponseDto>>> filterRequests(
-            @RequestBody RequestFilterDto dto) {
+            @PathVariable LocalDate fromDate,
+            @PathVariable LocalDate toDate) {
 
         ApiResponse<List<TimeoffRequestResponseDto>> response =
-                timeOffPoliciesFacade.filterRequests(dto);
+                timeOffPoliciesFacade.filterRequests(fromDate, toDate);
+
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
+
+    @GetMapping("/requests/filter/role/{fromDate}/{toDate}")
+    public ResponseEntity<ApiResponse<List<TimeoffRequestResponseDto>>> filterRequestsBasedOnRole(
+            @PathVariable LocalDate fromDate,
+            @PathVariable LocalDate toDate) {
+
+        ApiResponse<List<TimeoffRequestResponseDto>> response = timeOffPoliciesFacade.filterRequestsBasedOnRole(fromDate, toDate);
+
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
+
 
 }

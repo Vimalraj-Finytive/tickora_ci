@@ -108,7 +108,7 @@ public class PayRollController {
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
-    @PutMapping
+    @PostMapping
     public ResponseEntity<ApiResponse> updatePayroll(@RequestHeader("Authorization") String token, @RequestBody PayRollUpdateDto payRollUpdateDto){
         ApiResponse response = facade.updatePayroll(payRollUpdateDto);
         return ResponseEntity.status(response.getStatusCode()).body(response);

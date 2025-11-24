@@ -1,9 +1,6 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.mapper;
 
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeOffPolicyRequestDto;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeOffPolicyResponseDto;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeoffRequestResponseDto;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.LeaveBalanceEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeoffPolicyEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeoffRequestEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeOffPolicyRequestModel;
@@ -12,7 +9,6 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeoffPolici
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeoffRequestResponseModel;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
-import org.mapstruct.Mappings;
 
 import java.util.List;
 
@@ -36,7 +32,6 @@ public interface TimeOffPolicyEntityMapper {
 
 
     @Mapping(source = "policy.policyName", target = "policyName")
-    @Mapping(source = "status", target = "status")
     TimeoffRequestResponseModel toModel(TimeoffRequestEntity entity);
 
     List<TimeoffRequestResponseModel> toResponseModelList(List<TimeoffRequestEntity> entities);

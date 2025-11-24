@@ -1,5 +1,9 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.model;
 
+import jakarta.validation.constraints.NotNull;
+
+import java.time.LocalDate;
+
 public class TimeOffPolicyEditRequestModel {
 
     private String policyId;
@@ -8,6 +12,15 @@ public class TimeOffPolicyEditRequestModel {
     private Integer entitledHours;
     private Boolean carryForward;
     private Integer maxCarryForwardUnits;
+    @NotNull
+    private LocalDate validityStartDate;
+
+    private LocalDate validityEndDate;
+
+    @NotNull
+    private LocalDate userValidFrom;
+
+    private LocalDate userValidTo;
 
     public String getPolicyName() {
         return policyName;
@@ -55,6 +68,38 @@ public class TimeOffPolicyEditRequestModel {
 
     public void setMaxCarryForwardUnits(Integer maxCarryForwardUnits) {
         this.maxCarryForwardUnits = maxCarryForwardUnits;
+    }
+
+    public LocalDate getValidityStartDate() {
+        return validityStartDate;
+    }
+
+    public void setValidityStartDate(LocalDate validityStartDate) {
+        this.validityStartDate = validityStartDate;
+    }
+
+    public LocalDate getValidityEndDate() {
+        return validityEndDate;
+    }
+
+    public void setValidityEndDate(LocalDate validityEndDate) {
+        this.validityEndDate = validityEndDate;
+    }
+
+    public LocalDate getUserValidFrom() {
+        return userValidFrom;
+    }
+
+    public void setUserValidFrom(LocalDate userValidFrom) {
+        this.userValidFrom = userValidFrom;
+    }
+
+    public LocalDate getUserValidTo() {
+        return userValidTo;
+    }
+
+    public void setUserValidTo(LocalDate userValidTo) {
+        this.userValidTo = userValidTo;
     }
 }
 
