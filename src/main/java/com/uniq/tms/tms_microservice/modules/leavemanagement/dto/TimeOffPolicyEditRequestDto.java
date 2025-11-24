@@ -1,8 +1,5 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.dto;
 
-import java.time.LocalDate;
-import java.util.List;
-
 public class TimeOffPolicyEditRequestDto {
 
     private String policyName;

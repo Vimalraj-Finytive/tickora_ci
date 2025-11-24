@@ -9,8 +9,8 @@ import java.time.LocalTime;
 import java.util.List;
 
 @Entity
-@Table(name = "timeoff_request")
-public class TimeoffRequestEntity {
+@Table(name = "timeOff_request")
+public class TimeOffRequestEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -18,11 +18,11 @@ public class TimeoffRequestEntity {
     private Long timeoffRequestId;
 
     @OneToMany(mappedBy = "timeoffRequest", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<TimeoffRequestHistoryEntity> historyRecords;
+    private List<TimeOffRequestHistoryEntity> historyRecords;
 
     @ManyToOne
     @JoinColumn(name = "policy_id")
-    private TimeoffPolicyEntity policy;
+    private TimeOffPolicyEntity policy;
 
     @Column(name = "user_id", length = 20, nullable = false)
     private String userId;
@@ -73,11 +73,11 @@ public class TimeoffRequestEntity {
         this.timeoffRequestId = timeoffRequestId;
     }
 
-    public TimeoffPolicyEntity getPolicy() {
+    public TimeOffPolicyEntity getPolicy() {
         return policy;
     }
 
-    public void setPolicy(TimeoffPolicyEntity policy) {
+    public void setPolicy(TimeOffPolicyEntity policy) {
         this.policy = policy;
     }
 
@@ -101,11 +101,11 @@ public class TimeoffRequestEntity {
         return startDate;
     }
 
-    public List<TimeoffRequestHistoryEntity> getHistoryRecords() {
+    public List<TimeOffRequestHistoryEntity> getHistoryRecords() {
         return historyRecords;
     }
 
-    public void setHistoryRecords(List<TimeoffRequestHistoryEntity> historyRecords) {
+    public void setHistoryRecords(List<TimeOffRequestHistoryEntity> historyRecords) {
         this.historyRecords = historyRecords;
     }
 

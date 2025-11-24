@@ -1,12 +1,8 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.mapper;
 
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.*;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeoffPolicyEntity;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeoffRequestEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.*;
 import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
-
 import java.util.List;
 
 @Mapper(componentModel = "spring")
@@ -30,11 +26,11 @@ public interface TimeOffPolicyDtoMapper {
 
     AdminStatusUpdate toAdminStatusModel(AdminStatusUpdateDto dto);
 
-    TimeoffPoliciesDto toDto(TimeoffPoliciesModel model);
+    TimeoffPoliciesDto toDto(TimeOffPoliciesModel model);
 
-    TimeoffPoliciesModel toModel(TimeoffPoliciesDto dto);
+    TimeOffPoliciesModel toModel(TimeoffPoliciesDto dto);
 
-    TimeoffPolicyDto toPolicyDto(TimeoffPoliciesModel model);
+    TimeoffPolicyDto toPolicyDto(TimeOffPoliciesModel model);
 
     AccrualTypeEnumDto toDto(AccrualTypeEnumModel model);
 
@@ -44,13 +40,7 @@ public interface TimeOffPolicyDtoMapper {
 
     CompensationEnumDto toDto(CompensationEnumModel model);
 
-//    LeaveBalanceDto toDto(LeaveBalanceModel model);
-//    LeaveBalanceModel toModel(LeaveBalanceDto dto);
-//    List<LeaveBalanceDto> toDtoList(List<LeaveBalanceModel> model);
-
-    List<TimeoffRequestResponseDto> toDtoList(List<TimeoffRequestResponseModel> models);
+    List<TimeoffRequestResponseDto> toDtoList(List<TimeOffRequestResponseModel> models);
     RequestFilterModel toModel(RequestFilterDto dto);
-
-
 
 }

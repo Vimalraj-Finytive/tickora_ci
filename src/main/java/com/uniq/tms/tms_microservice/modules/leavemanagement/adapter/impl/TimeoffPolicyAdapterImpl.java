@@ -1,58 +1,42 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.impl;
 
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.TimeoffPolicyAdapter;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.*;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeoffRequestUserModel;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.repository.*;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeoffPolicyEntity;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.repository.TimeoffPolicyRepository;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeOffPolicyEntity;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.repository.TimeOffPolicyRepository;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.repository.UserPolicyRepository;
 import com.uniq.tms.tms_microservice.modules.userManagement.repository.UserRepository;
 import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Component;
 import org.springframework.web.server.ResponseStatusException;
-
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
 
 @Component
 public class TimeoffPolicyAdapterImpl implements TimeoffPolicyAdapter {
 
-    private final TimeoffPolicyRepository timeoffPolicyRepo;
+    private final TimeOffPolicyRepository timeoffPolicyRepo;
     private final UserPolicyRepository userPolicyRepo;
-    private final LeaveBalanceRepository leaveBalanceRepo;
     private final UserRepository userRepository;
-    private final TimeoffRequestRepository timeoffRequestRepo;
-    private final UsersRequestMappingRepository usersRequestMappingRepo;
 
-
-    public TimeoffPolicyAdapterImpl(TimeoffPolicyRepository timeoffPolicyRepo, UserPolicyRepository userPolicyRepo, LeaveBalanceRepository leaveBalanceRepo, UserRepository userRepository, TimeoffRequestRepository timeoffRequestRepo, UsersRequestMappingRepository usersRequestMappingRepo) {
+    public TimeoffPolicyAdapterImpl(TimeOffPolicyRepository timeoffPolicyRepo, UserPolicyRepository userPolicyRepo,
+                                     UserRepository userRepository) {
         this.timeoffPolicyRepo = timeoffPolicyRepo;
         this.userPolicyRepo = userPolicyRepo;
-        this.leaveBalanceRepo = leaveBalanceRepo;
         this.userRepository = userRepository;
-        this.timeoffRequestRepo = timeoffRequestRepo;
-        this.usersRequestMappingRepo = usersRequestMappingRepo;
     }
-  
+
     @Override
-    public TimeoffPolicyEntity savePolicy(TimeoffPolicyEntity policy) {
+    public TimeOffPolicyEntity savePolicy(TimeOffPolicyEntity policy) {
         return timeoffPolicyRepo.save(policy);
     }
 
     @Override
-    public TimeoffPolicyEntity findByPolicyId(String policyId) {
+    public TimeOffPolicyEntity findByPolicyId(String policyId) {
         return timeoffPolicyRepo.findByPolicyId(policyId);
     }
 
-
     @Override
-    public List<TimeoffPolicyEntity> findPoliciesByIds(List<String> policyIds) {
+    public List<TimeOffPolicyEntity> findPoliciesByIds(List<String> policyIds) {
 
         if (policyIds == null || policyIds.isEmpty()) {
             return Collections.emptyList();
@@ -60,13 +44,12 @@ public class TimeoffPolicyAdapterImpl implements TimeoffPolicyAdapter {
         return timeoffPolicyRepo.findByPolicyIdIn(policyIds);
     }
 
-
-    public List<TimeoffPolicyEntity> findAll() {
+    public List<TimeOffPolicyEntity> findAll() {
         return timeoffPolicyRepo.findAll();
     }
 
     @Override
-    public TimeoffPolicyEntity findById(String id) {
+    public TimeOffPolicyEntity findById(String id) {
         return timeoffPolicyRepo.findById(id).orElseThrow(()-> new ResponseStatusException(HttpStatus.CONFLICT, "No timeoffpolicy Found"));
     }
 
@@ -81,58 +64,12 @@ public class TimeoffPolicyAdapterImpl implements TimeoffPolicyAdapter {
     }
 
     @Override
-    public List<TimeoffPolicyEntity> findByUserId(String userId){
+    public List<TimeOffPolicyEntity> findByUserId(String userId){
         return timeoffPolicyRepo.findPolicyByUserId(userId);
     }
 
     @Override
-    public TimeoffPolicyEntity findPolicyById(String policyId) {
+    public TimeOffPolicyEntity findPolicyById(String policyId) {
         return timeoffPolicyRepo.findById(policyId).get();
     }
-
-    @Override
-    public LeaveBalanceEntity findLeaveBalance(String policyId, String userId) {
-        return leaveBalanceRepo.findByPolicy_PolicyIdAndUserId(policyId, userId);
-    }
-
-    @Override
-    public boolean existsTimeoffRequest(String userId, String policyId) {
-        return timeoffRequestRepo.existsByUserIdAndPolicy_PolicyId(userId, policyId);
-    }
-
-    @Override
-    public TimeoffRequestEntity saveRequest(TimeoffRequestEntity entity) {
-        return timeoffRequestRepo.save(entity);
-    }
-
-    @Override
-    public List<UsersRequestMappingEntity> saveUsersRequestMapping(List<UsersRequestMappingEntity> entity) {
-        return usersRequestMappingRepo.saveAll(entity);
-    }
-
-    @Override
-    public TimeoffRequestEntity findByUserIdAndRequestDate(String userId, LocalDate requestDate) {
-        return timeoffRequestRepo.findByUserIdAndRequestDate(userId, requestDate);
-    }
-
-    @Override
-    public List<TimeoffRequestEntity> saveAllRequest(List<TimeoffRequestEntity> entities) {
-        return timeoffRequestRepo.saveAll(entities);
-    }
-
-    @Override
-    public List<TimeoffRequestEntity> findStartByDate(LocalDate date) {
-        return timeoffRequestRepo.findByStartDate(date);
-    }
-
-    @Override
-    public List<LeaveBalanceEntity> saveAllLeaveBalance(List<LeaveBalanceEntity> entities) {
-        return leaveBalanceRepo.saveAll(entities);
-    }
-
-    @Override
-    public List<TimeoffRequestUserModel> filterWithUser(LocalDate from, LocalDate to) {
-        return timeoffRequestRepo.filterWithUser(from, to);
-    }
 }
-

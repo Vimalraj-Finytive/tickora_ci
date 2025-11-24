@@ -2,9 +2,7 @@ package com.uniq.tms.tms_microservice.modules.leavemanagement.entity;
 
 import jakarta.persistence.*;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.List;
 
 @Entity
 @Table(name = "leave_balance")
@@ -17,7 +15,7 @@ public class LeaveBalanceEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "policy_id", nullable = false)
-    private TimeoffPolicyEntity policy;
+    private TimeOffPolicyEntity policy;
 
     @Column(name = "user_id", length = 20, nullable = false)
     private String userId;
@@ -58,11 +56,11 @@ public class LeaveBalanceEntity {
         this.leaveBalanceId = leaveBalanceId;
     }
 
-    public TimeoffPolicyEntity getPolicy() {
+    public TimeOffPolicyEntity getPolicy() {
         return policy;
     }
 
-    public void setPolicy(TimeoffPolicyEntity policy) {
+    public void setPolicy(TimeOffPolicyEntity policy) {
         this.policy = policy;
     }
 

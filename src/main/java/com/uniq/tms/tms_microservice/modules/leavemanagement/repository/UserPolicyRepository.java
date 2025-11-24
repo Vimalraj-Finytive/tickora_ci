@@ -1,6 +1,5 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.repository;
 
-import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeoffPolicyEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.UserPolicyEntity;
 import io.lettuce.core.dynamic.annotation.Param;
 import jakarta.transaction.Transactional;

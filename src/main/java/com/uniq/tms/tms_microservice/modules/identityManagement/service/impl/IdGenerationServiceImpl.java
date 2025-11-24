@@ -4,7 +4,7 @@ import com.uniq.tms.tms_microservice.modules.identityManagement.adapter.IdGenera
 import com.uniq.tms.tms_microservice.modules.identityManagement.service.IdGenerationService;
 import com.uniq.tms.tms_microservice.modules.identityManagement.entity.OrgUserSequenceEntity;
 import com.uniq.tms.tms_microservice.modules.identityManagement.enums.IdGenerationTypeEnum;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.repository.TimeoffPolicyRepository;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.repository.TimeOffPolicyRepository;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.OrgUserSequenceRepository;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.OrganizationRepository;
 import jakarta.transaction.Transactional;
@@ -23,9 +23,9 @@ public class IdGenerationServiceImpl implements IdGenerationService {
     private OrgUserSequenceRepository orgUserSequenceRepository;
     private final IdGeneratorAdapter idGeneratorAdapter;
     private final OrganizationRepository organizationRepository;
-    private final TimeoffPolicyRepository timeoffPolicyRepository;
+    private final TimeOffPolicyRepository timeoffPolicyRepository;
 
-    public IdGenerationServiceImpl(OrgUserSequenceRepository orgUserSequenceRepository, IdGeneratorAdapter idGeneratorAdapter, OrganizationRepository organizationRepository, TimeoffPolicyRepository timeoffPolicyRepository) {
+    public IdGenerationServiceImpl(OrgUserSequenceRepository orgUserSequenceRepository, IdGeneratorAdapter idGeneratorAdapter, OrganizationRepository organizationRepository, TimeOffPolicyRepository timeoffPolicyRepository) {
         this.orgUserSequenceRepository = orgUserSequenceRepository;
         this.idGeneratorAdapter = idGeneratorAdapter;
         this.organizationRepository = organizationRepository;

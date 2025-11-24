@@ -3,15 +3,13 @@ package com.uniq.tms.tms_microservice.modules.leavemanagement.facade;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.AdminStatusUpdateDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.EmployeeStatusUpdateDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeOffRequestDto;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeoffRequestEntity;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.mapper.TimeOffPolicyEntityMapper;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.AdminStatusUpdate;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.EmployeeStatusUpdate;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeOffRequest;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.services.TimeOffPolicyService;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.services.TimeOffRequestService;
 import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
 import org.springframework.stereotype.Component;
-import org.springframework.web.bind.annotation.RequestBody;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.*;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.mapper.TimeOffPolicyDtoMapper;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.*;
@@ -21,40 +19,37 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeoffPolicies
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeoffPolicyDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.AccrualTypeEnumModel;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.CompensationEnumModel;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeoffPoliciesModel;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.services.TimeOffPolicyService;
-import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
-import org.springframework.stereotype.Component;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeOffPoliciesModel;
 import java.util.List;
-import java.util.stream.Collectors;
+
 @Component
-public class TimeOffPoliciesFacade {
+public class TimeOffFacade {
 
     private final TimeOffPolicyService timeOffPolicyService;
     private final TimeOffPolicyDtoMapper timeoffPolicyDtoMapper;
-    private final TimeOffPolicyEntityMapper timeOffPolicyEntityMapper;
+    private final TimeOffRequestService timeOffRequestService;
 
-    public TimeOffPoliciesFacade(TimeOffPolicyService timeOffPolicyService, TimeOffPolicyDtoMapper timeoffPolicyDtoMapper, TimeOffPolicyEntityMapper timeOffPolicyEntityMapper) {
+    public TimeOffFacade(TimeOffPolicyService timeOffPolicyService, TimeOffPolicyDtoMapper timeoffPolicyDtoMapper, TimeOffRequestService timeOffRequestService) {
         this.timeOffPolicyService = timeOffPolicyService;
         this.timeoffPolicyDtoMapper = timeoffPolicyDtoMapper;
-        this.timeOffPolicyEntityMapper = timeOffPolicyEntityMapper;
+        this.timeOffRequestService = timeOffRequestService;
     }
 
     public ApiResponse createRequest(TimeOffRequestDto requestDto) {
         TimeOffRequest request = timeoffPolicyDtoMapper.toRequestModel(requestDto);
-        timeOffPolicyService.createRequest(request);
+        timeOffRequestService.createRequest(request);
         return new ApiResponse<>(200,"Requested TimeOff Successfully",null);
     }
 
     public ApiResponse employeeUpdateStatus(EmployeeStatusUpdateDto dto){
         EmployeeStatusUpdate model = timeoffPolicyDtoMapper.toStatusModel(dto);
-        timeOffPolicyService.employeeUpdateStatus(model);
+        timeOffRequestService.employeeUpdateStatus(model);
         return new ApiResponse<>(200,"Update TimeOff Request Successfully",null);
     }
 
     public ApiResponse adminUpdateStatus(AdminStatusUpdateDto dto) {
         AdminStatusUpdate model = timeoffPolicyDtoMapper.toAdminStatusModel(dto);
-        timeOffPolicyService.adminUpdateStatus(model);
+        timeOffRequestService.adminUpdateStatus(model);
         return new ApiResponse<>(200, "Update TimeOff Request status Successfully", null);
     }
 
@@ -135,7 +130,7 @@ public class TimeOffPoliciesFacade {
 
 
     public ApiResponse<List<TimeoffPoliciesDto>> getAllPolicies() {
-        List<TimeoffPoliciesModel> models = timeOffPolicyService.getAllPolicies();
+        List<TimeOffPoliciesModel> models = timeOffPolicyService.getAllPolicies();
         List<TimeoffPoliciesDto> dtos =
                 models.stream().map(timeoffPolicyDtoMapper::toDto)
                         .toList();
@@ -143,7 +138,7 @@ public class TimeOffPoliciesFacade {
     }
 
     public ApiResponse<List<TimeoffPolicyDto>> getAllPolicy(){
-        List<TimeoffPoliciesModel> model=timeOffPolicyService.getAllPolicy();
+        List<TimeOffPoliciesModel> model=timeOffPolicyService.getAllPolicy();
         List<TimeoffPolicyDto> dto=model.stream()
                 .map(timeoffPolicyDtoMapper::toPolicyDto)
                 .toList();
@@ -168,7 +163,7 @@ public class TimeOffPoliciesFacade {
     }
 
     public ApiResponse<List<TimeoffPolicyDto>> getPolicyByUserId(String userId){
-        List<TimeoffPoliciesModel> model=timeOffPolicyService.getPolicyByUserId(userId);
+        List<TimeOffPoliciesModel> model=timeOffPolicyService.getPolicyByUserId(userId);
         List<TimeoffPolicyDto> dto = model.stream()
                 .map(timeoffPolicyDtoMapper::toPolicyDto)
                 .toList();
@@ -178,7 +173,7 @@ public class TimeOffPoliciesFacade {
     public ApiResponse<List<TimeoffRequestResponseDto>> filterRequests(RequestFilterDto dto) {
         try {
             RequestFilterModel model= timeoffPolicyDtoMapper.toModel(dto);
-            List<TimeoffRequestResponseModel> modelList = timeOffPolicyService.getRequestsByDateRange(model);
+            List<TimeOffRequestResponseModel> modelList = timeOffRequestService.getRequestsByDateRange(model);
             List<TimeoffRequestResponseDto> responseList = timeoffPolicyDtoMapper.toDtoList(modelList);
                 return new ApiResponse<>(200, "Requests fetched successfully", responseList);
         } catch (IllegalArgumentException ex) {

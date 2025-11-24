@@ -11,8 +11,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "timeoff_policies")
-public class TimeoffPolicyEntity {
+@Table(name = "timeOff_policies")
+public class TimeOffPolicyEntity {
 
     @Id
     @Column(name = "policy_id", length = 20)
@@ -72,7 +72,7 @@ public class TimeoffPolicyEntity {
     private List<UserPolicyEntity> userPolicies;
 
     @OneToMany(mappedBy = "policy", cascade = CascadeType.ALL)
-    private List<TimeoffRequestEntity> requests = new ArrayList<>();
+    private List<TimeOffRequestEntity> requests = new ArrayList<>();
     public Integer getEntitledHours() {
         return entitledHours;
     }
@@ -210,11 +210,11 @@ public class TimeoffPolicyEntity {
         this.userPolicies = userPolicies;
     }
 
-    public List<TimeoffRequestEntity> getRequests() {
+    public List<TimeOffRequestEntity> getRequests() {
         return requests;
     }
 
-    public void setRequests(List<TimeoffRequestEntity> requests) {
+    public void setRequests(List<TimeOffRequestEntity> requests) {
         this.requests = requests;
     }
 

@@ -1,8 +1,5 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.dto;
 
-import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeoffPolicyEntity;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.AccrualLeaveType;
-
 import java.time.LocalDate;
 import java.time.LocalTime;
 

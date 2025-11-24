@@ -9,7 +9,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
-public class TimeoffPoliciesModel {
+public class TimeOffPoliciesModel {
 
     private String policyId;
     private String policyName;
