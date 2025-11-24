@@ -1,7 +1,6 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.mapper;
 
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeOffPolicyRequestDto;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeoffRequestEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeOffPolicyResponseDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeOffRequestEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeOffPolicyEntity;
@@ -32,7 +31,7 @@ public interface TimeOffPolicyEntityMapper {
     List<TimeOffRequestResponseModel> toModel(List<TimeOffRequestEntity> entityList);
 
     @Mapping(source = "policy.policyName", target = "policyName")
-    TimeOffRequestResponseModel toModel(TimeoffRequestEntity entity);
+    TimeOffRequestResponseModel toModel(TimeOffRequestEntity entity);
 
     List<TimeOffRequestResponseModel> toResponseModelList(List<TimeOffRequestEntity> entities);
     @Mapping(source = "policy.policyName", target = "policyName")

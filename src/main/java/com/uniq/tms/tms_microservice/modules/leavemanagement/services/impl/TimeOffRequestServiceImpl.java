@@ -26,12 +26,12 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
 
     private final TimeOffRequestAdapter timeOffRequestAdapter;
     private final TimeoffPolicyAdapter timeoffPolicyAdapter;
-    private final TimeOffPolicyEntityMapper TimeOffPolicyEntityMapper;
+    private final TimeOffPolicyEntityMapper timeOffPolicyEntityMapper;
 
     public TimeOffRequestServiceImpl(TimeOffRequestAdapter timeOffRequestAdapter, TimeoffPolicyAdapter timeoffPolicyAdapter, TimeOffPolicyEntityMapper timeOffPolicyEntityMapper) {
         this.timeOffRequestAdapter = timeOffRequestAdapter;
         this.timeoffPolicyAdapter = timeoffPolicyAdapter;
-        TimeOffPolicyEntityMapper = timeOffPolicyEntityMapper;
+        this.timeOffPolicyEntityMapper = timeOffPolicyEntityMapper;
     }
 
     @Override
@@ -220,29 +220,6 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
     }
 
     @Override
-    public List<TimeOffRequestResponseModel> getRequestsByDateRange(RequestFilterModel model) {
-
-        if (model.getFromDate() == null || model.getToDate() == null) {
-            throw new IllegalArgumentException("fromDate and toDate are required");
-        }
-
-        List<TimeOffRequestUserModel> list =
-                timeOffRequestAdapter.filterWithUser(model.getFromDate(), model.getToDate());
-
-        List<TimeOffRequestResponseModel> response = new ArrayList<>();
-
-        for (TimeOffRequestUserModel item : list) {
-            TimeOffRequestResponseModel dto =
-                    TimeOffPolicyEntityMapper.toModel(item.getRequest());
-
-            dto.setUserName(item.getUserName());
-
-            response.add(dto);
-        }
-
-        return response;
-    }
-    @Override
     public List<StatusEnumModel> getStatus() {
         List<StatusEnumModel> list=new ArrayList<>();
         for(Compensation e: Compensation.values()){
@@ -252,4 +229,44 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
         return list;
     }
 
+    @Override
+    public List<TimeOffRequestResponseModel> filterRequestsByRole(
+            LocalDate fromDate,
+            LocalDate toDate,
+            int minRoleLevel) {
+
+        if (fromDate == null || toDate == null) {
+            throw new IllegalArgumentException("fromDate and toDate are required");
+        }
+
+        List<TimeOffRequestUserModel> list =
+                timeOffRequestAdapter.filterWithUserAndRole(fromDate, toDate, minRoleLevel);
+
+        List<TimeOffRequestResponseModel> result = new ArrayList<>();
+
+        for (TimeOffRequestUserModel item : list) {
+            TimeOffRequestResponseModel rm =
+                    timeOffPolicyEntityMapper.toModel(item.getRequest());
+
+            rm.setUserName(item.getUserName());
+            result.add(rm);
+        }
+
+        return result;
+    }
+
+    @Override
+    public List<TimeOffRequestResponseModel> getRequestsByDateRange(LocalDate fromDate, LocalDate toDate) {
+        if (fromDate == null || toDate == null) {
+            throw new IllegalArgumentException("fromDate and toDate are required");}
+        List<TimeOffRequestUserModel> list = timeOffRequestAdapter.filterWithUser(fromDate, toDate);
+        List<TimeOffRequestResponseModel> response = new ArrayList<>();
+        for (TimeOffRequestUserModel item : list) {
+            TimeOffRequestResponseModel model = timeOffPolicyEntityMapper.toModel(item.getRequest());
+            model.setUserName(item.getUserName());
+            response.add(model);
+        }
+
+        return response;
+    }
 }

@@ -16,8 +16,4 @@ public interface TimeoffPolicyAdapter {
     List<String> findUserIdsByPolicyId(String policyId);
     String findUsernameByUserId(String userId);
     List<TimeOffPolicyEntity> findByUserId(String userId);
-    List<TimeOffRequestUserModel> filterWithUser(LocalDate fromDate, LocalDate toDate);
-    List<TimeOffRequestUserModel> filterWithUserAndRole(LocalDate from, LocalDate to, int minRoleLevel);
-
-
 }

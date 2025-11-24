@@ -70,4 +70,9 @@ public class TimeOffRequestAdapterImpl implements TimeOffRequestAdapter {
     public List<TimeOffRequestUserModel> filterWithUser(LocalDate from, LocalDate to) {
         return timeoffRequestRepo.filterWithUser(from, to);
     }
+
+    @Override
+    public List<TimeOffRequestUserModel> filterWithUserAndRole(LocalDate from, LocalDate to, int minRoleLevel) {
+        return timeoffRequestRepo.filterWithUserAndRole(from, to, minRoleLevel);
+    }
 }
