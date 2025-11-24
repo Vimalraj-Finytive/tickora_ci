@@ -1,21 +1,21 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.model;
 
-import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeoffRequestEntity;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeOffRequestEntity;
 
-public class TimeoffRequestUserModel {
+public class TimeOffRequestUserModel {
 
-    private TimeoffRequestEntity request;
+    private TimeOffRequestEntity request;
     private String userName;
 
-    public TimeoffRequestUserModel(TimeoffRequestEntity request, String userName) {
+    public TimeOffRequestUserModel(TimeOffRequestEntity request, String userName) {
         this.request = request;
         this.userName = userName;
     }
-    public TimeoffRequestEntity getRequest() {
+    public TimeOffRequestEntity getRequest() {
         return request;
     }
 
-    public void setRequest(TimeoffRequestEntity request) {
+    public void setRequest(TimeOffRequestEntity request) {
         this.request = request;
     }
 

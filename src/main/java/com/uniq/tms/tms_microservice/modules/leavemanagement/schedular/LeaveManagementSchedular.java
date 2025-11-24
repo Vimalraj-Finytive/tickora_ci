@@ -1,9 +1,8 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.schedular;
 
-import com.uniq.tms.tms_microservice.modules.leavemanagement.services.TimeOffPolicyService;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.services.TimeOffRequestService;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.OrganizationEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.OrganizationRepository;
-import com.uniq.tms.tms_microservice.modules.payrollManagement.schedular.PayRollSchedular;
 import com.uniq.tms.tms_microservice.shared.util.TenantUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,11 +16,11 @@ public class LeaveManagementSchedular {
 
     private static final Logger log = LoggerFactory.getLogger(LeaveManagementSchedular.class);
 
-    private final TimeOffPolicyService timeOffPolicyService;
+    private final TimeOffRequestService timeOffRequestService;
     private final OrganizationRepository organizationRepository;
 
-    public LeaveManagementSchedular(TimeOffPolicyService timeOffPolicyService, OrganizationRepository organizationRepository) {
-        this.timeOffPolicyService = timeOffPolicyService;
+    public LeaveManagementSchedular(TimeOffRequestService timeOffRequestService, OrganizationRepository organizationRepository) {
+        this.timeOffRequestService = timeOffRequestService;
         this.organizationRepository = organizationRepository;
     }
 
@@ -33,7 +32,7 @@ public class LeaveManagementSchedular {
                 TenantUtil.setCurrentTenant(orgId.getSchemaName());
                 try {
                     log.info("Scheduled clock triggered for calculate Leave Balance");
-                    timeOffPolicyService.updateLeaveBalance();
+                    timeOffRequestService.updateLeaveBalance();
                 } catch (Exception e) {
                     continue;
                 } finally {

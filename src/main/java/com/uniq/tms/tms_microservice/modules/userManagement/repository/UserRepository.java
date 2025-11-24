@@ -268,4 +268,6 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
         WHERE u.userId IN :userIds
     """)
     List<UserEntity> findUsersWithCalendars(@Param("userIds") String[] userIds);
+
+
 }

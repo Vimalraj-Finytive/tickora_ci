@@ -2270,4 +2270,14 @@ public class UserServiceImpl implements UserService {
         }
     }
 
+
+    @Override
+    public List<UserLevelModel> getUsersBelowHierarchy(String userId, String orgId) {
+        UserEntity loggedInUser = userAdapter.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        int userHierarchyLevel = loggedInUser.getRole().getHierarchyLevel();
+        List<UserEntity> filteredUsers = userAdapter.getAllUsers(orgId, userId, userHierarchyLevel);
+        return userEntityMapper.toModelList(filteredUsers);
+    }
+
 }

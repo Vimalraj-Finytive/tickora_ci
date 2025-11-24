@@ -1,77 +1,29 @@
-package com.uniq.tms.tms_microservice.modules.leavemanagement.entity;
-
-import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
-import jakarta.persistence.*;
+package com.uniq.tms.tms_microservice.modules.leavemanagement.model;
 
 import java.time.LocalDate;
 
-@Entity
-@Table(name = "leave_balance")
-public class LeaveBalanceEntity {
+public class LeaveBalanceModel {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "leave_balance_id")
-    private Long leaveBalanceId;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "policy_id", nullable = false)
-    private TimeOffPolicyEntity policy;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn (name = "user_id", nullable = false)
-    private UserEntity user;
-
-    @Column(name = "period_start_date")
+    private String policyName;
     private LocalDate periodStartDate;
-
-    @Column(name = "period_end")
     private LocalDate periodEnd;
 
-    @Column(name = "total_units")
     private Double totalUnits;
-
-    @Column(name = "expired_units")
-    private Double expiredUnits = 0.0;
-
-    @Column(name = "leave_taken_units")
-    private Double leaveTakenUnits = 0.0;
-
-    @Column(name = "balance_units")
+    private Double expiredUnits;
+    private Double leaveTakenUnits;
     private Double balanceUnits;
 
-    @Column(name = "next_accrual_date")
     private LocalDate nextAccrualDate;
-
-    @Column(name = "last_accrual_date")
     private LocalDate lastAccrualDate;
 
-    @Column(name = "carry_forward_units")
-    private Double carryForwardUnits = 0.0;
+    private Double carryForwardUnits;
 
-
-    public Long getLeaveBalanceId() {
-        return leaveBalanceId;
+    public String getPolicyName() {
+        return policyName;
     }
 
-    public void setLeaveBalanceId(Long leaveBalanceId) {
-        this.leaveBalanceId = leaveBalanceId;
-    }
-
-    public TimeOffPolicyEntity getPolicy() {
-        return policy;
-    }
-
-    public void setPolicy(TimeOffPolicyEntity policy) {
-        this.policy = policy;
-    }
-
-    public UserEntity getUser() {
-        return user;
-    }
-
-    public void setUser(UserEntity user) {
-        this.user = user;
+    public void setPolicyName(String policyName) {
+        this.policyName = policyName;
     }
 
     public LocalDate getPeriodStartDate() {
@@ -144,8 +96,5 @@ public class LeaveBalanceEntity {
 
     public void setCarryForwardUnits(Double carryForwardUnits) {
         this.carryForwardUnits = carryForwardUnits;
-    }
-
-    public void setUserId(String userId) {
     }
 }

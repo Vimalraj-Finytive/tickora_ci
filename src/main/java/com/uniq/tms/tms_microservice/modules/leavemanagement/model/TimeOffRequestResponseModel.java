@@ -1,11 +1,9 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.model;
 
-import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.AccrualLeaveType;
-
 import java.time.LocalDate;
 import java.time.LocalTime;
 
-public class TimeoffRequestResponseModel {
+public class TimeOffRequestResponseModel {
     private String policyName;
     private String userName;
     private LocalDate requestDate;

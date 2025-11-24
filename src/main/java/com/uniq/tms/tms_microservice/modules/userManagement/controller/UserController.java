@@ -263,4 +263,12 @@ public class UserController {
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
+    @GetMapping("/users")
+    public ResponseEntity<ApiResponse<List<UserLevelDto>>>getUsersBelowHierarchy() {
+        String userId = authHelper.getUserId();
+        String orgId = authHelper.getOrgId();
+        ApiResponse<List<UserLevelDto>> result = userFacade.getUsersBelowHierarchy(userId,orgId);
+        return ResponseEntity.status(result.getStatusCode()).body(result);
+    }
+
 }

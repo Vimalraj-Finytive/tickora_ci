@@ -1,43 +1,43 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.mapper;
 
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeOffPolicyRequestDto;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeoffPolicyEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeoffRequestEntity;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeOffPolicyRequestModel;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeOffPolicyResponseModel;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeoffPoliciesModel;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeoffRequestResponseModel;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeOffPolicyResponseDto;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeOffRequestEntity;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeOffPolicyEntity;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.model.*;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.LeaveBalanceEntity;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
-
+import org.mapstruct.ReportingPolicy;
 import java.util.List;
 
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE,unmappedSourcePolicy = ReportingPolicy.IGNORE)
 public interface TimeOffPolicyEntityMapper {
 
-    TimeoffPolicyEntity toEntity(TimeOffPolicyRequestDto dto);
+    TimeOffPolicyEntity toEntity(TimeOffPolicyRequestDto dto);
 
-    TimeoffPolicyEntity toEntity(TimeOffPolicyRequestModel model);
+    TimeOffPolicyEntity toEntity(TimeOffPolicyRequestModel model);
 
-    TimeOffPolicyResponseModel toResponseModel(TimeoffPolicyEntity entity);
+    TimeOffPolicyResponseModel toResponseModel(TimeOffPolicyEntity entity);
 
-    TimeoffPoliciesModel toModel(TimeoffPolicyEntity entity);
+    TimeOffPolicyResponseDto toResponseDto(TimeOffPolicyEntity entity);
 
-    TimeoffPolicyEntity toEntity(TimeoffPoliciesModel model);
+    TimeOffPoliciesModel toModel(TimeOffPolicyEntity entity);
 
-    List<TimeoffPoliciesModel> toModelList(List<TimeoffPolicyEntity> entity);
+    TimeOffPolicyEntity toEntity(TimeOffPoliciesModel model);
 
-    List<TimeoffRequestResponseModel> toModel(List<TimeoffRequestEntity> entityList);
+    List<TimeOffPoliciesModel> toModelList(List<TimeOffPolicyEntity> entity);
 
-
+    List<TimeOffRequestResponseModel> toModel(List<TimeOffRequestEntity> entityList);
 
     @Mapping(source = "policy.policyName", target = "policyName")
-    TimeoffRequestResponseModel toModel(TimeoffRequestEntity entity);
+    TimeOffRequestResponseModel toModel(TimeoffRequestEntity entity);
 
-    List<TimeoffRequestResponseModel> toResponseModelList(List<TimeoffRequestEntity> entities);
+    List<TimeOffRequestResponseModel> toResponseModelList(List<TimeOffRequestEntity> entities);
+    @Mapping(source = "policy.policyName", target = "policyName")
+    LeaveBalanceModel toModel(LeaveBalanceEntity entity);
+    List<LeaveBalanceModel> toBalanceModelList(List<LeaveBalanceEntity> entities);
 
-//    @Mapping(source = "policy.policyName", target = "policyName")
-//    @Mapping(source = "user.userId", target = "userId")
-//    LeaveBalanceModel toModel(LeaveBalanceEntity entity);
-//    List<LeaveBalanceModel> toBalanceModelList(List<LeaveBalanceEntity> entities);
+
 }

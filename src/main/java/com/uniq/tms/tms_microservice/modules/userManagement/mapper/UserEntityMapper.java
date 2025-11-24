@@ -72,4 +72,13 @@ public interface UserEntityMapper {
     UserLocationEntity toEntity(BulkUserLocationModel model);
 
     BulkUserLocationModel toModel(UserLocationEntity entity);
+
+    @Mappings({
+            @Mapping(source = "userId", target = "userId"),
+            @Mapping(source = "userName", target = "userName"),
+            @Mapping(source = "role.name", target = "role")
+    })
+    UserLevelModel toModel(UserEntity entity);
+
+    List<UserLevelModel> toModelList(List<UserEntity> entities);
 }

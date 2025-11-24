@@ -3,9 +3,10 @@ package com.uniq.tms.tms_microservice.modules.leavemanagement.mapper;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.*;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.*;
 import org.mapstruct.Mapper;
+import org.mapstruct.ReportingPolicy;
 import java.util.List;
 
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE,unmappedSourcePolicy = ReportingPolicy.IGNORE)
 public interface TimeOffPolicyDtoMapper {
 
     TimeOffPolicyRequestModel toRequestModel(TimeOffPolicyRequestDto dto);
@@ -26,11 +27,11 @@ public interface TimeOffPolicyDtoMapper {
 
     AdminStatusUpdate toAdminStatusModel(AdminStatusUpdateDto dto);
 
-    TimeoffPoliciesDto toDto(TimeoffPoliciesModel model);
+    TimeoffPoliciesDto toDto(TimeOffPoliciesModel model);
 
-    TimeoffPoliciesModel toModel(TimeoffPoliciesDto dto);
+    TimeOffPoliciesModel toModel(TimeoffPoliciesDto dto);
 
-    TimeoffPolicyDto toPolicyDto(TimeoffPoliciesModel model);
+    TimeoffPolicyDto toPolicyDto(TimeOffPoliciesModel model);
 
     AccrualTypeEnumDto toDto(AccrualTypeEnumModel model);
 
@@ -40,11 +41,18 @@ public interface TimeOffPolicyDtoMapper {
 
     CompensationEnumDto toDto(CompensationEnumModel model);
 
-//    LeaveBalanceDto toDto(LeaveBalanceModel model);
-//    LeaveBalanceModel toModel(LeaveBalanceDto dto);
-//    List<LeaveBalanceDto> toDtoList(List<LeaveBalanceModel> model);
+    LeaveBalanceDto toDto(LeaveBalanceModel model);
 
-    List<TimeoffRequestResponseDto> toDtoList(List<TimeoffRequestResponseModel> models);
+    LeaveBalanceModel toModel(LeaveBalanceDto dto);
 
+    List<LeaveBalanceDto> toDtoLeaveList(List<LeaveBalanceModel> model);
 
+    List<TimeoffRequestResponseDto> toDtoList(List<TimeOffRequestResponseModel> models);
+
+    StatusEnumDto toDto (StatusEnumModel model);
+
+    StatusEnumModel toModel(StatusEnumDto dto);
+
+    UserWithLeaveBalanceDto toDto(UserWithLeaveBalanceModel model);
+    List<UserWithLeaveBalanceDto> toUserDtoList(List<UserWithLeaveBalanceModel> models);
 }

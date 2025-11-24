@@ -16,7 +16,7 @@ public class MonthlySummaryEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "policy_id", nullable = false)
-    private TimeoffPolicyEntity policy;
+    private TimeOffPolicyEntity policy;
 
     @Column(name = "month", nullable = false)
     private Integer month;
@@ -64,11 +64,11 @@ public class MonthlySummaryEntity {
         this.userId = userId;
     }
 
-    public TimeoffPolicyEntity getPolicy() {
+    public TimeOffPolicyEntity getPolicy() {
         return policy;
     }
 
-    public void setPolicy(TimeoffPolicyEntity policy) {
+    public void setPolicy(TimeOffPolicyEntity policy) {
         this.policy = policy;
     }
 
