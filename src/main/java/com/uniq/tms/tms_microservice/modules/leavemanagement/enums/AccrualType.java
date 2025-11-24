@@ -3,7 +3,8 @@ package com.uniq.tms.tms_microservice.modules.leavemanagement.enums;
 public enum AccrualType {
 
         MONTHLY("Monthly"),
-        ANNUALLY("Annually");
+        ANNUALLY("Annually"),
+        FIXED("Fixed");
 
         private final String value;
 

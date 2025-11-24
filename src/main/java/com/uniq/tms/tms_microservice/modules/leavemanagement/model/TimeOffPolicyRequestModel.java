@@ -3,6 +3,7 @@ package com.uniq.tms.tms_microservice.modules.leavemanagement.model;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.AccrualType;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.Compensation;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.EntitledType;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.ResetFrequency;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -15,7 +16,7 @@ public class TimeOffPolicyRequestModel {
 
     private LocalDate validityStartDate;
     private LocalDate validityEndDate;
-
+    private ResetFrequency resetFrequency;
     private EntitledType entitledType;
     private Integer entitledUnits;
     private Integer entitledHours;
@@ -139,6 +140,14 @@ public class TimeOffPolicyRequestModel {
 
     public void setGroupIds(List<Long> groupIds) {
         this.groupIds = groupIds;
+    }
+
+    public ResetFrequency getResetFrequency() {
+        return resetFrequency;
+    }
+
+    public void setResetFrequency(ResetFrequency resetFrequency) {
+        this.resetFrequency = resetFrequency;
     }
 }
 

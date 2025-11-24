@@ -1,9 +1,6 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.dto;
 
-import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.AccrualType;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.Compensation;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.EntitledType;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.Status;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.*;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -21,7 +18,7 @@ public class TimeoffPoliciesDto {
     private LocalDate validityEndDate;
     private LocalDate accrualStartDate;
 
-    private AccrualType resetFrequency;
+    private ResetFrequency resetFrequency;
 
     private Integer entitledUnits;
     private EntitledType entitledType;
@@ -100,11 +97,11 @@ public class TimeoffPoliciesDto {
         this.accrualStartDate = accrualStartDate;
     }
 
-    public AccrualType getResetFrequency() {
+    public ResetFrequency getResetFrequency() {
         return resetFrequency;
     }
 
-    public void setResetFrequency(AccrualType resetFrequency) {
+    public void setResetFrequency(ResetFrequency resetFrequency) {
         this.resetFrequency = resetFrequency;
     }
 

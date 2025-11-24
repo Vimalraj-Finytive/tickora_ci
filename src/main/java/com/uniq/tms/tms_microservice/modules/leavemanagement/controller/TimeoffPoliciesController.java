@@ -6,6 +6,7 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.EmployeeStatusU
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeOffRequestDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.facade.TimeOffPoliciesFacade;
 import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.*;
@@ -30,7 +31,7 @@ public class TimeoffPoliciesController {
     }
 
     @PostMapping("/create")
-    public ResponseEntity<ApiResponse<Void>> createPolicy(@RequestBody TimeOffPolicyRequestDto request,
+    public ResponseEntity<ApiResponse<Void>> createPolicy(@Valid @RequestBody TimeOffPolicyRequestDto request,
                                                           @RequestHeader("Authorization") String token) {
         ApiResponse<Void> response = timeOffPoliciesFacade.createPolicy(request);
         return ResponseEntity.status(HttpStatus.OK).body(response);
@@ -44,7 +45,7 @@ public class TimeoffPoliciesController {
 
     @PostMapping("/edit")
     public ResponseEntity<ApiResponse<Void>> editPolicy(
-            @RequestBody TimeOffPolicyEditRequestDto request,
+            @Valid @RequestBody TimeOffPolicyEditRequestDto request,
             @RequestHeader("Authorization") String token) {
         ApiResponse<Void> response = timeOffPoliciesFacade.editPolicy(request);
         return ResponseEntity.status(response.getStatusCode()).body(response);
@@ -52,7 +53,7 @@ public class TimeoffPoliciesController {
 
     @PostMapping("update/assign")
     public ResponseEntity<ApiResponse<Void>> assignPoliciesToUsers(
-            @RequestBody TimeOffPolicyBulkAssignRequestDto request,
+            @Valid @RequestBody TimeOffPolicyBulkAssignRequestDto request,
             @RequestHeader("Authorization") String token) {
 
         ApiResponse<Void> response =timeOffPoliciesFacade.assignPoliciesToUsers(request);
@@ -142,8 +143,6 @@ public class TimeoffPoliciesController {
 
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
-
-
 
     @GetMapping("/requests/filter/role/{fromDate}/{toDate}")
     public ResponseEntity<ApiResponse<List<TimeoffRequestResponseDto>>> filterRequestsBasedOnRole(
