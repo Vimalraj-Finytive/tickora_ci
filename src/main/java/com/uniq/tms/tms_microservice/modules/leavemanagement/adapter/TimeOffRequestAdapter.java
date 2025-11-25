@@ -10,13 +10,14 @@ import java.util.List;
 public interface TimeOffRequestAdapter {
 
     LeaveBalanceEntity findLeaveBalance(String payrollId, String userId);
-    boolean existsTimeoffRequest(String userId, String policyId);
-    List<LeaveBalanceEntity> saveAllLeaveBalance(List<LeaveBalanceEntity> entities);
+    void saveAllLeaveBalance(List<LeaveBalanceEntity> entities);
     TimeOffRequestEntity saveRequest(TimeOffRequestEntity entity);
     List<UsersRequestMappingEntity> saveUsersRequestMapping(List<UsersRequestMappingEntity> entity);
-    TimeOffRequestEntity findByUserIdAndRequestDate(String userId, LocalDate requestDate);
     List<TimeOffRequestEntity> saveAllRequest(List<TimeOffRequestEntity> entities);
     List<TimeOffRequestEntity> findStartByDate(LocalDate startDate);
     List<TimeOffRequestUserModel> filterWithUser(LocalDate fromDate, LocalDate toDate);
     List<TimeOffRequestUserModel> filterWithUserAndRole(LocalDate from, LocalDate to, int minRoleLevel);
+    boolean existsTimeoffRequest(String userId, String policyId, LocalDate requestDate);
+    TimeOffRequestEntity getTimeoffRequest(String policyId, String userId, LocalDate requestDate);
+    List<TimeOffRequestEntity> findByStartDate(LocalDate startDate);
 }

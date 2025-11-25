@@ -4,6 +4,9 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.LeaveBalance
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeOffPolicyEntity;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.GroupEntity;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.AccrualType;
+
+import java.time.LocalDate;
 import java.util.List;
 
 public interface LeaveBalanceAdapter {
@@ -17,4 +20,8 @@ public interface LeaveBalanceAdapter {
     List<UserEntity> getMembers(Long groupId, String supervisorId);
     List<GroupEntity> getSupervisorGroups(String supervisorId);
     List<LeaveBalanceEntity> getLeaveBalance(List<String> userIds);
+    List<LeaveBalanceEntity> findBalancesByMonthYearAndAccrualType(int month, int year, AccrualType type);
+    List<LeaveBalanceEntity> findBalancesByYearAndAccrualType(int year, AccrualType type);
+    void saveLeaveBalance(LeaveBalanceEntity leaveBalance);
+    LeaveBalanceEntity findForPeriod(String policyId, String userId, LocalDate start, LocalDate end);
 }

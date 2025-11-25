@@ -46,7 +46,7 @@ public class TimeOffFacade {
         this.authHelper = authHelper;
     }
 
-    public ApiResponse createRequest(TimeOffRequestDto requestDto) {
+    public ApiResponse<TimeOffRequestDto> createRequest(TimeOffRequestDto requestDto) {
         TimeOffRequest request = timeoffPolicyDtoMapper.toRequestModel(requestDto);
         timeOffRequestService.createRequest(request);
         return new ApiResponse<>(200,"Requested TimeOff Successfully",null);

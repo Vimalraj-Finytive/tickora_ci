@@ -8,7 +8,6 @@ public class TimeOffRequestDto {
 
     private String policyId;
     private String userId;
-    private LocalDate requestDate;
     private LocalDate startDate;
     private LocalDate endDate;
     private LocalTime startTime;
@@ -33,14 +32,6 @@ public class TimeOffRequestDto {
 
     public void setUserId(String userId) {
         this.userId = userId;
-    }
-
-    public LocalDate getRequestDate() {
-        return requestDate;
-    }
-
-    public void setRequestDate(LocalDate requestDate) {
-        this.requestDate = requestDate;
     }
 
     public LocalDate getStartDate() {

@@ -1,17 +1,17 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.repository;
 
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.LeaveBalanceEntity;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.AccrualType;
 import io.lettuce.core.dynamic.annotation.Param;
 import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import java.util.List;
-import java.util.Optional;import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
+import java.util.Optional;
 import org.springframework.stereotype.Repository;
-
 import java.time.LocalDate;
+
 @Repository
 public interface LeaveBalanceRepository extends JpaRepository<LeaveBalanceEntity, Long> {
 
@@ -41,4 +41,51 @@ public interface LeaveBalanceRepository extends JpaRepository<LeaveBalanceEntity
             "JOIN FETCH lb.user u " +
             "WHERE u.userId IN :userIds")
     List<LeaveBalanceEntity> findLeaveBalanceByUserIds(@Param("userIds") List<String> userIds);
+
+    @Query("""
+       SELECT lb FROM LeaveBalanceEntity lb
+       WHERE lb.policy.policyId = :policyId
+         AND lb.user.userId = :userId
+         AND lb.periodStartDate <= :start
+         AND lb.periodEnd >= :end
+       """)
+    LeaveBalanceEntity findForPeriod(String policyId, String userId, LocalDate start, LocalDate end);
+
+    @Query("""
+           SELECT lb FROM LeaveBalanceEntity lb
+           WHERE lb.policy.policyId = :policyId
+             AND lb.user.userId = :userId
+             AND :date BETWEEN lb.periodStartDate AND lb.periodEnd
+           """)
+    LeaveBalanceEntity findForMonth(String policyId, String userId, LocalDate date);
+
+    @Query("""
+           SELECT lb FROM LeaveBalanceEntity lb
+           WHERE lb.policy.policyId = :policyId
+             AND lb.user.userId = :userId
+             AND EXTRACT(YEAR FROM lb.periodStartDate) = :year
+           """)
+    LeaveBalanceEntity findForYear(String policyId, String userId, int year);
+
+    @Query("""
+    SELECT lb
+    FROM LeaveBalanceEntity lb
+    WHERE EXTRACT(MONTH FROM lb.periodStartDate) = :month
+    AND EXTRACT(YEAR FROM lb.periodStartDate) = :year
+    AND lb.policy.accrualType = :accrualType
+    """)
+    List<LeaveBalanceEntity> findBalancesByMonthYearAndAccrualType(
+            @Param("month") int month,
+            @Param("year") int year,
+            @Param("accrualType") AccrualType accrualType);
+
+    @Query("""
+    SELECT lb
+    FROM LeaveBalanceEntity lb
+    WHERE EXTRACT(YEAR FROM lb.periodStartDate) = :year
+    AND lb.policy.accrualType = :accrualType
+    """)
+    List<LeaveBalanceEntity> findBalancesByYearAndAccrualType(
+            @Param("year") int year,
+            @Param("accrualType") AccrualType accrualType);
 }

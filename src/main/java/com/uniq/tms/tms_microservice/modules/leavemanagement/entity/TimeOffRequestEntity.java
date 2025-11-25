@@ -3,18 +3,21 @@ package com.uniq.tms.tms_microservice.modules.leavemanagement.entity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.AccrualLeaveType;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.Status;
 import jakarta.persistence.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 
 @Entity
-@Table(name = "timeOff_request")
+@Table(name = "timeoff_request")
 public class TimeOffRequestEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "timeOff_request_id")
+    @Column(name = "timeoff_request_id")
     private Long timeOffRequestId;
 
     @OneToMany(mappedBy = "timeOffRequest", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -55,9 +58,11 @@ public class TimeOffRequestEntity {
     @Column(name = "reason", length = 255)
     private String reason;
 
-    @Column(name = "created_at")
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
+    @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 

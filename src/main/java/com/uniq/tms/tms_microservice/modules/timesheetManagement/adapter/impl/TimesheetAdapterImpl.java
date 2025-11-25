@@ -116,6 +116,9 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
         Map<String, String> userGroups = fetchUserGroupsMap(userIdArrays);
         List<UserCalendarProjection> userCalendarList = userRepository.findCalendarIdsByUserIds(userIdArrays);
         Map<String, String> userToCalendarMap = userCalendarList.stream()
+                .filter(Objects::nonNull)
+                .filter(u -> u.getUserId() != null)
+                .filter(u -> u.getCalendarId() != null)
                 .collect(Collectors.toMap(UserCalendarProjection::getUserId, UserCalendarProjection::getCalendarId));
         Set<String> calendarIds = new HashSet<>(userToCalendarMap.values());
         List<Object[]> results = calendarHolidayRepository.findHolidayDatesByCalendarIds(calendarIds);

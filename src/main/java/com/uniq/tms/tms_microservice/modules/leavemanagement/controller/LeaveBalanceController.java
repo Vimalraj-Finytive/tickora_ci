@@ -8,7 +8,6 @@ import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
 import com.uniq.tms.tms_microservice.shared.helper.AuthHelper;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
 
 @RestController
@@ -44,9 +43,7 @@ public class LeaveBalanceController{
         String userId = authHelper.getUserId();
         ApiResponse<List<UserWithLeaveBalanceDto>> response =
                 timeOffFacade.getSupervisorLeave(userId);
-
         return ResponseEntity.status(response.getStatusCode()).body(response);
-
     }
 
 }

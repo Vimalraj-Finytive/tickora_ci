@@ -727,6 +727,7 @@ CREATE TABLE IF NOT EXISTS user_policies (
     id BIGSERIAL PRIMARY KEY,
     policy_id VARCHAR(20) NOT NULL,
     user_id VARCHAR(20) NOT NULL,
+    entitled_units INT,
     valid_from DATE,
     valid_to DATE,
     assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

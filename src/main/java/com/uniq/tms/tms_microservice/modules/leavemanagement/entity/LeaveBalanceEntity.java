@@ -14,7 +14,7 @@ public class LeaveBalanceEntity {
     @Column(name = "leave_balance_id")
     private Long leaveBalanceId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "policy_id", nullable = false)
     private TimeOffPolicyEntity policy;
 
@@ -49,6 +49,8 @@ public class LeaveBalanceEntity {
     @Column(name = "carry_forward_units")
     private Double carryForwardUnits = 0.0;
 
+    public LeaveBalanceEntity() {
+    }
 
     public Long getLeaveBalanceId() {
         return leaveBalanceId;

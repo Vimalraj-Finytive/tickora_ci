@@ -9,5 +9,7 @@ public interface LeaveBalanceService {
 
     List<LeaveBalanceModel> getLeaveBalance(String userId);
     List<UserWithLeaveBalanceModel> getSupervisorLeave(String userId);
-
+    void updateMonthlyLeaveBalance();
+    void updateYearlyLeaveBalance();
+    void  updateLeaveSummary();
 }

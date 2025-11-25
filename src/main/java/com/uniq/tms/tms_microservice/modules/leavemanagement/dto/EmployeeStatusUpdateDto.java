@@ -3,16 +3,21 @@ package com.uniq.tms.tms_microservice.modules.leavemanagement.dto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.Status;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 
 public class EmployeeStatusUpdateDto {
     private String userId;
+    private String policyId;
     private Status status;
     private String reason;
     private Integer unitsRequested;
     private Integer hoursRequested;
-    private String startAndEndDates;
-    private String startAndEndTimes;
+    private LocalDate startDate;
+    private LocalDate endDate;
+    private LocalTime startTime;
+    private LocalTime endTime;
     private LocalDate requestDate;
+
 
     public Status getStatus() {
         return status;
@@ -54,20 +59,44 @@ public class EmployeeStatusUpdateDto {
         this.hoursRequested = hoursRequested;
     }
 
-    public String getStartAndEndDates() {
-        return startAndEndDates;
+    public String getPolicyId() {
+        return policyId;
     }
 
-    public void setStartAndEndDates(String startAndEndDates) {
-        this.startAndEndDates = startAndEndDates;
+    public void setPolicyId(String policyId) {
+        this.policyId = policyId;
     }
 
-    public String getStartAndEndTimes() {
-        return startAndEndTimes;
+    public LocalDate getStartDate() {
+        return startDate;
     }
 
-    public void setStartAndEndTimes(String startAndEndTimes) {
-        this.startAndEndTimes = startAndEndTimes;
+    public void setStartDate(LocalDate startDate) {
+        this.startDate = startDate;
+    }
+
+    public LocalDate getEndDate() {
+        return endDate;
+    }
+
+    public void setEndDate(LocalDate endDate) {
+        this.endDate = endDate;
+    }
+
+    public LocalTime getStartTime() {
+        return startTime;
+    }
+
+    public void setStartTime(LocalTime startTime) {
+        this.startTime = startTime;
+    }
+
+    public LocalTime getEndTime() {
+        return endTime;
+    }
+
+    public void setEndTime(LocalTime endTime) {
+        this.endTime = endTime;
     }
 
     public LocalDate getRequestDate() {
