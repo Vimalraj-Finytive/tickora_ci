@@ -204,6 +204,9 @@ public class TimeOffFacade {
         try {
             String roleName = authHelper.getRole();
             int minLevel = UserRole.getLevel(roleName);
+            if (fromDate == null || toDate == null) {
+                throw new IllegalArgumentException("fromDate and toDate are required");
+            }
             List<TimeOffRequestResponseModel> list = timeOffRequestService.filterRequestsByRole(fromDate, toDate, minLevel);
             List<TimeoffRequestResponseDto> dtoList = timeoffPolicyDtoMapper.toDtoList(list);
 

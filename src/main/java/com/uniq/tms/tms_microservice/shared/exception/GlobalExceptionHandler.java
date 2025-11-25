@@ -21,6 +21,7 @@ import java.nio.file.AccessDeniedException;
 import java.time.format.DateTimeParseException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @RestControllerAdvice
@@ -67,9 +68,13 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse> handleValidation(MethodArgumentNotValidException ex) {
         log.error("Validation error: {}", ex.getMessage(), ex);
         Map<String, String> errors = new HashMap<>();
-        ex.getBindingResult().getFieldErrors().forEach(error ->
-                errors.put("Error", error.getDefaultMessage()));
-        String errorMessage = String.join(", ", errors.values());
+        ex.getBindingResult().getFieldErrors().forEach(error ->{
+            String fieldName = error.getField();
+            errors.put(fieldName, error.getDefaultMessage());});
+        String errorMessage = errors.entrySet()
+                .stream()
+                .map(e -> e.getKey() + " : " + e.getValue())
+                .collect(Collectors.joining(", "));
         return ResponseEntity.badRequest().body(new ApiResponse(400, errorMessage, false));
     }
 

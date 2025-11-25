@@ -45,11 +45,12 @@ public class TimeOffPoliciesController {
     }
 
     @PostMapping("/assign")
-    public ResponseEntity<ApiResponse<String>> assignPoliciesToUsers(
+    public ResponseEntity<ApiResponse<Void>> assignPoliciesToUsers(
             @RequestBody TimeOffPolicyBulkAssignRequestDto request,
             @RequestHeader("Authorization") String token) {
-        timeOffFacade.assignPoliciesToUsers(request);
-        return ResponseEntity.ok(new ApiResponse<>(200, "Policies assigned successfully", null));
+        ApiResponse<Void> response =  timeOffFacade.assignPoliciesToUsers(request);
+
+        return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
     @PatchMapping("/{policyId}/status")

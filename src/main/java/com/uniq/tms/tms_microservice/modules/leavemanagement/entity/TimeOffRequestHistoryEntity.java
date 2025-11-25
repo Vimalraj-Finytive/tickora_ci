@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "timeOff_request_history")
+@Table(name = "timeoff_request_history")
 public class TimeOffRequestHistoryEntity {
 
     @Id
@@ -13,7 +13,7 @@ public class TimeOffRequestHistoryEntity {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "timeOff_request_id", nullable = false)
+    @JoinColumn(name = "timeoff_request_id", nullable = false)
     private TimeOffRequestEntity timeOffRequest;
 
     @Column(name = "user_id", nullable = false, length = 20)

@@ -12,7 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "timeOff_policies")
+@Table(name = "timeoff_policies")
 public class TimeOffPolicyEntity {
 
     @Id
@@ -74,6 +74,7 @@ public class TimeOffPolicyEntity {
 
     @OneToMany(mappedBy = "policy", cascade = CascadeType.ALL)
     private List<TimeOffRequestEntity> requests = new ArrayList<>();
+
     public Integer getEntitledHours() {
         return entitledHours;
     }

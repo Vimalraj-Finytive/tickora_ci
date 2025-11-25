@@ -635,11 +635,6 @@ CREATE TABLE IF NOT EXISTS ${schemaName}.user_payroll_history (
     action_by VARCHAR(100),
     user_id VARCHAR(20) NOT NULL,
     user_payroll_amount_id BIGINT,
-
-   CONSTRAINT fk_user_history_user
-         FOREIGN KEY (user_id)
-         REFERENCES ${schemaName}.users(user_id)
-         ON DELETE CASCADE
 );
 
 -- ===========================================================
@@ -704,7 +699,7 @@ CREATE TABLE IF NOT EXISTS timeoff_policies (
     policy_id VARCHAR(20) PRIMARY KEY,
     policy_name VARCHAR(255) NOT NULL,
     compensation VARCHAR(10) CHECK (compensation IN ('PAID','UNPAID')),
-    accrual_type VARCHAR(10) CHECK (accrual_type IN ('MONTHLY','ANNUALLY')),
+    accrual_type VARCHAR(10) CHECK (accrual_type IN ('MONTHLY','ANNUALLY','FIXED')),
     validity_start_date DATE,
     validity_end_date DATE,
     accrual_start_date DATE,
@@ -727,6 +722,7 @@ CREATE TABLE IF NOT EXISTS user_policies (
     id BIGSERIAL PRIMARY KEY,
     policy_id VARCHAR(20) NOT NULL,
     user_id VARCHAR(20) NOT NULL,
+    entitled_units INT,
     valid_from DATE,
     valid_to DATE,
     assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -761,6 +757,9 @@ CREATE TABLE IF NOT EXISTS timeoff_request (
     updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_timeoff_request_policy
         FOREIGN KEY (policy_id) REFERENCES timeoff_policies(policy_id)
+        ON DELETE CASCADE,
+    CONSTRAINT fk_timeoff_request_user
+        FOREIGN KEY (user_id) REFERENCES users(user_id)
         ON DELETE CASCADE
 );
 
@@ -787,10 +786,7 @@ CREATE TABLE IF NOT EXISTS timeoff_request_history (
     action_type VARCHAR(50) NOT NULL,
     action_by VARCHAR(50) NOT NULL,
     action_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_history_request
-        FOREIGN KEY (timeoff_request_id) REFERENCES timeoff_request(timeoff_request_id)
-        ON DELETE CASCADE
+    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- ===========================================================
@@ -1247,7 +1243,7 @@ BEGIN
             NEW.id
         );
 
-    ELSIF (TG_OP = 'DELETE') THEN
+ ELSIF (TG_OP = 'DELETE') THEN
         INSERT INTO ${schemaName}.payroll_history (
             action_at,
             action_type,
@@ -1259,15 +1255,23 @@ BEGIN
             CURRENT_USER,
             OLD.id
         );
+
+        RETURN OLD;
     END IF;
 
-    RETURN NULL;
+    RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
---changeset system:create-trg-payroll-history endDelimiter://
-CREATE TRIGGER trg_payroll_history
-AFTER INSERT OR UPDATE OR DELETE ON ${schemaName}.payroll
+--changeset system:create-trg-payroll-history-ins-upd endDelimiter://
+CREATE TRIGGER trg_payroll_history_ins_upd
+AFTER INSERT OR UPDATE ON ${schemaName}.payroll
+FOR EACH ROW
+EXECUTE FUNCTION ${schemaName}.log_payroll_history();
+
+--changeset system:create-trg-payroll-history-delete endDelimiter://
+CREATE TRIGGER trg_payroll_history_delete
+BEFORE DELETE ON ${schemaName}.payroll
 FOR EACH ROW
 EXECUTE FUNCTION ${schemaName}.log_payroll_history();
 
@@ -1319,16 +1323,25 @@ BEGIN
             CURRENT_USER,
             NOW()
         );
+        RETURN OLD;
     END IF;
 
-    RETURN NULL; -- AFTER trigger
+    RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
---changeset system:create-trg-timeoff-request-history endDelimiter://
-CREATE TRIGGER trg_timeoff_request_history
-AFTER INSERT OR UPDATE OR DELETE ON ${schemaName}.timeoff_request
+--changeset system:create-trg-timeoff-request-history-ins-upd endDelimiter://
+CREATE TRIGGER trg_timeoff_request_history_ins_upd
+AFTER INSERT OR UPDATE ON ${schemaName}.timeoff_request
 FOR EACH ROW
 EXECUTE FUNCTION ${schemaName}.log_timeoff_request_history();
+
+--changeset system:create-trg-timeoff-request-history-delete endDelimiter://
+CREATE TRIGGER trg_timeoff_request_history_delete
+BEFORE DELETE ON ${schemaName}.timeoff_request
+FOR EACH ROW
+EXECUTE FUNCTION ${schemaName}.log_timeoff_request_history();
+
+
 
 

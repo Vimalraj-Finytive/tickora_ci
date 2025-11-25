@@ -14,6 +14,7 @@ public class TimeOffPolicyBulkAssignRequestDto {
     private LocalDate userValidFrom;
 
     private LocalDate userValidTo;
+
     public List<String> getPolicyIds() {
         return policyIds;
     }
@@ -36,5 +37,21 @@ public class TimeOffPolicyBulkAssignRequestDto {
 
     public void setGroupIds(List<Long> groupIds) {
         this.groupIds = groupIds;
+    }
+
+    public LocalDate getUserValidFrom() {
+        return userValidFrom;
+    }
+
+    public void setUserValidFrom(LocalDate userValidFrom) {
+        this.userValidFrom = userValidFrom;
+    }
+
+    public LocalDate getUserValidTo() {
+        return userValidTo;
+    }
+
+    public void setUserValidTo(LocalDate userValidTo) {
+        this.userValidTo = userValidTo;
     }
 }

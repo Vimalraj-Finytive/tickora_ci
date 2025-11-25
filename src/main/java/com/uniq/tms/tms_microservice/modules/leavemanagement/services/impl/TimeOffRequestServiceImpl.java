@@ -235,10 +235,6 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
             LocalDate toDate,
             int minRoleLevel) {
 
-        if (fromDate == null || toDate == null) {
-            throw new IllegalArgumentException("fromDate and toDate are required");
-        }
-
         List<TimeOffRequestUserModel> list =
                 timeOffRequestAdapter.filterWithUserAndRole(fromDate, toDate, minRoleLevel);
 

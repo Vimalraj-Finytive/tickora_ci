@@ -1,6 +1,5 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.entity;
 
-import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.AccrualLeaveType;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.Status;
 import jakarta.persistence.*;
 import java.time.LocalDate;
@@ -9,12 +8,12 @@ import java.time.LocalTime;
 import java.util.List;
 
 @Entity
-@Table(name = "timeOff_request")
+@Table(name = "timeoff_request")
 public class TimeOffRequestEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "timeOff_request_id")
+    @Column(name = "timeoff_request_id")
     private Long timeOffRequestId;
 
     @OneToMany(mappedBy = "timeOffRequest", cascade = CascadeType.ALL, orphanRemoval = true)
