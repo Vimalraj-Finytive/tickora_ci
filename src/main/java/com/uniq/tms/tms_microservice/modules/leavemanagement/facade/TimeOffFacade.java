@@ -46,7 +46,7 @@ public class TimeOffFacade {
         this.authHelper = authHelper;
     }
 
-    public ApiResponse createRequest(TimeOffRequestDto requestDto) {
+    public ApiResponse<TimeOffRequestDto> createRequest(TimeOffRequestDto requestDto) {
         TimeOffRequest request = timeoffPolicyDtoMapper.toRequestModel(requestDto);
         timeOffRequestService.createRequest(request);
         return new ApiResponse<>(200,"Requested TimeOff Successfully",null);
@@ -204,9 +204,6 @@ public class TimeOffFacade {
         try {
             String roleName = authHelper.getRole();
             int minLevel = UserRole.getLevel(roleName);
-            if (fromDate == null || toDate == null) {
-                throw new IllegalArgumentException("fromDate and toDate are required");
-            }
             List<TimeOffRequestResponseModel> list = timeOffRequestService.filterRequestsByRole(fromDate, toDate, minLevel);
             List<TimeoffRequestResponseDto> dtoList = timeoffPolicyDtoMapper.toDtoList(list);
 

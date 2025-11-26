@@ -9,7 +9,6 @@ public interface TimeOffRequestService {
     void createRequest(TimeOffRequest request);
     void employeeUpdateStatus(EmployeeStatusUpdate model);
     void adminUpdateStatus(AdminStatusUpdate model);
-    void updateLeaveBalance();
     List<TimeOffRequestResponseModel> getRequestsByDateRange(LocalDate fromDate, LocalDate toDate);
     List<TimeOffRequestResponseModel> filterRequestsByRole(LocalDate fromDate, LocalDate toDate, int minRoleLevel);
     List<StatusEnumModel> getStatus();

@@ -699,7 +699,7 @@ CREATE TABLE IF NOT EXISTS timeoff_policies (
     policy_id VARCHAR(20) PRIMARY KEY,
     policy_name VARCHAR(255) NOT NULL,
     compensation VARCHAR(10) CHECK (compensation IN ('PAID','UNPAID')),
-    accrual_type VARCHAR(10) CHECK (accrual_type IN ('MONTHLY','ANNUALLY','FIXED')),
+    accrual_type VARCHAR(10) CHECK (accrual_type IN ('MONTHLY','ANNUALLY')),
     validity_start_date DATE,
     validity_end_date DATE,
     accrual_start_date DATE,
@@ -722,7 +722,6 @@ CREATE TABLE IF NOT EXISTS user_policies (
     id BIGSERIAL PRIMARY KEY,
     policy_id VARCHAR(20) NOT NULL,
     user_id VARCHAR(20) NOT NULL,
-    entitled_units INT,
     valid_from DATE,
     valid_to DATE,
     assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -757,9 +756,6 @@ CREATE TABLE IF NOT EXISTS timeoff_request (
     updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_timeoff_request_policy
         FOREIGN KEY (policy_id) REFERENCES timeoff_policies(policy_id)
-        ON DELETE CASCADE,
-    CONSTRAINT fk_timeoff_request_user
-        FOREIGN KEY (user_id) REFERENCES users(user_id)
         ON DELETE CASCADE
 );
 
@@ -1341,7 +1337,3 @@ CREATE TRIGGER trg_timeoff_request_history_delete
 BEFORE DELETE ON ${schemaName}.timeoff_request
 FOR EACH ROW
 EXECUTE FUNCTION ${schemaName}.log_timeoff_request_history();
-
-
-
-

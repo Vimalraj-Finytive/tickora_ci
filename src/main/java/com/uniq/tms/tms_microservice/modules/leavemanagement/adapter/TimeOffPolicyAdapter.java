@@ -1,11 +1,9 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.adapter;
 
 import java.util.List;
-import java.time.LocalDate;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeOffPolicyEntity;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeOffRequestUserModel;
 
-public interface TimeoffPolicyAdapter {
+public interface TimeOffPolicyAdapter {
 
     TimeOffPolicyEntity findPolicyById(String policyId);
     TimeOffPolicyEntity savePolicy(TimeOffPolicyEntity policy);

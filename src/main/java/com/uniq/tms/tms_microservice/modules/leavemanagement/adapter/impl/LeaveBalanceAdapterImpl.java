@@ -3,17 +3,18 @@ package com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.impl;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.LeaveBalanceAdapter;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.LeaveBalanceEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeOffPolicyEntity;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.AccrualType;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.repository.LeaveBalanceRepository;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.GroupEntity;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
 import com.uniq.tms.tms_microservice.modules.userManagement.repository.UserGroupRepository;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-
+import java.time.LocalDate;
 import java.util.List;
 
 @Component
 public class LeaveBalanceAdapterImpl implements LeaveBalanceAdapter {
+
     private final LeaveBalanceRepository leaveBalanceRepo;
     private final UserGroupRepository userGroupRepository;
 
@@ -26,7 +27,6 @@ public class LeaveBalanceAdapterImpl implements LeaveBalanceAdapter {
     public void saveLeaveBalances(List<LeaveBalanceEntity> leaveBalances) {
         leaveBalanceRepo.saveAll(leaveBalances);
     }
-
 
     @Override
     public void deleteLeaveBalances(String policyId) {
@@ -66,5 +66,25 @@ public class LeaveBalanceAdapterImpl implements LeaveBalanceAdapter {
     @Override
     public List<LeaveBalanceEntity> getLeaveBalance(List<String> userIds) {
         return leaveBalanceRepo.findLeaveBalanceByUserIds((userIds));
+    }
+
+    @Override
+    public List<LeaveBalanceEntity> findBalancesByMonthYearAndAccrualType(int month, int year, AccrualType type) {
+        return leaveBalanceRepo.findBalancesByMonthYearAndAccrualType(month, year, type);
+    }
+
+    @Override
+    public void saveLeaveBalance(LeaveBalanceEntity leaveBalance) {
+        leaveBalanceRepo.save(leaveBalance);
+    }
+
+    @Override
+    public List<LeaveBalanceEntity> findBalancesByYearAndAccrualType(int year, AccrualType type) {
+        return leaveBalanceRepo.findBalancesByYearAndAccrualType(year, type);
+    }
+
+    @Override
+    public LeaveBalanceEntity findForPeriod(String policyId, String userId, LocalDate start, LocalDate end) {
+        return leaveBalanceRepo.findForPeriod(policyId, userId, start, end);
     }
 }

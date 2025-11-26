@@ -7,6 +7,7 @@ import java.time.LocalDate;
 public class AdminStatusUpdateDto {
 
     private String userId;
+    private String policyId;
     private Status status;
     private LocalDate requestDate;
 
@@ -16,6 +17,14 @@ public class AdminStatusUpdateDto {
 
     public void setUserId(String userId) {
         this.userId = userId;
+    }
+
+    public String getPolicyId() {
+        return policyId;
+    }
+
+    public void setPolicyId(String policyId) {
+        this.policyId = policyId;
     }
 
     public Status getStatus() {

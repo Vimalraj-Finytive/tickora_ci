@@ -18,7 +18,7 @@ public class UsersRequestMappingEntity {
     private String requesterId;
 
     @Column(name = "timeoff_request_id", length = 20, nullable = false)
-    private Long timeoffRequestId;
+    private Long timeOffRequestId;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "type", length = 20, nullable = false)
@@ -50,12 +50,12 @@ public class UsersRequestMappingEntity {
         this.requesterId = requesterId;
     }
 
-    public Long getTimeoffRequestId() {
-        return timeoffRequestId;
+    public Long getTimeOffRequestId() {
+        return timeOffRequestId;
     }
 
-    public void setTimeoffRequestId(Long timeoffRequestId) {
-        this.timeoffRequestId = timeoffRequestId;
+    public void setTimeOffRequestId(Long timeOffRequestId) {
+        this.timeOffRequestId = timeOffRequestId;
     }
 
     public ViewerType getType() {

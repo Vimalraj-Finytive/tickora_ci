@@ -15,7 +15,6 @@ import java.util.List;
 @Component
 public class TimeOffRequestAdapterImpl implements TimeOffRequestAdapter {
 
-
     private final TimeOffRequestRepository timeoffRequestRepo;
     private final UsersRequestMappingRepository usersRequestMappingRepo;
     private final LeaveBalanceRepository leaveBalanceRepository;
@@ -32,11 +31,6 @@ public class TimeOffRequestAdapterImpl implements TimeOffRequestAdapter {
     }
 
     @Override
-    public boolean existsTimeoffRequest(String userId, String policyId) {
-        return timeoffRequestRepo.existsByUserIdAndPolicy_PolicyId(userId, policyId);
-    }
-
-    @Override
     public TimeOffRequestEntity saveRequest(TimeOffRequestEntity entity) {
         return timeoffRequestRepo.save(entity);
     }
@@ -44,11 +38,6 @@ public class TimeOffRequestAdapterImpl implements TimeOffRequestAdapter {
     @Override
     public List<UsersRequestMappingEntity> saveUsersRequestMapping(List<UsersRequestMappingEntity> entity) {
         return usersRequestMappingRepo.saveAll(entity);
-    }
-
-    @Override
-    public TimeOffRequestEntity findByUserIdAndRequestDate(String userId, LocalDate requestDate) {
-        return timeoffRequestRepo.findByUserIdAndRequestDate(userId, requestDate);
     }
 
     @Override
@@ -62,11 +51,6 @@ public class TimeOffRequestAdapterImpl implements TimeOffRequestAdapter {
     }
 
     @Override
-    public List<LeaveBalanceEntity> saveAllLeaveBalance(List<LeaveBalanceEntity> entities) {
-        return leaveBalanceRepository.saveAll(entities);
-    }
-
-    @Override
     public List<TimeOffRequestUserModel> filterWithUser(LocalDate from, LocalDate to) {
         return timeoffRequestRepo.filterWithUser(from, to);
     }
@@ -74,5 +58,26 @@ public class TimeOffRequestAdapterImpl implements TimeOffRequestAdapter {
     @Override
     public List<TimeOffRequestUserModel> filterWithUserAndRole(LocalDate from, LocalDate to, int minRoleLevel) {
         return timeoffRequestRepo.filterWithUserAndRole(from, to, minRoleLevel);
+    }
+
+    @Override
+    public TimeOffRequestEntity getTimeoffRequest(String policyId, String userId, LocalDate requestDate) {
+        return timeoffRequestRepo.findByUserIdAndRequestDate(policyId, userId, requestDate);
+    }
+
+    @Override
+    public boolean existsTimeoffRequest(String userId, String policyId, LocalDate requestDate) {
+        return timeoffRequestRepo.existsByUserIdAndPolicy_PolicyIdAndRequestDate(userId, policyId, requestDate);
+    }
+
+    @Override
+    public List<TimeOffRequestEntity> findByStartDate(LocalDate date) {
+        return timeoffRequestRepo.findByStartDateAndStatusApproved(date);
+    }
+
+
+    @Override
+    public void saveAllLeaveBalance(List<LeaveBalanceEntity> entities) {
+        leaveBalanceRepository.saveAll(entities);
     }
 }

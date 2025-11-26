@@ -14,12 +14,14 @@ public interface TimeOffRequestRepository extends JpaRepository<TimeOffRequestEn
 
     List<TimeOffRequestEntity> findByUserId(String userId);
     List<TimeOffRequestEntity> findByStartDate(LocalDate startDate);
-    boolean existsByUserIdAndPolicy_PolicyId(String userId, String policyId);
+    boolean existsByUserIdAndPolicy_PolicyIdAndRequestDate(String userId, String policyId, LocalDate requestDate);
 
     @Query("SELECT t FROM TimeOffRequestEntity t " +
-            "WHERE t.userId = :userId " +
+            "WHERE t.policy.policyId = :policyId " +
+            "AND t.userId = :userId " +
             "AND t.requestDate = :requestDate")
     TimeOffRequestEntity findByUserIdAndRequestDate(
+            @Param("policyId") String policyId,
             @Param("userId") String userId,
             @Param("requestDate") LocalDate requestDate);
 
@@ -57,6 +59,7 @@ WHERE r.startDate <= :toDate
             @Param("minRoleLevel") int minRoleLevel
     );
 
-
-
+    @Query("SELECT t FROM TimeOffRequestEntity t " +
+            "WHERE t.startDate = :startDate AND t.status = Status.APPROVED")
+    List<TimeOffRequestEntity> findByStartDateAndStatusApproved(@Param("startDate") LocalDate startDate);
 }

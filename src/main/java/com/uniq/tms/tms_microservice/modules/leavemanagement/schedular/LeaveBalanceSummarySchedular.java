@@ -1,5 +1,7 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.schedular;
 
+import com.uniq.tms.tms_microservice.modules.leavemanagement.services.LeaveBalanceService;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.services.TimeOffPolicyService;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.services.TimeOffRequestService;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.OrganizationEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.OrganizationRepository;
@@ -12,27 +14,27 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 
 @Component
-public class LeaveManagementSchedular {
+public class LeaveBalanceSummarySchedular {
 
-    private static final Logger log = LoggerFactory.getLogger(LeaveManagementSchedular.class);
+    private static final Logger log = LoggerFactory.getLogger(LeaveBalanceSummarySchedular.class);
 
-    private final TimeOffRequestService timeOffRequestService;
+    private final LeaveBalanceService leaveBalanceService;
     private final OrganizationRepository organizationRepository;
 
-    public LeaveManagementSchedular(TimeOffRequestService timeOffRequestService, OrganizationRepository organizationRepository) {
-        this.timeOffRequestService = timeOffRequestService;
+    public LeaveBalanceSummarySchedular( LeaveBalanceService leaveBalanceService, OrganizationRepository organizationRepository) {
+        this.leaveBalanceService = leaveBalanceService;
         this.organizationRepository = organizationRepository;
     }
 
     @Scheduled(cron = "0 0 0 * * ?", zone = "Asia/Kolkata")
-    public void autoUpdateLeaveBalance(){
+    public void autoUpdateLeaveSummary(){
         try {
             List<OrganizationEntity> orgIds = organizationRepository.findAll();
             for (OrganizationEntity orgId : orgIds) {
                 TenantUtil.setCurrentTenant(orgId.getSchemaName());
                 try {
-                    log.info("Scheduled clock triggered for calculate Leave Balance");
-                    timeOffRequestService.updateLeaveBalance();
+                    log.info("Scheduled clock triggered for calculate Leave Summary");
+                    leaveBalanceService.updateLeaveSummary();
                 } catch (Exception e) {
                     continue;
                 } finally {
@@ -40,7 +42,8 @@ public class LeaveManagementSchedular {
                 }
             }
         } catch (Exception e) {
-            log.error("Error while leaveBalance calculate", e);
+            log.error("Error while leaveSummary calculate", e);
         }
     }
+
 }
