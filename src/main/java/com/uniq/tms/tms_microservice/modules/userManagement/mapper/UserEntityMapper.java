@@ -79,6 +79,8 @@ public interface UserEntityMapper {
             @Mapping(source = "role.name", target = "role")
     })
     UserLevelModel toModel(UserEntity entity);
+    List<UserLevelModel> toUserModelList(List<UserEntity> entities);
 
-    List<UserLevelModel> toModelList(List<UserEntity> entities);
+    GroupModel toModel(GroupEntity entity);
+    List<GroupModel> toModelList(List<GroupEntity> entities);
 }

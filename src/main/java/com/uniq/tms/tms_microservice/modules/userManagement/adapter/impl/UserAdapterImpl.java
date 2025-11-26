@@ -600,8 +600,14 @@ public class UserAdapterImpl implements UserAdapter {
         return userGroupRepository.findUserIdsByGroupIds(groupIds);
     }
 
+    @Override
+    public List<GroupEntity> getSupervisorGroups(String supervisorId) {
+        return userGroupRepository.findGroups(supervisorId);
+    }
 
-
-
+    @Override
+    public List<UserEntity>getGroupMembers(Long groupId){
+        return userGroupRepository.findUsersByGroupId(Collections.singletonList(groupId));
+    }
 
 }

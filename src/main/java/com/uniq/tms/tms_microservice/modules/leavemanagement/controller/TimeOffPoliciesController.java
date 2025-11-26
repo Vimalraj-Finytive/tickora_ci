@@ -3,6 +3,7 @@ package com.uniq.tms.tms_microservice.modules.leavemanagement.controller;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.constant.LeaveConstant;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.facade.TimeOffFacade;
 import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
+import com.uniq.tms.tms_microservice.shared.helper.AuthHelper;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.*;
@@ -18,14 +19,16 @@ import java.util.List;
 public class TimeOffPoliciesController {
 
     private final TimeOffFacade timeOffFacade;
+    private final AuthHelper authHelper;
 
-    public TimeOffPoliciesController(TimeOffFacade timeOffFacade) {
+    public TimeOffPoliciesController(TimeOffFacade timeOffFacade, AuthHelper authHelper) {
         this.timeOffFacade = timeOffFacade;
+        this.authHelper = authHelper;
     }
 
     @PostMapping("/create")
     public ResponseEntity<ApiResponse<Void>> createPolicy(@RequestBody TimeOffPolicyRequestDto request,
-                                                                              @RequestHeader("Authorization") String token) {
+                                                          @RequestHeader("Authorization") String token) {
         ApiResponse<Void> response = timeOffFacade.createPolicy(request);
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
@@ -72,30 +75,30 @@ public class TimeOffPoliciesController {
 
     @GetMapping("/basic")
     public ResponseEntity<ApiResponse<List<TimeoffPolicyDto>>> getAllPolicy(
-            @RequestHeader("Authorization")String token){
-    ApiResponse<List<TimeoffPolicyDto>> response   = timeOffFacade.getAllPolicy();
-    return ResponseEntity.status(response.getStatusCode()).body(response);
+            @RequestHeader("Authorization") String token) {
+        ApiResponse<List<TimeoffPolicyDto>> response = timeOffFacade.getAllPolicy();
+        return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
     @GetMapping("/accrualType")
     public ResponseEntity<ApiResponse<List<AccrualTypeEnumDto>>> getAccrualStatus(
-             @RequestHeader("Authorization")String token){
-        ApiResponse<List<AccrualTypeEnumDto>> response= timeOffFacade.getAccrualStatus();
+            @RequestHeader("Authorization") String token) {
+        ApiResponse<List<AccrualTypeEnumDto>> response = timeOffFacade.getAccrualStatus();
         return ResponseEntity.status(response.getStatusCode()).body(response);
 
     }
 
     @GetMapping("/compensation")
     public ResponseEntity<ApiResponse<List<CompensationEnumDto>>> getCompensation(
-            @RequestHeader("Authorization")String token){
-        ApiResponse<List<CompensationEnumDto>> response= timeOffFacade.getCompensation();
+            @RequestHeader("Authorization") String token) {
+        ApiResponse<List<CompensationEnumDto>> response = timeOffFacade.getCompensation();
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<TimeoffPoliciesDto>> getPolicyById(
-            @RequestHeader("Authorization")String token,@PathVariable String id){
-        ApiResponse<TimeoffPoliciesDto> response= timeOffFacade.getPolicyById(id);
+            @RequestHeader("Authorization") String token, @PathVariable String id) {
+        ApiResponse<TimeoffPoliciesDto> response = timeOffFacade.getPolicyById(id);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
@@ -107,4 +110,11 @@ public class TimeOffPoliciesController {
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
+    @GetMapping("/user")
+    public ResponseEntity<ApiResponse<List<TimeoffPolicyDto>>> getPoliciesByUserId(
+            @RequestHeader("Authorization") String token) {
+        String userId = authHelper.getUserId();
+        ApiResponse<List<TimeoffPolicyDto>> response = timeOffFacade.getPolicyByUserId(userId);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
 }

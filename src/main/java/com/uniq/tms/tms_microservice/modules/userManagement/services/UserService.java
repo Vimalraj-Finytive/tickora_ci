@@ -48,4 +48,6 @@ public interface UserService {
     BulkUserLocationModel assignLocations(BulkUserLocationModel model,String orgId);
     boolean UpdateCalendar(UserCalendarRequestDto updates);
     List<UserLevelModel> getUsersBelowHierarchy(String userId,String orgId);
+     List<GroupModel> getSupervisorGroups(String userId);
+     List<UserLevelModel>getGroupMembers(Long groupId);
 }

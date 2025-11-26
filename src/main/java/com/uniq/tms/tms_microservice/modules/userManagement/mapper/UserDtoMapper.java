@@ -84,20 +84,18 @@ public interface UserDtoMapper {
 
     BulkRoleUpdateModel toModel(BulkRoleUpdateDto dto);
 
-    @Mappings({
-            @Mapping(source = "userId", target = "userId"),
-            @Mapping(source = "userName", target = "userName"),
-            @Mapping(source = "role", target = "role")
-    })
     UserLevelDto toDto(UserLevelModel model);
 
-    @Mappings({
-            @Mapping(source = "userId", target = "userId"),
-            @Mapping(source = "userName", target = "userName"),
-            @Mapping(source = "role", target = "role")
-    })
     UserLevelModel toModel(UserLevelDto dto);
+
     List<UserLevelDto> toDtoList(List<UserLevelModel> models);
+
     List<UserLevelModel> toModelList(List<UserLevelDto> dtos);
+
+    GroupDto toDto(GroupModel model);
+
+    GroupModel toModel(GroupDto dto);
+
+    List<GroupDto> todtoList(List<GroupModel> model);
 
 }

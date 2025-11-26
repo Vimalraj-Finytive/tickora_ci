@@ -46,9 +46,9 @@ public class TimeoffPolicyAdapterImpl implements TimeOffPolicyAdapter {
         }
         return timeoffPolicyRepo.findByPolicyIdIn(policyIds);
     }
-
-    public List<TimeOffPolicyEntity> findAll() {
-        return timeoffPolicyRepo.findAll();
+    @Override
+    public List<TimeOffPolicyEntity> findByIsActiveTrue() {
+        return timeoffPolicyRepo.findByIsActiveTrue();
     }
 
     @Override

@@ -5,8 +5,7 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.LeaveBalance
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeOffPolicyEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.AccrualType;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.repository.LeaveBalanceRepository;
-import com.uniq.tms.tms_microservice.modules.userManagement.entity.GroupEntity;
-import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.repository.TimeOffPolicyRepository;
 import com.uniq.tms.tms_microservice.modules.userManagement.repository.UserGroupRepository;
 import org.springframework.stereotype.Component;
 import java.time.LocalDate;
@@ -17,10 +16,12 @@ public class LeaveBalanceAdapterImpl implements LeaveBalanceAdapter {
 
     private final LeaveBalanceRepository leaveBalanceRepo;
     private final UserGroupRepository userGroupRepository;
+    private final TimeOffPolicyRepository timeOffPolicyRepository;
 
-    public LeaveBalanceAdapterImpl(LeaveBalanceRepository leaveBalanceRepo, UserGroupRepository userGroupRepository) {
+    public LeaveBalanceAdapterImpl(LeaveBalanceRepository leaveBalanceRepo, UserGroupRepository userGroupRepository, TimeOffPolicyRepository timeOffPolicyRepository) {
         this.leaveBalanceRepo = leaveBalanceRepo;
         this.userGroupRepository = userGroupRepository;
+        this.timeOffPolicyRepository = timeOffPolicyRepository;
     }
 
     @Override
@@ -47,25 +48,12 @@ public class LeaveBalanceAdapterImpl implements LeaveBalanceAdapter {
 
     @Override
     public List<TimeOffPolicyEntity> findByUserId(String userId) {
-        return List.of();
+        return timeOffPolicyRepository.findPolicyByUserId(userId);
     }
 
 
     public List<LeaveBalanceEntity> findBalance(String userId) {
         return leaveBalanceRepo.findLeaveBalanceByUserId( userId);
-    }
-
-    public List<GroupEntity> getSupervisorGroups(String supervisorId) {
-        return userGroupRepository.findGroupsWhereUserIsSupervisor(supervisorId);
-    }
-
-    public List<UserEntity> getMembers(Long groupId, String supervisorId) {
-        return userGroupRepository.findMembersExcludingSupervisor(groupId, supervisorId);
-    }
-
-    @Override
-    public List<LeaveBalanceEntity> getLeaveBalance(List<String> userIds) {
-        return leaveBalanceRepo.findLeaveBalanceByUserIds((userIds));
     }
 
     @Override

@@ -53,6 +53,4 @@ public interface TimeOffPolicyDtoMapper {
 
     StatusEnumModel toModel(StatusEnumDto dto);
 
-    UserWithLeaveBalanceDto toDto(UserWithLeaveBalanceModel model);
-    List<UserWithLeaveBalanceDto> toUserDtoList(List<UserWithLeaveBalanceModel> models);
 }

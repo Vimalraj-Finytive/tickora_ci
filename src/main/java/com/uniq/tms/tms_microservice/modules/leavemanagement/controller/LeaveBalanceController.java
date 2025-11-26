@@ -2,7 +2,6 @@ package com.uniq.tms.tms_microservice.modules.leavemanagement.controller;
 
 import com.uniq.tms.tms_microservice.modules.leavemanagement.constant.LeaveConstant;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.LeaveBalanceDto;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.UserWithLeaveBalanceDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.facade.TimeOffFacade;
 import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
 import com.uniq.tms.tms_microservice.shared.helper.AuthHelper;
@@ -21,7 +20,7 @@ public class LeaveBalanceController{
         this.authHelper = authHelper;
     }
 
-    @GetMapping("/leave")
+    @GetMapping
     public ResponseEntity<ApiResponse<List<LeaveBalanceDto>>> getLeaveBalance(
             @RequestHeader("Authorization") String authHeader){
         String userId = authHelper.getUserId();
@@ -29,7 +28,7 @@ public class LeaveBalanceController{
         return ResponseEntity.status(balance.getStatusCode()).body(balance);
     }
 
-    @GetMapping("/leave/{userId}")
+    @GetMapping("/{userId}")
     public ResponseEntity<ApiResponse<List<LeaveBalanceDto>>> getLeaveBalance(
             @RequestHeader("Authorization")String token,
             @PathVariable("userId") String userId) {
@@ -37,13 +36,6 @@ public class LeaveBalanceController{
             return ResponseEntity.status(response.getStatusCode()).body(response);
         }
 
-    @GetMapping("/supervisor/leave")
-    public ResponseEntity<ApiResponse<List<UserWithLeaveBalanceDto>>> getLeave(
-            @RequestHeader("Authorization") String token) {
-        String userId = authHelper.getUserId();
-        ApiResponse<List<UserWithLeaveBalanceDto>> response =
-                timeOffFacade.getSupervisorLeave(userId);
-        return ResponseEntity.status(response.getStatusCode()).body(response);
-    }
+
 
 }
