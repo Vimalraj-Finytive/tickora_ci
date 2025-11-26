@@ -2270,14 +2270,28 @@ public class UserServiceImpl implements UserService {
         }
     }
 
-
     @Override
     public List<UserLevelModel> getUsersBelowHierarchy(String userId, String orgId) {
         UserEntity loggedInUser = userAdapter.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
         int userHierarchyLevel = loggedInUser.getRole().getHierarchyLevel();
         List<UserEntity> filteredUsers = userAdapter.getAllUsers(orgId, userId, userHierarchyLevel);
-        return userEntityMapper.toModelList(filteredUsers);
+        return userEntityMapper.toUserModelList(filteredUsers);
     }
+
+    @Override
+    public List<GroupModel> getSupervisorGroups(String userId) {
+        List<GroupEntity> entities = userAdapter.getSupervisorGroups(userId);
+        if(entities.isEmpty())throw new IllegalArgumentException("No group found");
+        return userEntityMapper.toModelList(entities);
+    }
+
+    @Override
+    public List<UserLevelModel>getGroupMembers(Long groupId){
+       List<UserEntity> entities= userAdapter.getGroupMembers(groupId);
+       if(entities.isEmpty())throw new IllegalArgumentException("No group found");
+       return userEntityMapper.toUserModelList(entities);
+    }
+
 
 }

@@ -5,10 +5,7 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.LeaveBalance
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.AccrualType;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.mapper.TimeOffPolicyEntityMapper;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.LeaveBalanceModel;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.model.UserWithLeaveBalanceModel;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.services.LeaveBalanceService;
-import com.uniq.tms.tms_microservice.modules.userManagement.entity.GroupEntity;
-import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -40,46 +37,6 @@ public class LeaveBalanceServiceImpl implements LeaveBalanceService {
         return timeOffPolicyEntityMapper.toBalanceModelList(entities);
         }
 
-
-
-    @Override
-    public List<UserWithLeaveBalanceModel> getSupervisorLeave(String userId) {
-        List<GroupEntity> groups = leaveBalanceAdapter.getSupervisorGroups(userId);
-        if (groups.isEmpty()) {
-            throw new RuntimeException("User is not a supervisor");
-        }
-        List<UserWithLeaveBalanceModel> result = new ArrayList<>();
-        for (GroupEntity group : groups) {
-            List<UserEntity> members = leaveBalanceAdapter.getMembers(group.getGroupId(), userId);
-            if (members.isEmpty()) continue;
-
-            List<String> memberIds = members.stream()
-                    .map(UserEntity::getUserId)
-                    .toList();
-
-            List<LeaveBalanceEntity> balances =
-                    leaveBalanceAdapter.getLeaveBalance(memberIds);
-            Map<String, List<LeaveBalanceEntity>> groupedBalances =
-                    balances.stream()
-                            .collect(Collectors.groupingBy(lb -> lb.getUser().getUserId()));
-
-            for (UserEntity member : members) {
-                UserWithLeaveBalanceModel model = new UserWithLeaveBalanceModel();
-                model.setUserId(member.getUserId());
-                model.setUserName(member.getUserName());
-                model.setGroupName(group.getGroupName());
-
-                List<LeaveBalanceEntity> userBalanceList =
-                        groupedBalances.getOrDefault(member.getUserId(), List.of());
-
-                model.setLeaveBalances(
-                        timeOffPolicyEntityMapper.toBalanceModelList(userBalanceList)
-                );
-                result.add(model);
-            }
-        }
-        return result;
-    }
 
     @Override
     public void updateMonthlyLeaveBalance() {
@@ -171,5 +128,8 @@ public class LeaveBalanceServiceImpl implements LeaveBalanceService {
                         (lb1, lb2) -> lb1
                 ));
     }
+
+
+
 
 }

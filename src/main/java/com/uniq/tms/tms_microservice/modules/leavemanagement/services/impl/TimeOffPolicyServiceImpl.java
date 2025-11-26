@@ -375,7 +375,7 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
 
     @Override
     public List<TimeOffPoliciesModel> getAllPolicies() {
-        List<TimeOffPolicyEntity> entities = timeOffPolicyAdapter.findAll();
+        List<TimeOffPolicyEntity> entities = timeOffPolicyAdapter.findByIsActiveTrue();
         if (entities == null || entities.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "No Data Found");
         }
@@ -393,7 +393,7 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
 
     @Override
     public List<TimeOffPoliciesModel> getAllPolicy() {
-        List<TimeOffPolicyEntity> entities= timeOffPolicyAdapter.findAll();
+        List<TimeOffPolicyEntity> entities= timeOffPolicyAdapter.findByIsActiveTrue();
         if (entities==null||entities.isEmpty())throw new  ResponseStatusException(HttpStatus.CONFLICT, "No Data Found");
         return entities.stream().map(timeOffPolicyEntityMapper::toModel).toList();
     }
@@ -424,7 +424,7 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
 
         if (entity==null) new ResponseStatusException(
                 HttpStatus.NOT_FOUND,
-                "No time-off policy found for userId");
+                "No time-off policy found");
         return timeOffPolicyEntityMapper.toModel(entity);
     }
 
@@ -433,7 +433,7 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
         List<TimeOffPolicyEntity> entity=timeOffPolicyAdapter.findByUserId(userId);
         if (entity==null) new ResponseStatusException(
                 HttpStatus.NOT_FOUND,
-                "No time-off policy found for userId");
+                "No time-off policy found ");
         return timeOffPolicyEntityMapper.toModelList(entity);
     }
 

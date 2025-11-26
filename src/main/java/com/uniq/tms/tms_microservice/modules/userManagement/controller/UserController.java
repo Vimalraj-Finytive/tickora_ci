@@ -271,4 +271,20 @@ public class UserController {
         return ResponseEntity.status(result.getStatusCode()).body(result);
     }
 
+    @GetMapping("groups/list")
+    public ResponseEntity<ApiResponse<List<GroupDto>>> getSupervisorGroups(
+            @RequestHeader("Authorization") String token) {
+        String userId = authHelper.getUserId();
+        ApiResponse<List<GroupDto>> response = userFacade.getSupervisorGroups(userId);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
+
+    @GetMapping("groupUsers/{groupId}")
+    public ResponseEntity<ApiResponse<List<UserLevelDto>>> getGroupMembers(
+            @RequestHeader("Authorization") String token,
+            @PathVariable Long groupId) {
+        ApiResponse<List<UserLevelDto>> response = userFacade.getGroupMembers(groupId);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
+
 }

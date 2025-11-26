@@ -356,6 +356,7 @@ public class PayRollServiceImpl implements PayRollService {
                 return entityMapper.toModel(entity);
     }
 
+    @Override
     public void updatePayroll(PayRollUpdate model) {
         List<UserEntity> users = userAdapter.getUsersByIds(model.getUserId());
         PayRollEntity payroll = payRollAdapter.getPayRoll(model.getPayRollId());

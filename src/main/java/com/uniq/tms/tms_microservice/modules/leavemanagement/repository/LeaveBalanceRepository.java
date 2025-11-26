@@ -15,26 +15,23 @@ import java.time.LocalDate;
 @Repository
 public interface LeaveBalanceRepository extends JpaRepository<LeaveBalanceEntity, Long> {
 
-    LeaveBalanceEntity findByPolicy_PolicyIdAndUser_UserId(String policyId,String userId);
+    LeaveBalanceEntity findByPolicy_PolicyIdAndUser_UserId(String policyId, String userId);
 
     @Transactional
     @Modifying
     @Query("DELETE FROM LeaveBalanceEntity lb WHERE lb.policy.policyId = :policyId")
     void deleteByPolicyId(String policyId);
 
-   Optional<LeaveBalanceEntity> findTopByUser_UserIdOrderByLeaveBalanceIdDesc(String userId);
+    Optional<LeaveBalanceEntity> findTopByUser_UserIdOrderByLeaveBalanceIdDesc(String userId);
 
     @Query("""
-        SELECT lb FROM LeaveBalanceEntity lb
-        WHERE lb.policy.policyId = :policyId
-    """)
+                SELECT lb FROM LeaveBalanceEntity lb
+                WHERE lb.policy.policyId = :policyId
+            """)
     List<LeaveBalanceEntity> findByPolicyId(@Param("policyId") String policyId);
 
     @Query("SELECT lb FROM LeaveBalanceEntity lb JOIN FETCH lb.policy WHERE lb.user.userId = :userId")
     List<LeaveBalanceEntity> findLeaveBalanceByUserId(@Param("userId") String userId);
-
-
-
 
     @Query("SELECT lb FROM LeaveBalanceEntity lb " +
             "JOIN FETCH lb.policy p " +
@@ -88,4 +85,6 @@ public interface LeaveBalanceRepository extends JpaRepository<LeaveBalanceEntity
     List<LeaveBalanceEntity> findBalancesByYearAndAccrualType(
             @Param("year") int year,
             @Param("accrualType") AccrualType accrualType);
+
+
 }

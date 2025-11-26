@@ -3,7 +3,6 @@ package com.uniq.tms.tms_microservice.modules.leavemanagement.facade;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.AdminStatusUpdateDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.EmployeeStatusUpdateDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeOffRequestDto;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.mapper.TimeOffPolicyEntityMapper;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.AdminStatusUpdate;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.EmployeeStatusUpdate;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeOffRequest;
@@ -222,13 +221,6 @@ public class TimeOffFacade {
         return new ApiResponse<>(200, "Status fetched", dto);
     }
 
-    public ApiResponse<List<UserWithLeaveBalanceDto>> getSupervisorLeave(String userId) {
-        List<UserWithLeaveBalanceModel> modelList =
-                leaveBalanceService.getSupervisorLeave(userId);
-        List<UserWithLeaveBalanceDto> dtoList = modelList.stream()
-                .map(timeoffPolicyDtoMapper::toDto)
-                .toList();
-        return new ApiResponse<>( 200,"Supervisor leave balance fetched successfully", dtoList);
-    }
+
 
 }

@@ -9,7 +9,7 @@ public interface TimeOffPolicyAdapter {
     TimeOffPolicyEntity savePolicy(TimeOffPolicyEntity policy);
     TimeOffPolicyEntity findByPolicyId(String policyId);
     List<TimeOffPolicyEntity> findPoliciesByIds(List<String> policyIds);
-    List<TimeOffPolicyEntity> findAll();
+    List<TimeOffPolicyEntity> findByIsActiveTrue();
     TimeOffPolicyEntity findById(String id);
     List<String> findUserIdsByPolicyId(String policyId);
     String findUsernameByUserId(String userId);

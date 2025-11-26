@@ -1,6 +1,7 @@
 package com.uniq.tms.tms_microservice.modules.userManagement.facade;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.uniq.tms.tms_microservice.modules.userManagement.entity.GroupEntity;
 import com.uniq.tms.tms_microservice.modules.userManagement.model.*;
 import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
 import com.uniq.tms.tms_microservice.modules.userManagement.dto.*;
@@ -408,5 +409,16 @@ public class UserFacade {
         List<UserLevelModel> models = userService.getUsersBelowHierarchy(userId,orgId);
         List<UserLevelDto> dtoList = userDtoMapper.toDtoList(models);
         return new ApiResponse<>(200, "Users fetched successfully", dtoList);
+    }
+
+    public ApiResponse<List<GroupDto>> getSupervisorGroups(String userId) {
+        List<GroupModel> model = userService.getSupervisorGroups(userId);
+        List<GroupDto> dto = userDtoMapper.todtoList(model);
+        return new ApiResponse<>(200, "Supervisor groups fetched successfully", dto);
+    }
+    public ApiResponse<List<UserLevelDto>>getGroupMembers(Long groupId){
+    List<UserLevelModel> model =userService.getGroupMembers(groupId);
+    List<UserLevelDto> dto=userDtoMapper.toDtoList(model);
+    return new ApiResponse<>(200,"Group members fetched successfully",dto);
     }
 }

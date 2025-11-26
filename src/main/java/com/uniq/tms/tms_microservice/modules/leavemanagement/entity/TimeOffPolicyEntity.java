@@ -55,7 +55,7 @@ public class TimeOffPolicyEntity {
     private EntitledType entitledType;
 
     @Column(name = "is_active")
-    private boolean isActive;
+    private Boolean isActive;
 
     @Column(name = "max_carry_forward_units")
     private Integer maxCarryForwardUnits;

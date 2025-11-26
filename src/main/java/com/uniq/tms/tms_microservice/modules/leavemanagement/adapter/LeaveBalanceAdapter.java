@@ -17,9 +17,6 @@ public interface LeaveBalanceAdapter {
     List<LeaveBalanceEntity> findLeaveBalancesByPolicyId(String policyId);
     List<TimeOffPolicyEntity> findByUserId(String userId);
     List<LeaveBalanceEntity> findBalance(String userId);
-    List<UserEntity> getMembers(Long groupId, String supervisorId);
-    List<GroupEntity> getSupervisorGroups(String supervisorId);
-    List<LeaveBalanceEntity> getLeaveBalance(List<String> userIds);
     List<LeaveBalanceEntity> findBalancesByMonthYearAndAccrualType(int month, int year, AccrualType type);
     List<LeaveBalanceEntity> findBalancesByYearAndAccrualType(int year, AccrualType type);
     void saveLeaveBalance(LeaveBalanceEntity leaveBalance);
