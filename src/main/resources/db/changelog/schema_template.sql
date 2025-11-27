@@ -634,7 +634,7 @@ CREATE TABLE IF NOT EXISTS ${schemaName}.user_payroll_history (
     action_type VARCHAR(100),
     action_by VARCHAR(100),
     user_id VARCHAR(20) NOT NULL,
-    user_payroll_amount_id BIGINT,
+    user_payroll_amount_id BIGINT
 );
 
 -- ===========================================================
@@ -703,7 +703,7 @@ CREATE TABLE IF NOT EXISTS timeoff_policies (
     validity_start_date DATE,
     validity_end_date DATE,
     accrual_start_date DATE,
-    reset_frequency VARCHAR(10) CHECK (reset_frequency IN ('MONTHLY','ANNUALLY')),
+    reset_frequency VARCHAR(10) CHECK (reset_frequency IN ('MONTHLY','ANNUALLY','FIXED')),
     entitled_units INT,
     entitled_hours INT,
     entitled_type VARCHAR(10) CHECK (entitled_type IN ('DAY','HOURS','HALF_DAY')),
@@ -722,6 +722,7 @@ CREATE TABLE IF NOT EXISTS user_policies (
     id BIGSERIAL PRIMARY KEY,
     policy_id VARCHAR(20) NOT NULL,
     user_id VARCHAR(20) NOT NULL,
+    entitled_units INT,
     valid_from DATE,
     valid_to DATE,
     assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

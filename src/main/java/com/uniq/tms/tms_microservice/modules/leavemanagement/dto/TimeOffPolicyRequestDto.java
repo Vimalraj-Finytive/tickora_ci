@@ -23,7 +23,6 @@ public class TimeOffPolicyRequestDto {
     private ResetFrequency resetFrequency;
     private EntitledType entitledType;
     private Integer entitledUnits;
-    private Integer entitledHours;
     private Boolean carryForward;
     private Integer maxCarryForwardUnits;
 
@@ -83,15 +82,6 @@ public class TimeOffPolicyRequestDto {
     public void setEntitledUnits(Integer entitledUnits) {
         this.entitledUnits = entitledUnits;
     }
-
-    public Integer getEntitledHours() {
-        return entitledHours;
-    }
-
-    public void setEntitledHours(Integer entitledHours) {
-        this.entitledHours = entitledHours;
-    }
-
 
     public Boolean getCarryForward() {
         return carryForward;

@@ -30,4 +30,6 @@ public interface CalendarAdapter {
     Boolean existsCalendarIdAndHolidayId(String calendarId,String holidayId);
     void deleteByCalendarAndHoliday(String calendarId , String holidayId);
     CalendarEntity findByCalendarIdAndDefaultTrue(CalendarId ids);
+    CalendarEntity findDefaultCalendar();
+
 }

@@ -75,7 +75,6 @@ public class TimeOffRequestAdapterImpl implements TimeOffRequestAdapter {
         return timeoffRequestRepo.findByStartDateAndStatusApproved(date);
     }
 
-
     @Override
     public void saveAllLeaveBalance(List<LeaveBalanceEntity> entities) {
         leaveBalanceRepository.saveAll(entities);
