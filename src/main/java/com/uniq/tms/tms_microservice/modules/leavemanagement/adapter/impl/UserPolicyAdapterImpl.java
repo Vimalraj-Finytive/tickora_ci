@@ -5,9 +5,7 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.UserPolicyEn
 import com.uniq.tms.tms_microservice.modules.leavemanagement.repository.UserPolicyRepository;
 import org.springframework.stereotype.Component;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Component
 public class UserPolicyAdapterImpl implements UserPolicyAdapter {
@@ -48,4 +46,21 @@ public class UserPolicyAdapterImpl implements UserPolicyAdapter {
     public List<UserPolicyEntity> findUserPoliciesByPolicyId(String policyId) {
         return userPolicyRepo.findByPolicyId(policyId);
     }
+
+    @Override
+    public Optional<UserPolicyEntity> findByUserIdAndPolicyId(String userId, String policyId) {
+
+        List<UserPolicyEntity> list = userPolicyRepo.findAllByUserAndPolicy(userId, policyId);
+
+        if (list == null || list.isEmpty())
+            return Optional.empty();
+
+        return Optional.of(list.getFirst());
+    }
+
+    @Override
+    public List<UserPolicyEntity> findAllByPolicyIdsAndUserIds(List<String> policyIds, Set<String> userIds) {
+        return userPolicyRepo.findAllByPolicyIdsAndUserIds(policyIds, userIds);
+    }
+
 }

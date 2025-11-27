@@ -4,6 +4,8 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.UserPolicyEn
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 
 public interface UserPolicyAdapter {
 
@@ -16,4 +18,9 @@ public interface UserPolicyAdapter {
     void deleteUserPolicies(String policyId);
 
     List<UserPolicyEntity> findUserPoliciesByPolicyId(String policyId);
+
+    Optional<UserPolicyEntity> findByUserIdAndPolicyId(String userId, String policyId);
+
+    List<UserPolicyEntity> findAllByPolicyIdsAndUserIds(List<String> policyIds, Set<String> userIds);
+
 }

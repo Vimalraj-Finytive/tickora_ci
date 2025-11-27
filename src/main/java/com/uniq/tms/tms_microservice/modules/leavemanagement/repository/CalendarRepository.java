@@ -38,4 +38,8 @@ public interface CalendarRepository extends JpaRepository<CalendarEntity, String
 
     @Query("SELECT c FROM CalendarEntity c WHERE c.id = :calendarId AND c.isActive = true")
     Optional<CalendarEntity> findByCalendarId(@Param("calendarId") String calendarId);
+
+    @Query("SELECT c FROM CalendarEntity c WHERE c.isDefault = true AND c.isActive = true")
+    CalendarEntity findDefaultCalendar();
+
 }
