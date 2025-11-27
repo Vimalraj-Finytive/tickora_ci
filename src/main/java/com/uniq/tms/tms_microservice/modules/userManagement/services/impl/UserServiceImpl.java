@@ -544,6 +544,14 @@ public class UserServiceImpl implements UserService {
         entity.setPassword(PasswordUtil.encryptPassword(generatedPass));
         entity.setDefaultPassword(true);
         entity.setActive(true);
+
+        CalendarEntity calendarEntity=calendarAdapter.findDefaultCalendar();
+        if(calendarEntity!=null)
+            entity.setCalendar(calendarEntity);
+
+        else
+            entity.setCalendar(null);
+
         entity.setCreatedAt(LocalDateTime.now());
         return entity;
     }
@@ -655,6 +663,14 @@ public class UserServiceImpl implements UserService {
         }
         entity.setWorkSchedule(scheduleToSet);
         entity.setActive(true);
+
+        CalendarEntity calendarEntity=calendarAdapter.findDefaultCalendar();
+        if(calendarEntity!=null)
+            entity.setCalendar(calendarEntity);
+
+        else
+            entity.setCalendar(null);
+
         entity.setCreatedAt(LocalDateTime.now());
         log.info("Saving user: {}", userMiddleware.getUserName());
         UserEntity savedUserEntity = userAdapter.saveUser(entity);

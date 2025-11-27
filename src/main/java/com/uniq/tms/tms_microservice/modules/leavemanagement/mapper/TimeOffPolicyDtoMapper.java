@@ -17,6 +17,7 @@ public interface TimeOffPolicyDtoMapper {
 
     EntitledTypeDropdownDto toDto(EntitledTypeDropdownModel model);
 
+
     TimeOffPolicyBulkAssignModel toBulkAssignModel(TimeOffPolicyBulkAssignRequestDto dto);
 
     TimeOffPolicyInactivateModel toInactivateModel(TimeOffPolicyInactivateRequestDto dto);

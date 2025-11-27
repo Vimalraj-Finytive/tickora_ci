@@ -8,6 +8,8 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 
 @Repository
 public interface UserPolicyRepository extends JpaRepository<UserPolicyEntity, Long> {
@@ -30,5 +32,19 @@ public interface UserPolicyRepository extends JpaRepository<UserPolicyEntity, Lo
     List<String> findUserIdsByPolicyId(@Param("policyId") String policyId);
 
 
+    @Query("SELECT up FROM UserPolicyEntity up " +
+            "WHERE up.user.userId = :userId AND up.policy.policyId = :policyId " +
+            "ORDER BY up.validTo DESC NULLS LAST, up.id DESC")
+    List<UserPolicyEntity> findAllByUserAndPolicy(
+            @Param("userId") String userId,
+            @Param("policyId") String policyId
+    );
+
+    @Query("SELECT up FROM UserPolicyEntity up " +
+            "WHERE up.policy.policyId IN :policyIds AND up.user.userId IN :userIds")
+    List<UserPolicyEntity> findAllByPolicyIdsAndUserIds(
+            @Param("policyIds") List<String> policyIds,
+            @Param("userIds") Set<String> userIds
+    );
 
 }

@@ -634,12 +634,7 @@ CREATE TABLE IF NOT EXISTS ${schemaName}.user_payroll_history (
     action_type VARCHAR(100),
     action_by VARCHAR(100),
     user_id VARCHAR(20) NOT NULL,
-    user_payroll_amount_id BIGINT,
-
-   CONSTRAINT fk_user_history_user
-         FOREIGN KEY (user_id)
-         REFERENCES ${schemaName}.users(user_id)
-         ON DELETE CASCADE
+    user_payroll_amount_id BIGINT
 );
 
 -- ===========================================================
@@ -708,7 +703,7 @@ CREATE TABLE IF NOT EXISTS timeoff_policies (
     validity_start_date DATE,
     validity_end_date DATE,
     accrual_start_date DATE,
-    reset_frequency VARCHAR(10) CHECK (reset_frequency IN ('MONTHLY','ANNUALLY')),
+    reset_frequency VARCHAR(10) CHECK (reset_frequency IN ('MONTHLY','ANNUALLY','FIXED')),
     entitled_units INT,
     entitled_hours INT,
     entitled_type VARCHAR(10) CHECK (entitled_type IN ('DAY','HOURS','HALF_DAY')),
@@ -788,10 +783,7 @@ CREATE TABLE IF NOT EXISTS timeoff_request_history (
     action_type VARCHAR(50) NOT NULL,
     action_by VARCHAR(50) NOT NULL,
     action_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_history_request
-        FOREIGN KEY (timeoff_request_id) REFERENCES timeoff_request(timeoff_request_id)
-        ON DELETE CASCADE
+    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- ===========================================================
@@ -1248,7 +1240,7 @@ BEGIN
             NEW.id
         );
 
-    ELSIF (TG_OP = 'DELETE') THEN
+ ELSIF (TG_OP = 'DELETE') THEN
         INSERT INTO ${schemaName}.payroll_history (
             action_at,
             action_type,
@@ -1260,15 +1252,23 @@ BEGIN
             CURRENT_USER,
             OLD.id
         );
+
+        RETURN OLD;
     END IF;
 
-    RETURN NULL;
+    RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
---changeset system:create-trg-payroll-history endDelimiter://
-CREATE TRIGGER trg_payroll_history
-AFTER INSERT OR UPDATE OR DELETE ON ${schemaName}.payroll
+--changeset system:create-trg-payroll-history-ins-upd endDelimiter://
+CREATE TRIGGER trg_payroll_history_ins_upd
+AFTER INSERT OR UPDATE ON ${schemaName}.payroll
+FOR EACH ROW
+EXECUTE FUNCTION ${schemaName}.log_payroll_history();
+
+--changeset system:create-trg-payroll-history-delete endDelimiter://
+CREATE TRIGGER trg_payroll_history_delete
+BEFORE DELETE ON ${schemaName}.payroll
 FOR EACH ROW
 EXECUTE FUNCTION ${schemaName}.log_payroll_history();
 
@@ -1320,16 +1320,21 @@ BEGIN
             CURRENT_USER,
             NOW()
         );
+        RETURN OLD;
     END IF;
 
-    RETURN NULL; -- AFTER trigger
+    RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
---changeset system:create-trg-timeoff-request-history endDelimiter://
-CREATE TRIGGER trg_timeoff_request_history
-AFTER INSERT OR UPDATE OR DELETE ON ${schemaName}.timeoff_request
+--changeset system:create-trg-timeoff-request-history-ins-upd endDelimiter://
+CREATE TRIGGER trg_timeoff_request_history_ins_upd
+AFTER INSERT OR UPDATE ON ${schemaName}.timeoff_request
 FOR EACH ROW
 EXECUTE FUNCTION ${schemaName}.log_timeoff_request_history();
 
-
+--changeset system:create-trg-timeoff-request-history-delete endDelimiter://
+CREATE TRIGGER trg_timeoff_request_history_delete
+BEFORE DELETE ON ${schemaName}.timeoff_request
+FOR EACH ROW
+EXECUTE FUNCTION ${schemaName}.log_timeoff_request_history();
