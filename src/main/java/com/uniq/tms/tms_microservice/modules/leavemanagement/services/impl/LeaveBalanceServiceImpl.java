@@ -1,15 +1,18 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.services.impl;
 
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.LeaveBalanceAdapter;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.TimeOffPolicyAdapter;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.record.UserPolicyKey;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.LeaveBalanceEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.AccrualType;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.ResetFrequency;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.mapper.TimeOffPolicyEntityMapper;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.LeaveBalanceModel;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.record.UserPolicyProjection;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.services.LeaveBalanceService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
@@ -24,10 +27,12 @@ public class LeaveBalanceServiceImpl implements LeaveBalanceService {
        private static final Logger log = LoggerFactory.getLogger(TimeOffPolicyServiceImpl.class);
 
        private final LeaveBalanceAdapter leaveBalanceAdapter;
+       private final TimeOffPolicyAdapter timeOffPolicyAdapter;
        private final TimeOffPolicyEntityMapper timeOffPolicyEntityMapper;
 
-    public LeaveBalanceServiceImpl(LeaveBalanceAdapter leaveBalanceAdapter, TimeOffPolicyEntityMapper timeOffPolicyEntityMapper) {
+    public LeaveBalanceServiceImpl(LeaveBalanceAdapter leaveBalanceAdapter, TimeOffPolicyAdapter timeOffPolicyAdapter, TimeOffPolicyEntityMapper timeOffPolicyEntityMapper) {
         this.leaveBalanceAdapter = leaveBalanceAdapter;
+        this.timeOffPolicyAdapter = timeOffPolicyAdapter;
         this.timeOffPolicyEntityMapper = timeOffPolicyEntityMapper;
     }
 
@@ -61,32 +66,98 @@ public class LeaveBalanceServiceImpl implements LeaveBalanceService {
     private void updateLeaveBalance(List<LeaveBalanceEntity> currentBalances, AccrualType type){
 
         List<LeaveBalanceEntity> nextLeaveBalance = new ArrayList<>();
+        List<UserPolicyProjection> result = timeOffPolicyAdapter.findUserPolicyValidTo();
+        Map<UserPolicyKey, LocalDate> validToMap = result.stream()
+                .collect(Collectors.toMap(
+                        UserPolicyProjection::key,
+                        UserPolicyProjection::validTo
+                ));
         for (LeaveBalanceEntity current : currentBalances) {
             log.info("loop started");
+            String userId = current.getUser().getUserId();
+            String policyId = current.getPolicy().getPolicyId();
+            UserPolicyKey key = new UserPolicyKey(userId, policyId);
+            LocalDate validTo = validToMap.get(key);
+            if ( validTo != null && validTo.isBefore(LocalDate.now(zoneId))){
+                continue;
+            }
             LeaveBalanceEntity next = new LeaveBalanceEntity();
             next.setPolicy(current.getPolicy());
-            next.setUserId(current.getUser().getUserId());
+            next.setUser(current.getUser());
             log.info("type");
+            double carry =  current.getPolicy().getMaxCarryForwardUnits();
+            double expiredUnits = 0.0;
+            double totalUnits = 0.0;
             if (type == AccrualType.MONTHLY) {
+                if (current.getPolicy().getResetFrequency() == ResetFrequency.ANNUALLY) {
+                    boolean isResetDay = LocalDate.now().getDayOfYear() == 1;
+                    if (isResetDay) {
+                        if (current.getPolicy().getCarryForward()) {
+                            if (carry < current.getPolicy().getEntitledUnits()) {
+                                expiredUnits = current.getPolicy().getEntitledUnits() - carry;
+                            } else {
+                                carry = current.getBalanceUnits();
+                            }
+                            totalUnits = current.getBalanceUnits() + carry;
+                        } else {
+                            expiredUnits = current.getBalanceUnits();
+                            carry = 0.0;
+                            totalUnits = current.getPolicy().getEntitledUnits();
+                        }
+                    } else {
+                        carry = 0.0;
+                        totalUnits = current.getBalanceUnits() + current.getPolicy().getEntitledUnits();
+                    }
+                }
+                else if (current.getPolicy().getResetFrequency() == ResetFrequency.MONTHLY) {
+                    if (current.getPolicy().getCarryForward()) {
+                        if (carry < current.getBalanceUnits()) {
+                            expiredUnits = current.getBalanceUnits() - carry;
+                        } else {
+                            carry = current.getBalanceUnits();
+                        }
+                        totalUnits = carry + current.getPolicy().getEntitledUnits();
+                    }else {
+                        carry = 0.0;
+                        totalUnits = current.getPolicy().getEntitledUnits();
+                    }
+                }
                 log.info("month");
-                next.setPeriodStartDate(current.getPeriodStartDate().plusMonths(1));
-                next.setPeriodEnd(current.getPeriodEnd().plusMonths(1));
-                next.setNextAccrualDate(LocalDate.now(zoneId).plusMonths(1));
+                next.setPeriodStartDate(LocalDate.now(zoneId));
+                LocalDate periodEnd = current.getPeriodEnd().plusMonths(1);
+                LocalDate nextAccrual = LocalDate.now(zoneId).plusMonths(1);
+                if (periodEnd.isAfter(validTo)){
+                    periodEnd = validTo;
+                    nextAccrual = null;
+                }
+                next.setPeriodEnd(periodEnd);
+                next.setNextAccrualDate(nextAccrual);
                 log.info("month saved");
-            }
-            else {
+            } else {
+                if (current.getPolicy().getCarryForward()) {
+                    if (carry < current.getBalanceUnits()){
+                        expiredUnits = current.getBalanceUnits() - carry;
+                    }
+                    else {
+                        carry = current.getBalanceUnits();
+                    }
+                    totalUnits = carry + current.getPolicy().getEntitledUnits();
+                }
+                else {
+                    expiredUnits = current.getBalanceUnits();
+                    carry = 0.0;
+                    totalUnits = current.getPolicy().getEntitledUnits();
+                }
                 next.setPeriodStartDate(current.getPeriodStartDate().plusYears(1));
                 next.setPeriodEnd(current.getPeriodEnd().plusYears(1));
                 next.setNextAccrualDate(LocalDate.now(zoneId).plusYears(1));
             }
             log.info("before carryForward{}",current.getPolicy().getCarryForward());
-            double carryForward = current.getPolicy().getCarryForward() ? current.getCarryForwardUnits() : 0.0;
-            log.info("get carryforward{}:",carryForward);
-            next.setCarryForwardUnits((double) current.getPolicy().getMaxCarryForwardUnits());
-            next.setTotalUnits(current.getTotalUnits());
-            next.setExpiredUnits(0.0);
+            next.setCarryForwardUnits(carry);
+            next.setTotalUnits(totalUnits);
+            next.setExpiredUnits(expiredUnits);
             next.setLeaveTakenUnits(0.0);
-            next.setBalanceUnits(next.getTotalUnits() + carryForward);
+            next.setBalanceUnits(totalUnits);
             next.setLastAccrualDate(LocalDate.now());
             log.info("before add");
             nextLeaveBalance.add(next);
@@ -128,8 +199,4 @@ public class LeaveBalanceServiceImpl implements LeaveBalanceService {
                         (lb1, lb2) -> lb1
                 ));
     }
-
-
-
-
 }

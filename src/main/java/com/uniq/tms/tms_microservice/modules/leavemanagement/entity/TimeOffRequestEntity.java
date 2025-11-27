@@ -46,8 +46,6 @@ public class TimeOffRequestEntity {
     @Column(name = "units_requested")
     private Integer unitsRequested;
 
-    @Column(name = "hours_requested")
-    private Integer hoursRequested;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 20)
@@ -142,14 +140,6 @@ public class TimeOffRequestEntity {
 
     public void setUnitsRequested(Integer unitsRequested) {
         this.unitsRequested = unitsRequested;
-    }
-
-    public Integer getHoursRequested() {
-        return hoursRequested;
-    }
-
-    public void setHoursRequested(Integer hoursRequested) {
-        this.hoursRequested = hoursRequested;
     }
 
     public Status getStatus() {

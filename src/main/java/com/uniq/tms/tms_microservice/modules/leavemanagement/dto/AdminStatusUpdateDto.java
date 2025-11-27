@@ -1,14 +1,17 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.dto;
 
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.Status;
-
+import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
 
 public class AdminStatusUpdateDto {
 
+    @NotNull(message = "User ID cannot be null")
     private String userId;
+    @NotNull(message = "Policy ID cannot be null")
     private String policyId;
     private Status status;
+    @NotNull(message = "Request date cannot be null")
     private LocalDate requestDate;
 
     public String getUserId() {
