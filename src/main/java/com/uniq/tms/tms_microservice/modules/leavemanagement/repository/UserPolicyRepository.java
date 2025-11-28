@@ -18,7 +18,7 @@ public interface UserPolicyRepository extends JpaRepository<UserPolicyEntity, Lo
     List<Object[]> findUserPolicyMap(@Param("userIds") List<String> userIds);
 
     @Query("SELECT up FROM UserPolicyEntity up WHERE up.user.userId IN :userIds")
-    List<UserPolicyEntity> findByUserIds(List<String> userIds);
+    List<UserPolicyEntity> findByUser_UserIds(List<String> userIds);
 
     @Transactional
     @Modifying

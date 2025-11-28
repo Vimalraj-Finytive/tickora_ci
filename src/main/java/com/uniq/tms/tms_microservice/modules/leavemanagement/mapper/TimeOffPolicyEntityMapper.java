@@ -33,6 +33,9 @@ public interface TimeOffPolicyEntityMapper {
     @Mapping(source = "policy.policyName", target = "policyName")
     TimeOffRequestResponseModel toModel(TimeOffRequestEntity entity);
 
+    @Mapping(source = "policy.policyName", target = "policyName")
+    TimeOffRequestGroupModel toGroupModel(TimeOffRequestEntity entity);
+
     List<TimeOffRequestResponseModel> toResponseModelList(List<TimeOffRequestEntity> entities);
     @Mapping(source = "policy.policyName", target = "policyName")
     LeaveBalanceModel toModel(LeaveBalanceEntity entity);

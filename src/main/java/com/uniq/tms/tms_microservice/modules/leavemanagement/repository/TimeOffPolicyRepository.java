@@ -26,15 +26,15 @@ public interface TimeOffPolicyRepository extends JpaRepository<TimeOffPolicyEnti
     List<TimeOffPolicyEntity> findPolicyByUserId(@Param("userId") String userId);
 
     @Query("""
-    SELECT new com.uniq.tms.tms_microservice.modules.leavemanagement.record.UserPolicyProjection(
-       new com.uniq.tms.tms_microservice.modules.leavemanagement.record.UserPolicyKey(
-            up.user.userId,
-            up.policy.policyId
-        ),
-        up.validTo
-    )
-    FROM UserPolicyEntity up
-    """)
+            SELECT new com.uniq.tms.tms_microservice.modules.leavemanagement.record.UserPolicyProjection(
+               new com.uniq.tms.tms_microservice.modules.leavemanagement.record.UserPolicyKey(
+                    up.user.userId,
+                    up.policy.policyId
+                ),
+                up.validTo
+            )
+            FROM UserPolicyEntity up
+            """)
     List<UserPolicyProjection> findUserPolicyValidTo();
 
     @Query(
@@ -44,15 +44,14 @@ public interface TimeOffPolicyRepository extends JpaRepository<TimeOffPolicyEnti
     List<TimeOffPolicyEntity> findByIsActiveTrue();
 
     @Query("""
-    SELECT COUNT(p) > 0
-    FROM TimeOffPolicyEntity p
-    WHERE p.policyId = :policyId
-      AND p.isActive = true
-      AND p.validityStartDate <= :date
-      AND (p.validityEndDate IS NULL OR :date <= p.validityEndDate)
-    """)
+            SELECT COUNT(p) > 0
+            FROM TimeOffPolicyEntity p
+            WHERE p.policyId = :policyId
+              AND p.isActive = true
+              AND p.validityStartDate <= :date
+              AND (p.validityEndDate IS NULL OR :date <= p.validityEndDate)
+            """)
     boolean existsValidPolicy(String policyId, LocalDate date);
-
 }
 
 

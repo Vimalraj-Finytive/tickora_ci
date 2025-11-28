@@ -4,6 +4,7 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.LeaveBalanc
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.TimeOffPolicyAdapter;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.TimeOffRequestAdapter;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.UserPolicyAdapter;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeOffccDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.LeaveBalanceEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeOffPolicyEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeOffRequestEntity;
@@ -12,13 +13,16 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.*;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.mapper.TimeOffPolicyEntityMapper;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.*;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.services.TimeOffRequestService;
+import com.uniq.tms.tms_microservice.shared.helper.AuthHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import java.time.*;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Stream;
 
 @Service
@@ -33,13 +37,15 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
     private final LeaveBalanceAdapter leaveBalanceAdapter;
     private final TimeOffPolicyAdapter timeOffPolicyAdapter;
     private final UserPolicyAdapter userPolicyAdapter;
+    private final AuthHelper authHelper;
 
-    public TimeOffRequestServiceImpl(TimeOffRequestAdapter timeOffRequestAdapter, TimeOffPolicyEntityMapper TimeOffPolicyEntityMapper, LeaveBalanceAdapter leaveBalanceAdapter, TimeOffPolicyAdapter timeOffPolicyAdapter, UserPolicyAdapter userPolicyAdapter) {
+    public TimeOffRequestServiceImpl(TimeOffRequestAdapter timeOffRequestAdapter, TimeOffPolicyEntityMapper TimeOffPolicyEntityMapper, LeaveBalanceAdapter leaveBalanceAdapter, TimeOffPolicyAdapter timeOffPolicyAdapter, UserPolicyAdapter userPolicyAdapter, AuthHelper authHelper) {
         this.timeOffRequestAdapter = timeOffRequestAdapter;
         this.TimeOffPolicyEntityMapper = TimeOffPolicyEntityMapper;
         this.leaveBalanceAdapter = leaveBalanceAdapter;
         this.timeOffPolicyAdapter = timeOffPolicyAdapter;
         this.userPolicyAdapter = userPolicyAdapter;
+        this.authHelper = authHelper;
     }
 
     @Override
@@ -104,7 +110,7 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
             entity.setEndTime(request.getEndTime());
             entity.setUnitsRequested(request.getUnitsRequested());
         }
-        entity.setUserId(request.getUserId());
+//        entity.setUserId(request.getUserId());
         entity.setPolicy(policy);
         entity.setStatus(Status.PENDING);
         entity.setReason(request.getReason());
@@ -154,7 +160,7 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
        if (days != request.getUnitsRequested()){
            throw new IllegalArgumentException("Invalid request format for the selected entitled type");
        }
-       entity.setUserId(request.getUserId());
+//       entity.setUserId(request.getUserId());
        entity.setPolicy(policy);
        entity.setStartDate(request.getStartDate());
        entity.setEndDate(request.getEndDate());
@@ -204,7 +210,7 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
             timeOffRequestAdapter.saveRequest(entity);
             return;
         }
-        LeaveBalanceEntity leaveBalance = leaveBalanceAdapter.findForPeriod(entity.getPolicy().getPolicyId(), entity.getUserId(), entity.getStartDate(), entity.getEndDate());
+        LeaveBalanceEntity leaveBalance = leaveBalanceAdapter.findForPeriod(entity.getPolicy().getPolicyId(), entity.getUser().getUserId(), entity.getStartDate(), entity.getEndDate());
         if ((entity.getPolicy().getEntitledType() == EntitledType.DAY || entity.getPolicy().getEntitledType() == EntitledType.HALF_DAY )&&(model.getUnitsRequested() != null && model.getStartDate() != null && model.getEndDate() != null)) {
 
             if (model.getUnitsRequested() != days){
@@ -290,7 +296,7 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
 
     public void deductLeaveBalance(TimeOffRequestEntity entity, Integer requested){
 
-        LeaveBalanceEntity leaveBalance = leaveBalanceAdapter.findForPeriod(entity.getPolicy().getPolicyId(), entity.getUserId(), entity.getStartDate(), entity.getEndDate());
+        LeaveBalanceEntity leaveBalance = leaveBalanceAdapter.findForPeriod(entity.getPolicy().getPolicyId(), entity.getUser().getUserId(), entity.getStartDate(), entity.getEndDate());
         if(leaveBalance != null && entity.getPolicy().getEntitledType() == EntitledType.HALF_DAY ) {
             log.info("leave balance find");
             leaveBalance.setLeaveTakenUnits(leaveBalance.getLeaveTakenUnits() + requested*0.5);
@@ -313,7 +319,7 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
     }
 
     public void addLeaveBalance(TimeOffRequestEntity entity, Integer requested){
-        LeaveBalanceEntity leaveBalance = leaveBalanceAdapter.findForPeriod(entity.getPolicy().getPolicyId(), entity.getUserId(), entity.getStartDate(), entity.getEndDate());
+        LeaveBalanceEntity leaveBalance = leaveBalanceAdapter.findForPeriod(entity.getPolicy().getPolicyId(), entity.getUser().getUserId(), entity.getStartDate(), entity.getEndDate());
         if(leaveBalance != null && entity.getPolicy().getEntitledType() == EntitledType.HALF_DAY ) {
             log.info("leave balance finds");
             leaveBalance.setLeaveTakenUnits(leaveBalance.getLeaveTakenUnits() - requested*0.5);
@@ -347,9 +353,9 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
 
     @Override
     public List<StatusEnumModel> getStatus() {
-        List<StatusEnumModel> list=new ArrayList<>();
-        for(Compensation e: Compensation.values()){
-            StatusEnumModel model= new StatusEnumModel(e.name(),e.getValue());
+        List<StatusEnumModel> list = new ArrayList<>();
+        for (Compensation e : Compensation.values()) {
+            StatusEnumModel model = new StatusEnumModel(e.name(), e.getValue());
             list.add(model);
         }
         return list;
@@ -382,16 +388,46 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
     }
 
     @Override
-    public List<TimeOffRequestResponseModel> getRequestsByDateRange(LocalDate fromDate, LocalDate toDate) {
-        if (fromDate == null || toDate == null) {
-            throw new IllegalArgumentException("fromDate and toDate are required");}
-        List<TimeOffRequestUserModel> list = timeOffRequestAdapter.filterWithUser(fromDate, toDate);
-        List<TimeOffRequestResponseModel> response = new ArrayList<>();
-        for (TimeOffRequestUserModel item : list) {
-            TimeOffRequestResponseModel model = TimeOffPolicyEntityMapper.toModel(item.getRequest());
-            model.setUserName(item.getUserName());
-            response.add(model);
+    public Map<String, List<TimeOffRequestGroupModel>> filterRequests(TimeOffccDto dto) {
+        LocalDate fromDate = dto.getFromDate();
+        LocalDate toDate = dto.getToDate();
+        String inputUserId = dto.getUserId();
+        String finalUserId;
+        boolean creatorMode;
+        if (inputUserId == null || inputUserId.trim().isEmpty()) {
+            finalUserId = authHelper.getUserId();
+            creatorMode = true;
+        } else {
+            finalUserId = inputUserId;
+            creatorMode = false;
         }
-        return response;
+        if (fromDate == null || toDate == null) {
+            throw new IllegalArgumentException("fromDate and toDate are required");
+        }
+        List<TimeOffRequestUserModel> list =
+                creatorMode
+                        ? timeOffRequestAdapter.filterCreatedByUser(fromDate, toDate, finalUserId)
+                        : timeOffRequestAdapter.filterWithUser(fromDate, toDate, finalUserId);
+
+        List<TimeOffRequestGroupModel> toList = new ArrayList<>();
+        List<TimeOffRequestGroupModel> ccList = new ArrayList<>();
+
+        for (TimeOffRequestUserModel item : list) {
+            TimeOffRequestGroupModel model =
+                    TimeOffPolicyEntityMapper.toGroupModel(item.getRequest());
+            model.setUserId(item.getUserId());
+            model.setUserName(item.getUserName());
+
+            if (item.getType() == ViewerType.APPROVER)
+                toList.add(model);
+            else if (item.getType() == ViewerType.VIEWER)
+                ccList.add(model);
+        }
+
+        Map<String, List<TimeOffRequestGroupModel>> map = new HashMap<>();
+        map.put("TO", toList);
+        map.put("CC", ccList);
+
+        return map;
     }
 }

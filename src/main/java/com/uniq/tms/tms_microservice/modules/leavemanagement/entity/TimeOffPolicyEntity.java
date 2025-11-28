@@ -74,7 +74,6 @@ public class TimeOffPolicyEntity {
 
     @OneToMany(mappedBy = "policy", cascade = CascadeType.ALL)
     private List<TimeOffRequestEntity> requests = new ArrayList<>();
-
     public Integer getEntitledHours() {
         return entitledHours;
     }

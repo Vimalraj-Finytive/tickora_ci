@@ -1,6 +1,7 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.entity;
 
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.Status;
+import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -25,8 +26,9 @@ public class TimeOffRequestEntity {
     @JoinColumn(name = "policy_id")
     private TimeOffPolicyEntity policy;
 
-    @Column(name = "user_id", length = 20, nullable = false)
-    private String userId;
+    @ManyToOne
+    @JoinColumn(name = "user_id")
+    private UserEntity user;
 
     @Column(name = "request_date", nullable = false)
     private LocalDate requestDate;
@@ -78,12 +80,12 @@ public class TimeOffRequestEntity {
         this.policy = policy;
     }
 
-    public String getUserId() {
-        return userId;
+    public UserEntity getUser() {
+        return user;
     }
 
-    public void setUserId(String userId) {
-        this.userId = userId;
+    public void setUser(UserEntity user) {
+        this.user = user;
     }
 
     public LocalDate getRequestDate() {
@@ -173,4 +175,5 @@ public class TimeOffRequestEntity {
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
     }
+
 }
