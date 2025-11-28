@@ -10,54 +10,79 @@ import java.time.LocalDate;
 import java.util.List;
 
 @Repository
-public interface TimeOffRequestRepository extends JpaRepository<TimeOffRequestEntity,Long> {
+public interface TimeOffRequestRepository extends JpaRepository<TimeOffRequestEntity, Long> {
 
-    List<TimeOffRequestEntity> findByUserId(String userId);
+    List<TimeOffRequestEntity> findByUser_UserId(String userId);
+
     List<TimeOffRequestEntity> findByStartDate(LocalDate startDate);
-    boolean existsByUserIdAndPolicy_PolicyIdAndRequestDate(String userId, String policyId, LocalDate requestDate);
+
+    boolean existsByUser_UserIdAndPolicy_PolicyIdAndRequestDate(String userId, String policyId, LocalDate requestDate);
 
     @Query("SELECT t FROM TimeOffRequestEntity t " +
             "WHERE t.policy.policyId = :policyId " +
-            "AND t.userId = :userId " +
+            "AND t.user.userId = :userId " +
             "AND t.requestDate = :requestDate")
-    TimeOffRequestEntity findByUserIdAndRequestDate(
+    TimeOffRequestEntity findByUser_UserIdAndRequestDate(
             @Param("policyId") String policyId,
             @Param("userId") String userId,
             @Param("requestDate") LocalDate requestDate);
 
     @Query("""
-SELECT new com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeOffRequestUserModel(
-    r,
-    u.userName
-)
-FROM TimeOffRequestEntity r
-JOIN UserEntity u ON u.userId = r.userId
-WHERE r.startDate <= :toDate
-  AND r.endDate   >= :fromDate
-""")
+            SELECT new com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeOffRequestUserModel(
+                r,
+                u.userId,
+                u.userName,
+                m.type
+            )
+            FROM UsersRequestMappingEntity m
+            JOIN TimeOffRequestEntity r ON r.timeOffRequestId = m.timeOffRequestId
+            JOIN r.user u
+            WHERE m.viewerId = :userId
+              AND r.startDate >= :fromDate
+              AND r.endDate <= :toDate
+            """)
     List<TimeOffRequestUserModel> filterWithUser(
             @Param("fromDate") LocalDate fromDate,
-            @Param("toDate") LocalDate toDate
+            @Param("toDate") LocalDate toDate,
+            @Param("userId") String userId
     );
-
 
     @Query("""
-SELECT new com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeOffRequestUserModel(
-    r,
-    u.userName
-)
-FROM TimeOffRequestEntity r
-JOIN UserEntity u ON u.userId = r.userId
-JOIN RoleEntity role ON role.roleId = u.role.roleId
-WHERE r.startDate <= :toDate
-  AND r.endDate >= :fromDate
-  AND role.hierarchyLevel > :minRoleLevel
-""")
-    List<TimeOffRequestUserModel> filterWithUserAndRole(
+            SELECT new com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeOffRequestUserModel(
+                r,
+                u.userId,
+                u.userName,
+                m.type
+            )
+            FROM UsersRequestMappingEntity m
+            JOIN TimeOffRequestEntity r ON r.timeOffRequestId = m.timeOffRequestId
+            JOIN UserEntity u ON u.userId = m.viewerId
+            WHERE m.requesterId = :userId
+              AND r.startDate >= :fromDate
+              AND r.endDate <= :toDate
+            """)
+    List<TimeOffRequestUserModel> filterCreatedByUser(
             @Param("fromDate") LocalDate fromDate,
             @Param("toDate") LocalDate toDate,
-            @Param("minRoleLevel") int minRoleLevel
+            @Param("userId") String userId
     );
+
+    @Query("""
+            SELECT new com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeOffRequestUserModel(
+                r,
+                u.userName
+            )
+            FROM TimeOffRequestEntity r
+            JOIN r.user u
+            JOIN u.role role
+            WHERE r.startDate <= :toDate
+              AND r.endDate >= :fromDate
+              AND role.hierarchyLevel > :minRoleLevel
+            """)
+    List<TimeOffRequestUserModel> filterWithUserAndRole(
+            @Param("from") LocalDate from,
+            @Param("to") LocalDate to,
+            @Param("minRoleLevel") int minRoleLevel);
 
     @Query("SELECT t FROM TimeOffRequestEntity t " +
             "WHERE t.startDate = :startDate AND t.status = Status.APPROVED")

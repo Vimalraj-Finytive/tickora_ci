@@ -749,7 +749,6 @@ CREATE TABLE IF NOT EXISTS timeoff_request (
     start_time TIME,
     end_time TIME,
     units_requested INT,
-    hours_requested INT,
     status VARCHAR(20) CHECK (status IN ('APPROVED','PENDING','REJECTED','CANCELLED')),
     reason VARCHAR(255),
     created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,

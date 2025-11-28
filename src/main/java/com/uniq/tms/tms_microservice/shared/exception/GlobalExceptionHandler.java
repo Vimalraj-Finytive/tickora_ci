@@ -46,6 +46,16 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
     }
 
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<Object> handleIllegalStateException(IllegalStateException ex) {
+        log.error("Invalid argument: {}", ex.getMessage(), ex);
+        Map<String, Object> body = new HashMap<>();
+        body.put("statusCode", HttpStatus.BAD_REQUEST.value());
+        body.put("message", sanitizeMessage(ex.getMessage()));
+        body.put("data", null);
+        return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
+    }
+
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<Object> handleResponseStatusException(ResponseStatusException ex) {
         log.error("Response status exception: {}", ex.getMessage(), ex);

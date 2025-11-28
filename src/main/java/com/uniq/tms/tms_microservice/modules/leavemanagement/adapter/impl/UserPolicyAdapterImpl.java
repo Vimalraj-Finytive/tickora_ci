@@ -4,8 +4,11 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.UserPolicyA
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.UserPolicyEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.repository.UserPolicyRepository;
 import org.springframework.stereotype.Component;
-
 import java.util.*;
+import java.time.LocalDate;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @Component
 public class UserPolicyAdapterImpl implements UserPolicyAdapter {
@@ -34,7 +37,7 @@ public class UserPolicyAdapterImpl implements UserPolicyAdapter {
 
     @Override
     public List<UserPolicyEntity> findUserPolicyEntities(List<String> userIds) {
-        return userPolicyRepo.findByUserIds(userIds);
+        return userPolicyRepo.findByUser_UserIds(userIds);
     }
 
     @Override
@@ -45,6 +48,11 @@ public class UserPolicyAdapterImpl implements UserPolicyAdapter {
     @Override
     public List<UserPolicyEntity> findUserPoliciesByPolicyId(String policyId) {
         return userPolicyRepo.findByPolicyId(policyId);
+    }
+
+    @Override
+    public boolean isUserPolicyActive(String policyId, String userId, LocalDate date) {
+        return userPolicyRepo.isUserPolicyActive(policyId, userId, date);
     }
 
     @Override

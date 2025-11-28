@@ -10,13 +10,11 @@ public class EmployeeStatusUpdate {
     private Status status;
     private String reason;
     private Integer unitsRequested;
-    private Integer hoursRequested;
     private LocalDate startDate;
     private LocalDate endDate;
     private LocalTime startTime;
     private LocalTime endTime;
     private LocalDate requestDate;
-
 
     public Status getStatus() {
         return status;
@@ -48,14 +46,6 @@ public class EmployeeStatusUpdate {
 
     public void setUnitsRequested(Integer unitsRequested) {
         this.unitsRequested = unitsRequested;
-    }
-
-    public Integer getHoursRequested() {
-        return hoursRequested;
-    }
-
-    public void setHoursRequested(Integer hoursRequested) {
-        this.hoursRequested = hoursRequested;
     }
 
     public String getPolicyId() {

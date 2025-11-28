@@ -22,10 +22,10 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeoffPolicies
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeoffPolicyDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.AccrualTypeEnumModel;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.CompensationEnumModel;
-
 import java.time.LocalDate;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeOffPoliciesModel;
 import java.util.List;
+import java.util.Map;
 
 @Component
 public class TimeOffFacade {
@@ -186,18 +186,11 @@ public class TimeOffFacade {
         return new ApiResponse<>(200, "Policies fetched successfully", dto);
     }
 
-    public ApiResponse<List<TimeoffRequestResponseDto>> filterRequests(LocalDate fromDate, LocalDate toDate) {
-        try {
-            List<TimeOffRequestResponseModel> modelList = timeOffRequestService.getRequestsByDateRange(fromDate, toDate);
-            List<TimeoffRequestResponseDto> dtoList = timeoffPolicyDtoMapper.toDtoList(modelList);
-            return new ApiResponse<>(200, "Requests fetched successfully", dtoList);
-        } catch (IllegalArgumentException ex) {
-            return new ApiResponse<>(400, ex.getMessage(), null);
-        } catch (Exception ex) {
-            return new ApiResponse<>(409, ex.getMessage(), null);
-        }
+    public ApiResponse<Map<String, List<TimeOffRequestGroupDto>>> filterRequests(TimeOffccDto dto) {
+        Map<String, List<TimeOffRequestGroupModel>> model = timeOffRequestService.filterRequests(dto);
+        Map<String, List<TimeOffRequestGroupDto>> dtoMap = timeoffPolicyDtoMapper.toDtoList(model);
+        return new ApiResponse<>(200, "Requests fetched successfully", dtoMap);
     }
-
 
     public ApiResponse<List<TimeoffRequestResponseDto>> filterRequestsBasedOnRole(LocalDate fromDate, LocalDate toDate) {
         try {

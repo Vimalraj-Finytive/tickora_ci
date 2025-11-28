@@ -13,7 +13,6 @@ public class TimeOffRequest {
     private LocalTime startTime;
     private LocalTime endTime;
     private Integer unitsRequested;
-    private Integer hoursRequested;
     private String reason;
     private String to;
     private List<String> cc;
@@ -72,14 +71,6 @@ public class TimeOffRequest {
 
     public void setUnitsRequested(Integer unitsRequested) {
         this.unitsRequested = unitsRequested;
-    }
-
-    public Integer getHoursRequested() {
-        return hoursRequested;
-    }
-
-    public void setHoursRequested(Integer hoursRequested) {
-        this.hoursRequested = hoursRequested;
     }
 
     public String getReason() {
