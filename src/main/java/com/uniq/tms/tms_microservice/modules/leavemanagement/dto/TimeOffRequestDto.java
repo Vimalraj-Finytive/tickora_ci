@@ -1,19 +1,25 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.dto;
 
+import jakarta.validation.constraints.NotNull;
+
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
 
 public class TimeOffRequestDto {
 
+    @NotNull(message = "Policy ID cannot be null")
     private String policyId;
+    @NotNull(message = "User ID cannot be null")
     private String userId;
+    @NotNull(message = "Start date cannot be null")
     private LocalDate startDate;
+    @NotNull(message = "end date cannot be null")
     private LocalDate endDate;
     private LocalTime startTime;
     private LocalTime endTime;
+    @NotNull(message = "unitsRequested cannot be null")
     private Integer unitsRequested;
-    private Integer hoursRequested;
     private String reason;
     private String to;
     private List<String> cc;
@@ -72,14 +78,6 @@ public class TimeOffRequestDto {
 
     public void setUnitsRequested(Integer unitsRequested) {
         this.unitsRequested = unitsRequested;
-    }
-
-    public Integer getHoursRequested() {
-        return hoursRequested;
-    }
-
-    public void setHoursRequested(Integer hoursRequested) {
-        this.hoursRequested = hoursRequested;
     }
 
     public String getReason() {

@@ -4,6 +4,7 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.TimeOffRequ
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.LeaveBalanceEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeOffRequestEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.UsersRequestMappingEntity;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeOffRequestGroupModel;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeOffRequestUserModel;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.repository.LeaveBalanceRepository;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.repository.TimeOffRequestRepository;
@@ -51,8 +52,12 @@ public class TimeOffRequestAdapterImpl implements TimeOffRequestAdapter {
     }
 
     @Override
-    public List<TimeOffRequestUserModel> filterWithUser(LocalDate from, LocalDate to) {
-        return timeoffRequestRepo.filterWithUser(from, to);
+    public List<TimeOffRequestUserModel> filterWithUser(LocalDate from, LocalDate to, String userId) {
+        return timeoffRequestRepo.filterWithUser(from, to,userId);
+    }
+    @Override
+    public List<TimeOffRequestUserModel> filterCreatedByUser(LocalDate from, LocalDate to, String userId) {
+        return timeoffRequestRepo.filterCreatedByUser(from, to,userId);
     }
 
     @Override
@@ -62,12 +67,12 @@ public class TimeOffRequestAdapterImpl implements TimeOffRequestAdapter {
 
     @Override
     public TimeOffRequestEntity getTimeoffRequest(String policyId, String userId, LocalDate requestDate) {
-        return timeoffRequestRepo.findByUserIdAndRequestDate(policyId, userId, requestDate);
+        return timeoffRequestRepo.findByUser_UserIdAndRequestDate(policyId, userId, requestDate);
     }
 
     @Override
     public boolean existsTimeoffRequest(String userId, String policyId, LocalDate requestDate) {
-        return timeoffRequestRepo.existsByUserIdAndPolicy_PolicyIdAndRequestDate(userId, policyId, requestDate);
+        return timeoffRequestRepo.existsByUser_UserIdAndPolicy_PolicyIdAndRequestDate(userId, policyId, requestDate);
     }
 
     @Override

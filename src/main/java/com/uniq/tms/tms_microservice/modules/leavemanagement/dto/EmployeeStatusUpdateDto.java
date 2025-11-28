@@ -1,21 +1,24 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.dto;
 
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.Status;
+import jakarta.validation.constraints.NotNull;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
 
 public class EmployeeStatusUpdateDto {
+    @NotNull(message = "User ID cannot be null")
     private String userId;
+    @NotNull(message = "Policy ID cannot be null")
     private String policyId;
     private Status status;
     private String reason;
     private Integer unitsRequested;
-    private Integer hoursRequested;
     private LocalDate startDate;
     private LocalDate endDate;
     private LocalTime startTime;
     private LocalTime endTime;
+    @NotNull(message = "Request date cannot be null")
     private LocalDate requestDate;
 
 
@@ -51,13 +54,6 @@ public class EmployeeStatusUpdateDto {
         this.unitsRequested = unitsRequested;
     }
 
-    public Integer getHoursRequested() {
-        return hoursRequested;
-    }
-
-    public void setHoursRequested(Integer hoursRequested) {
-        this.hoursRequested = hoursRequested;
-    }
 
     public String getPolicyId() {
         return policyId;

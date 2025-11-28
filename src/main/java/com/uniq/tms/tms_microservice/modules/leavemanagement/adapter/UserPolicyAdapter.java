@@ -1,7 +1,7 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.adapter;
 
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.UserPolicyEntity;
-
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -23,4 +23,5 @@ public interface UserPolicyAdapter {
 
     List<UserPolicyEntity> findAllByPolicyIdsAndUserIds(List<String> policyIds, Set<String> userIds);
 
+    boolean isUserPolicyActive(String policyId, String userId, LocalDate date);
 }

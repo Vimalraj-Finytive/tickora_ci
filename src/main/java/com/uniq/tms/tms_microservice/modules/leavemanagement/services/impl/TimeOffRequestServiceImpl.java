@@ -3,6 +3,8 @@ package com.uniq.tms.tms_microservice.modules.leavemanagement.services.impl;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.LeaveBalanceAdapter;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.TimeOffPolicyAdapter;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.TimeOffRequestAdapter;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.UserPolicyAdapter;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeOffccDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.LeaveBalanceEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeOffPolicyEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeOffRequestEntity;
@@ -11,13 +13,16 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.*;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.mapper.TimeOffPolicyEntityMapper;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.*;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.services.TimeOffRequestService;
+import com.uniq.tms.tms_microservice.shared.helper.AuthHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import java.time.*;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Stream;
 
 @Service
@@ -31,34 +36,50 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
     private final TimeOffPolicyEntityMapper TimeOffPolicyEntityMapper;
     private final LeaveBalanceAdapter leaveBalanceAdapter;
     private final TimeOffPolicyAdapter timeOffPolicyAdapter;
+    private final UserPolicyAdapter userPolicyAdapter;
+    private final AuthHelper authHelper;
 
-    public TimeOffRequestServiceImpl(TimeOffRequestAdapter timeOffRequestAdapter, TimeOffPolicyEntityMapper TimeOffPolicyEntityMapper, LeaveBalanceAdapter leaveBalanceAdapter, TimeOffPolicyAdapter timeOffPolicyAdapter) {
+    public TimeOffRequestServiceImpl(TimeOffRequestAdapter timeOffRequestAdapter, TimeOffPolicyEntityMapper TimeOffPolicyEntityMapper, LeaveBalanceAdapter leaveBalanceAdapter, TimeOffPolicyAdapter timeOffPolicyAdapter, UserPolicyAdapter userPolicyAdapter, AuthHelper authHelper) {
         this.timeOffRequestAdapter = timeOffRequestAdapter;
         this.TimeOffPolicyEntityMapper = TimeOffPolicyEntityMapper;
         this.leaveBalanceAdapter = leaveBalanceAdapter;
         this.timeOffPolicyAdapter = timeOffPolicyAdapter;
+        this.userPolicyAdapter = userPolicyAdapter;
+        this.authHelper = authHelper;
     }
 
     @Override
     public void createRequest(TimeOffRequest request) {
-        TimeOffRequestEntity entity = new TimeOffRequestEntity();
-        TimeOffPolicyEntity policy = timeOffPolicyAdapter.findPolicyById(request.getPolicyId());
+        boolean validPolicy = timeOffPolicyAdapter.existsValidPolicy(request.getPolicyId(), request.getStartDate());
+        boolean validUserPolicy = userPolicyAdapter.isUserPolicyActive(request.getPolicyId(), request.getUserId(), request.getStartDate());
+        if (!validPolicy ){
+            throw new IllegalStateException("Invalid policy for the given date.");
+        }
+        if (!validUserPolicy){
+            throw new IllegalStateException("Invalid user policy for the given date.");
+        }
         boolean exists = timeOffRequestAdapter.existsTimeoffRequest(request.getUserId(), request.getPolicyId(), LocalDate.now(zoneId));
         if (exists) {
             throw new IllegalArgumentException("Duplicate requests on the same day are not allowed");
         }
-        LeaveBalanceEntity leaveBalance = leaveBalanceAdapter.findForPeriod(policy.getPolicyId(), request.getUserId(), request.getStartDate(), request.getEndDate());
-        if (request.getStartDate() == null || request.getEndDate() == null ||  LocalDate.now(zoneId).isAfter(request.getStartDate())){
+        if ( LocalDate.now(zoneId).isAfter(request.getStartDate())){
             throw new IllegalArgumentException("Invalid request format for the selected entitled type");
         }
+        TimeOffPolicyEntity policy = timeOffPolicyAdapter.findPolicyById(request.getPolicyId());
+        if (policy.getCompensation() == Compensation.UNPAID){
+            createUnpaidRequest(request, policy);
+            return;
+        }
+        TimeOffRequestEntity entity = new TimeOffRequestEntity();
+        LeaveBalanceEntity leaveBalance = leaveBalanceAdapter.findForPeriod(policy.getPolicyId(), request.getUserId(), request.getStartDate(), request.getEndDate());
         double days = ChronoUnit.DAYS.between(request.getStartDate(), request.getEndDate()) + 1;
         Integer requested = 0;
         boolean invalidDayOrHalfDay =
                 (policy.getEntitledType() == EntitledType.DAY || policy.getEntitledType() == EntitledType.HALF_DAY)
-                        && (request.getStartTime() != null || request.getEndTime() != null || request.getUnitsRequested() == null || request.getHoursRequested() != null || request.getUnitsRequested() != days);
+                        && (request.getStartTime() != null || request.getEndTime() != null || request.getUnitsRequested() != days);
         boolean invalidHour =
                 policy.getEntitledType() == EntitledType.HOURS
-                        && (request.getUnitsRequested() != null  || days != 1 || request.getHoursRequested() == null ||
+                        && ( days != 1 ||
                         request.getStartTime() == null || request.getEndTime() == null);
         boolean invalidHalfDay =
                 policy.getEntitledType() == EntitledType.HALF_DAY
@@ -73,23 +94,23 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
         entity.setEndDate(request.getEndDate());
         if (policy.getEntitledType() == EntitledType.DAY) {
             requested = request.getUnitsRequested();
-            validateDays(days, leaveBalance);
+            validateDays(days, leaveBalance.getBalanceUnits());
             entity.setUnitsRequested(request.getUnitsRequested());
         }
         else if (policy.getEntitledType() == EntitledType.HALF_DAY) {
             requested = request.getUnitsRequested();
             days = request.getUnitsRequested() * 0.5;
-            validateDays(days, leaveBalance);
+            validateDays(days, leaveBalance.getBalanceUnits());
             entity.setUnitsRequested(request.getUnitsRequested());
         }
         else {
-            requested = request.getHoursRequested();
-            validateHours(request.getStartTime(), request.getEndTime(), request.getHoursRequested(), leaveBalance);
+            requested = request.getUnitsRequested();
+            validateHours(request.getStartTime(), request.getEndTime(), request.getUnitsRequested(), leaveBalance);
             entity.setStartTime(request.getStartTime());
             entity.setEndTime(request.getEndTime());
-            entity.setHoursRequested(request.getHoursRequested());
+            entity.setUnitsRequested(request.getUnitsRequested());
         }
-        entity.setUserId(request.getUserId());
+//        entity.setUserId(request.getUserId());
         entity.setPolicy(policy);
         entity.setStatus(Status.PENDING);
         entity.setReason(request.getReason());
@@ -127,81 +148,117 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
         }
     }
 
-    private void validateDays(double days, LeaveBalanceEntity leaveBalance){
-        if (days > leaveBalance.getBalanceUnits() ) {
+    private void validateDays(double days, Double balanceUnits){
+        if ( balanceUnits - days < 0) {
             throw new IllegalArgumentException("Insufficient leave balance.");
         }
     }
 
+    private void createUnpaidRequest(TimeOffRequest request, TimeOffPolicyEntity policy){
+       TimeOffRequestEntity entity = new TimeOffRequestEntity();
+        double days = ChronoUnit.DAYS.between(request.getStartDate(), request.getEndDate()) + 1;
+       if (days != request.getUnitsRequested()){
+           throw new IllegalArgumentException("Invalid request format for the selected entitled type");
+       }
+//       entity.setUserId(request.getUserId());
+       entity.setPolicy(policy);
+       entity.setStartDate(request.getStartDate());
+       entity.setEndDate(request.getEndDate());
+       entity.setReason(request.getReason());
+       entity.setUnitsRequested(request.getUnitsRequested());
+       entity.setRequestDate(LocalDate.now(zoneId));
+       entity.setStatus(Status.PENDING);
+       timeOffRequestAdapter.saveRequest(entity);
+    }
+
     @Override
     public void employeeUpdateStatus(EmployeeStatusUpdate model) {
-        checkCredentials(model.getPolicyId(), model.getUserId(), model.getRequestDate());
+        if (model.getStartDate() != null){
+            boolean validUserPolicy = userPolicyAdapter.isUserPolicyActive(model.getPolicyId(), model.getUserId(), model.getStartDate());
+            if ( !validUserPolicy){
+                throw new IllegalStateException("Invalid policy for the given date.");
+            }
+        }
         TimeOffRequestEntity entity = timeOffRequestAdapter.getTimeoffRequest(model.getPolicyId(), model.getUserId(), model.getRequestDate());
         if ( LocalDate.now(zoneId).isAfter(entity.getStartDate()) || (model.getStatus() != null && !handleEmployeeRules(entity.getStatus(), model.getStatus()))) {
             throw new IllegalArgumentException("Update not allowed");
         }
         if (model.getStatus() != null && model.getStatus() == Status.CANCELLED){
-            TimeOffPolicyEntity policy = entity.getPolicy();
-            Integer requested = policy.getEntitledType() == EntitledType.HOURS ? entity.getHoursRequested() : entity.getUnitsRequested();
-            addLeaveBalance(entity, requested);
+            if (entity.getPolicy().getCompensation() == Compensation.PAID) {
+                Integer requested = entity.getUnitsRequested();
+                addLeaveBalance(entity, requested);
+            }
             entity.setStatus(model.getStatus());
             timeOffRequestAdapter.saveRequest(entity);
             return;
         }
-        else {
-            if (entity.getPolicy().getEntitledType() == EntitledType.HOURS) {
-                if (model.getHoursRequested() > entity.getHoursRequested()) {
-                    deductLeaveBalance(entity, model.getHoursRequested() - entity.getHoursRequested());
-                } else if (model.getHoursRequested() < entity.getHoursRequested()) {
-                    addLeaveBalance(entity, entity.getHoursRequested() - model.getHoursRequested());
-                }
-            } else {
-                if (model.getUnitsRequested() > entity.getUnitsRequested()) {
-                    deductLeaveBalance(entity, model.getUnitsRequested() - entity.getUnitsRequested());
-                } else if (model.getUnitsRequested() < entity.getUnitsRequested()) {
-                    addLeaveBalance(entity, entity.getUnitsRequested() - model.getUnitsRequested());
-                }
-            }
-        }
-        if (model.getStatus() != null) {
-            entity.setStatus(model.getStatus());
-        }
+
+        double days =  ChronoUnit.DAYS.between(entity.getStartDate(), entity.getEndDate()) + 1;
+
         if (model.getReason() != null) {
             entity.setReason(model.getReason());
         }
-        double days =  ChronoUnit.DAYS.between(entity.getStartDate(), entity.getEndDate()) + 1;
         if (model.getStartDate() != null && model.getEndDate() != null){
             days =  ChronoUnit.DAYS.between(model.getStartDate(), model.getEndDate()) + 1;
             entity.setStartDate(model.getStartDate());
             entity.setEndDate(model.getEndDate());
         }
-        LeaveBalanceEntity leaveBalance = leaveBalanceAdapter.findForPeriod(entity.getPolicy().getPolicyId(), entity.getUserId(), entity.getStartDate(), entity.getEndDate());
+        if (entity.getPolicy().getCompensation() == Compensation.UNPAID){
+            if (model.getUnitsRequested() != null && days!= model.getUnitsRequested()){
+                throw new IllegalArgumentException("Invalid paid leave request.");
+            }
+            timeOffRequestAdapter.saveRequest(entity);
+            return;
+        }
+        LeaveBalanceEntity leaveBalance = leaveBalanceAdapter.findForPeriod(entity.getPolicy().getPolicyId(), entity.getUser().getUserId(), entity.getStartDate(), entity.getEndDate());
         if ((entity.getPolicy().getEntitledType() == EntitledType.DAY || entity.getPolicy().getEntitledType() == EntitledType.HALF_DAY )&&(model.getUnitsRequested() != null && model.getStartDate() != null && model.getEndDate() != null)) {
 
             if (model.getUnitsRequested() != days){
                 throw new IllegalArgumentException("Invalid paid leave request.");
             }
             if (entity.getPolicy().getEntitledType() == EntitledType.DAY ){
-                validateDays(days, leaveBalance);
+                if (model.getUnitsRequested() > entity.getUnitsRequested()){
+                    days = model.getUnitsRequested() - entity.getUnitsRequested();
+                    validateDays(days, leaveBalance.getBalanceUnits());
+                }
+
             }
             if (entity.getPolicy().getEntitledType() == EntitledType.HALF_DAY) {
                 if ( days != 1){
                     throw new IllegalArgumentException("Invalid paid leave request.");
                 }
-                validateDays(days*0.5, leaveBalance);
             }
         }
 
         if (entity.getPolicy().getEntitledType() == EntitledType.HOURS && (model.getStartTime() != null && model.getEndTime() != null &&
-                model.getHoursRequested()!= null)) {
+                model.getUnitsRequested()!= null)) {
             if (days != 1){
                 throw new IllegalArgumentException("Invalid paid leave request.");
             }
-            validateHours( model.getStartTime(), model.getEndTime(), model.getHoursRequested(), leaveBalance);
+            validateHours( model.getStartTime(), model.getEndTime(), model.getUnitsRequested(), leaveBalance);
+            if (model.getUnitsRequested() > entity.getUnitsRequested()) {
+                  double hour = model.getUnitsRequested() - entity.getUnitsRequested();
+                  if (leaveBalance.getBalanceUnits() < hour){
+                      throw new IllegalArgumentException("Insufficient leave balance.");
+                  }
+            }
             entity.setStartTime(model.getStartTime());
             entity.setEndTime(model.getEndTime());
         }
 
+        if (entity.getPolicy().getEntitledType() == EntitledType.HOURS) {
+            if (model.getUnitsRequested() > entity.getUnitsRequested()) {
+                deductLeaveBalance(entity, model.getUnitsRequested() - entity.getUnitsRequested());
+            } else if (model.getUnitsRequested() < entity.getUnitsRequested()) {
+                addLeaveBalance(entity, entity.getUnitsRequested() - model.getUnitsRequested());
+            }
+        } else {
+            if (model.getUnitsRequested() > entity.getUnitsRequested()) {
+                deductLeaveBalance(entity, model.getUnitsRequested() - entity.getUnitsRequested());
+            } else if (model.getUnitsRequested() < entity.getUnitsRequested()) {
+                addLeaveBalance(entity, entity.getUnitsRequested() - model.getUnitsRequested());
+            }
+        }
         entity.setUnitsRequested(model.getUnitsRequested());
         TimeOffRequestEntity saved = timeOffRequestAdapter.saveRequest(entity);
     }
@@ -210,24 +267,20 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
         return (current == Status.PENDING || current == Status.APPROVED) && next == Status.CANCELLED;
     }
 
-    private void checkCredentials(String policyId, String userId, LocalDate requestDate){
-        if (policyId == null || userId == null || requestDate == null){
-            throw new IllegalArgumentException("Missing required fields.");
-        }
-    }
     @Override
     public void adminUpdateStatus(AdminStatusUpdate model) {
-        checkCredentials(model.getPolicyId(), model.getUserId(), model.getRequestDate());
         TimeOffRequestEntity entity = timeOffRequestAdapter.getTimeoffRequest(model.getPolicyId(), model.getUserId(), model.getRequestDate());
-        if ( LocalDate.now(zoneId).isAfter(entity.getStartDate())|| (model.getStatus() != null && !handleAdminRules(entity.getStatus(), model.getStatus()))) {
+        if (entity == null){
+            throw new IllegalArgumentException("No time-off request exists ");
+        }
+        if (LocalDate.now(zoneId).isAfter(entity.getStartDate()) || model.getStatus() != null && !handleAdminRules(entity.getStatus(), model.getStatus())) {
             throw new IllegalArgumentException("Update not allowed. Invalid date or status");
         }
         if(model.getStatus() != null) {
             entity.setStatus(model.getStatus());
             TimeOffRequestEntity saved = timeOffRequestAdapter.saveRequest(entity);
             if (saved.getStatus() == Status.REJECTED) {
-                TimeOffPolicyEntity policy = saved.getPolicy();
-                Integer requested = policy.getEntitledType() == EntitledType.HOURS ? saved.getHoursRequested() : saved.getUnitsRequested();
+                Integer requested = saved.getUnitsRequested();
                 addLeaveBalance(saved, requested);
             }
         }
@@ -243,10 +296,9 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
 
     public void deductLeaveBalance(TimeOffRequestEntity entity, Integer requested){
 
-        LeaveBalanceEntity leaveBalance = leaveBalanceAdapter.findForPeriod(entity.getPolicy().getPolicyId(), entity.getUserId(), entity.getStartDate(), entity.getEndDate());
+        LeaveBalanceEntity leaveBalance = leaveBalanceAdapter.findForPeriod(entity.getPolicy().getPolicyId(), entity.getUser().getUserId(), entity.getStartDate(), entity.getEndDate());
         if(leaveBalance != null && entity.getPolicy().getEntitledType() == EntitledType.HALF_DAY ) {
             log.info("leave balance find");
-            leaveBalance.setExpiredUnits(leaveBalance.getExpiredUnits() + requested*0.5);
             leaveBalance.setLeaveTakenUnits(leaveBalance.getLeaveTakenUnits() + requested*0.5);
             double balanceUnits = leaveBalance.getBalanceUnits() - requested*0.5;
             leaveBalance.setBalanceUnits(balanceUnits);
@@ -256,7 +308,6 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
         }
         else if (leaveBalance != null &&  (entity.getPolicy().getEntitledType() == EntitledType.HOURS ||
                 entity.getPolicy().getEntitledType() == EntitledType.DAY)) {
-            leaveBalance.setExpiredUnits(leaveBalance.getExpiredUnits() + requested);
             leaveBalance.setLeaveTakenUnits(leaveBalance.getLeaveTakenUnits() + requested);
             double balanceUnits = leaveBalance.getBalanceUnits() - requested;
             leaveBalance.setBalanceUnits(balanceUnits);
@@ -268,25 +319,33 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
     }
 
     public void addLeaveBalance(TimeOffRequestEntity entity, Integer requested){
-        LeaveBalanceEntity leaveBalance = leaveBalanceAdapter.findForPeriod(entity.getPolicy().getPolicyId(), entity.getUserId(), entity.getStartDate(), entity.getEndDate());
+        LeaveBalanceEntity leaveBalance = leaveBalanceAdapter.findForPeriod(entity.getPolicy().getPolicyId(), entity.getUser().getUserId(), entity.getStartDate(), entity.getEndDate());
         if(leaveBalance != null && entity.getPolicy().getEntitledType() == EntitledType.HALF_DAY ) {
             log.info("leave balance finds");
-            leaveBalance.setExpiredUnits(leaveBalance.getExpiredUnits() - requested*0.5);
             leaveBalance.setLeaveTakenUnits(leaveBalance.getLeaveTakenUnits() - requested*0.5);
             double balanceUnits = leaveBalance.getBalanceUnits() + requested*0.5;
             leaveBalance.setBalanceUnits(balanceUnits);
-            if (entity.getPolicy().getCarryForward() && balanceUnits < leaveBalance.getCarryForwardUnits() ){
-                leaveBalance.setCarryForwardUnits(balanceUnits);
+            if (entity.getPolicy().getCarryForward()){
+                if (balanceUnits >= leaveBalance.getPolicy().getMaxCarryForwardUnits()) {
+                    leaveBalance.setCarryForwardUnits((double)leaveBalance.getPolicy().getMaxCarryForwardUnits());
+                }
+                else {
+                    leaveBalance.setCarryForwardUnits(balanceUnits);
+                }
             }
         }
         else if (leaveBalance != null &&  (entity.getPolicy().getEntitledType() == EntitledType.HOURS ||
                 entity.getPolicy().getEntitledType() == EntitledType.DAY)) {
-            leaveBalance.setExpiredUnits(leaveBalance.getExpiredUnits() - requested);
             leaveBalance.setLeaveTakenUnits(leaveBalance.getLeaveTakenUnits() - requested);
             double balanceUnits = leaveBalance.getBalanceUnits() + requested;
             leaveBalance.setBalanceUnits(balanceUnits);
-            if (entity.getPolicy().getCarryForward() && balanceUnits < leaveBalance.getCarryForwardUnits()) {
-                leaveBalance.setCarryForwardUnits(balanceUnits);
+            if (entity.getPolicy().getCarryForward()){
+                if (balanceUnits >= leaveBalance.getPolicy().getMaxCarryForwardUnits()) {
+                    leaveBalance.setCarryForwardUnits((double)leaveBalance.getPolicy().getMaxCarryForwardUnits());
+                }
+                else {
+                    leaveBalance.setCarryForwardUnits(balanceUnits);
+                }
             }
         }
         leaveBalanceAdapter.saveLeaveBalance(leaveBalance);
@@ -294,9 +353,9 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
 
     @Override
     public List<StatusEnumModel> getStatus() {
-        List<StatusEnumModel> list=new ArrayList<>();
-        for(Compensation e: Compensation.values()){
-            StatusEnumModel model= new StatusEnumModel(e.name(),e.getValue());
+        List<StatusEnumModel> list = new ArrayList<>();
+        for (Compensation e : Compensation.values()) {
+            StatusEnumModel model = new StatusEnumModel(e.name(), e.getValue());
             list.add(model);
         }
         return list;
@@ -329,17 +388,46 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
     }
 
     @Override
-    public List<TimeOffRequestResponseModel> getRequestsByDateRange(LocalDate fromDate, LocalDate toDate) {
+    public Map<String, List<TimeOffRequestGroupModel>> filterRequests(TimeOffccDto dto) {
+        LocalDate fromDate = dto.getFromDate();
+        LocalDate toDate = dto.getToDate();
+        String inputUserId = dto.getUserId();
+        String finalUserId;
+        boolean creatorMode;
+        if (inputUserId == null || inputUserId.trim().isEmpty()) {
+            finalUserId = authHelper.getUserId();
+            creatorMode = true;
+        } else {
+            finalUserId = inputUserId;
+            creatorMode = false;
+        }
         if (fromDate == null || toDate == null) {
-            throw new IllegalArgumentException("fromDate and toDate are required");}
-        List<TimeOffRequestUserModel> list = timeOffRequestAdapter.filterWithUser(fromDate, toDate);
-        List<TimeOffRequestResponseModel> response = new ArrayList<>();
+            throw new IllegalArgumentException("fromDate and toDate are required");
+        }
+        List<TimeOffRequestUserModel> list =
+                creatorMode
+                        ? timeOffRequestAdapter.filterCreatedByUser(fromDate, toDate, finalUserId)
+                        : timeOffRequestAdapter.filterWithUser(fromDate, toDate, finalUserId);
+
+        List<TimeOffRequestGroupModel> toList = new ArrayList<>();
+        List<TimeOffRequestGroupModel> ccList = new ArrayList<>();
+
         for (TimeOffRequestUserModel item : list) {
-            TimeOffRequestResponseModel model = TimeOffPolicyEntityMapper.toModel(item.getRequest());
+            TimeOffRequestGroupModel model =
+                    TimeOffPolicyEntityMapper.toGroupModel(item.getRequest());
+            model.setUserId(item.getUserId());
             model.setUserName(item.getUserName());
-            response.add(model);
+
+            if (item.getType() == ViewerType.APPROVER)
+                toList.add(model);
+            else if (item.getType() == ViewerType.VIEWER)
+                ccList.add(model);
         }
 
-        return response;
+        Map<String, List<TimeOffRequestGroupModel>> map = new HashMap<>();
+        map.put("TO", toList);
+        map.put("CC", ccList);
+
+        return map;
     }
 }

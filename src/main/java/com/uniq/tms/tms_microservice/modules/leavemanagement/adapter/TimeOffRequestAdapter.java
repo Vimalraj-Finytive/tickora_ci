@@ -15,7 +15,8 @@ public interface TimeOffRequestAdapter {
     List<UsersRequestMappingEntity> saveUsersRequestMapping(List<UsersRequestMappingEntity> entity);
     List<TimeOffRequestEntity> saveAllRequest(List<TimeOffRequestEntity> entities);
     List<TimeOffRequestEntity> findStartByDate(LocalDate startDate);
-    List<TimeOffRequestUserModel> filterWithUser(LocalDate fromDate, LocalDate toDate);
+    List<TimeOffRequestUserModel> filterWithUser(LocalDate fromDate, LocalDate toDate, String userId);
+     List<TimeOffRequestUserModel> filterCreatedByUser(LocalDate from, LocalDate to, String userId);
     List<TimeOffRequestUserModel> filterWithUserAndRole(LocalDate from, LocalDate to, int minRoleLevel);
     boolean existsTimeoffRequest(String userId, String policyId, LocalDate requestDate);
     TimeOffRequestEntity getTimeoffRequest(String policyId, String userId, LocalDate requestDate);
