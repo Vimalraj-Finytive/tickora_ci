@@ -15,7 +15,7 @@ public interface UserPolicyAdapter {
 
     List<UserPolicyEntity> findUserPolicyEntities(List<String> userIds);
 
-    void deleteUserPolicies(String policyId);
+    void deleteByPolicyIdAndUserIds(String policyId, Set<String> userIds);
 
     List<UserPolicyEntity> findUserPoliciesByPolicyId(String policyId);
 

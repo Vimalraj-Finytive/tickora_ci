@@ -610,4 +610,8 @@ public class UserAdapterImpl implements UserAdapter {
         return userGroupRepository.findUsersByGroupId(Collections.singletonList(groupId));
     }
 
+    @Override
+    public Optional<UserEntity>findSuperAdminByOrgId(String orgId){
+        return userRepository.findSuperAdminByOrgId(orgId);
+    }
 }

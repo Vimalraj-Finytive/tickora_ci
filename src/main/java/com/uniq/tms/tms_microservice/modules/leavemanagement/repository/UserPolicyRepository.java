@@ -20,10 +20,15 @@ public interface UserPolicyRepository extends JpaRepository<UserPolicyEntity, Lo
     @Query("SELECT up FROM UserPolicyEntity up WHERE up.user.userId IN :userIds")
     List<UserPolicyEntity> findByUserIds(List<String> userIds);
 
-    @Transactional
     @Modifying
-    @Query("DELETE FROM UserPolicyEntity up WHERE up.policy.policyId = :policyId")
-    void deleteByPolicyId(String policyId);
+    @Transactional
+    @Query("DELETE FROM UserPolicyEntity up " +
+            "WHERE up.policy.policyId = :policyId " +
+            "AND up.user.userId IN :userIds")
+    void deleteByPolicyIdAndUserIds(
+            @Param("policyId") String policyId,
+            @Param("userIds") Set<String> userIds
+    );
 
     @Query("SELECT up FROM UserPolicyEntity up WHERE up.policy.policyId = :policyId")
     List<UserPolicyEntity> findByPolicyId(String policyId);
@@ -40,8 +45,16 @@ public interface UserPolicyRepository extends JpaRepository<UserPolicyEntity, Lo
             @Param("policyId") String policyId
     );
 
-    @Query("SELECT up FROM UserPolicyEntity up " +
-            "WHERE up.policy.policyId IN :policyIds AND up.user.userId IN :userIds")
+    @Query("""
+    SELECT up FROM UserPolicyEntity up
+    WHERE up.validTo IN (
+        SELECT MAX(up2.validTo)
+        FROM UserPolicyEntity up2
+        WHERE up2.policy.policyId IN :policyIds
+          AND up2.user.userId IN :userIds
+        GROUP BY up2.policy.policyId, up2.user.userId
+    )
+""")
     List<UserPolicyEntity> findAllByPolicyIdsAndUserIds(
             @Param("policyIds") List<String> policyIds,
             @Param("userIds") Set<String> userIds

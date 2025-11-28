@@ -8,11 +8,12 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.AccrualType;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Set;
 
 public interface LeaveBalanceAdapter {
 
     void saveLeaveBalances(List<LeaveBalanceEntity> leaveBalances);
-    void deleteLeaveBalances(String policyId);
+    void deleteByPolicyIdAndUserIds(String policyId, Set<String> userIds);
     LeaveBalanceEntity findLeaveBalance(String userId);
     List<LeaveBalanceEntity> findLeaveBalancesByPolicyId(String policyId);
     List<TimeOffPolicyEntity> findByUserId(String userId);

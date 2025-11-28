@@ -11,16 +11,22 @@ import java.util.List;
 import java.util.Optional;
 import org.springframework.stereotype.Repository;
 import java.time.LocalDate;
+import java.util.Set;
 
 @Repository
 public interface LeaveBalanceRepository extends JpaRepository<LeaveBalanceEntity, Long> {
 
     LeaveBalanceEntity findByPolicy_PolicyIdAndUser_UserId(String policyId, String userId);
 
-    @Transactional
     @Modifying
-    @Query("DELETE FROM LeaveBalanceEntity lb WHERE lb.policy.policyId = :policyId")
-    void deleteByPolicyId(String policyId);
+    @Transactional
+    @Query("DELETE FROM LeaveBalanceEntity lb " +
+            "WHERE lb.policy.policyId = :policyId " +
+            "AND lb.user.userId IN :userIds")
+    void deleteByPolicyIdAndUserIds(
+            @Param("policyId") String policyId,
+            @Param("userIds") Set<String> userIds
+    );
 
     Optional<LeaveBalanceEntity> findTopByUser_UserIdOrderByLeaveBalanceIdDesc(String userId);
 

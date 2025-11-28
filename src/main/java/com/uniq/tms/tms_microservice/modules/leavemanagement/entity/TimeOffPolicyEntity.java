@@ -47,9 +47,6 @@ public class TimeOffPolicyEntity {
     @Column(name = "entitled_units")
     private Integer entitledUnits;
 
-    @Column(name = "entitled_hours")
-    private Integer entitledHours;
-
     @Enumerated(EnumType.STRING)
     @Column(name = "entitled_type", length = 10)
     private EntitledType entitledType;
@@ -75,13 +72,6 @@ public class TimeOffPolicyEntity {
     @OneToMany(mappedBy = "policy", cascade = CascadeType.ALL)
     private List<TimeOffRequestEntity> requests = new ArrayList<>();
 
-    public Integer getEntitledHours() {
-        return entitledHours;
-    }
-
-    public void setEntitledHours(Integer entitledHours) {
-        this.entitledHours = entitledHours;
-    }
 
     public String getPolicyId() {
         return policyId;
