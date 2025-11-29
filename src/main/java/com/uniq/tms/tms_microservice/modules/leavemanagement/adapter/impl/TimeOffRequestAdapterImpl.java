@@ -33,6 +33,7 @@ public class TimeOffRequestAdapterImpl implements TimeOffRequestAdapter {
 
     @Override
     public TimeOffRequestEntity saveRequest(TimeOffRequestEntity entity) {
+        System.out.println("triggered");
         return timeoffRequestRepo.save(entity);
     }
 
@@ -72,7 +73,7 @@ public class TimeOffRequestAdapterImpl implements TimeOffRequestAdapter {
 
     @Override
     public boolean existsTimeoffRequest(String userId, String policyId, LocalDate requestDate) {
-        return timeoffRequestRepo.existsByUser_UserIdAndPolicy_PolicyIdAndRequestDate(userId, policyId, requestDate);
+        return timeoffRequestRepo.existsTimeoffRequest(userId, policyId, requestDate);
     }
 
     @Override
@@ -83,5 +84,10 @@ public class TimeOffRequestAdapterImpl implements TimeOffRequestAdapter {
     @Override
     public void saveAllLeaveBalance(List<LeaveBalanceEntity> entities) {
         leaveBalanceRepository.saveAll(entities);
+    }
+
+    @Override
+    public boolean existsOverlappingRequest(String userId, String policyId, LocalDate startDate, LocalDate endDate) {
+        return timeoffRequestRepo.existsOverlappingRequest(userId,policyId,startDate,endDate);
     }
 }

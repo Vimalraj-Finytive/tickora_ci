@@ -618,4 +618,8 @@ public class UserAdapterImpl implements UserAdapter {
         return userGroupRepository.findUsersInGroup(groupIds, supervisorId);
     }
 
+    @Override
+    public Optional<UserEntity>findSuperAdminByOrgId(String orgId){
+        return userRepository.findSuperAdminByOrgId(orgId);
+    }
 }

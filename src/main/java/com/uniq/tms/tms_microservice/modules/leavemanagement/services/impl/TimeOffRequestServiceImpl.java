@@ -1,5 +1,7 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.services.impl;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.LeaveBalanceAdapter;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.TimeOffPolicyAdapter;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.TimeOffRequestAdapter;
@@ -13,16 +15,16 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.*;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.mapper.TimeOffPolicyEntityMapper;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.*;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.services.TimeOffRequestService;
+import com.uniq.tms.tms_microservice.modules.userManagement.adapter.UserAdapter;
+import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
 import com.uniq.tms.tms_microservice.shared.helper.AuthHelper;
+import lombok.ToString;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import java.time.*;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Stream;
 
 @Service
@@ -38,14 +40,16 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
     private final TimeOffPolicyAdapter timeOffPolicyAdapter;
     private final UserPolicyAdapter userPolicyAdapter;
     private final AuthHelper authHelper;
+    private final UserAdapter userAdapter;
 
-    public TimeOffRequestServiceImpl(TimeOffRequestAdapter timeOffRequestAdapter, TimeOffPolicyEntityMapper TimeOffPolicyEntityMapper, LeaveBalanceAdapter leaveBalanceAdapter, TimeOffPolicyAdapter timeOffPolicyAdapter, UserPolicyAdapter userPolicyAdapter, AuthHelper authHelper) {
+    public TimeOffRequestServiceImpl(TimeOffRequestAdapter timeOffRequestAdapter, TimeOffPolicyEntityMapper TimeOffPolicyEntityMapper, LeaveBalanceAdapter leaveBalanceAdapter, TimeOffPolicyAdapter timeOffPolicyAdapter, UserPolicyAdapter userPolicyAdapter, AuthHelper authHelper, UserAdapter userAdapter) {
         this.timeOffRequestAdapter = timeOffRequestAdapter;
         this.TimeOffPolicyEntityMapper = TimeOffPolicyEntityMapper;
         this.leaveBalanceAdapter = leaveBalanceAdapter;
         this.timeOffPolicyAdapter = timeOffPolicyAdapter;
         this.userPolicyAdapter = userPolicyAdapter;
         this.authHelper = authHelper;
+        this.userAdapter = userAdapter;
     }
 
     @Override
@@ -60,10 +64,16 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
         }
         boolean exists = timeOffRequestAdapter.existsTimeoffRequest(request.getUserId(), request.getPolicyId(), LocalDate.now(zoneId));
         if (exists) {
-            throw new IllegalArgumentException("Duplicate requests on the same day are not allowed");
+            throw new IllegalArgumentException("Request for today is already pending or approved");
         }
         if ( LocalDate.now(zoneId).isAfter(request.getStartDate())){
             throw new IllegalArgumentException("Invalid request format for the selected entitled type");
+        }
+
+        boolean overlap = timeOffRequestAdapter.existsOverlappingRequest(request.getUserId(), request.getPolicyId(), request.getStartDate(), request.getEndDate());
+
+        if (overlap) {
+            throw new IllegalArgumentException("Request already exists within this date range.");
         }
         TimeOffPolicyEntity policy = timeOffPolicyAdapter.findPolicyById(request.getPolicyId());
         if (policy.getCompensation() == Compensation.UNPAID){
@@ -90,6 +100,12 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
         if (leaveBalance.getBalanceUnits() == 0.0){
             throw new IllegalArgumentException("Cannot take paid leave");
         }
+
+        UserEntity user = userAdapter.findById(request.getUserId())
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        entity.setUser(user);
+
         entity.setStartDate(request.getStartDate());
         entity.setEndDate(request.getEndDate());
         if (policy.getEntitledType() == EntitledType.DAY) {
@@ -110,17 +126,20 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
             entity.setEndTime(request.getEndTime());
             entity.setUnitsRequested(request.getUnitsRequested());
         }
-//        entity.setUserId(request.getUserId());
         entity.setPolicy(policy);
         entity.setStatus(Status.PENDING);
         entity.setReason(request.getReason());
         entity.setRequestDate(LocalDate.now(zoneId));
         TimeOffRequestEntity saved = timeOffRequestAdapter.saveRequest(entity);
         deductLeaveBalance(saved, requested);
+
+        Set<String> uniqueCc=new HashSet<>(request.getCc());
+        uniqueCc.remove(request.getTo());
+
         List<UsersRequestMappingEntity> usersMapping =
                 Stream.concat(
                         Stream.of(buildMapping(ViewerType.APPROVER, request.getTo(), request.getUserId(), saved.getTimeOffRequestId())),
-                        request.getCc().stream().map(viewer -> buildMapping(ViewerType.VIEWER, viewer, request.getUserId(), saved.getTimeOffRequestId()))
+                        uniqueCc.stream().map(viewer -> buildMapping(ViewerType.VIEWER, viewer, request.getUserId(), saved.getTimeOffRequestId()))
                 ).toList();
         List<UsersRequestMappingEntity> entities = timeOffRequestAdapter.saveUsersRequestMapping(usersMapping);
     }
@@ -160,7 +179,6 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
        if (days != request.getUnitsRequested()){
            throw new IllegalArgumentException("Invalid request format for the selected entitled type");
        }
-//       entity.setUserId(request.getUserId());
        entity.setPolicy(policy);
        entity.setStartDate(request.getStartDate());
        entity.setEndDate(request.getEndDate());
@@ -180,15 +198,51 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
             }
         }
         TimeOffRequestEntity entity = timeOffRequestAdapter.getTimeoffRequest(model.getPolicyId(), model.getUserId(), model.getRequestDate());
+
+        if (entity == null) {
+            throw new IllegalArgumentException("No time-off request found for given details");
+        }
+        Status current=entity.getStatus();
+        Status requestedStatus=model.getStatus();
+
         if ( LocalDate.now(zoneId).isAfter(entity.getStartDate()) || (model.getStatus() != null && !handleEmployeeRules(entity.getStatus(), model.getStatus()))) {
             throw new IllegalArgumentException("Update not allowed");
         }
-        if (model.getStatus() != null && model.getStatus() == Status.CANCELLED){
-            if (entity.getPolicy().getCompensation() == Compensation.PAID) {
-                Integer requested = entity.getUnitsRequested();
-                addLeaveBalance(entity, requested);
+
+        if (current == Status.CANCELLED || current == Status.REJECTED) {
+            throw new IllegalArgumentException("Cancelled/Rejected request cannot be edited.");
+        }
+
+        if (current == Status.APPROVED) {
+
+            if (LocalDate.now(zoneId).isAfter(entity.getEndDate())) {
+                throw new IllegalArgumentException(
+                        "Status change is not allowed after the leave ends"
+                );
             }
-            entity.setStatus(model.getStatus());
+
+            if (requestedStatus != Status.CANCELLED && requestedStatus != Status.REJECTED) {
+                throw new IllegalArgumentException(
+                        "Only cancellation or rejection allowed after approval"
+                );
+            }
+
+            boolean changed = (model.getStartDate() != null && !model.getStartDate().equals(entity.getStartDate())) ||
+                            (model.getEndDate() != null && !model.getEndDate().equals(entity.getEndDate())) ||
+                            (model.getUnitsRequested() != null && !model.getUnitsRequested().equals(entity.getUnitsRequested())) ||
+                            (model.getStartTime() != null && !model.getStartTime().equals(entity.getStartTime())) ||
+                            (model.getEndTime() != null && !model.getEndTime().equals(entity.getEndTime())) ||
+                            (model.getReason() != null && !model.getReason().equals(entity.getReason()));
+
+            if (changed) {
+                throw new IllegalArgumentException("Editing an approved request is not allowed");
+            }
+
+            if (requestedStatus == Status.CANCELLED && entity.getPolicy().getCompensation() == Compensation.PAID) {
+                addLeaveBalance(entity, entity.getUnitsRequested());
+            }
+
+            entity.setStatus(requestedStatus);
             timeOffRequestAdapter.saveRequest(entity);
             return;
         }
@@ -204,12 +258,14 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
             entity.setEndDate(model.getEndDate());
         }
         if (entity.getPolicy().getCompensation() == Compensation.UNPAID){
+
             if (model.getUnitsRequested() != null && days!= model.getUnitsRequested()){
                 throw new IllegalArgumentException("Invalid paid leave request.");
             }
             timeOffRequestAdapter.saveRequest(entity);
             return;
         }
+
         LeaveBalanceEntity leaveBalance = leaveBalanceAdapter.findForPeriod(entity.getPolicy().getPolicyId(), entity.getUser().getUserId(), entity.getStartDate(), entity.getEndDate());
         if ((entity.getPolicy().getEntitledType() == EntitledType.DAY || entity.getPolicy().getEntitledType() == EntitledType.HALF_DAY )&&(model.getUnitsRequested() != null && model.getStartDate() != null && model.getEndDate() != null)) {
 
@@ -260,8 +316,10 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
             }
         }
         entity.setUnitsRequested(model.getUnitsRequested());
+        entity.setStatus(requestedStatus);
         TimeOffRequestEntity saved = timeOffRequestAdapter.saveRequest(entity);
     }
+
 
     private boolean handleEmployeeRules(Status current, Status next) {
         return (current == Status.PENDING || current == Status.APPROVED) && next == Status.CANCELLED;

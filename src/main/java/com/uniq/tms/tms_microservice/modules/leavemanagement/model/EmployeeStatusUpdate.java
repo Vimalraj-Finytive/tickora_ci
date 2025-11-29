@@ -95,4 +95,18 @@ public class EmployeeStatusUpdate {
     public void setRequestDate(LocalDate requestDate) {
         this.requestDate = requestDate;
     }
+    @Override
+    public String toString() {
+        return "TimeOffRequestEntity {" +
+                ", startDate=" + startDate +
+                ", endDate=" + endDate +
+                ", startTime=" + startTime +
+                ", endTime=" + endTime +
+                ", unitsRequested=" + unitsRequested +
+                ", status=" + status +
+                ", reason='" + reason + '\'' +
+                ", requestDate=" + requestDate +
+                '}';
+    }
+
 }

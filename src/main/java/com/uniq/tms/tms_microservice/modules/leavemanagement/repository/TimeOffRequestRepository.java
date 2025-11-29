@@ -16,11 +16,20 @@ public interface TimeOffRequestRepository extends JpaRepository<TimeOffRequestEn
 
     List<TimeOffRequestEntity> findByStartDate(LocalDate startDate);
 
-    boolean existsByUser_UserIdAndPolicy_PolicyIdAndRequestDate(String userId, String policyId, LocalDate requestDate);
+    @Query("""
+            SELECT COUNT(r) > 0
+            FROM TimeOffRequestEntity r
+            WHERE r.user.userId = :userId
+            AND r.policy.policyId = :policyId
+            AND r.requestDate = :requestDate
+            AND r.status IN ('PENDING','APPROVED')
+            """)
+    boolean existsTimeoffRequest(String userId, String policyId, LocalDate requestDate);
 
     @Query("SELECT t FROM TimeOffRequestEntity t " +
             "WHERE t.policy.policyId = :policyId " +
             "AND t.user.userId = :userId " +
+            "AND t.status IN ('PENDING','APPROVED')"+
             "AND t.requestDate = :requestDate")
     TimeOffRequestEntity findByUser_UserIdAndRequestDate(
             @Param("policyId") String policyId,
@@ -87,4 +96,14 @@ public interface TimeOffRequestRepository extends JpaRepository<TimeOffRequestEn
     @Query("SELECT t FROM TimeOffRequestEntity t " +
             "WHERE t.startDate = :startDate AND t.status = Status.APPROVED")
     List<TimeOffRequestEntity> findByStartDateAndStatusApproved(@Param("startDate") LocalDate startDate);
+
+    @Query(""" 
+            SELECT COUNT(r) >0  FROM TimeOffRequestEntity r
+            WHERE r.user.userId = :userId
+            AND r.policy.policyId = :policyId
+            AND r.status NOT IN  ('REJECTED','CANCELLED')
+            AND (r.startDate <= :endDate AND r.endDate >= :startDate)
+            """)
+    boolean existsOverlappingRequest(String userId, String policyId, LocalDate startDate, LocalDate endDate);
+
 }

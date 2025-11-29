@@ -46,12 +46,16 @@ public class TimeOffFacade {
     }
 
     public ApiResponse<TimeOffRequestDto> createRequest(TimeOffRequestDto requestDto) {
+        String userId= authHelper.getUserId();
+        requestDto.setUserId(userId);
         TimeOffRequest request = timeoffPolicyDtoMapper.toRequestModel(requestDto);
         timeOffRequestService.createRequest(request);
         return new ApiResponse<>(200,"Requested TimeOff Successfully",null);
     }
 
     public ApiResponse employeeUpdateStatus(EmployeeStatusUpdateDto dto){
+        String userId= authHelper.getUserId();
+        dto.setUserId(userId);
         EmployeeStatusUpdate model = timeoffPolicyDtoMapper.toStatusModel(dto);
         timeOffRequestService.employeeUpdateStatus(model);
         return new ApiResponse<>(200,"Update TimeOff Request Successfully",null);

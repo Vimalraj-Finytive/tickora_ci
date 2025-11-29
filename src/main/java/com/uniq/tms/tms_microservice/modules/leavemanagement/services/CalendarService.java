@@ -7,11 +7,11 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.model.Holiday;
 import java.util.List;
 
 public interface CalendarService {
-    Calendar create(Calendar calendarMiddleware);
+    Calendar create(Calendar calendarMiddleware, String orgId);
     List<Calendar> getAll();
     void delete(CalendarId ids);
     Calendar getById(String id);
-    Calendar update(Calendar model);
+    Calendar update(Calendar model,String orgId);
     Holiday createHoliday(Holiday holidayMiddleware, String calendarId);
     Holiday updateHoliday(HolidayDto holidayDto, String id, String holidayId);
     List<Holiday> findHolidaysByCalendar(String id, String year);

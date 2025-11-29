@@ -175,5 +175,21 @@ public class TimeOffRequestEntity {
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
     }
+    @Override
+    public String toString() {
+        return "TimeOffRequestEntity {" +
+                "id=" + timeOffRequestId +
+                ", policyId=" + (policy != null ? policy.getPolicyId() : null) +
+                ", userId=" + (user != null ? user.getUserId() : null) +
+                ", startDate=" + startDate +
+                ", endDate=" + endDate +
+                ", startTime=" + startTime +
+                ", endTime=" + endTime +
+                ", unitsRequested=" + unitsRequested +
+                ", status=" + status +
+                ", reason='" + reason + '\'' +
+                ", requestDate=" + requestDate +
+                '}';
+    }
 
 }
