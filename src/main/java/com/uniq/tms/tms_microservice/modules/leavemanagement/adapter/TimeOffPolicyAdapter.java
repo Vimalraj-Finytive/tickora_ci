@@ -18,4 +18,5 @@ public interface TimeOffPolicyAdapter {
     List<TimeOffPolicyEntity> findByUserId(String userId);
     List<UserPolicyProjection> findUserPolicyValidTo();
     boolean existsValidPolicy(String policyId, LocalDate date);
+    boolean existsByPolicyNameIgnoreCase(String policyName);
 }
