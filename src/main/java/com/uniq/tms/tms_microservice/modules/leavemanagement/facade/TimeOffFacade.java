@@ -54,6 +54,8 @@ public class TimeOffFacade {
     }
 
     public ApiResponse employeeUpdateStatus(EmployeeStatusUpdateDto dto){
+        String userId= authHelper.getUserId();
+        dto.setUserId(userId);
         EmployeeStatusUpdate model = timeoffPolicyDtoMapper.toStatusModel(dto);
         timeOffRequestService.employeeUpdateStatus(model);
         return new ApiResponse<>(200,"Update TimeOff Request Successfully",null);

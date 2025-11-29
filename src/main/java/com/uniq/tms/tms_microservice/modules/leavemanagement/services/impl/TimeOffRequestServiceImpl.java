@@ -1,5 +1,7 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.services.impl;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.LeaveBalanceAdapter;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.TimeOffPolicyAdapter;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.TimeOffRequestAdapter;
@@ -16,6 +18,7 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.services.TimeOffReq
 import com.uniq.tms.tms_microservice.modules.userManagement.adapter.UserAdapter;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
 import com.uniq.tms.tms_microservice.shared.helper.AuthHelper;
+import lombok.ToString;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -195,12 +198,16 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
             }
         }
         TimeOffRequestEntity entity = timeOffRequestAdapter.getTimeoffRequest(model.getPolicyId(), model.getUserId(), model.getRequestDate());
-        if ( LocalDate.now(zoneId).isAfter(entity.getStartDate())) {
-            throw new IllegalArgumentException("Update not allowed");
-        }
 
+        if (entity == null) {
+            throw new IllegalArgumentException("No time-off request found for given details");
+        }
         Status current=entity.getStatus();
         Status requestedStatus=model.getStatus();
+
+        if ( LocalDate.now(zoneId).isAfter(entity.getStartDate()) || (model.getStatus() != null && !handleEmployeeRules(entity.getStatus(), model.getStatus()))) {
+            throw new IllegalArgumentException("Update not allowed");
+        }
 
         if (current == Status.CANCELLED || current == Status.REJECTED) {
             throw new IllegalArgumentException("Cancelled/Rejected request cannot be edited.");
@@ -309,8 +316,10 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
             }
         }
         entity.setUnitsRequested(model.getUnitsRequested());
+        entity.setStatus(requestedStatus);
         TimeOffRequestEntity saved = timeOffRequestAdapter.saveRequest(entity);
     }
+
 
     private boolean handleEmployeeRules(Status current, Status next) {
         return (current == Status.PENDING || current == Status.APPROVED) && next == Status.CANCELLED;
