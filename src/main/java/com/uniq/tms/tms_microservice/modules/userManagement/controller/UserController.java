@@ -287,4 +287,11 @@ public class UserController {
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
+    @GetMapping("Supervising/Group")
+    public ResponseEntity<ApiResponse<List<UserLevelDto>>> getUsersInGroup(
+            @RequestHeader("Authorization") String token){
+        ApiResponse<List<UserLevelDto>> response = userFacade.getUsersInGroup();
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
+
 }

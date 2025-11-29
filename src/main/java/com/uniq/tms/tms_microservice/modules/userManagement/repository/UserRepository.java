@@ -270,6 +270,8 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
     """)
     List<UserEntity> findUsersWithCalendars(@Param("userIds") String[] userIds);
 
+    List<UserEntity>findByActiveTrue();
+
     @Query("SELECT u FROM UserEntity u WHERE u.role.roleId = 1 AND u.organizationId = :orgId")
     Optional<UserEntity>findSuperAdminByOrgId(@Param("orgId") String orgId);
 
