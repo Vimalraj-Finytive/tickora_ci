@@ -116,12 +116,12 @@ public class PayRollAdapterImpl implements PayRollAdapter {
 
     @Override
     public Optional<PayRollEntity> findById(String id) {
-        return payrollRepo.findById(id);
+        return payrollRepo.findActiveById(id);
     }
 
     @Override
     public List<PayRollEntity> findAll() {
-        return payrollRepo.findAll();
+        return payrollRepo.findByIsActiveTrue();
     }
 
     @Override

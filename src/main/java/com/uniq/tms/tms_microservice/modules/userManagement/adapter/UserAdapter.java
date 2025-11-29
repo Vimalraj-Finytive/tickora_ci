@@ -119,5 +119,7 @@ public interface UserAdapter {
     List<String> findUserIdsByGroupIds(List<Long> groupIds);
     List<GroupEntity> getSupervisorGroups(String supervisorId);
     List<UserEntity>getGroupMembers(Long groupId);
+    List<UserEntity>  getallUsers();
+     List<UserEntity> findusersInGroup(List<Long> groupIds, String userId);
 
 }

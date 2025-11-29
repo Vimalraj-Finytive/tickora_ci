@@ -393,19 +393,19 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
         LocalDate toDate = dto.getToDate();
         String inputUserId = dto.getUserId();
         String finalUserId;
-        boolean creatorMode;
+        boolean SelfRequest;
         if (inputUserId == null || inputUserId.trim().isEmpty()) {
             finalUserId = authHelper.getUserId();
-            creatorMode = true;
+            SelfRequest = true;
         } else {
             finalUserId = inputUserId;
-            creatorMode = false;
+            SelfRequest = false;
         }
         if (fromDate == null || toDate == null) {
             throw new IllegalArgumentException("fromDate and toDate are required");
         }
         List<TimeOffRequestUserModel> list =
-                creatorMode
+                SelfRequest
                         ? timeOffRequestAdapter.filterCreatedByUser(fromDate, toDate, finalUserId)
                         : timeOffRequestAdapter.filterWithUser(fromDate, toDate, finalUserId);
 
