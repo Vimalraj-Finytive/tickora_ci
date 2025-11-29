@@ -533,8 +533,8 @@ CREATE TABLE IF NOT EXISTS ${schemaName}.payroll (
     others NUMERIC(19,2) NOT NULL,
     overtime_amount NUMERIC(19,2) NOT NULL,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP
+    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 --===========================================================
@@ -827,6 +827,7 @@ CREATE TABLE IF NOT EXISTS monthly_summary (
     balance_units INT DEFAULT 0,
     half_day_units INT DEFAULT 0,
     full_day_units INT DEFAULT 0,
+    hours_units INT DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

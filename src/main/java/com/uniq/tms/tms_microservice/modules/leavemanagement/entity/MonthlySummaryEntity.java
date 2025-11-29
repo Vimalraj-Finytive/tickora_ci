@@ -43,6 +43,9 @@ public class MonthlySummaryEntity {
     @Column(name = "full_day_units", nullable = false)
     private Integer fullDayUnits = 0;
 
+    @Column(name = "hours_units", nullable = false)
+    private Integer hoursUnits = 0;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
@@ -141,5 +144,13 @@ public class MonthlySummaryEntity {
 
     public void setFullDayUnits(Integer fullDayUnits) {
         this.fullDayUnits = fullDayUnits;
+    }
+
+    public Integer getHoursUnits() {
+        return hoursUnits;
+    }
+
+    public void setHoursUnits(Integer hoursUnits) {
+        this.hoursUnits = hoursUnits;
     }
 }
