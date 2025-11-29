@@ -68,4 +68,11 @@ public interface UserPolicyRepository extends JpaRepository<UserPolicyEntity, Lo
             @Param("policyIds") List<String> policyIds,
             @Param("userIds") Set<String> userIds
     );
+
+    @Query("""
+    SELECT DISTINCT up.user.userId
+    FROM UserPolicyEntity up
+    """)
+    List<String> findAllUserIdsInUserPolicies();
+
 }

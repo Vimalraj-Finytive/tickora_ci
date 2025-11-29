@@ -92,5 +92,23 @@ public interface LeaveBalanceRepository extends JpaRepository<LeaveBalanceEntity
             @Param("year") int year,
             @Param("accrualType") AccrualType accrualType);
 
+    @Query("""
+    SELECT lb
+    FROM LeaveBalanceEntity lb
+    WHERE YEAR(lb.periodStartDate) = :year
+      AND lb.policy.accrualType = :accrualType
+    """)
+    List<LeaveBalanceEntity> findAnnualLeaveBalances(
+            @Param("year") int year,
+            @Param("accrualType") AccrualType accrualType
+    );
+
+    @Query("""
+    SELECT lb
+    FROM LeaveBalanceEntity lb
+    WHERE lb.policy.accrualType = :type
+    """)
+    List<LeaveBalanceEntity> findAllFixedAccrual(@Param("type") AccrualType type);
+
 
 }
