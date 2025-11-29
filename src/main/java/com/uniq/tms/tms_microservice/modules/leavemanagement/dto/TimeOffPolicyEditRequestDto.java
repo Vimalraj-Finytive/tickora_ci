@@ -1,6 +1,7 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.dto;
 
 import java.time.LocalDate;
+import java.util.List;
 
 public class TimeOffPolicyEditRequestDto {
 
@@ -10,7 +11,10 @@ public class TimeOffPolicyEditRequestDto {
     private Boolean carryForward;
     private Integer maxCarryForwardUnits;
     private LocalDate validityEndDate;
+    private LocalDate userValidFrom;
     private LocalDate userValidTo;
+    private List<String> userIds;
+    private List<Long> groupIds;
 
     public String getPolicyName() {
         return policyName;
@@ -67,5 +71,29 @@ public class TimeOffPolicyEditRequestDto {
     public void setUserValidTo(LocalDate userValidTo) {
         this.userValidTo = userValidTo;
     }
-} 
+
+    public LocalDate getUserValidFrom() {
+        return userValidFrom;
+    }
+
+    public void setUserValidFrom(LocalDate userValidFrom) {
+        this.userValidFrom = userValidFrom;
+    }
+
+    public List<String> getUserIds() {
+        return userIds;
+    }
+
+    public void setUserIds(List<String> userIds) {
+        this.userIds = userIds;
+    }
+
+    public List<Long> getGroupIds() {
+        return groupIds;
+    }
+
+    public void setGroupIds(List<Long> groupIds) {
+        this.groupIds = groupIds;
+    }
+}
 

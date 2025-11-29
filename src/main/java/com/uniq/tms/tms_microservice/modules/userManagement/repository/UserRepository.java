@@ -4,6 +4,7 @@ import com.uniq.tms.tms_microservice.modules.timesheetManagement.projection.Time
 import com.uniq.tms.tms_microservice.modules.userManagement.dto.UserNameEmailDto;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserGroupEntity;
+import com.uniq.tms.tms_microservice.modules.userManagement.model.User;
 import com.uniq.tms.tms_microservice.modules.userManagement.model.UserResponse;
 import com.uniq.tms.tms_microservice.modules.userManagement.dto.UserNameSuggestionDto;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.projection.TimesheetProjection;
@@ -269,5 +270,9 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
     """)
     List<UserEntity> findUsersWithCalendars(@Param("userIds") String[] userIds);
 
-   List<UserEntity>findByActiveTrue();
+    List<UserEntity>findByActiveTrue();
+
+    @Query("SELECT u FROM UserEntity u WHERE u.role.roleId = 1 AND u.organizationId = :orgId")
+    Optional<UserEntity>findSuperAdminByOrgId(@Param("orgId") String orgId);
+
 }

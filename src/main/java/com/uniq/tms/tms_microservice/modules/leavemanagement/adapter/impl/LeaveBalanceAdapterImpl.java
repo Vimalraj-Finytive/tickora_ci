@@ -10,6 +10,7 @@ import com.uniq.tms.tms_microservice.modules.userManagement.repository.UserGroup
 import org.springframework.stereotype.Component;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Set;
 
 @Component
 public class LeaveBalanceAdapterImpl implements LeaveBalanceAdapter {
@@ -30,10 +31,10 @@ public class LeaveBalanceAdapterImpl implements LeaveBalanceAdapter {
     }
 
     @Override
-    public void deleteLeaveBalances(String policyId) {
-        leaveBalanceRepo.deleteByPolicyId(policyId);
+    public void deleteByPolicyIdAndUserIds(String policyId, Set<String> userIds) {
+        if (userIds == null || userIds.isEmpty()) return;
+        leaveBalanceRepo.deleteByPolicyIdAndUserIds(policyId, userIds);
     }
-
     @Override
     public LeaveBalanceEntity findLeaveBalance(String userId) {
         return leaveBalanceRepo

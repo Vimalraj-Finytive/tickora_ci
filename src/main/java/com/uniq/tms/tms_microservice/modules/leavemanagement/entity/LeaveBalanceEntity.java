@@ -4,6 +4,7 @@ import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
 import jakarta.persistence.*;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "leave_balance")
@@ -47,7 +48,13 @@ public class LeaveBalanceEntity {
     private LocalDate lastAccrualDate;
 
     @Column(name = "carry_forward_units")
-    private Double carryForwardUnits = 0.0;
+    private Double carryForwardUnits;
+
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
+
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
 
     public LeaveBalanceEntity() {
     }
@@ -149,5 +156,21 @@ public class LeaveBalanceEntity {
     }
 
     public void setUserId(String userId) {
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
     }
 }

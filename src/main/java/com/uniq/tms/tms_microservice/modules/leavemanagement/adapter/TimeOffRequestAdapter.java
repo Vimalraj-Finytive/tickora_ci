@@ -21,4 +21,5 @@ public interface TimeOffRequestAdapter {
     boolean existsTimeoffRequest(String userId, String policyId, LocalDate requestDate);
     TimeOffRequestEntity getTimeoffRequest(String policyId, String userId, LocalDate requestDate);
     List<TimeOffRequestEntity> findByStartDate(LocalDate startDate);
+    boolean existsOverlappingRequest(String userId, String policyId, LocalDate startDate, LocalDate endDate);
 }

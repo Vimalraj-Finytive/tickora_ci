@@ -14,11 +14,16 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.model.CalendarId;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.Holiday;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.services.CalendarService;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.OrganizationRepository;
+import com.uniq.tms.tms_microservice.modules.userManagement.adapter.UserAdapter;
+import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
+import com.uniq.tms.tms_microservice.modules.userManagement.enums.UserRole;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -32,19 +37,19 @@ public class CalendarServiceImpl implements CalendarService {
     private final CalendarAdapter calendarAdapter;
     private final IdGenerationService idGenerationService;
     private final HolidayEntityMapper holidayEntityMapper;
-    private final OrganizationRepository organizationRepository;
+    private final UserAdapter userAdapter;
 
-    public CalendarServiceImpl(CalendarEntityMapper calendarEntityMapper, CalendarAdapter calendarAdapter, IdGenerationService idGenerationService, HolidayEntityMapper holidayEntityMapper, OrganizationRepository organizationRepository) {
+    public CalendarServiceImpl(CalendarEntityMapper calendarEntityMapper, CalendarAdapter calendarAdapter, IdGenerationService idGenerationService, HolidayEntityMapper holidayEntityMapper, UserAdapter userAdapter) {
         this.calendarEntityMapper = calendarEntityMapper;
         this.calendarAdapter = calendarAdapter;
         this.idGenerationService = idGenerationService;
         this.holidayEntityMapper = holidayEntityMapper;
-        this.organizationRepository = organizationRepository;
+        this.userAdapter = userAdapter;
     }
 
     @Override
     @Transactional
-    public Calendar create(Calendar calendarMiddleware) {
+    public Calendar create(Calendar calendarMiddleware, String orgId) {
         log.info("Creating calendar: {}", calendarMiddleware);
         boolean isDefault = Boolean.TRUE.equals(calendarMiddleware.getIsDefault());
         calendarMiddleware.setIsDefault(isDefault);
@@ -56,6 +61,19 @@ public class CalendarServiceImpl implements CalendarService {
 
         CalendarEntity entity = calendarEntityMapper.toEntity(calendarMiddleware);
         CalendarEntity savedEntity = calendarAdapter.saveCalendar(entity);
+        boolean shouldAssignToSuperAdmin = calendarMiddleware.getDefault();
+        if (shouldAssignToSuperAdmin) {
+            int superAdminRoleLevel = UserRole.SUPERADMIN.getHierarchyLevel();
+            List<UserEntity> superAdminUser = userAdapter.findUserByOrgIdAndRoleId(orgId, superAdminRoleLevel);
+            List<UserEntity> userEntities = new ArrayList<>();
+            if (superAdminUser != null) {
+                for (UserEntity user : superAdminUser) {
+                    user.setCalendar(savedEntity);
+                    userEntities.add(user);
+                }
+                userAdapter.save(userEntities);
+            }
+        }
 
         log.info("Calendar saved successfully with ID: {}", savedEntity.getId());
 
@@ -120,9 +138,24 @@ public class CalendarServiceImpl implements CalendarService {
     }
 
     @Override
-    public Calendar update(Calendar model){
+    public Calendar update(Calendar model,String orgId){
         CalendarEntity entity = calendarEntityMapper.toEntity(model);
-        return calendarEntityMapper.toModel(calendarAdapter.updateCalendar(entity));
+        CalendarEntity calendarEntity=calendarAdapter.updateCalendar(entity);
+        Calendar calendar= calendarEntityMapper.toModel(calendarEntity);
+        boolean shouldAssignToSuperAdmin = model.getDefault();
+        if (shouldAssignToSuperAdmin) {
+            int superAdminRoleLevel = UserRole.SUPERADMIN.getHierarchyLevel();
+            List<UserEntity> superAdminUser = userAdapter.findUserByOrgIdAndRoleId(orgId, superAdminRoleLevel);
+            List<UserEntity> userEntities = new ArrayList<>();
+            if (superAdminUser != null) {
+                for (UserEntity user : superAdminUser) {
+                    user.setCalendar(calendarEntity);
+                    userEntities.add(user);
+                }
+                userAdapter.save(userEntities);
+            }
+        }
+        return calendar;
     }
 
     @Override

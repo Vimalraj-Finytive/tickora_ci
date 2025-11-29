@@ -41,10 +41,10 @@ public class UserPolicyAdapterImpl implements UserPolicyAdapter {
     }
 
     @Override
-    public void deleteUserPolicies(String policyId) {
-        userPolicyRepo.deleteByPolicyId(policyId);
+    public void deleteByPolicyIdAndUserIds(String policyId, Set<String> userIds) {
+        if (userIds == null || userIds.isEmpty()) return;
+        userPolicyRepo.deleteByPolicyIdAndUserIds(policyId, userIds);
     }
-
     @Override
     public List<UserPolicyEntity> findUserPoliciesByPolicyId(String policyId) {
         return userPolicyRepo.findByPolicyId(policyId);
