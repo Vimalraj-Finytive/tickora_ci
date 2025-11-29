@@ -92,7 +92,12 @@ public class LeaveBalanceAdapterImpl implements LeaveBalanceAdapter {
     }
 
     @Override
-    public List<LeaveBalanceEntity> findAllFixedAccrual(AccrualType type) {
-        return leaveBalanceRepo.findAllFixedAccrual(type);
+    public List<LeaveBalanceEntity> findAllFixedAccrual(int month, int year, AccrualType type) {
+        return leaveBalanceRepo.findAllFixedAccrual(month, year, type);
+    }
+
+    @Override
+    public List<MonthlySummaryEntity> findByMonthAndYear(Integer month, Integer year) {
+        return monthlySummaryRepository.findByMonthAndYear(month, year);
     }
 }

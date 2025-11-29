@@ -142,4 +142,12 @@ public class MonthlySummaryEntity {
     public void setFullDayUnits(Integer fullDayUnits) {
         this.fullDayUnits = fullDayUnits;
     }
+
+    public Integer getHoursUnits() {
+        return hoursUnits;
+    }
+
+    public void setHoursUnits(Integer hoursUnits) {
+        this.hoursUnits = hoursUnits;
+    }
 }
