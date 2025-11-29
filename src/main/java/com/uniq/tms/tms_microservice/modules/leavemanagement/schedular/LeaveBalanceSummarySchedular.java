@@ -26,7 +26,7 @@ public class LeaveBalanceSummarySchedular {
         this.organizationRepository = organizationRepository;
     }
 
-    @Scheduled(cron = "0 0/2 * * * ?", zone = "Asia/Kolkata")
+    @Scheduled(cron = "0 0 0 1 * ?", zone = "Asia/Kolkata")
     public void autoUpdateLeaveSummary(){
         try {
             List<OrganizationEntity> orgIds = organizationRepository.findAll();

@@ -360,18 +360,12 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
             leaveBalance.setLeaveTakenUnits(leaveBalance.getLeaveTakenUnits() + requested*0.5);
             double balanceUnits = leaveBalance.getBalanceUnits() - requested*0.5;
             leaveBalance.setBalanceUnits(balanceUnits);
-            if (entity.getPolicy().getCarryForward() && balanceUnits < leaveBalance.getCarryForwardUnits() ){
-                leaveBalance.setCarryForwardUnits(balanceUnits);
-            }
         }
         else if (leaveBalance != null &&  (entity.getPolicy().getEntitledType() == EntitledType.HOURS ||
                 entity.getPolicy().getEntitledType() == EntitledType.DAY)) {
             leaveBalance.setLeaveTakenUnits(leaveBalance.getLeaveTakenUnits() + requested);
             double balanceUnits = leaveBalance.getBalanceUnits() - requested;
             leaveBalance.setBalanceUnits(balanceUnits);
-            if (entity.getPolicy().getCarryForward() && balanceUnits < leaveBalance.getCarryForwardUnits()) {
-                leaveBalance.setCarryForwardUnits(balanceUnits);
-            }
         }
         leaveBalanceAdapter.saveLeaveBalance(leaveBalance);
     }
@@ -383,28 +377,12 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
             leaveBalance.setLeaveTakenUnits(leaveBalance.getLeaveTakenUnits() - requested*0.5);
             double balanceUnits = leaveBalance.getBalanceUnits() + requested*0.5;
             leaveBalance.setBalanceUnits(balanceUnits);
-            if (entity.getPolicy().getCarryForward()){
-                if (balanceUnits >= leaveBalance.getPolicy().getMaxCarryForwardUnits()) {
-                    leaveBalance.setCarryForwardUnits((double)leaveBalance.getPolicy().getMaxCarryForwardUnits());
-                }
-                else {
-                    leaveBalance.setCarryForwardUnits(balanceUnits);
-                }
-            }
         }
         else if (leaveBalance != null &&  (entity.getPolicy().getEntitledType() == EntitledType.HOURS ||
                 entity.getPolicy().getEntitledType() == EntitledType.DAY)) {
             leaveBalance.setLeaveTakenUnits(leaveBalance.getLeaveTakenUnits() - requested);
             double balanceUnits = leaveBalance.getBalanceUnits() + requested;
             leaveBalance.setBalanceUnits(balanceUnits);
-            if (entity.getPolicy().getCarryForward()){
-                if (balanceUnits >= leaveBalance.getPolicy().getMaxCarryForwardUnits()) {
-                    leaveBalance.setCarryForwardUnits((double)leaveBalance.getPolicy().getMaxCarryForwardUnits());
-                }
-                else {
-                    leaveBalance.setCarryForwardUnits(balanceUnits);
-                }
-            }
         }
         leaveBalanceAdapter.saveLeaveBalance(leaveBalance);
     }
