@@ -24,7 +24,6 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Component
 @ConditionalOnProperty(name = "database.type", havingValue = "postgres")
@@ -608,6 +607,15 @@ public class UserAdapterImpl implements UserAdapter {
     @Override
     public List<UserEntity>getGroupMembers(Long groupId){
         return userGroupRepository.findUsersByGroupId(Collections.singletonList(groupId));
+    }
+    @Override
+    public   List<UserEntity> getallUsers(){
+        return userRepository.findByActiveTrue();
+    }
+
+    @Override
+    public List<UserEntity> findusersInGroup(List<Long> groupIds, String supervisorId) {
+        return userGroupRepository.findUsersInGroup(groupIds, supervisorId);
     }
 
 }

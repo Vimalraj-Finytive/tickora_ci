@@ -421,4 +421,10 @@ public class UserFacade {
     List<UserLevelDto> dto=userDtoMapper.toDtoList(model);
     return new ApiResponse<>(200,"Group members fetched successfully",dto);
     }
+
+    public ApiResponse<List<UserLevelDto>>getUsersInGroup(){
+        List<UserLevelModel> model =userService.getUsersInGroup();
+        List<UserLevelDto> dto=userDtoMapper.toDtoList(model);
+        return new ApiResponse<>(200,"Group members fetched successfully",dto);
+    }
 }

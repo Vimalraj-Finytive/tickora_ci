@@ -269,5 +269,5 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
     """)
     List<UserEntity> findUsersWithCalendars(@Param("userIds") String[] userIds);
 
-
+   List<UserEntity>findByActiveTrue();
 }

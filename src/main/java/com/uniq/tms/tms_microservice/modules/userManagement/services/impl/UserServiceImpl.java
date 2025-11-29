@@ -10,8 +10,6 @@ import com.uniq.tms.tms_microservice.modules.locationManagement.mapper.LocationD
 import com.uniq.tms.tms_microservice.modules.locationManagement.repository.LocationRepository;
 import com.uniq.tms.tms_microservice.modules.locationManagement.services.LocationService;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.mapper.OrganizationEntityMapper;
-import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.WorkScheduleTypeEntity;
-import com.uniq.tms.tms_microservice.modules.workScheduleManagement.enums.WorkScheduleTypeEnum;
 import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.OrganizationAdapter;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.OrganizationEntity;
@@ -23,7 +21,7 @@ import com.uniq.tms.tms_microservice.modules.organizationManagement.services.Org
 import com.uniq.tms.tms_microservice.modules.userManagement.dto.*;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.*;
 import com.uniq.tms.tms_microservice.modules.userManagement.model.*;
-import com.uniq.tms.tms_microservice.shared.helper.BulkUserHelper;
+import com.uniq.tms.tms_microservice.shared.helper.*;
 import com.uniq.tms.tms_microservice.shared.util.*;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.adapter.TimesheetAdapter;
 import com.uniq.tms.tms_microservice.modules.authenticationManagement.model.EmailData;
@@ -45,9 +43,6 @@ import com.uniq.tms.tms_microservice.modules.locationManagement.entity.LocationE
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.entity.TimesheetEntity;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.WorkScheduleEntity;
 import com.uniq.tms.tms_microservice.shared.exception.CommonExceptionHandler;
-import com.uniq.tms.tms_microservice.shared.helper.EmailHelper;
-import com.uniq.tms.tms_microservice.shared.helper.ExceptionHelper;
-import com.uniq.tms.tms_microservice.shared.helper.RolePrivilegeHelper;
 import com.uniq.tms.tms_microservice.modules.userManagement.mapper.UserDtoMapper;
 import com.uniq.tms.tms_microservice.modules.userManagement.mapper.UserEntityMapper;
 import com.uniq.tms.tms_microservice.modules.userManagement.mapper.SecondaryDetailsMapper;
@@ -131,6 +126,7 @@ public class UserServiceImpl implements UserService {
     private final OrganizationAdapter organizationAdapter;
     private final LocationAdapter locationAdapter;
     private final OrganizationEntityMapper organizationEntityMapper;
+    private final AuthHelper authHelper;
 
     public UserServiceImpl(Validator validator, UserAdapter userAdapter, TimesheetAdapter timesheetAdapter,
                            UserEntityMapper userEntityMapper, CalendarAdapter calendarAdapter, OrganizationRepository organizationRepository,
@@ -140,7 +136,7 @@ public class UserServiceImpl implements UserService {
                            ApplicationEventPublisher publisher, WorkScheduleAdapter workScheduleAdapter, UserCacheService userCacheService,
                            CacheKeyUtil cacheKeyUtil, GroupRepository groupRepository, CacheKeyConfig cacheKeyConfig, CacheReloadHandlerRegistry cacheReloadHandlerRegistry,
                            OrganizationTypeRepository organizationTypeRepository, IdGenerationService idGenerationService, SecondaryDetailsRepository secondaryDetailsRepository,
-                           RolePrivilegeHelper rolePrivilegeHelper, ExceptionHelper exceptionHelper, OrganizationCacheService organizationCacheService, LocationDtoMapper locationDtoMapper, LocationService locationService, OrganizationAdapter organizationAdapter, LocationAdapter locationAdapter, OrganizationEntityMapper organizationEntityMapper) {
+                           RolePrivilegeHelper rolePrivilegeHelper, ExceptionHelper exceptionHelper, OrganizationCacheService organizationCacheService, LocationDtoMapper locationDtoMapper, LocationService locationService, OrganizationAdapter organizationAdapter, LocationAdapter locationAdapter, OrganizationEntityMapper organizationEntityMapper, AuthHelper authHelper) {
 
         this.validator = validator;
         this.userAdapter = userAdapter;
@@ -172,6 +168,7 @@ public class UserServiceImpl implements UserService {
         this.organizationAdapter = organizationAdapter;
         this.locationAdapter = locationAdapter;
         this.organizationEntityMapper = organizationEntityMapper;
+        this.authHelper = authHelper;
     }
 
     private static final Logger log = LoggerFactory.getLogger(UserServiceImpl.class);
@@ -2309,5 +2306,30 @@ public class UserServiceImpl implements UserService {
        return userEntityMapper.toUserModelList(entities);
     }
 
+    @Override
+    public List<UserLevelModel> getUsersInGroup() {
+        String userId=authHelper.getUserId();
+        String role = authHelper.getRole();
+        if (RoleName.SUPERADMIN.getRoleName().equalsIgnoreCase(role)) {
+            List<UserEntity> allUsers = userAdapter.getallUsers();
+            if (allUsers.isEmpty()) {
+                throw new IllegalArgumentException("No users found");
+            }
+            return userEntityMapper.toUserModelList(allUsers);
+        }
+        List<GroupEntity> supervisorGroups = userAdapter.getSupervisorGroups(userId);
 
+        if (supervisorGroups == null || supervisorGroups.isEmpty()) {
+            throw new IllegalArgumentException("Access Denied: User is not a supervisor");
+        }
+        List<Long> groupIds = supervisorGroups.stream()
+                .map(GroupEntity::getGroupId)
+                .toList();
+        List<UserEntity> members = userAdapter.findusersInGroup(groupIds, userId);
+
+        if (members.isEmpty()) {
+            throw new IllegalArgumentException("No group members found");
+        }
+        return userEntityMapper.toUserModelList(members);
+    }
 }

@@ -50,4 +50,5 @@ public interface UserService {
     List<UserLevelModel> getUsersBelowHierarchy(String userId,String orgId);
      List<GroupModel> getSupervisorGroups(String userId);
      List<UserLevelModel>getGroupMembers(Long groupId);
+     List<UserLevelModel>getUsersInGroup();
 }
