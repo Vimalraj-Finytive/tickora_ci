@@ -2,20 +2,27 @@ package com.uniq.tms.tms_microservice.modules.leavemanagement.services.impl;
 
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.LeaveBalanceAdapter;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.TimeOffPolicyAdapter;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.TimeOffRequestAdapter;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.UserPolicyAdapter;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.MonthlySummaryEntity;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeOffRequestEntity;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.*;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.record.UserPolicyKey;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.LeaveBalanceEntity;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.AccrualType;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.ResetFrequency;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.mapper.TimeOffPolicyEntityMapper;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.LeaveBalanceModel;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.record.UserPolicyProjection;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.services.LeaveBalanceService;
+import io.lettuce.core.dynamic.annotation.Param;
+import jakarta.persistence.Column;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -29,11 +36,15 @@ public class LeaveBalanceServiceImpl implements LeaveBalanceService {
        private final LeaveBalanceAdapter leaveBalanceAdapter;
        private final TimeOffPolicyAdapter timeOffPolicyAdapter;
        private final TimeOffPolicyEntityMapper timeOffPolicyEntityMapper;
+       private final TimeOffRequestAdapter timeOffRequestAdapter;
+       private final UserPolicyAdapter userPolicyAdapter;
 
-    public LeaveBalanceServiceImpl(LeaveBalanceAdapter leaveBalanceAdapter, TimeOffPolicyAdapter timeOffPolicyAdapter, TimeOffPolicyEntityMapper timeOffPolicyEntityMapper) {
+    public LeaveBalanceServiceImpl(LeaveBalanceAdapter leaveBalanceAdapter, TimeOffPolicyAdapter timeOffPolicyAdapter, TimeOffPolicyEntityMapper timeOffPolicyEntityMapper, TimeOffRequestAdapter timeOffRequestAdapter, UserPolicyAdapter userPolicyAdapter) {
         this.leaveBalanceAdapter = leaveBalanceAdapter;
         this.timeOffPolicyAdapter = timeOffPolicyAdapter;
         this.timeOffPolicyEntityMapper = timeOffPolicyEntityMapper;
+        this.timeOffRequestAdapter = timeOffRequestAdapter;
+        this.userPolicyAdapter = userPolicyAdapter;
     }
 
     @Override
@@ -189,14 +200,119 @@ public class LeaveBalanceServiceImpl implements LeaveBalanceService {
             month =12;
             year -= 1;
         }
+        log.info("monthly request");
+        List<MonthlySummaryEntity> summaryEntityList = new ArrayList<>();
+        List<String> userIds = userPolicyAdapter.findAllUserIdsInUserPolicies();
         List<LeaveBalanceEntity> list =
                 leaveBalanceAdapter.findBalancesByMonthYearAndAccrualType(month, year, AccrualType.MONTHLY);
 
-        Map<String, LeaveBalanceEntity> map = list.stream()
+        Map<String, List<LeaveBalanceEntity>> monthlyLeaveBalance =
+                list.stream()
+                        .collect(Collectors.groupingBy(lb -> lb.getUser().getUserId()));
+
+        List<TimeOffRequestEntity> unpaidRequests = timeOffRequestAdapter.findAllUnpaidRequest( month, year, Compensation.UNPAID, Status.APPROVED);
+        Map<String, List<TimeOffRequestEntity>> unpaidMap =
+                unpaidRequests.stream()
+                        .collect(Collectors.groupingBy(r -> r.getUser().getUserId()));
+
+        List<TimeOffRequestEntity> annualRequests = timeOffRequestAdapter.findAllAnnualRequests(month, year, Compensation.PAID, Status.APPROVED, AccrualType.ANNUALLY);
+        Map<String, List<TimeOffRequestEntity>> annualRequestsMap =
+                annualRequests.stream()
+                        .collect(Collectors.groupingBy(r -> r.getUser().getUserId()));
+
+        List<LeaveBalanceEntity> leaveBalanceEntities = leaveBalanceAdapter.findAnnualLeaveBalances(year, AccrualType.ANNUALLY);
+        Map<String, List<LeaveBalanceEntity>> leaveBalanceMap =
+                leaveBalanceEntities.stream()
+                        .collect(Collectors.groupingBy(lb -> lb.getUser().getUserId()));
+
+        List<TimeOffRequestEntity> fixedRequests = timeOffRequestAdapter.findFixedRequests(month, year, Status.APPROVED, AccrualType.FIXED);
+        Map<String, List<TimeOffRequestEntity>> fixedRequestsMap =
+                fixedRequests.stream()
+                        .collect(Collectors.groupingBy(
+                                r -> r.getUser().getUserId()));
+
+        List<LeaveBalanceEntity> fixedLeaveBalance = leaveBalanceAdapter.findAllFixedAccrual(AccrualType.FIXED);
+        Map<String, Double> balanceMap = fixedLeaveBalance.stream()
                 .collect(Collectors.toMap(
                         lb -> lb.getUser().getUserId(),
-                        lb -> lb,
-                        (lb1, lb2) -> lb1
+                        lb -> lb.getBalanceUnits() != null
+                                ? lb.getBalanceUnits()
+                                : 0.0
                 ));
+
+        for (String userId : userIds){
+            MonthlySummaryEntity summaryEntity = new MonthlySummaryEntity();
+             int totalLeavesTaken = 0;
+             int paidLeavesTaken = 0;
+             int unpaidLeavesTaken = 0;
+             int totalUnitsAvailable = 0;
+             int balanceUnits = 0;
+             int halfDayUnits = 0;
+             int fullDayUnits = 0;
+            for (LeaveBalanceEntity entity : monthlyLeaveBalance.getOrDefault(userId, Collections.emptyList())){
+                if (entity.getPolicy().getEntitledType() == EntitledType.DAY){
+                    fullDayUnits += entity.getLeaveTakenUnits();
+                    paidLeavesTaken += entity.getLeaveTakenUnits();
+                    totalUnitsAvailable += entity.getTotalUnits();
+                    balanceUnits += entity.getBalanceUnits();
+                }
+                else if (entity.getPolicy().getEntitledType() == EntitledType.HALF_DAY){
+                    halfDayUnits += entity.getLeaveTakenUnits();
+                    paidLeavesTaken += (int)(entity.getLeaveTakenUnits()*2);
+                    totalUnitsAvailable += entity.getTotalUnits();
+                    balanceUnits += entity.getBalanceUnits();
+                }
+                else {
+                    paidLeavesTaken += entity.getLeaveTakenUnits();
+                    totalUnitsAvailable += entity.getTotalUnits();
+                    balanceUnits += entity.getBalanceUnits();
+                }
+            }
+            for (TimeOffRequestEntity request : unpaidMap.getOrDefault(userId, Collections.emptyList())){
+                 unpaidLeavesTaken += request.getUnitsRequested();
+                 fullDayUnits += request.getUnitsRequested();
+            }
+            for (TimeOffRequestEntity entity : annualRequestsMap.getOrDefault(userId, Collections.emptyList())){
+                 if (entity.getPolicy().getEntitledType() == EntitledType.DAY){
+                     fullDayUnits += entity.getUnitsRequested();
+                     paidLeavesTaken += entity.getUnitsRequested();
+                 }
+                 else if (entity.getPolicy().getEntitledType() == EntitledType.HALF_DAY){
+                     halfDayUnits += (2*entity.getUnitsRequested());
+                     paidLeavesTaken +=(2*entity.getUnitsRequested());
+                 }
+                 else {
+                     paidLeavesTaken += entity.getUnitsRequested();
+                 }
+            }
+            for (LeaveBalanceEntity leaveBalance : leaveBalanceMap.get(userId)){
+                totalLeavesTaken += leaveBalance.getTotalUnits();
+                balanceUnits += leaveBalance.getBalanceUnits();
+            }
+            for (TimeOffRequestEntity request : fixedRequestsMap.get(userId)){
+                LocalDate monthStart = LocalDate.of(year, month, 1);
+                LocalDate monthEnd = monthStart.withDayOfMonth(monthStart.lengthOfMonth());
+                LocalDate effectiveStart = request.getStartDate().isBefore(monthStart) ? monthStart : request.getStartDate();
+                LocalDate effectiveEnd = request.getEndDate().isAfter(monthEnd) ? monthEnd : request.getEndDate();
+                int days = (int)ChronoUnit.DAYS.between(effectiveStart, effectiveEnd) + 1;
+                fullDayUnits += days;
+                paidLeavesTaken += fullDayUnits;
+                totalUnitsAvailable += request.getPolicy().getEntitledUnits();
+                balanceUnits += balanceMap.get(userId);
+            }
+            totalLeavesTaken = paidLeavesTaken + unpaidLeavesTaken;
+            summaryEntity.setUserId(userId);
+            summaryEntity.setYear(year);
+            summaryEntity.setMonth(month);
+            summaryEntity.setTotalLeavesTaken(totalLeavesTaken);
+            summaryEntity.setPaidLeavesTaken(paidLeavesTaken);
+            summaryEntity.setUnpaidLeavesTaken(unpaidLeavesTaken);
+            summaryEntity.setFullDayUnits(fullDayUnits);
+            summaryEntity.setHalfDayUnits(halfDayUnits);
+            summaryEntity.setTotalUnitsAvailable(totalUnitsAvailable);
+            summaryEntity.setBalanceUnits(balanceUnits);
+            summaryEntityList.add(summaryEntity);
+        }
+        leaveBalanceAdapter.saveAllSummary(summaryEntityList);
     }
 }
