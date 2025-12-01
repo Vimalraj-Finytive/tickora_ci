@@ -238,7 +238,7 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
             entitlementChanged = true;
         }
 
-        if (request.getCarryForward().equals(Boolean.TRUE)) {
+        if (Boolean.TRUE.equals(request.getCarryForward())) {
             policy.setCarryForward(request.getCarryForward());
                 if (request.getMaxCarryForwardUnits() == null) {
                     throw new IllegalArgumentException("MaxCarryForwardUnits is required");
