@@ -34,6 +34,17 @@ public class SchemaMultiTenantConnectionProvider
             String schema = tenantIdentifier != null ? tenantIdentifier.toString() : "public";
             stmt.execute("SET search_path TO " + schema);
         }
+        String appUserId = TenantContext.getCurrentUser();
+        System.out.println("🟩 Setting app.current_user_id = " + appUserId); // ADD LOGGING
+
+        if (appUserId != null) {
+            try (Statement stmt = connection.createStatement()) {
+                stmt.execute("SET app.current_user_id = '" + appUserId + "'");
+            }
+        } else {
+            System.out.println("🟥 UserContext.get() is NULL");
+        }
+
         return connection;
     }
 

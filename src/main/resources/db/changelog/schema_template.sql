@@ -435,6 +435,27 @@ CREATE TABLE IF NOT EXISTS ${schemaName}.timesheet_history (
 );
 
 -- ===========================================================
+-- Table: timesheet-edit-history
+-- ===========================================================
+--changeset system:create-timesheet-edit-history
+CREATE TABLE IF NOT EXISTS ${schemaName}.timesheet_edit_history (
+    id BIGSERIAL PRIMARY KEY,
+    timesheet_id BIGINT NOT NULL,
+    log_type VARCHAR(100),
+    old_value VARCHAR(255),
+    new_value VARCHAR(255),
+    action_type VARCHAR(50),
+    log_from VARCHAR(50),
+    action_by VARCHAR(50),
+    action_at TIMESTAMP DEFAULT NOW(),
+
+    CONSTRAINT fk_timesheet_edit_history_timesheet
+        FOREIGN KEY (timesheet_id)
+        REFERENCES ${schemaName}.timesheet(id)
+        ON DELETE CASCADE
+);
+
+-- ===========================================================
 -- Table: blacklisted_tokens
 -- ===========================================================
 --changeset system:create-blacklisted-tokens
@@ -781,7 +802,6 @@ CREATE TABLE IF NOT EXISTS timeoff_request_history (
     action_type VARCHAR(50) NOT NULL,
     action_by VARCHAR(50) NOT NULL,
     action_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- ===========================================================
@@ -1137,6 +1157,8 @@ $BODY$;
 --changeset system:create-log-user-payroll-history-function endDelimiter://
 CREATE OR REPLACE FUNCTION ${schemaName}.log_user_payroll_history()
 RETURNS TRIGGER AS $$
+DECLARE
+    actor text := current_setting('app.current_user_id', true);
 BEGIN
     IF (TG_OP = 'INSERT') THEN
         INSERT INTO ${schemaName}.user_payroll_history (
@@ -1148,7 +1170,7 @@ BEGIN
         ) VALUES (
             NOW(),
             'CREATE',
-            CURRENT_USER,
+            COALESCE(actor, 'SYSTEM'),
             NEW.user_id,
             NEW.id
         );
@@ -1163,7 +1185,7 @@ BEGIN
         ) VALUES (
             NOW(),
             'UPDATE',
-            CURRENT_USER,
+            COALESCE(actor, 'SYSTEM'),
             NEW.user_id,
             NEW.id
         );
@@ -1178,7 +1200,7 @@ BEGIN
         ) VALUES (
             NOW(),
             'DELETE',
-            CURRENT_USER,
+            COALESCE(actor, 'SYSTEM'),
             OLD.user_id,
             OLD.id
         );
@@ -1206,6 +1228,8 @@ EXECUTE FUNCTION ${schemaName}.log_user_payroll_history();
 --changeset system:create-log-payroll-history-function endDelimiter://
 CREATE OR REPLACE FUNCTION ${schemaName}.log_payroll_history()
 RETURNS TRIGGER AS $$
+DECLARE
+    actor text := current_setting('app.current_user_id', true);
 BEGIN
     IF (TG_OP = 'INSERT') THEN
         INSERT INTO ${schemaName}.payroll_history (
@@ -1216,7 +1240,7 @@ BEGIN
         ) VALUES (
             NOW(),
             'CREATE',
-            CURRENT_USER,
+            COALESCE(actor, 'SYSTEM'),
             NEW.id
         );
 
@@ -1229,7 +1253,7 @@ BEGIN
         ) VALUES (
             NOW(),
             'UPDATE',
-            CURRENT_USER,
+            COALESCE(actor, 'SYSTEM'),
             NEW.id
         );
 
@@ -1242,7 +1266,7 @@ BEGIN
         ) VALUES (
             NOW(),
             'DELETE',
-            CURRENT_USER,
+            COALESCE(actor, 'SYSTEM'),
             OLD.id
         );
 
@@ -1268,6 +1292,8 @@ EXECUTE FUNCTION ${schemaName}.log_payroll_history();
 --changeset system:create-log-timeoff-request-history-function endDelimiter://
 CREATE OR REPLACE FUNCTION ${schemaName}.log_timeoff_request_history()
 RETURNS TRIGGER AS $$
+DECLARE
+    actor text := current_setting('app.current_user_id', true);
 BEGIN
     IF (TG_OP = 'INSERT') THEN
         INSERT INTO ${schemaName}.timeoff_request_history (
@@ -1280,7 +1306,7 @@ BEGIN
             NEW.timeoff_request_id,
             NEW.user_id,
             'CREATE',
-            CURRENT_USER,
+            COALESCE(actor, 'SYSTEM'),
             NOW()
         );
 
@@ -1295,7 +1321,7 @@ BEGIN
             NEW.timeoff_request_id,
             NEW.user_id,
             'UPDATE',
-            CURRENT_USER,
+            COALESCE(actor, 'SYSTEM'),
             NOW()
         );
 
@@ -1310,7 +1336,7 @@ BEGIN
             OLD.timeoff_request_id,
             OLD.user_id,
             'DELETE',
-            CURRENT_USER,
+            COALESCE(actor, 'SYSTEM'),
             NOW()
         );
         RETURN OLD;
@@ -1331,3 +1357,107 @@ CREATE TRIGGER trg_timeoff_request_history_delete
 BEFORE DELETE ON ${schemaName}.timeoff_request
 FOR EACH ROW
 EXECUTE FUNCTION ${schemaName}.log_timeoff_request_history();
+
+--changeset system:create-log_timesheet_edit-function endDelimiter://
+CREATE OR REPLACE FUNCTION all_pvt_ltd.log_timesheet_edit()
+RETURNS TRIGGER AS $$
+DECLARE
+    actor text := current_setting('app.current_user_id', true);
+BEGIN
+
+    IF NEW.first_clock_in IS DISTINCT FROM OLD.first_clock_in THEN
+        INSERT INTO all_pvt_ltd.timesheet_edit_history (
+            timesheet_id,
+            log_type, old_value, new_value,
+            action_type, log_from,
+            action_by, action_at
+        )
+        VALUES (
+            OLD.id,
+            'CLOCK_IN',
+            OLD.first_clock_in::text, NEW.first_clock_in::text,
+            'UPDATE', 'MANUAL_ENTRY',
+            COALESCE(actor, 'SYSTEM'), NOW()
+        );
+    END IF;
+
+    IF NEW.last_clock_out IS DISTINCT FROM OLD.last_clock_out THEN
+        INSERT INTO all_pvt_ltd.timesheet_edit_history (
+            timesheet_id,
+            log_type, old_value, new_value,
+            action_type, log_from,
+            action_by, action_at
+        )
+        VALUES (
+            OLD.id,
+            'CLOCK_OUT',
+            OLD.last_clock_out::text, NEW.last_clock_out::text,
+            'UPDATE', 'MANUAL_ENTRY',
+            COALESCE(actor, 'SYSTEM'), NOW()
+        );
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+--changeset system:create-trg_timesheet_edit-trigger endDelimiter://
+CREATE TRIGGER trg_timesheet_edit
+AFTER UPDATE ON all_pvt_ltd.timesheet
+FOR EACH ROW
+WHEN (OLD IS DISTINCT FROM NEW)
+EXECUTE FUNCTION all_pvt_ltd.log_timesheet_edit();
+
+--changeset system:create-timeoff-export-view endDelimiter://
+CREATE OR REPLACE VIEW ${schemaName}.timeoff_export_view AS
+SELECT
+    r.time_off_request_id,
+    r.user_id AS creator_id,
+    u.name AS creator_name,
+    r.start_date AS leave_start_date,
+    r.end_date AS leave_end_date,
+    r.status,
+    r.policy_id,
+    p.policy_name,
+    p.entitled_type AS leave_type,
+    m.viewer_id,
+    m.type AS viewer_type
+FROM ${schemaName}.timeoff_request r
+JOIN ${schemaName}.users u
+    ON u.user_id = r.user_id
+JOIN ${schemaName}.policy p
+    ON p.policy_id = r.policy_id
+LEFT JOIN ${schemaName}.users_request_mapping m
+    ON m.time_off_request_id = r.time_off_request_id
+    AND m.viewer_id <> r.user_id;
+
+--changeset system:create-receiver-timeoff-export-view endDelimiter://
+CREATE OR REPLACE VIEW ${schemaName}.timeoff_request_view AS
+SELECT
+    r.timeoff_request_id,
+    r.user_id AS creator_id,
+    u.user_name AS creator_name,
+	r.request_date AS requested_date,
+    r.start_date AS leave_start_date,
+    r.end_date AS leave_end_date,
+	r.start_time AS leave_start_time,
+	r.end_time AS leave_end_time,
+    r.status,
+	r.reason,
+    r.policy_id,
+	r.units_requested,
+    p.policy_name,
+    p.entitled_type AS leave_type,
+    m.viewer_id,
+    vu.user_name AS viewer_name,
+    m.type AS viewer_type
+FROM ${schemaName}.timeoff_request r
+JOIN ${schemaName}.users u
+    ON u.user_id = r.user_id
+JOIN ${schemaName}.timeoff_policies p
+    ON p.policy_id = r.policy_id
+LEFT JOIN ${schemaName}.users_request_mapping m
+    ON m.timeoff_request_id = r.timeoff_request_id
+    AND m.viewer_id <> r.user_id
+LEFT JOIN ${schemaName}.users vu
+    ON vu.user_id = m.viewer_id;

@@ -2,7 +2,6 @@ package com.uniq.tms.tms_microservice.modules.leavemanagement.entity;
 
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
-
 import java.time.LocalDateTime;
 
 @Entity
@@ -42,6 +41,9 @@ public class MonthlySummaryEntity {
 
     @Column(name = "full_day_units", nullable = false)
     private Integer fullDayUnits = 0;
+
+    @Column(name = "hours_units", nullable = false)
+    private Integer hoursUnits;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

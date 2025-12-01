@@ -1,6 +1,5 @@
 package com.uniq.tms.tms_microservice.modules.userManagement.dto;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -12,7 +11,6 @@ public class UserDto {
     private String mobileNumber;
     private Long roleId;
     private List<Long> locationId;
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     private LocalDate dateOfJoining;
     private boolean isRegisterUser;
     private List<Long> groupId;

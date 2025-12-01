@@ -16,5 +16,3 @@ public enum AccrualType {
             return value;
         }
     }
-
-

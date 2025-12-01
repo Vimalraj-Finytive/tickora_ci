@@ -4,6 +4,7 @@ import com.uniq.tms.tms_microservice.modules.payrollManagement.enums.PayRollStat
 import java.math.BigDecimal;
 
 public class UserPayRollModel {
+
     private String userId;
     private BigDecimal totalPayrollAmount;
     private PayRollStatusEnum payrollStatus;
