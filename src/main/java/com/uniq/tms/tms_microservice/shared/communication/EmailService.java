@@ -40,7 +40,7 @@ public class EmailService {
             context.setVariable("isNewUser", isNewUser);
             context.setVariable("emailType", emailType);
 
-            String htmlContent = templateEngine.process("email-template", context);
+            String htmlContent = templateEngine.process("html/email-template", context);
 
             Map<String, String> payload = new HashMap<>();
             payload.put("to", to);
@@ -68,7 +68,7 @@ public class EmailService {
             context.setVariable("skippedcount", skippedCount);
             context.setVariable("emailType", emailType);
 
-            String htmlContent = templateEngine.process("email-template", context);
+            String htmlContent = templateEngine.process("html/email-template", context);
 
             Map<String, String> payload = new HashMap<>();
             payload.put("to", toEmail);
@@ -100,7 +100,7 @@ public class EmailService {
             context.setVariable("renewLink", renewLink);
             context.setVariable("emailType", "subscription_reminder");
 
-            String htmlContent = templateEngine.process("subscription_reminder", context);
+            String htmlContent = templateEngine.process("html/subscription_reminder", context);
 
             Map<String, String> payload = new HashMap<>();
             payload.put("to", toEmail);

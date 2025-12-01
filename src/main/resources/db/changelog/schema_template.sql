@@ -801,7 +801,7 @@ CREATE TABLE IF NOT EXISTS timeoff_request_history (
     user_id VARCHAR(20) NOT NULL,
     action_type VARCHAR(50) NOT NULL,
     action_by VARCHAR(50) NOT NULL,
-    action_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    action_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- ===========================================================
@@ -1359,14 +1359,14 @@ FOR EACH ROW
 EXECUTE FUNCTION ${schemaName}.log_timeoff_request_history();
 
 --changeset system:create-log_timesheet_edit-function endDelimiter://
-CREATE OR REPLACE FUNCTION all_pvt_ltd.log_timesheet_edit()
+CREATE OR REPLACE FUNCTION ${schemaName}.log_timesheet_edit()
 RETURNS TRIGGER AS $$
 DECLARE
     actor text := current_setting('app.current_user_id', true);
 BEGIN
 
     IF NEW.first_clock_in IS DISTINCT FROM OLD.first_clock_in THEN
-        INSERT INTO all_pvt_ltd.timesheet_edit_history (
+        INSERT INTO ${schemaName}.timesheet_edit_history (
             timesheet_id,
             log_type, old_value, new_value,
             action_type, log_from,
@@ -1382,7 +1382,7 @@ BEGIN
     END IF;
 
     IF NEW.last_clock_out IS DISTINCT FROM OLD.last_clock_out THEN
-        INSERT INTO all_pvt_ltd.timesheet_edit_history (
+        INSERT INTO ${schemaName}.timesheet_edit_history (
             timesheet_id,
             log_type, old_value, new_value,
             action_type, log_from,
@@ -1403,35 +1403,12 @@ $$ LANGUAGE plpgsql;
 
 --changeset system:create-trg_timesheet_edit-trigger endDelimiter://
 CREATE TRIGGER trg_timesheet_edit
-AFTER UPDATE ON all_pvt_ltd.timesheet
+AFTER UPDATE ON ${schemaName}.timesheet
 FOR EACH ROW
 WHEN (OLD IS DISTINCT FROM NEW)
-EXECUTE FUNCTION all_pvt_ltd.log_timesheet_edit();
+EXECUTE FUNCTION ${schemaName}.log_timesheet_edit();
 
---changeset system:create-timeoff-export-view endDelimiter://
-CREATE OR REPLACE VIEW ${schemaName}.timeoff_export_view AS
-SELECT
-    r.time_off_request_id,
-    r.user_id AS creator_id,
-    u.name AS creator_name,
-    r.start_date AS leave_start_date,
-    r.end_date AS leave_end_date,
-    r.status,
-    r.policy_id,
-    p.policy_name,
-    p.entitled_type AS leave_type,
-    m.viewer_id,
-    m.type AS viewer_type
-FROM ${schemaName}.timeoff_request r
-JOIN ${schemaName}.users u
-    ON u.user_id = r.user_id
-JOIN ${schemaName}.policy p
-    ON p.policy_id = r.policy_id
-LEFT JOIN ${schemaName}.users_request_mapping m
-    ON m.time_off_request_id = r.time_off_request_id
-    AND m.viewer_id <> r.user_id;
-
---changeset system:create-receiver-timeoff-export-view endDelimiter://
+--changeset system:create-receiver-timeoff_request_view endDelimiter://
 CREATE OR REPLACE VIEW ${schemaName}.timeoff_request_view AS
 SELECT
     r.timeoff_request_id,
