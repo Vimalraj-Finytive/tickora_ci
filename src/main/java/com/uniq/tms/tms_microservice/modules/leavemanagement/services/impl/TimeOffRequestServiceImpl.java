@@ -6,7 +6,6 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.TimeOffPoli
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.TimeOffRequestAdapter;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.UserPolicyAdapter;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeOffExportRequestDto;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeOffccDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.LeaveBalanceEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeOffPolicyEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeOffRequestEntity;
@@ -17,11 +16,9 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.mapper.TimeOffPolic
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.*;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.projection.TimeOffExportView;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.services.TimeOffRequestService;
-import com.uniq.tms.tms_microservice.modules.userManagement.adapter.UserAdapter;
-import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
 import com.uniq.tms.tms_microservice.shared.helper.AuthHelper;
-import lombok.ToString;
+import jakarta.annotation.Nullable;
 import com.uniq.tms.tms_microservice.shared.util.CacheKeyUtil;
 import jakarta.transaction.Transactional;
 import org.apache.poi.ss.usermodel.*;
@@ -40,7 +37,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.*;
 import java.time.temporal.ChronoUnit;
-import java.util.*;
 import java.util.*;
 import java.util.List;
 import java.util.stream.Stream;
@@ -62,13 +58,12 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
     private final TimeOffPolicyAdapter timeOffPolicyAdapter;
     private final UserPolicyAdapter userPolicyAdapter;
     private final AuthHelper authHelper;
-    private final UserAdapter userAdapter;
     private final CacheKeyUtil cacheKeyUtil;
     private final RedisTemplate<String,Object> redisTemplate;
 
     public TimeOffRequestServiceImpl(TimeOffRequestAdapter timeOffRequestAdapter, TimeOffPolicyEntityMapper TimeOffPolicyEntityMapper, TimeOffPolicyDtoMapper timeOffPolicyDtoMapper,
                                      LeaveBalanceAdapter leaveBalanceAdapter, TimeOffPolicyAdapter timeOffPolicyAdapter, UserPolicyAdapter userPolicyAdapter,
-                                     AuthHelper authHelper, UserAdapter userAdapter, CacheKeyUtil cacheKeyUtil, RedisTemplate<String, Object> redisTemplate) {
+                                     AuthHelper authHelper, CacheKeyUtil cacheKeyUtil, @Nullable RedisTemplate<String, Object> redisTemplate) {
         this.timeOffRequestAdapter = timeOffRequestAdapter;
         this.TimeOffPolicyEntityMapper = TimeOffPolicyEntityMapper;
         this.timeOffPolicyDtoMapper = timeOffPolicyDtoMapper;
@@ -76,7 +71,6 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
         this.timeOffPolicyAdapter = timeOffPolicyAdapter;
         this.userPolicyAdapter = userPolicyAdapter;
         this.authHelper = authHelper;
-        this.userAdapter = userAdapter;
         this.cacheKeyUtil = cacheKeyUtil;
         this.redisTemplate = redisTemplate;
     }
