@@ -18,7 +18,7 @@ public class LeaveBalanceEntity {
     @JoinColumn(name = "policy_id", nullable = false)
     private TimeOffPolicyEntity policy;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn (name = "user_id", nullable = false)
     private UserEntity user;
 
