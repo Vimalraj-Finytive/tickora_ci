@@ -23,7 +23,7 @@ public interface UserPolicyAdapter {
 
     List<UserPolicyEntity> findAllByPolicyIdsAndUserIds(List<String> policyIds, Set<String> userIds);
 
-    boolean isUserPolicyActive(String policyId, String userId, LocalDate date);
+    boolean isUserPolicyActive(String policyId, String userId,  LocalDate startDate, LocalDate endDate);
 
     List<String> findAllUserIdsInUserPolicies();
 }
