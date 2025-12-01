@@ -533,8 +533,8 @@ CREATE TABLE IF NOT EXISTS ${schemaName}.payroll (
     others NUMERIC(19,2) NOT NULL,
     overtime_amount NUMERIC(19,2) NOT NULL,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP
+    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 --===========================================================
@@ -809,7 +809,6 @@ CREATE TABLE IF NOT EXISTS leave_balance (
    CONSTRAINT fk_leave_balance_user
             FOREIGN KEY (user_id) REFERENCES users(user_id)
             ON DELETE CASCADE
-
 );
 
 -- ===========================================================
@@ -819,7 +818,6 @@ CREATE TABLE IF NOT EXISTS leave_balance (
 CREATE TABLE IF NOT EXISTS monthly_summary (
     id BIGSERIAL PRIMARY KEY,
     user_id VARCHAR(20) NOT NULL,
-    policy_id VARCHAR(20) NOT NULL,
     month INT NOT NULL,
     year INT NOT NULL,
     total_leaves_taken INT DEFAULT 0,
@@ -829,11 +827,8 @@ CREATE TABLE IF NOT EXISTS monthly_summary (
     balance_units INT DEFAULT 0,
     half_day_units INT DEFAULT 0,
     full_day_units INT DEFAULT 0,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_monthly_user_summary_policy_id
-        FOREIGN KEY (policy_id) REFERENCES timeoff_policies(policy_id)
-        ON DELETE CASCADE
-
+    hours_units INT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- ===========================================================

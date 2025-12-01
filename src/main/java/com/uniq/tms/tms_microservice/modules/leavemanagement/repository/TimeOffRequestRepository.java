@@ -1,6 +1,9 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.repository;
 
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeOffRequestEntity;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.AccrualType;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.Compensation;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.Status;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeOffRequestUserModel;
 import io.lettuce.core.dynamic.annotation.Param;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -106,4 +109,52 @@ public interface TimeOffRequestRepository extends JpaRepository<TimeOffRequestEn
             """)
     boolean existsOverlappingRequest(String userId, String policyId, LocalDate startDate, LocalDate endDate);
 
+
+    @Query("""
+    SELECT r
+    FROM TimeOffRequestEntity r
+    WHERE MONTH(r.startDate) = :month
+      AND YEAR(r.startDate) = :year
+      AND r.policy.compensation = :compensation
+      AND r.status = status""")
+    List<TimeOffRequestEntity> findAllUnpaidRequest(
+            @Param("month") int month,
+            @Param("year") int year,
+            @Param("type") Compensation compensation,
+            @Param("status") Status status);
+
+    @Query("""
+    SELECT r
+    FROM TimeOffRequestEntity r
+    WHERE MONTH(r.startDate) = :month
+      AND YEAR(r.startDate) = :year
+      AND r.policy.compensation = :compensation
+      AND r.status = :status
+      AND r.policy.accrualType = :accrualType
+    """)
+    List<TimeOffRequestEntity> findAllAnnualRequests(
+            @Param("month") int month,
+            @Param("year") int year,
+            @Param("compensation") Compensation compensation,
+            @Param("status") Status status,
+            @Param("accrual") AccrualType accrualType
+    );
+
+    @Query("""
+    SELECT r
+    FROM TimeOffRequestEntity r
+    WHERE
+        (
+            (MONTH(r.startDate) = :month AND YEAR(r.startDate) = :year)
+            OR
+            (MONTH(r.endDate) = :month AND YEAR(r.endDate) = :year)
+        )
+      AND r.status = :status
+      AND r.policy.accrualType = :accrualType
+    """)
+    List<TimeOffRequestEntity> findFixedRequests(
+            @Param("month") int month,
+            @Param("year") int year,
+            @Param("status") Status status,
+            @Param("accrualType") AccrualType accrualType);
 }
