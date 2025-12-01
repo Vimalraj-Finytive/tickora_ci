@@ -1,7 +1,5 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.model;
 
-import jakarta.validation.constraints.NotNull;
-
 import java.time.LocalDate;
 import java.util.List;
 

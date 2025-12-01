@@ -2,7 +2,6 @@ package com.uniq.tms.tms_microservice.modules.leavemanagement.entity;
 
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
 import jakarta.persistence.*;
-
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 

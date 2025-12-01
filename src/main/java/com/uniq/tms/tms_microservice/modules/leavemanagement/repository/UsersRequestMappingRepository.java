@@ -9,5 +9,4 @@ import java.time.LocalDate;
 
 @Repository
 public interface UsersRequestMappingRepository extends JpaRepository<UsersRequestMappingEntity,Long> {
-
 }

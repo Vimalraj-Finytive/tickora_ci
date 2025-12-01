@@ -30,5 +30,4 @@ public interface PayRollAdapter {
     List<PayRollEntity> findAll();
     PayRollEntity save(PayRollEntity entity);
     void deleteUserPayrollById(String payrollId);
-
 }

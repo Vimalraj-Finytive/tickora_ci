@@ -1,7 +1,6 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.model;
 
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.*;
-
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -10,27 +9,19 @@ public class TimeOffPoliciesModel {
 
     private String policyId;
     private String policyName;
-
     private Compensation compensation;
     private AccrualType accrualType;
-
     private LocalDate validityStartDate;
     private LocalDate validityEndDate;
     private LocalDate accrualStartDate;
-
     private ResetFrequency resetFrequency;
-
     private Integer entitledUnits;
     private EntitledType entitledType;
-
     private Status status;
-
     private Integer maxCarryForwardUnits;
     private Boolean isCarryForward;
-
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-
     private List<String> assignedUsernames;
 
     public List<String> getAssignedUsernames() {

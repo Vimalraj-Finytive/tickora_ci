@@ -1,11 +1,9 @@
 package com.uniq.tms.tms_microservice.modules.timesheetManagement.dto;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.entity.TimesheetEntity;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.constant.TimesheetConstant;
-
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -17,7 +15,6 @@ public class TimesheetDto {
     private Long id;
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String userId;
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     private LocalDate date;
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private LocalTime firstClockIn;

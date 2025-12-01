@@ -1,4 +1,5 @@
 package com.uniq.tms.tms_microservice.modules.payrollManagement.dto;
+
 public class PayRollSettingenumDto {
 
     private String key;

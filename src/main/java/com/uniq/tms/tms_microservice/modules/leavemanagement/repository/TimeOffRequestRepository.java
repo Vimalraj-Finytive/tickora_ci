@@ -1,10 +1,11 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.repository;
 
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeOffRequestEntity;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.Status;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.AccrualType;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.Compensation;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.Status;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeOffRequestUserModel;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.projection.TimeOffExportView;
 import io.lettuce.core.dynamic.annotation.Param;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -157,4 +158,55 @@ public interface TimeOffRequestRepository extends JpaRepository<TimeOffRequestEn
             @Param("year") int year,
             @Param("status") Status status,
             @Param("accrualType") AccrualType accrualType);
+
+        @Query(value = """
+        SELECT *
+        FROM timeoff_export_view
+        WHERE leave_start_date >= :fromDate
+        AND leave_end_date <= :toDate
+        AND policy_id IN (:policies)
+        AND status IN (:status)
+        """, nativeQuery = true)
+        List<TimeOffExportView> fetchRequestDate(LocalDate fromDate,
+                                          LocalDate toDate,
+                                          List<String> policies,
+                                          List<String> status);
+
+    @Query(value = """
+    SELECT *
+    FROM timeoff_request_view
+    WHERE creator_id = :userId
+      AND leave_start_date >= :fromDate
+      AND leave_end_date <= :toDate
+      AND (array_length(:policies, 1) IS NULL OR policy_id = ANY(:policies))
+      AND (array_length(:status, 1) IS NULL OR status = ANY(:status))
+    """,
+            nativeQuery = true)
+    List<TimeOffExportView> fetchCreatorRequests(
+            @Param("fromDate") LocalDate fromDate,
+            @Param("toDate") LocalDate toDate,
+            @Param("status") String[] status,
+            @Param("policies") String[] policies,
+            @Param("userId") String userId
+    );
+
+    @Query(value = """
+    SELECT *
+    FROM timeoff_request_view
+    WHERE viewer_id = :viewerId
+      AND leave_start_date >= :fromDate
+      AND leave_end_date <= :toDate
+      AND (array_length(:policies, 1) IS NULL OR policy_id = ANY(:policies))
+      AND (array_length(:status, 1) IS NULL OR status = ANY(:status))
+    """,
+            nativeQuery = true)
+    List<TimeOffExportView> fetchReceiverRequests(
+            @Param("fromDate") LocalDate fromDate,
+            @Param("toDate") LocalDate toDate,
+            @Param("status") String[] status,
+            @Param("policies") String[] policies,
+            @Param("viewerId") String viewerId
+    );
+
+
 }

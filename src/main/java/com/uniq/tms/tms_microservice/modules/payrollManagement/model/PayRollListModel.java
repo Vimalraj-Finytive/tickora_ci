@@ -11,7 +11,6 @@ public class PayRollListModel {
     private BigDecimal others;
     private BigDecimal overtimeAmount;
 
-    // Getters and setters
     public String getId() {
         return id;
     }

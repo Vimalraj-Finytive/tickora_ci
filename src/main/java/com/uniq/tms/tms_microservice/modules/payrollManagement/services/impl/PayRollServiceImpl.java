@@ -39,7 +39,7 @@ public class PayRollServiceImpl implements PayRollService {
 
     private static final Logger log = LogManager.getLogger(PayRollServiceImpl.class);
 
-    private  final PayRollAdapter payRollAdapter;
+    private final PayRollAdapter payRollAdapter;
     private final PayRollEntityMapper entityMapper;
     private final UserAdapter userAdapter;
     private final IdGenerationService idGenerationService;
@@ -73,7 +73,6 @@ public class PayRollServiceImpl implements PayRollService {
         PayRollSettingEntity saved = payRollAdapter.save(entity);
         return entityMapper.toModel(saved);
     }
-
 
     @Override
     public PayRollModel createRecord(PayRollModel model, String orgId) {
@@ -168,7 +167,7 @@ public class PayRollServiceImpl implements PayRollService {
             userPayrollAmount.setNotes("monthly salary updated");
             userPayrollAmountList.add(userPayrollAmount);
         }
-          payRollAdapter.saveAllUserPayrollAmount(userPayrollAmountList);
+        payRollAdapter.saveAllUserPayrollAmount(userPayrollAmountList);
     }
 
 
@@ -197,7 +196,7 @@ public class PayRollServiceImpl implements PayRollService {
 //        return List.of(count,restDaysCount+count);
 //    }
 
-    public BigDecimal calculateOvertimeHrs(List<TimesheetEntity> timesheetEntities){
+    public BigDecimal calculateOvertimeHrs(List<TimesheetEntity> timesheetEntities) {
         return timesheetEntities.stream()
                 .filter(t -> t.getTotalOverTime() != null)
                 .map(t -> BigDecimal.valueOf(t.getTotalOverTime().getHour())
@@ -205,7 +204,7 @@ public class PayRollServiceImpl implements PayRollService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    public BigDecimal calculateRegularHrs(List<TimesheetEntity> timesheetEntities){
+    public BigDecimal calculateRegularHrs(List<TimesheetEntity> timesheetEntities) {
         return timesheetEntities.stream()
                 .filter(t -> t.getRegularHours() != null)
                 .map(t -> BigDecimal.valueOf(t.getRegularHours().getHour())
@@ -214,10 +213,10 @@ public class PayRollServiceImpl implements PayRollService {
     }
 
     public BigDecimal calculateRegularPayrollAmount(Integer regularDays, BigDecimal daySalary) {
-            if (regularDays == 0) {
-                return BigDecimal.ZERO;
-            }
-            return BigDecimal.valueOf(regularDays).multiply(daySalary);
+        if (regularDays == 0) {
+            return BigDecimal.ZERO;
+        }
+        return BigDecimal.valueOf(regularDays).multiply(daySalary);
     }
 
     @Override
@@ -227,10 +226,10 @@ public class PayRollServiceImpl implements PayRollService {
 
     @Override
     @Transactional
-    public UserPayRollAmountModel updatePayrollAmount(UserPayRollAmountModel model,String month) {
+    public UserPayRollAmountModel updatePayrollAmount(String userId, UserPayRollAmountModel model, String month) {
 
         Optional<UserPayRollAmountEntity> optExisting =
-                payRollAdapter.findUserPayrollAmountByUserIdAndMonth(model.getUserId(),month);
+                payRollAdapter.findUserPayrollAmountByUserIdAndMonth(userId, month);
         UserPayRollAmountEntity existing = getUserPayrollAmountEntity(model, optExisting);
 
         BigDecimal incomingTotalAmount = model.getTotalAmount();
@@ -238,8 +237,7 @@ public class PayRollServiceImpl implements PayRollService {
 
         if (existingTotalAmount == null && incomingTotalAmount != null) {
             existing.setTotalAmount(incomingTotalAmount);
-        }
-        else if (incomingTotalAmount != null && incomingTotalAmount.compareTo(existingTotalAmount) != 0) {
+        } else if (incomingTotalAmount != null && incomingTotalAmount.compareTo(existingTotalAmount) != 0) {
             existing.setTotalAmount(incomingTotalAmount);
         }
 
@@ -294,7 +292,6 @@ public class PayRollServiceImpl implements PayRollService {
         }
     }
 
-
     private static UserPayRollAmountEntity getUserPayrollAmountEntity(UserPayRollAmountModel model, Optional<UserPayRollAmountEntity> optExisting) {
         UserPayRollAmountEntity existing = optExisting.orElseThrow(() ->
                 new RuntimeException("User payroll amount record not found for userId: " + model.getUserId()));
@@ -325,13 +322,12 @@ public class PayRollServiceImpl implements PayRollService {
         List<UserPayRollAmountEntity> userPayRollAmountEntityList = payRollAdapter.getAllByMonthAndYear(month);
         BigDecimal totalPayment = BigDecimal.ZERO;
         int paidCount = 0, unpaidCount = 0, failedCount = 0;
-        for (UserPayRollAmountEntity entity : userPayRollAmountEntityList){
-            totalPayment =  totalPayment.add(entity.getTotalPayrollAmount());
-            if (entity.getPayrollStatus() == PayRollStatusEnum.PAID){
+        for (UserPayRollAmountEntity entity : userPayRollAmountEntityList) {
+            totalPayment = totalPayment.add(entity.getTotalPayrollAmount());
+            if (entity.getPayrollStatus() == PayRollStatusEnum.PAID) {
                 paidCount++;
-            }
-            else {
-                if(entity.getPayrollStatus() == PayRollStatusEnum.FAILED){
+            } else {
+                if (entity.getPayrollStatus() == PayRollStatusEnum.FAILED) {
                     failedCount++;
                 }
                 unpaidCount++;
@@ -351,8 +347,7 @@ public class PayRollServiceImpl implements PayRollService {
         return list;
     }
 
-
-@Override
+    @Override
     public List<PayRollStatusEnumModel> getAllStatus() {
         List<PayRollStatusEnumModel> list = new ArrayList<>();
         for (PayRollStatusEnum e : PayRollStatusEnum.values()) {
@@ -364,20 +359,19 @@ public class PayRollServiceImpl implements PayRollService {
 
     @Override
     public PayRollSettingModel getSetting() {
-                PayRollSettingEntity entity = payRollAdapter.findFirst().orElse(null);
-                if (entity == null) throw new ResponseStatusException(HttpStatus.CONFLICT, "No Data Found");
-                return entityMapper.toModel(entity);
+        PayRollSettingEntity entity = payRollAdapter.findFirst().orElse(null);
+        if (entity == null) throw new ResponseStatusException(HttpStatus.CONFLICT, "No Data Found");
+        return entityMapper.toModel(entity);
     }
 
-    @Override
-    public void updatePayroll(PayRollUpdate model) {
+    public void assignPayroll(PayRollUpdate model) {
         List<UserEntity> users = userAdapter.getUsersByIds(model.getUserId());
         PayRollEntity payroll = payRollAdapter.getPayRoll(model.getPayRollId());
 
-        List<UserPayRollEntity> existingMappings =payRollAdapter.
+        List<UserPayRollEntity> existingMappings = payRollAdapter.
                 findExistingUserPayrolls(model.getUserId());
 
-         Map<String, UserPayRollEntity> existingMap = existingMappings.stream()
+        Map<String, UserPayRollEntity> existingMap = existingMappings.stream()
                 .collect(Collectors.toMap(e -> e.getUser().getUserId(), e -> e));
 
         List<UserPayRollEntity> toUpdate = new ArrayList<>();
@@ -407,27 +401,27 @@ public class PayRollServiceImpl implements PayRollService {
     }
 
     @Override
-    public void editPayroll(PayRollEditRequestModel editModel) {
+    public void updatePayroll(PayRollEditRequestModel editModel) {
 
         PayRollEntity payroll = payRollAdapter.findById(editModel.getPayrollId())
                 .orElseThrow(() -> new IllegalArgumentException("Payroll not found"));
 
-        if (editModel.getPayrollName()!=null)
+        if (editModel.getPayrollName() != null)
             payroll.setPayrollName(editModel.getPayrollName());
 
-        if (editModel.getYearlySalary()!=null)
+        if (editModel.getYearlySalary() != null)
             payroll.setYearlySalary(editModel.getYearlySalary());
 
-        if (editModel.getMonthlySalary()!=null)
+        if (editModel.getMonthlySalary() != null)
             payroll.setMonthlySalary(editModel.getMonthlySalary());
 
-        if (editModel.getPf()!=null)
+        if (editModel.getPf() != null)
             payroll.setPf(editModel.getPf());
 
-        if (editModel.getOthers()!=null)
+        if (editModel.getOthers() != null)
             payroll.setOthers(editModel.getOthers());
 
-        if (editModel.getOvertimeAmount()!=null)
+        if (editModel.getOvertimeAmount() != null)
             payroll.setOvertimeAmount(editModel.getOvertimeAmount());
 
         payroll.setUpdatedAt(LocalDateTime.now());

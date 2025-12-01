@@ -259,7 +259,7 @@ public class UserController {
     public ResponseEntity<ApiResponse<UserCalendarRequestDto>> updateUser(
             @RequestHeader("Authorization") String token,
             @RequestBody UserCalendarRequestDto updates){
-        ApiResponse response = userFacade.updateCalendar(updates);
+        ApiResponse<UserCalendarRequestDto> response = userFacade.updateCalendar(updates);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 

@@ -12,6 +12,8 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.services.TimeOffReq
 import com.uniq.tms.tms_microservice.modules.userManagement.enums.UserRole;
 import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
 import com.uniq.tms.tms_microservice.shared.helper.AuthHelper;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.*;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.mapper.TimeOffPolicyDtoMapper;
@@ -190,8 +192,8 @@ public class TimeOffFacade {
         return new ApiResponse<>(200, "Policies fetched successfully", dto);
     }
 
-    public ApiResponse<Map<String, List<TimeOffRequestGroupDto>>> filterRequests(TimeOffccDto dto) {
-        Map<String, List<TimeOffRequestGroupModel>> model = timeOffRequestService.filterRequests(dto);
+    public ApiResponse<Map<String, List<TimeOffRequestGroupDto>>> filterRequests(TimeOffExportRequest dto,String loggedUserId) {
+        Map<String, List<TimeOffRequestGroupModel>> model = timeOffRequestService.filterRequests(dto,loggedUserId);
         Map<String, List<TimeOffRequestGroupDto>> dtoMap = timeoffPolicyDtoMapper.toDtoList(model);
         return new ApiResponse<>(200, "Requests fetched successfully", dtoMap);
     }
@@ -219,5 +221,18 @@ public class TimeOffFacade {
     }
 
 
+    public ApiResponse<Map<String,String>> startExportJob(TimeOffExportRequestDto request, String schema, String orgId) {
+        String exportId = timeOffRequestService.startExporting(request, schema, orgId);
+        return new ApiResponse<>(202,"Report generation Started",exportId);
+    }
 
+    public ApiResponse<Map<String, String>> getExportStatus(String schema, String orgId, String exportId) {
+        String exportStatus = timeOffRequestService.exportStatus(exportId, schema, orgId);
+        return new ApiResponse<>(200,"Fetched Report Status Successfully",exportStatus);
+    }
+
+    public ApiResponse<Resource> downloadExport(String schema, String orgId, String exportId, String type) {
+        Resource downloadStatus = timeOffRequestService.downloadReport(exportId, schema, orgId, type);
+        return new ApiResponse<>(200,"Report Downloaded Successfully",downloadStatus);
+    }
 }

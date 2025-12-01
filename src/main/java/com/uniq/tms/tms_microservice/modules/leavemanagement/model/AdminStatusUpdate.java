@@ -1,7 +1,6 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.model;
 
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.Status;
-
 import java.time.LocalDate;
 
 public class AdminStatusUpdate {

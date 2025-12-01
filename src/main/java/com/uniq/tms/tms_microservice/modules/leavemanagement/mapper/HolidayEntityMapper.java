@@ -17,4 +17,3 @@ public interface HolidayEntityMapper {
 
     CalendarHolidayEntity toEntity(Holiday holidayMiddleware);
 }
-

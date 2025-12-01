@@ -3,7 +3,6 @@ package com.uniq.tms.tms_microservice.modules.leavemanagement.model;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.AccrualType;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.Compensation;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.EntitledType;
-
 import java.time.LocalDate;
 
 public class TimeOffPolicyResponseModel {

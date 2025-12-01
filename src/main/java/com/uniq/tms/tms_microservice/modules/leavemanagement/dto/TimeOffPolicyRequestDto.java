@@ -5,7 +5,6 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.Compensation;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.EntitledType;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.ResetFrequency;
 import jakarta.validation.constraints.NotNull;
-
 import java.time.LocalDate;
 import java.util.List;
 
@@ -147,4 +146,3 @@ public class TimeOffPolicyRequestDto {
         this.groupIds = groupIds;
     }
 }
-

@@ -6,6 +6,7 @@ import java.util.List;
 @Entity
 @Table(name = "country", schema = "public")
 public class CountryEntity {
+
     @Id
     private String id;
     @Column(name = "code", nullable = false)
@@ -47,6 +48,5 @@ public class CountryEntity {
     public void setPublicHolidays(List<PublicHolidayEntity> publicHolidays) {
         this.publicHolidays = publicHolidays;
     }
-
 
 }

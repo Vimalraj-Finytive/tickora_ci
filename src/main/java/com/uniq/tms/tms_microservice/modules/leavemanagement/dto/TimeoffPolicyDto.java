@@ -3,6 +3,7 @@ package com.uniq.tms.tms_microservice.modules.leavemanagement.dto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.EntitledType;
 
 public class TimeoffPolicyDto {
+
     private String policyId;
     private String policyName;
     private EntitledType entitledType;
