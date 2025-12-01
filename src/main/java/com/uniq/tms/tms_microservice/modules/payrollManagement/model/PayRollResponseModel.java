@@ -58,5 +58,3 @@ public class PayRollResponseModel {
         this.overtimeAmount = overtimeAmount;
     }
 }
-
-

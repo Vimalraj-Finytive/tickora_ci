@@ -15,13 +15,13 @@ import java.util.List;
 @RequestMapping(PayRollConstant.PAYROLL_URl)
 public class PayRollController {
 
-    private PayRollFacade facade;
+    private final PayRollFacade facade;
 
     public PayRollController(PayRollFacade facade) {
         this.facade = facade;
     }
 
-    @PutMapping("/setting/create")
+    @PutMapping("/settings/update")
     public ResponseEntity<ApiResponse<Object>> createOrUpdate(
             @RequestHeader("Authorization") String token,
             @RequestBody PayRollSettingDto dto) {
@@ -57,21 +57,26 @@ public class PayRollController {
         return ResponseEntity.status(payrollPayment.getStatusCode()).body(payrollPayment);
     }
 
-    @PutMapping("/userPayRoll/update/{month}")
-    public ResponseEntity<ApiResponse<UserPayRollUpdateDto>> updatePayroll(
+    @PutMapping("/userPayRoll/update/{userId}/{month}")
+    public ResponseEntity<ApiResponse<UserPayRollUpdateDto>> updateUserPayroll(
             @RequestHeader("Authorization") String token,
-            @RequestBody UserPayRollUpdateDto dto,@PathVariable String month) {
-        ApiResponse<UserPayRollUpdateDto> response = facade.updatePayrollAmount(dto,month);
+            @PathVariable String userId,
+            @PathVariable String month,
+            @RequestBody UserPayRollUpdateDto dto) {
+        ApiResponse<UserPayRollUpdateDto> response =
+                facade.updatePayrollAmount(userId, dto, month);
+
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<PayrollResponseDto>> getPayrollById(@RequestHeader("Authorization") String token,@PathVariable String id) {
+    public ResponseEntity<ApiResponse<PayrollResponseDto>> getPayrollById(@RequestHeader("Authorization") String token,
+                                                                          @PathVariable String id) {
         ApiResponse<PayrollResponseDto> response = facade.getPayrollById(id);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
-    @GetMapping("/amount/details")
+    @GetMapping("/details")
     public ResponseEntity<ApiResponse<List<PayrollListResponseDto>>> getAllPayrolls(
             @RequestHeader("Authorization") String token) {
         ApiResponse<List<PayrollListResponseDto>> response = facade.getAllPayrolls();
@@ -109,14 +114,17 @@ public class PayRollController {
     }
 
     @PostMapping
-    public ResponseEntity<ApiResponse> updatePayroll(@RequestHeader("Authorization") String token, @RequestBody PayRollUpdateDto payRollUpdateDto){
-        ApiResponse response = facade.updatePayroll(payRollUpdateDto);
+    public ResponseEntity<ApiResponse<Void>> assignPayroll(@RequestHeader("Authorization") String token,
+                                                     @RequestBody PayRollUpdateDto payRollUpdateDto){
+        ApiResponse<Void> response = facade.assignPayroll(payRollUpdateDto);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
-    @PutMapping("/edit")
-    public ResponseEntity<ApiResponse> editPayRoll(@RequestHeader("Authorization") String token,@RequestBody PayRollEditRequestDto payRollEditRequestDto){
-        ApiResponse response=facade.editPayroll(payRollEditRequestDto);
+    @PutMapping("/{payRollId}/update")
+    public ResponseEntity<ApiResponse<Void>> updatePayroll(@RequestHeader("Authorization") String token,
+                                                     @PathVariable String payRollId,
+                                                   @RequestBody PayRollEditRequestDto payRollEditRequestDto){
+        ApiResponse<Void> response=facade.updatePayroll(payRollId,payRollEditRequestDto);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 

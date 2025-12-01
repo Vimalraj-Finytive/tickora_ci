@@ -1,4 +1,5 @@
 package com.uniq.tms.tms_microservice.modules.payrollManagement.model;
+
 public class PayRollSettingenumModel {
 
     private String key;
@@ -17,5 +18,3 @@ public class PayRollSettingenumModel {
     public String getValue() { return value; }
     public void setValue(String value) { this.value = value; }
 }
-
-

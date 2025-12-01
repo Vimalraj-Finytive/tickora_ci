@@ -399,9 +399,9 @@ public class UserFacade {
     public ApiResponse<UserCalendarRequestDto> updateCalendar(UserCalendarRequestDto updates){
         boolean success = userService.UpdateCalendar(updates);
         if (!success) {
-            return new ApiResponse(401, "Unauthorized - Invalid users", null);
+            return new ApiResponse<>(401, "Unauthorized - Invalid users", null);
         }
-        return new ApiResponse(200, "User Updated successfully",updates);
+        return new ApiResponse<>(200, "User Updated successfully",null);
 
     }
 
