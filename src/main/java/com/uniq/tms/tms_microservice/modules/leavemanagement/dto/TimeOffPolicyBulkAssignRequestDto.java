@@ -1,7 +1,6 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.dto;
 
 import jakarta.validation.constraints.NotNull;
-
 import java.time.LocalDate;
 import java.util.List;
 
@@ -9,10 +8,8 @@ public class TimeOffPolicyBulkAssignRequestDto {
     private List<String> policyIds;
     private List<String> userIds;
     private List<Long> groupIds;
-
     @NotNull
     private LocalDate userValidFrom;
-
     private LocalDate userValidTo;
 
     public List<String> getPolicyIds() {

@@ -241,6 +241,7 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
         log.info("Fetch user groups");
         return timesheetRepository.fetchUserGroups(arrayOfUserIds)
                 .stream()
+                .filter(Objects::nonNull)
                 .collect(Collectors.toMap(
                         UserGroupProjection::getUserId,
                         ug -> ug.getGroupNames() != null ? ug.getGroupNames() : "null"

@@ -1,6 +1,7 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.model;
 
 public class StatusEnumModel {
+
     private String key;
     private String value;
 

@@ -1,7 +1,5 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.model;
 
-import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.ViewerType;
-
 import java.time.LocalDate;
 
 public class TimeOffRequestGroupModel {
@@ -14,10 +12,9 @@ public class TimeOffRequestGroupModel {
         private String startTime;
         private String endTime;
         private Integer unitsRequested;
-        private Double hoursRequested;
         private String reason;
         private String status;
-        private ViewerType viewerType;
+        private String viewerType;
 
     public String getUserId() {
         return userId;
@@ -91,14 +88,6 @@ public class TimeOffRequestGroupModel {
         this.unitsRequested = unitsRequested;
     }
 
-    public Double getHoursRequested() {
-        return hoursRequested;
-    }
-
-    public void setHoursRequested(Double hoursRequested) {
-        this.hoursRequested = hoursRequested;
-    }
-
     public String getReason() {
         return reason;
     }
@@ -115,11 +104,11 @@ public class TimeOffRequestGroupModel {
         this.status = status;
     }
 
-    public ViewerType getViewerType() {
+    public String getViewerType() {
         return viewerType;
     }
 
-    public void setViewerType(ViewerType viewerType) {
+    public void setViewerType(String viewerType) {
         this.viewerType = viewerType;
     }
 

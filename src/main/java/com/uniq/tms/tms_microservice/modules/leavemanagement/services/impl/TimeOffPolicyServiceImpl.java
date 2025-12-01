@@ -252,7 +252,6 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
 
         List<UserPolicyEntity> assignedUsers = userPolicyAdapter.findUserPoliciesByPolicyId(policy.getPolicyId());
 
-
         List<LeaveBalanceEntity> assignedLb =leaveBalanceAdapter.findLeaveBalancesByPolicyId(request.getPolicyId());
         Set<String> existingUserIds = assignedUsers.stream()
                 .map(up -> up.getUser().getUserId())
@@ -588,8 +587,6 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
     }
 
     private UserPolicyEntity buildUserPolicy(TimeOffPolicyEntity policy, UserEntity user, LocalDate validFrom, LocalDate validTo) {
-
-
         UserPolicyEntity up = new UserPolicyEntity();
         up.setUser(user);
         up.setPolicy(policy);

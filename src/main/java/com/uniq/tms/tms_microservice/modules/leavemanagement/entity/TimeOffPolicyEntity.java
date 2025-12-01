@@ -1,6 +1,5 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.entity;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.AccrualType;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.Compensation;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.EntitledType;
@@ -36,7 +35,6 @@ public class TimeOffPolicyEntity {
     @Column(name = "validity_end_date")
     private LocalDate validityEndDate;
 
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     @Column(name = "accrual_start_date")
     private LocalDate accrualStartDate;
 

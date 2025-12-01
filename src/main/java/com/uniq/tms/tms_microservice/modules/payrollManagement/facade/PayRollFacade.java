@@ -1,6 +1,5 @@
 package com.uniq.tms.tms_microservice.modules.payrollManagement.facade;
 
-
 import com.uniq.tms.tms_microservice.modules.payrollManagement.dto.*;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.mapper.PayRollDtoMapper;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.model.*;
@@ -44,9 +43,9 @@ public class PayRollFacade {
         return new ApiResponse<>(200, "Fetched UserPayrollAmount Successfully", dto);
     }
 
-    public ApiResponse<UserPayRollUpdateDto> updatePayrollAmount(UserPayRollUpdateDto dto,String month) {
+    public ApiResponse<UserPayRollUpdateDto> updatePayrollAmount(String userId,UserPayRollUpdateDto dto,String month) {
         UserPayRollAmountModel model = dtoMapper.toModel(dto);
-        UserPayRollAmountModel updatedModel = service.updatePayrollAmount(model,month);
+        UserPayRollAmountModel updatedModel = service.updatePayrollAmount(userId,model,month);
         return new ApiResponse<>(200, "Payroll updated successfully", null);
     }
 
@@ -114,19 +113,24 @@ public class PayRollFacade {
         return new ApiResponse<>(200, "PayRoll Settings fetched successfully", dto);
     }
 
-    public ApiResponse updatePayroll(PayRollUpdateDto payRollUpdateDto){
-        service.updatePayroll(dtoMapper.toPayRollUpdateModel(payRollUpdateDto));
-        return new ApiResponse(200, "PayRoll Updated successfully",null);
+    public ApiResponse<Void> assignPayroll(PayRollUpdateDto payRollUpdateDto){
+        service.assignPayroll(dtoMapper.toPayRollUpdateModel(payRollUpdateDto));
+        return new ApiResponse<>(200, "PayRoll Updated successfully",null);
     }
 
-    public ApiResponse editPayroll(PayRollEditRequestDto payRollEditRequestDto) {
+    public ApiResponse<Void> updatePayroll(String payRollId, PayRollEditRequestDto dto) {
         try {
-            service.editPayroll(dtoMapper.toEditModel(payRollEditRequestDto));
-            return new ApiResponse(200, "Payroll details saved successfully", null);
+            PayRollEditRequestModel model = dtoMapper.toEditModel(dto);
+            model.setPayrollId(payRollId);
+
+            service.updatePayroll(model);
+
+            return new ApiResponse<>(200, "Payroll details saved successfully", null);
         } catch (IllegalArgumentException e) {
-            return new ApiResponse<>(400,e.getMessage(),null);
+            return new ApiResponse<>(400, e.getMessage(), null);
         } catch (Exception e) {
-            return new ApiResponse<>(404,e.getMessage(),null);
+            return new ApiResponse<>(404, e.getMessage(), null);
         }
     }
+
 }

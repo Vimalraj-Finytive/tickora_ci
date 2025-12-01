@@ -1,31 +1,52 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.services.impl;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
+import com.opencsv.CSVWriter;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.LeaveBalanceAdapter;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.TimeOffPolicyAdapter;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.TimeOffRequestAdapter;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.UserPolicyAdapter;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeOffExportRequestDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeOffccDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.LeaveBalanceEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeOffPolicyEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeOffRequestEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.UsersRequestMappingEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.*;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.mapper.TimeOffPolicyDtoMapper;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.mapper.TimeOffPolicyEntityMapper;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.*;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.projection.TimeOffExportView;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.services.TimeOffRequestService;
 import com.uniq.tms.tms_microservice.modules.userManagement.adapter.UserAdapter;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
+import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
 import com.uniq.tms.tms_microservice.shared.helper.AuthHelper;
 import lombok.ToString;
+import com.uniq.tms.tms_microservice.shared.util.CacheKeyUtil;
+import jakarta.transaction.Transactional;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.*;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.*;
+import java.util.List;
 import java.util.stream.Stream;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.FileSystemResource;
+
 
 @Service
 public class TimeOffRequestServiceImpl implements TimeOffRequestService {
@@ -36,21 +57,32 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
 
     private final TimeOffRequestAdapter timeOffRequestAdapter;
     private final TimeOffPolicyEntityMapper TimeOffPolicyEntityMapper;
+    private final TimeOffPolicyDtoMapper timeOffPolicyDtoMapper;
     private final LeaveBalanceAdapter leaveBalanceAdapter;
     private final TimeOffPolicyAdapter timeOffPolicyAdapter;
     private final UserPolicyAdapter userPolicyAdapter;
     private final AuthHelper authHelper;
     private final UserAdapter userAdapter;
+    private final CacheKeyUtil cacheKeyUtil;
+    private final RedisTemplate<String,Object> redisTemplate;
 
-    public TimeOffRequestServiceImpl(TimeOffRequestAdapter timeOffRequestAdapter, TimeOffPolicyEntityMapper TimeOffPolicyEntityMapper, LeaveBalanceAdapter leaveBalanceAdapter, TimeOffPolicyAdapter timeOffPolicyAdapter, UserPolicyAdapter userPolicyAdapter, AuthHelper authHelper, UserAdapter userAdapter) {
+    public TimeOffRequestServiceImpl(TimeOffRequestAdapter timeOffRequestAdapter, TimeOffPolicyEntityMapper TimeOffPolicyEntityMapper, TimeOffPolicyDtoMapper timeOffPolicyDtoMapper,
+                                     LeaveBalanceAdapter leaveBalanceAdapter, TimeOffPolicyAdapter timeOffPolicyAdapter, UserPolicyAdapter userPolicyAdapter,
+                                     AuthHelper authHelper, UserAdapter userAdapter, CacheKeyUtil cacheKeyUtil, RedisTemplate<String, Object> redisTemplate) {
         this.timeOffRequestAdapter = timeOffRequestAdapter;
         this.TimeOffPolicyEntityMapper = TimeOffPolicyEntityMapper;
+        this.timeOffPolicyDtoMapper = timeOffPolicyDtoMapper;
         this.leaveBalanceAdapter = leaveBalanceAdapter;
         this.timeOffPolicyAdapter = timeOffPolicyAdapter;
         this.userPolicyAdapter = userPolicyAdapter;
         this.authHelper = authHelper;
         this.userAdapter = userAdapter;
+        this.cacheKeyUtil = cacheKeyUtil;
+        this.redisTemplate = redisTemplate;
     }
+
+    @Value("${csv.request.download.dir}")
+    private String downloadDir;
 
     @Override
     public void createRequest(TimeOffRequest request) {
@@ -100,12 +132,6 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
         if (leaveBalance.getBalanceUnits() == 0.0){
             throw new IllegalArgumentException("Cannot take paid leave");
         }
-
-        UserEntity user = userAdapter.findById(request.getUserId())
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
-
-        entity.setUser(user);
-
         entity.setStartDate(request.getStartDate());
         entity.setEndDate(request.getEndDate());
         if (policy.getEntitledType() == EntitledType.DAY) {
@@ -126,6 +152,9 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
             entity.setEndTime(request.getEndTime());
             entity.setUnitsRequested(request.getUnitsRequested());
         }
+        UserEntity user = new UserEntity();
+        user.setUserId(request.getUserId());
+        entity.setUser(user);
         entity.setPolicy(policy);
         entity.setStatus(Status.PENDING);
         entity.setReason(request.getReason());
@@ -179,6 +208,9 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
        if (days != request.getUnitsRequested()){
            throw new IllegalArgumentException("Invalid request format for the selected entitled type");
        }
+       UserEntity user = new UserEntity();
+       user.setUserId(request.getUserId());
+       entity.setUser(user);
        entity.setPolicy(policy);
        entity.setStartDate(request.getStartDate());
        entity.setEndDate(request.getEndDate());
@@ -198,51 +230,15 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
             }
         }
         TimeOffRequestEntity entity = timeOffRequestAdapter.getTimeoffRequest(model.getPolicyId(), model.getUserId(), model.getRequestDate());
-
-        if (entity == null) {
-            throw new IllegalArgumentException("No time-off request found for given details");
-        }
-        Status current=entity.getStatus();
-        Status requestedStatus=model.getStatus();
-
         if ( LocalDate.now(zoneId).isAfter(entity.getStartDate()) || (model.getStatus() != null && !handleEmployeeRules(entity.getStatus(), model.getStatus()))) {
             throw new IllegalArgumentException("Update not allowed");
         }
-
-        if (current == Status.CANCELLED || current == Status.REJECTED) {
-            throw new IllegalArgumentException("Cancelled/Rejected request cannot be edited.");
-        }
-
-        if (current == Status.APPROVED) {
-
-            if (LocalDate.now(zoneId).isAfter(entity.getEndDate())) {
-                throw new IllegalArgumentException(
-                        "Status change is not allowed after the leave ends"
-                );
+        if (model.getStatus() != null && model.getStatus() == Status.CANCELLED){
+            if (entity.getPolicy().getCompensation() == Compensation.PAID) {
+                Integer requested = entity.getUnitsRequested();
+                addLeaveBalance(entity, requested);
             }
-
-            if (requestedStatus != Status.CANCELLED && requestedStatus != Status.REJECTED) {
-                throw new IllegalArgumentException(
-                        "Only cancellation or rejection allowed after approval"
-                );
-            }
-
-            boolean changed = (model.getStartDate() != null && !model.getStartDate().equals(entity.getStartDate())) ||
-                            (model.getEndDate() != null && !model.getEndDate().equals(entity.getEndDate())) ||
-                            (model.getUnitsRequested() != null && !model.getUnitsRequested().equals(entity.getUnitsRequested())) ||
-                            (model.getStartTime() != null && !model.getStartTime().equals(entity.getStartTime())) ||
-                            (model.getEndTime() != null && !model.getEndTime().equals(entity.getEndTime())) ||
-                            (model.getReason() != null && !model.getReason().equals(entity.getReason()));
-
-            if (changed) {
-                throw new IllegalArgumentException("Editing an approved request is not allowed");
-            }
-
-            if (requestedStatus == Status.CANCELLED && entity.getPolicy().getCompensation() == Compensation.PAID) {
-                addLeaveBalance(entity, entity.getUnitsRequested());
-            }
-
-            entity.setStatus(requestedStatus);
+            entity.setStatus(model.getStatus());
             timeOffRequestAdapter.saveRequest(entity);
             return;
         }
@@ -258,14 +254,12 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
             entity.setEndDate(model.getEndDate());
         }
         if (entity.getPolicy().getCompensation() == Compensation.UNPAID){
-
             if (model.getUnitsRequested() != null && days!= model.getUnitsRequested()){
                 throw new IllegalArgumentException("Invalid paid leave request.");
             }
             timeOffRequestAdapter.saveRequest(entity);
             return;
         }
-
         LeaveBalanceEntity leaveBalance = leaveBalanceAdapter.findForPeriod(entity.getPolicy().getPolicyId(), entity.getUser().getUserId(), entity.getStartDate(), entity.getEndDate());
         if ((entity.getPolicy().getEntitledType() == EntitledType.DAY || entity.getPolicy().getEntitledType() == EntitledType.HALF_DAY )&&(model.getUnitsRequested() != null && model.getStartDate() != null && model.getEndDate() != null)) {
 
@@ -293,10 +287,10 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
             }
             validateHours( model.getStartTime(), model.getEndTime(), model.getUnitsRequested(), leaveBalance);
             if (model.getUnitsRequested() > entity.getUnitsRequested()) {
-                  double hour = model.getUnitsRequested() - entity.getUnitsRequested();
-                  if (leaveBalance.getBalanceUnits() < hour){
-                      throw new IllegalArgumentException("Insufficient leave balance.");
-                  }
+                double hour = model.getUnitsRequested() - entity.getUnitsRequested();
+                if (leaveBalance.getBalanceUnits() < hour){
+                    throw new IllegalArgumentException("Insufficient leave balance.");
+                }
             }
             entity.setStartTime(model.getStartTime());
             entity.setEndTime(model.getEndTime());
@@ -316,10 +310,8 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
             }
         }
         entity.setUnitsRequested(model.getUnitsRequested());
-        entity.setStatus(requestedStatus);
         TimeOffRequestEntity saved = timeOffRequestAdapter.saveRequest(entity);
     }
-
 
     private boolean handleEmployeeRules(Status current, Status next) {
         return (current == Status.PENDING || current == Status.APPROVED) && next == Status.CANCELLED;
@@ -424,40 +416,70 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
     }
 
     @Override
-    public Map<String, List<TimeOffRequestGroupModel>> filterRequests(TimeOffccDto dto) {
-        LocalDate fromDate = dto.getFromDate();
-        LocalDate toDate = dto.getToDate();
-        String inputUserId = dto.getUserId();
-        String finalUserId;
-        boolean SelfRequest;
-        if (inputUserId == null || inputUserId.trim().isEmpty()) {
-            finalUserId = authHelper.getUserId();
-            SelfRequest = true;
-        } else {
-            finalUserId = inputUserId;
-            SelfRequest = false;
-        }
-        if (fromDate == null || toDate == null) {
+    public Map<String, List<TimeOffRequestGroupModel>> filterRequests(
+            TimeOffExportRequest request,
+            String loggedUserId) {
+
+        boolean creatorMode =
+                request.getUserId() != null &&
+                        !request.getUserId().trim().isEmpty() &&
+                        request.getUserId().equals(loggedUserId);
+
+        if (request.getFromDate() == null || request.getToDate() == null) {
             throw new IllegalArgumentException("fromDate and toDate are required");
         }
-        List<TimeOffRequestUserModel> list =
-                SelfRequest
-                        ? timeOffRequestAdapter.filterCreatedByUser(fromDate, toDate, finalUserId)
-                        : timeOffRequestAdapter.filterWithUser(fromDate, toDate, finalUserId);
+
+        String finalUserId = loggedUserId;
+
+        String[] statusArr =
+                (request.getStatus() == null || request.getStatus().isEmpty())
+                        ? new String[0]
+                        : request.getStatus().toArray(new String[0]);
+
+        String[] policyArr =
+                (request.getPolicyIds() == null || request.getPolicyIds().isEmpty())
+                        ? new String[0]
+                        : request.getPolicyIds().toArray(new String[0]);
+
+        List<TimeOffExportView> rows =
+                creatorMode
+                        ? timeOffRequestAdapter.fetchCreatorRequests(
+                        request.getFromDate(), request.getToDate(), statusArr, policyArr, finalUserId
+                )
+                        : timeOffRequestAdapter.fetchReceiverRequests(
+                        request.getFromDate(), request.getToDate(), statusArr, policyArr, finalUserId
+                );
 
         List<TimeOffRequestGroupModel> toList = new ArrayList<>();
         List<TimeOffRequestGroupModel> ccList = new ArrayList<>();
 
-        for (TimeOffRequestUserModel item : list) {
-            TimeOffRequestGroupModel model =
-                    TimeOffPolicyEntityMapper.toGroupModel(item.getRequest());
-            model.setUserId(item.getUserId());
-            model.setUserName(item.getUserName());
+        for (TimeOffExportView row : rows) {
 
-            if (item.getType() == ViewerType.APPROVER)
+            TimeOffRequestGroupModel model = new TimeOffRequestGroupModel();
+
+            model.setPolicyName(row.getPolicyName());
+            model.setRequestDate(LocalDate.parse(row.getRequestedDate()));
+            model.setStartDate(row.getLeaveStartDate());
+            model.setEndDate(row.getLeaveEndDate());
+            model.setStartTime(row.getLeaveStartTime());
+            model.setEndTime(row.getLeaveEndTime());
+            model.setStatus(row.getStatus());
+            model.setReason(row.getReason());
+            model.setUnitsRequested(row.getUnitsRequested());
+            if (creatorMode) {
+                model.setUserId(row.getViewerId());
+                model.setUserName(row.getViewerName());
+                model.setViewerType(null);
+                if ("APPROVER".equals(row.getViewerType()))
+                    toList.add(model);
+                else if ("VIEWER".equals(row.getViewerType()))
+                    ccList.add(model);
+            } else {
+                model.setUserId(row.getCreatorId());
+                model.setUserName(row.getCreatorName());
+                model.setViewerType(row.getViewerType());
                 toList.add(model);
-            else if (item.getType() == ViewerType.VIEWER)
-                ccList.add(model);
+            }
         }
 
         Map<String, List<TimeOffRequestGroupModel>> map = new HashMap<>();
@@ -466,4 +488,151 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
 
         return map;
     }
+
+    @Override
+    @Transactional
+    public String startExporting(TimeOffExportRequestDto request, String schema, String orgId) {
+        TimeOffExportRequest model = timeOffPolicyDtoMapper.toModel(request);
+        String exportId = UUID.randomUUID().toString();
+        String exportKey = cacheKeyUtil.getExport(schema, orgId, exportId);
+        redisTemplate.opsForValue().set(exportKey, ReportType.PENDING, Duration.ofHours(12));
+        generateReportAsync(exportId, exportKey,model);
+        return exportId;
+    }
+
+    @Async
+    public void generateReportAsync(String exportId, String exportKey, TimeOffExportRequest request) {
+        try {
+            redisTemplate.opsForValue().set(exportKey, ReportType.PROCESSING);
+            String loggedInUser = authHelper.getUserId();
+            List<TimeOffExportView> exportData = (List<TimeOffExportView>) filterRequests(request, loggedInUser);
+            Path dir = Paths.get(downloadDir);
+            if (!Files.exists(dir)) Files.createDirectories(dir);
+            String format =
+                    request.getFormat() == null ? "xlsx" : request.getFormat().toLowerCase();
+            File file = new File(downloadDir + exportId + "." + format);
+            if ("csv".equals(format)) {
+                generateCsv(exportData, file);
+            } else {
+                generateXlsx(exportData, file);
+            }
+            redisTemplate.opsForValue().set(exportKey, ReportType.COMPLETED);
+        } catch (Exception e) {
+            log.error("Export failed: {}", e.getMessage(), e);
+            redisTemplate.opsForValue().set(exportKey, ReportType.FAILED);
+        }
+    }
+
+    private void generateCsv(List<TimeOffExportView> data, File file) throws Exception {
+        try (FileWriter fw = new FileWriter(file, StandardCharsets.UTF_8);
+             CSVWriter csv = new CSVWriter(
+                     fw,
+                     CSVWriter.DEFAULT_SEPARATOR,
+                     CSVWriter.DEFAULT_QUOTE_CHARACTER,
+                     CSVWriter.DEFAULT_ESCAPE_CHARACTER,
+                     CSVWriter.DEFAULT_LINE_END
+             )) {
+            ClassPathResource resource = new ClassPathResource("templates/text/timeoff_request_csv_header.txt");
+            try (BufferedReader br = new BufferedReader(
+                    new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8))) {
+
+                String headerLine = br.readLine();
+                if (headerLine != null) {
+                    csv.writeNext(headerLine.split(","));
+                }
+            }
+            for (TimeOffExportView v : data) {
+                csv.writeNext(new String[]{
+                        v.getCreatorId(),
+                        v.getCreatorName(),
+                        v.getPolicyName(),
+                        String.valueOf(v.getLeaveStartDate()),
+                        String.valueOf(v.getLeaveEndDate()),
+                        v.getLeaveType(),
+                        v.getStatus()
+                });
+            }
+            csv.flush();
+        }
+    }
+
+    private void generateXlsx(List<TimeOffExportView> data, File file) throws Exception {
+
+        try (Workbook workbook = new XSSFWorkbook();
+             FileOutputStream fos = new FileOutputStream(file)) {
+
+            Sheet sheet = workbook.createSheet("TimeOff Report");
+
+            ClassPathResource resource = new ClassPathResource("templates/text/timeoff_request_excel_header.txt");
+
+            List<String> headerLines;
+            try (BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8))) {
+                headerLines = reader.lines().toList();
+            }
+
+            String[] headers = headerLines.getFirst().split("\\|");
+
+            CellStyle headerStyle = workbook.createCellStyle();
+            Font font = workbook.createFont();
+            font.setBold(true);
+            headerStyle.setFont(font);
+
+            Row headerRow = sheet.createRow(0);
+            for (int i = 0; i < headers.length; i++) {
+                Cell cell = headerRow.createCell(i);
+                cell.setCellValue(headers[i]);
+                cell.setCellStyle(headerStyle);
+            }
+
+            int rowIdx = 1;
+            for (TimeOffExportView v : data) {
+
+                Row row = sheet.createRow(rowIdx++);
+                int col = 0;
+
+                row.createCell(col++).setCellValue(v.getCreatorId());
+                row.createCell(col++).setCellValue(v.getCreatorName());
+                row.createCell(col++).setCellValue(v.getPolicyName());
+                row.createCell(col++).setCellValue(v.getLeaveStartDate());
+                row.createCell(col++).setCellValue(v.getLeaveEndDate());
+                row.createCell(col++).setCellValue(v.getLeaveType());
+                row.createCell(col).setCellValue(v.getStatus());
+            }
+
+            for (int i = 0; i < headers.length; i++) {
+                sheet.autoSizeColumn(i);
+            }
+
+            workbook.write(fos);
+        }
+    }
+
+    @Override
+    public String exportStatus(String exportId, String schema, String orgId) {
+        String exportKey = cacheKeyUtil.getExport(schema, orgId, exportId);
+        Object val = redisTemplate.opsForValue().get(exportKey);
+        if (val == null) return "NOT_FOUND";
+        return val.toString();
+    }
+
+    @Override
+    public Resource downloadReport(
+            String exportId,
+            String schema,
+            String orgId,
+            String type
+    ) {
+        String exportKey = cacheKeyUtil.getExport(schema, orgId, exportId);
+        String status = (String) redisTemplate.opsForValue().get(exportKey);
+        if (!ReportType.COMPLETED.getValues().equalsIgnoreCase(status)) {
+            throw new IllegalStateException("Report is not ready. Current status = " + status);
+        }
+        File file = new File(downloadDir + exportId + "." + type.toLowerCase());
+        if (!file.exists()) {
+            throw new RuntimeException("Report file not found");
+        }
+        return new FileSystemResource(file);
+    }
+
 }
