@@ -1,6 +1,7 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.dto;
 
 public class AccrualTypeEnumDto {
+
     private String key;
     private String value;
 

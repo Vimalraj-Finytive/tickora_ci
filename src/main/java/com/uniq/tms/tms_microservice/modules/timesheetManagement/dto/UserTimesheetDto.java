@@ -12,7 +12,6 @@ public class UserTimesheetDto {
     @JsonIgnore
     private String userId;
     private String userName;
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     private LocalDate date;
     private String workStatus;
     @JsonIgnore

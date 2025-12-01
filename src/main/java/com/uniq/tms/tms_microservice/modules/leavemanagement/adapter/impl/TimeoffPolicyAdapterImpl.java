@@ -89,5 +89,10 @@ public class TimeoffPolicyAdapterImpl implements TimeOffPolicyAdapter {
         return timeoffPolicyRepo.findById(policyId).get();
     }
 
+
+    @Override
+    public boolean existsByPolicyNameIgnoreCase(String policyName) {
+        return timeoffPolicyRepo.existsByPolicyNameIgnoreCase(policyName);
+    }
 }
 

@@ -52,6 +52,6 @@ public interface TimeOffPolicyRepository extends JpaRepository<TimeOffPolicyEnti
               AND (p.validityEndDate IS NULL OR :date <= p.validityEndDate)
             """)
     boolean existsValidPolicy(String policyId, LocalDate date);
+
+    boolean existsByPolicyNameIgnoreCase(String policyName);
 }
-
-

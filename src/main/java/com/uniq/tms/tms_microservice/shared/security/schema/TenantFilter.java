@@ -41,12 +41,14 @@ public class TenantFilter extends OncePerRequestFilter {
                                     @NonNull HttpServletResponse response,
                                     @NonNull FilterChain filterChain) throws ServletException, IOException {
         String tenantId = null;
+        String userId = null;
 
         String token = jwtFilter.extractTokenFromRequest(request);
         if (token != null) {
             try {
                 Claims claims = jwtUtil.extractAllClaims(token);
                 tenantId = claims.get("userSchema", String.class);
+                userId = claims.get("userId", String.class);
                 if (tenantId != null && !tenantId.isBlank()) {
                     log.info("Resolved tenant from JWT token: {}", tenantId);
                 } else {
@@ -127,7 +129,7 @@ public class TenantFilter extends OncePerRequestFilter {
 
         log.info("TenantFilter - setting tenant to: {}", tenantId);
         TenantContext.setCurrentTenant(tenantId);
-
+        TenantContext.setCurrentUser(userId);
         try {
             filterChain.doFilter(effectiveRequest, response);
         } finally {

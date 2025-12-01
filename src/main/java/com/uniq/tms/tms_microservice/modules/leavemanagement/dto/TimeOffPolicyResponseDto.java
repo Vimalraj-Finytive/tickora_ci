@@ -4,7 +4,6 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.AccrualType;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.Compensation;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.EntitledType;
 import lombok.Data;
-
 import java.time.LocalDate;
 
 @Data

@@ -1,7 +1,6 @@
 package com.uniq.tms.tms_microservice.modules.payrollManagement.entity;
 
 import jakarta.persistence.*;
-
 import java.time.LocalDateTime;
 
 @Entity

@@ -16,7 +16,7 @@ public class InvoiceGeneratorHelper {
     public static ByteArrayOutputStream generateInvoicePdf(PaymentDto plan, String OrgName) throws Exception {
 
         InputStream htmlStream = InvoiceGeneratorHelper.class
-                .getResourceAsStream("/templates/invoice-template.html");
+                .getResourceAsStream("/templates/html/invoice-template.html");
         if (htmlStream == null) throw new RuntimeException("Template missing!");
 
         InputStream logoStream = InvoiceGeneratorHelper.class.getResourceAsStream("/templates/image/tickora.png");

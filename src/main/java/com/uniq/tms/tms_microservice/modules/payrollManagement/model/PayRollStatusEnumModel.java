@@ -26,4 +26,3 @@ public class PayRollStatusEnumModel {
         this.value = value;
     }
 }
-

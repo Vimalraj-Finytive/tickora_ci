@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping(LeaveConstant.LEAVEBALANCE_URL )
+@RequestMapping(LeaveConstant.LEAVE_BALANCE_URL )
 public class LeaveBalanceController{
            private final TimeOffFacade timeOffFacade;
            private final AuthHelper authHelper;

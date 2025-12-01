@@ -72,7 +72,7 @@ public class ReportServiceImpl implements ReportService {
              CSVWriter csvWriter = new CSVWriter(outputStreamWriter, CSVWriter.DEFAULT_SEPARATOR,
                      CSVWriter.DEFAULT_QUOTE_CHARACTER, CSVWriter.DEFAULT_ESCAPE_CHARACTER, CSVWriter.DEFAULT_LINE_END)) {
 
-            ClassPathResource resource = new ClassPathResource("templates/timesheet_csv_header.txt");
+            ClassPathResource resource = new ClassPathResource("templates/text/timesheet_csv_header.txt");
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8))) {
                 String headerLine = reader.readLine();
                 if(headerLine != null){
@@ -112,7 +112,7 @@ public class ReportServiceImpl implements ReportService {
                 Sheet sheet = workbook.createSheet("Timesheets");
 
                 // Load headers from template
-                ClassPathResource resource = new ClassPathResource("templates/timesheet_excel_header.txt");
+                ClassPathResource resource = new ClassPathResource("templates/text/timesheet_excel_header.txt");
                 List<String> headerLines;
                 try (BufferedReader reader = new BufferedReader(new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8))) {
                     headerLines = reader.lines().toList();
