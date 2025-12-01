@@ -147,32 +147,7 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
         List<UserPolicyEntity> existingAssignments =
                 userPolicyAdapter.findUserPolicyEntities(finalList);
 
-        for (UserPolicyEntity up : existingAssignments) {
-            AccrualType existingAccrual = up.getPolicy().getAccrualType();
-            EntitledType existingType = up.getPolicy().getEntitledType();
-
-            if (request.getAccrualType() == AccrualType.MONTHLY &&
-                    existingAccrual == AccrualType.ANNUALLY) {
-                throw new IllegalArgumentException(
-                        "User already has an ANNUALLY policy. Cannot assign MONTHLY policy."
-                );
-            }
-
-            if (request.getAccrualType() == AccrualType.ANNUALLY &&
-                    existingAccrual == AccrualType.MONTHLY) {
-                throw new IllegalArgumentException(
-                        "User already has a MONTHLY policy. Cannot assign ANNUALLY policy."
-                );
-            }
-
-            if (request.getAccrualType() == existingAccrual &&
-                    request.getEntitledType() == existingType) {
-
-                throw new IllegalArgumentException(
-                        "User already has a same accrual and entitled type policy"
-                );
-            }
-        }
+        validateUserPolicyRules(existingAssignments,request.getAccrualType(),request.getEntitledType());
 
         List<String> finalUsers = new ArrayList<>(finalUserSet);
 
@@ -277,6 +252,7 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
 
         List<UserPolicyEntity> assignedUsers = userPolicyAdapter.findUserPoliciesByPolicyId(policy.getPolicyId());
 
+
         List<LeaveBalanceEntity> assignedLb =leaveBalanceAdapter.findLeaveBalancesByPolicyId(request.getPolicyId());
         Set<String> existingUserIds = assignedUsers.stream()
                 .map(up -> up.getUser().getUserId())
@@ -292,6 +268,14 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
         Set<String> newUsersToAdd = newUserSet.stream()
                 .filter(u -> !existingUserIds.contains(u))
                 .collect(Collectors.toSet());
+
+        if (!newUsersToAdd.isEmpty()) {
+
+            List<UserPolicyEntity> existingAssignmentsForNewUsers =
+                    userPolicyAdapter.findUserPolicyEntities(new ArrayList<>(newUsersToAdd));
+
+            validateUserPolicyRules(existingAssignmentsForNewUsers, policy.getAccrualType(), policy.getEntitledType());
+        }
 
         Set<String> usersToUpdate = newUserSet.stream()
                 .filter(existingUserIds::contains)
@@ -402,11 +386,12 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
         Map<String, UserEntity> userMap = allUsers.stream()
                 .collect(Collectors.toMap(UserEntity::getUserId, u -> u));
 
-        List<UserPolicyEntity> existingAssignments =
-                userPolicyAdapter.findAllByPolicyIdsAndUserIds(
-                        request.getPolicyIds(),
-                        finalUsers
-                );
+        Map<String, List<UserPolicyEntity>> userExistingPolicies =
+                userPolicyAdapter.findUserPolicyEntities(new ArrayList<>(finalUsers))
+                        .stream()
+                        .collect(Collectors.groupingBy(up -> up.getUser().getUserId()));
+
+        List<UserPolicyEntity> existingAssignments = userPolicyAdapter.findAllByPolicyIdsAndUserIds(request.getPolicyIds(), finalUsers);
 
         Map<String, UserPolicyEntity> existingMap =
                 existingAssignments.stream().collect(Collectors.toMap(
@@ -432,6 +417,10 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
                     throw new IllegalArgumentException("User not found: " + userId);
                 }
 
+                List<UserPolicyEntity> existingForUser =
+                        userExistingPolicies.getOrDefault(userId, Collections.emptyList());
+
+                validateUserPolicyRules(existingForUser, policy.getAccrualType(), policy.getEntitledType());
                 String key = policy.getPolicyId() + "_" + userId;
                 UserPolicyEntity existing = existingMap.get(key);
 
@@ -599,6 +588,8 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
     }
 
     private UserPolicyEntity buildUserPolicy(TimeOffPolicyEntity policy, UserEntity user, LocalDate validFrom, LocalDate validTo) {
+
+
         UserPolicyEntity up = new UserPolicyEntity();
         up.setUser(user);
         up.setPolicy(policy);
@@ -704,5 +695,32 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
         }
         return nextAccrualDate;
     }
+
+    private void validateUserPolicyRules(List<UserPolicyEntity> existingAssignments, AccrualType newAccrualType, EntitledType newEntitledType) {
+        for (UserPolicyEntity up : existingAssignments) {
+
+            AccrualType existingAccrual = up.getPolicy().getAccrualType();
+            EntitledType existingType = up.getPolicy().getEntitledType();
+
+            if (newAccrualType == AccrualType.MONTHLY && existingAccrual == AccrualType.ANNUALLY) {
+                throw new IllegalArgumentException(
+                        "User already has an ANNUALLY policy. Cannot assign MONTHLY policy."
+                );
+            }
+
+            if (newAccrualType == AccrualType.ANNUALLY && existingAccrual == AccrualType.MONTHLY) {
+                throw new IllegalArgumentException(
+                        "User already has a MONTHLY policy. Cannot assign ANNUALLY policy."
+                );
+            }
+
+            if (newAccrualType == existingAccrual && newEntitledType == existingType) {
+                throw new IllegalArgumentException(
+                        "User already has a same accrual and entitled type policy."
+                );
+            }
+        }
+    }
+
 
 }
