@@ -7,21 +7,20 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
-
 import java.util.Optional;
 
 @Repository
-public interface UserPayRollAmountRepository extends JpaRepository<UserPayRollAmountEntity,Integer> {
+public interface UserPayRollAmountRepository extends JpaRepository<UserPayRollAmountEntity, Integer> {
 
     Optional<UserPayRollAmountEntity> findByUser_UserId(String userId);
 
 
     @Query(value = """
-    SELECT *
-    FROM user_payroll_amount upa
-    WHERE upa.payroll_id = :payrollId
-      AND LOWER(upa.month) = LOWER(:month)
-    """,
+            SELECT *
+            FROM user_payroll_amount upa
+            WHERE upa.payroll_id = :payrollId
+              AND LOWER(upa.month) = LOWER(:month)
+            """,
             nativeQuery = true)
     List<UserPayRollAmountEntity> findAllByPayrollIdAndMonth(
             @Param("payrollId") String payrollId,
@@ -29,13 +28,15 @@ public interface UserPayRollAmountRepository extends JpaRepository<UserPayRollAm
     );
 
     @Query(value = """
-    SELECT *
-    FROM user_payroll_amount upa
-    WHERE LOWER(upa.month) = LOWER(:month)
-    """,
+            SELECT *
+            FROM user_payroll_amount upa
+            WHERE LOWER(upa.month) = LOWER(:month)
+            """,
             nativeQuery = true)
     List<UserPayRollAmountEntity> findAllByMonth(
             @Param("month") String month
     );
+
+    Optional<UserPayRollAmountEntity> findByUser_UserIdAndMonth(String userId, String month);
 
 }

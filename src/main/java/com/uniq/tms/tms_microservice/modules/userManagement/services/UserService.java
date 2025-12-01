@@ -46,4 +46,9 @@ public interface UserService {
     Long getSubscribedUserLimit(String orgId);
     Long getCurrentUserCount(String orgId);
     BulkUserLocationModel assignLocations(BulkUserLocationModel model,String orgId);
+    boolean UpdateCalendar(UserCalendarRequestDto updates);
+    List<UserLevelModel> getUsersBelowHierarchy(String userId,String orgId);
+     List<GroupModel> getSupervisorGroups(String userId);
+     List<UserLevelModel>getGroupMembers(Long groupId);
+     List<UserLevelModel>getUsersInGroup();
 }

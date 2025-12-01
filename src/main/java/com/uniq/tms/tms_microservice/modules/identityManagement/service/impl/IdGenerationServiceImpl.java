@@ -4,6 +4,7 @@ import com.uniq.tms.tms_microservice.modules.identityManagement.adapter.IdGenera
 import com.uniq.tms.tms_microservice.modules.identityManagement.service.IdGenerationService;
 import com.uniq.tms.tms_microservice.modules.identityManagement.entity.OrgUserSequenceEntity;
 import com.uniq.tms.tms_microservice.modules.identityManagement.enums.IdGenerationTypeEnum;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.repository.TimeOffPolicyRepository;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.OrgUserSequenceRepository;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.OrganizationRepository;
 import jakarta.transaction.Transactional;
@@ -22,11 +23,13 @@ public class IdGenerationServiceImpl implements IdGenerationService {
     private OrgUserSequenceRepository orgUserSequenceRepository;
     private final IdGeneratorAdapter idGeneratorAdapter;
     private final OrganizationRepository organizationRepository;
+    private final TimeOffPolicyRepository timeoffPolicyRepository;
 
-    public IdGenerationServiceImpl(OrgUserSequenceRepository orgUserSequenceRepository, IdGeneratorAdapter idGeneratorAdapter, OrganizationRepository organizationRepository) {
+    public IdGenerationServiceImpl(OrgUserSequenceRepository orgUserSequenceRepository, IdGeneratorAdapter idGeneratorAdapter, OrganizationRepository organizationRepository, TimeOffPolicyRepository timeoffPolicyRepository) {
         this.orgUserSequenceRepository = orgUserSequenceRepository;
         this.idGeneratorAdapter = idGeneratorAdapter;
         this.organizationRepository = organizationRepository;
+        this.timeoffPolicyRepository = timeoffPolicyRepository;
     }
 
     @Transactional
@@ -263,6 +266,22 @@ public class IdGenerationServiceImpl implements IdGenerationService {
         return newId;
     }
 
+    @Transactional
+    @Override
+    public String generateNextTimeOffPolicyId() {
 
+        String prefix = IdGenerationTypeEnum.TIME_OFF_POLICY.getPrefix();
+        String maxId = timeoffPolicyRepository.findMaxPolicyId(prefix);
+        int nextNumber = 1;
+        if (maxId != null && maxId.startsWith(prefix)) {
+            String numericPart = maxId.substring(prefix.length());
+            try {
+                nextNumber = Integer.parseInt(numericPart) + 1;
+            } catch (NumberFormatException e) {
+                throw new IllegalStateException("Invalid TimeOff Policy ID format: " + maxId);
+            }
+        }
+        return prefix + String.format("%05d", nextNumber);
+    }
 
 }

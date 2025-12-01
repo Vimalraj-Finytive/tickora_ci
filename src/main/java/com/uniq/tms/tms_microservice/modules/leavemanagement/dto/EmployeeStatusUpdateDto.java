@@ -1,0 +1,105 @@
+package com.uniq.tms.tms_microservice.modules.leavemanagement.dto;
+
+import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.Status;
+import jakarta.validation.constraints.NotNull;
+
+import java.time.LocalDate;
+import java.time.LocalTime;
+
+public class EmployeeStatusUpdateDto {
+    @NotNull(message = "User ID cannot be null")
+    private String userId;
+    @NotNull(message = "Policy ID cannot be null")
+    private String policyId;
+    private Status status;
+    private String reason;
+    private Integer unitsRequested;
+    private LocalDate startDate;
+    private LocalDate endDate;
+    private LocalTime startTime;
+    private LocalTime endTime;
+    @NotNull(message = "Request date cannot be null")
+    private LocalDate requestDate;
+
+
+    public Status getStatus() {
+        return status;
+    }
+
+    public void setStatus(Status status) {
+        this.status = status;
+    }
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public void setUserId(String userId) {
+        this.userId = userId;
+    }
+
+    public String getReason() {
+        return reason;
+    }
+
+    public void setReason(String reason) {
+        this.reason = reason;
+    }
+
+    public Integer getUnitsRequested() {
+        return unitsRequested;
+    }
+
+    public void setUnitsRequested(Integer unitsRequested) {
+        this.unitsRequested = unitsRequested;
+    }
+
+
+    public String getPolicyId() {
+        return policyId;
+    }
+
+    public void setPolicyId(String policyId) {
+        this.policyId = policyId;
+    }
+
+    public LocalDate getStartDate() {
+        return startDate;
+    }
+
+    public void setStartDate(LocalDate startDate) {
+        this.startDate = startDate;
+    }
+
+    public LocalDate getEndDate() {
+        return endDate;
+    }
+
+    public void setEndDate(LocalDate endDate) {
+        this.endDate = endDate;
+    }
+
+    public LocalTime getStartTime() {
+        return startTime;
+    }
+
+    public void setStartTime(LocalTime startTime) {
+        this.startTime = startTime;
+    }
+
+    public LocalTime getEndTime() {
+        return endTime;
+    }
+
+    public void setEndTime(LocalTime endTime) {
+        this.endTime = endTime;
+    }
+
+    public LocalDate getRequestDate() {
+        return requestDate;
+    }
+
+    public void setRequestDate(LocalDate requestDate) {
+        this.requestDate = requestDate;
+    }
+}

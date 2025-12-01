@@ -254,4 +254,44 @@ public class UserController {
         ApiResponse<BulkUserLocationDto> response = userFacade.assignLocations(dto);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
+
+    @PutMapping("/updateCalendar")
+    public ResponseEntity<ApiResponse<UserCalendarRequestDto>> updateUser(
+            @RequestHeader("Authorization") String token,
+            @RequestBody UserCalendarRequestDto updates){
+        ApiResponse<UserCalendarRequestDto> response = userFacade.updateCalendar(updates);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
+
+    @GetMapping("/users")
+    public ResponseEntity<ApiResponse<List<UserLevelDto>>>getUsersBelowHierarchy() {
+        String userId = authHelper.getUserId();
+        String orgId = authHelper.getOrgId();
+        ApiResponse<List<UserLevelDto>> result = userFacade.getUsersBelowHierarchy(userId,orgId);
+        return ResponseEntity.status(result.getStatusCode()).body(result);
+    }
+
+    @GetMapping("groups/list")
+    public ResponseEntity<ApiResponse<List<GroupDto>>> getSupervisorGroups(
+            @RequestHeader("Authorization") String token) {
+        String userId = authHelper.getUserId();
+        ApiResponse<List<GroupDto>> response = userFacade.getSupervisorGroups(userId);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
+
+    @GetMapping("groupUsers/{groupId}")
+    public ResponseEntity<ApiResponse<List<UserLevelDto>>> getGroupMembers(
+            @RequestHeader("Authorization") String token,
+            @PathVariable Long groupId) {
+        ApiResponse<List<UserLevelDto>> response = userFacade.getGroupMembers(groupId);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
+
+    @GetMapping("Supervising/Group")
+    public ResponseEntity<ApiResponse<List<UserLevelDto>>> getUsersInGroup(
+            @RequestHeader("Authorization") String token){
+        ApiResponse<List<UserLevelDto>> response = userFacade.getUsersInGroup();
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
+
 }

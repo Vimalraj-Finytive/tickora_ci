@@ -1,6 +1,5 @@
 package com.uniq.tms.tms_microservice.modules.payrollManagement.facade;
 
-
 import com.uniq.tms.tms_microservice.modules.payrollManagement.dto.*;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.mapper.PayRollDtoMapper;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.model.*;
@@ -44,9 +43,9 @@ public class PayRollFacade {
         return new ApiResponse<>(200, "Fetched UserPayrollAmount Successfully", dto);
     }
 
-    public ApiResponse<UserPayRollUpdateDto> updatePayrollAmount(UserPayRollUpdateDto dto) {
+    public ApiResponse<UserPayRollUpdateDto> updatePayrollAmount(String userId,UserPayRollUpdateDto dto,String month) {
         UserPayRollAmountModel model = dtoMapper.toModel(dto);
-        UserPayRollAmountModel updatedModel = service.updatePayrollAmount(model);
+        UserPayRollAmountModel updatedModel = service.updatePayrollAmount(userId,model,month);
         return new ApiResponse<>(200, "Payroll updated successfully", null);
     }
 
@@ -64,11 +63,20 @@ public class PayRollFacade {
         return new ApiResponse<>(200, "Payroll list fetched successfully", dtos);
     }
 
-    public ApiResponse<String> updatePayrollStatus(PayrollStatusUpdateDto dto) {
-        PayrollStatusUpdateModel model = payRollDtoMapper.toStatusUpdateModel(dto);
-        service.updatePayrollStatus(model);
-        return new ApiResponse<>(200,"Payroll inactivated successfully",null);
+    public ApiResponse<String> updatePayrollStatus(String payrollId, PayrollStatusUpdateDto dto) {
+
+        try {
+            PayrollStatusUpdateModel model = payRollDtoMapper.toStatusUpdateModel(dto);
+            boolean isActive = model.isActive();
+            service.updatePayrollStatus(payrollId, model);
+            String message = isActive ? "Payroll activated successfully" : "Payroll inactivated successfully";
+            return new ApiResponse<>(200, message, null);
+        } catch (Exception e) {
+            return new ApiResponse<>(400, "Failed to update payroll: " + e.getMessage(), null
+            );
+        }
     }
+
 
     public ApiResponse<List<PayRollSummaryDto>> getAllPayrollIdAndName(){
         List<PayRollSummaryDto> dto = dtoMapper.toSummaryDto(service.getAllPayrollIdAndName());
@@ -105,8 +113,24 @@ public class PayRollFacade {
         return new ApiResponse<>(200, "PayRoll Settings fetched successfully", dto);
     }
 
-    public ApiResponse updatePayroll(PayRollUpdateDto payRollUpdateDto){
-        service.updatePayroll(dtoMapper.toPayRollUpdateModel(payRollUpdateDto));
-        return new ApiResponse(200, "PayRoll Updated successfully",null);
+    public ApiResponse<Void> assignPayroll(PayRollUpdateDto payRollUpdateDto){
+        service.assignPayroll(dtoMapper.toPayRollUpdateModel(payRollUpdateDto));
+        return new ApiResponse<>(200, "PayRoll Updated successfully",null);
     }
+
+    public ApiResponse<Void> updatePayroll(String payRollId, PayRollEditRequestDto dto) {
+        try {
+            PayRollEditRequestModel model = dtoMapper.toEditModel(dto);
+            model.setPayrollId(payRollId);
+
+            service.updatePayroll(model);
+
+            return new ApiResponse<>(200, "Payroll details saved successfully", null);
+        } catch (IllegalArgumentException e) {
+            return new ApiResponse<>(400, e.getMessage(), null);
+        } catch (Exception e) {
+            return new ApiResponse<>(404, e.getMessage(), null);
+        }
+    }
+
 }

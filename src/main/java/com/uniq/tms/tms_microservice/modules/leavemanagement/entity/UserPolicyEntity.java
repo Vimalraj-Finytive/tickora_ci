@@ -1,5 +1,6 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.entity;
 
+import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -14,16 +15,20 @@ public class UserPolicyEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "policy_id", nullable = false)
-    private TimeoffPolicyEntity policy;
+    private TimeOffPolicyEntity policy;
 
-    @Column(name = "user_id", length = 20, nullable = false)
-    private String userId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn (name = "user_id", nullable = false)
+    private UserEntity user;
 
     @Column(name = "valid_from")
     private LocalDate validFrom;
 
     @Column(name = "valid_to")
     private LocalDate validTo;
+
+    @Column(name = "entitled_units")
+    private Integer entitledUnits;
 
     @Column(name = "assigned_at")
     private LocalDateTime assignedAt;
@@ -36,20 +41,21 @@ public class UserPolicyEntity {
         this.id = id;
     }
 
-    public TimeoffPolicyEntity getPolicy() {
+    public TimeOffPolicyEntity getPolicy() {
         return policy;
     }
 
-    public void setPolicy(TimeoffPolicyEntity policy) {
+    public void setPolicy(TimeOffPolicyEntity policy) {
         this.policy = policy;
     }
 
-    public String getUserId() {
-        return userId;
+
+    public UserEntity getUser() {
+        return user;
     }
 
-    public void setUserId(String userId) {
-        this.userId = userId;
+    public void setUser(UserEntity user) {
+        this.user = user;
     }
 
     public LocalDate getValidFrom() {
@@ -66,6 +72,14 @@ public class UserPolicyEntity {
 
     public void setValidTo(LocalDate validTo) {
         this.validTo = validTo;
+    }
+
+    public Integer getEntitledUnits() {
+        return entitledUnits;
+    }
+
+    public void setEntitledUnits(Integer entitledUnits) {
+        this.entitledUnits = entitledUnits;
     }
 
     public LocalDateTime getAssignedAt() {

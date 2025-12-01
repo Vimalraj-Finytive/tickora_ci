@@ -58,4 +58,3 @@ public class PayrollResponseDto {
         this.overtimeAmount = overtimeAmount;
     }
 }
-

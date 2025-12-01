@@ -1,5 +1,6 @@
 package com.uniq.tms.tms_microservice.modules.userManagement.repository;
 
+import com.uniq.tms.tms_microservice.modules.userManagement.entity.GroupEntity;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserGroupEntity;
 import jakarta.transaction.Transactional;
@@ -85,4 +86,25 @@ public interface UserGroupRepository extends JpaRepository<UserGroupEntity,Long>
             "WHERE ug.user.userId IN :userIds AND ug.group.groupId IN :groupIds")
     List<UserGroupEntity> findAllByUserIdsAndGroupIds(@Param("userIds") Set<String> userIds,
                                                       @Param("groupIds") Set<Long> groupIds);
+
+    @Query("""
+    SELECT DISTINCT ug.user.userId
+    FROM UserGroupEntity ug
+    WHERE ug.group.groupId IN :groupIds
+""")
+    List<String> findUserIdsByGroupIds(@Param("groupIds") List<Long> groupIds);
+
+    @Query("SELECT ug.group FROM UserGroupEntity ug WHERE ug.user.userId = :userId AND ug.type = 'Supervisor'")
+    List<GroupEntity> findGroups(@Param("userId") String userId);
+
+    @Query("SELECT u FROM UserEntity u " +
+            "JOIN UserGroupEntity ug ON u.userId = ug.user.userId " +
+            "WHERE u.active = true " +
+            "AND ug.group.groupId IN :groupIds " +
+            "AND u.userId <> :supervisorId")
+    List<UserEntity> findUsersInGroup(
+            @Param("groupIds") List<Long> groupIds,
+            @Param("supervisorId") String userId
+    );
+
 }

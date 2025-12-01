@@ -591,4 +591,35 @@ public class UserAdapterImpl implements UserAdapter {
         return userRepository.findByUserIdAndActiveTrue(userIds);
     }
 
+    @Override
+    public List<String> findUserIdsByGroupIds(List<Long> groupIds) {
+        if (groupIds == null || groupIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return userGroupRepository.findUserIdsByGroupIds(groupIds);
+    }
+
+    @Override
+    public List<GroupEntity> getSupervisorGroups(String supervisorId) {
+        return userGroupRepository.findGroups(supervisorId);
+    }
+
+    @Override
+    public List<UserEntity>getGroupMembers(Long groupId){
+        return userGroupRepository.findUsersByGroupId(Collections.singletonList(groupId));
+    }
+    @Override
+    public   List<UserEntity> getallUsers(){
+        return userRepository.findByActiveTrue();
+    }
+
+    @Override
+    public List<UserEntity> findusersInGroup(List<Long> groupIds, String supervisorId) {
+        return userGroupRepository.findUsersInGroup(groupIds, supervisorId);
+    }
+
+    @Override
+    public Optional<UserEntity>findSuperAdminByOrgId(String orgId){
+        return userRepository.findSuperAdminByOrgId(orgId);
+    }
 }

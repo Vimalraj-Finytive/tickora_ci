@@ -247,5 +247,10 @@ public class CalendarAdapterImpl implements CalendarAdapter {
     public CalendarEntity findByCalendarIdAndDefaultTrue(CalendarId ids) {
         return calendarRepository.findByIdAndIsDefaultTrue(ids);
     }
-}
 
+    @Override
+    public CalendarEntity findDefaultCalendar() {
+        return calendarRepository.findDefaultCalendar();
+    }
+
+}

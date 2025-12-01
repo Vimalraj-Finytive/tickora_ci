@@ -23,12 +23,11 @@ public interface PayRollAdapter {
     List<UserPayRollAmountEntity> getPayrollAmount(String id, String month);
     List<UserPayRollAmountEntity> getAllByMonthAndYear(String month);
     List<PayRollProjection> getAllPayrollNameAndId();
-    Optional<UserPayRollAmountEntity> findUserPayrollAmountByUserId(String userId);
+    Optional<UserPayRollAmountEntity> findUserPayrollAmountByUserIdAndMonth(String userId,String month);
     UserPayRollAmountEntity saveUserPayRollAmount(UserPayRollAmountEntity entity);
     PayRollEntity getPayRoll(String payRollId);
     Optional<PayRollEntity> findById(String id);
     List<PayRollEntity> findAll();
     PayRollEntity save(PayRollEntity entity);
     void deleteUserPayrollById(String payrollId);
-
 }

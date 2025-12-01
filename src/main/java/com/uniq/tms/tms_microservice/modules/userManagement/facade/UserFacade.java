@@ -1,6 +1,7 @@
 package com.uniq.tms.tms_microservice.modules.userManagement.facade;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.uniq.tms.tms_microservice.modules.userManagement.entity.GroupEntity;
 import com.uniq.tms.tms_microservice.modules.userManagement.model.*;
 import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
 import com.uniq.tms.tms_microservice.modules.userManagement.dto.*;
@@ -393,5 +394,37 @@ public class UserFacade {
         BulkUserLocationModel saveUserLocation = userService.assignLocations(model,orgId);
         BulkUserLocationDto Dto=userDtoMapper.toDto(saveUserLocation);
         return new ApiResponse<>(200, "Locations assigned successfully", null);
+    }
+
+    public ApiResponse<UserCalendarRequestDto> updateCalendar(UserCalendarRequestDto updates){
+        boolean success = userService.UpdateCalendar(updates);
+        if (!success) {
+            return new ApiResponse<>(401, "Unauthorized - Invalid users", null);
+        }
+        return new ApiResponse<>(200, "User Updated successfully",null);
+
+    }
+
+    public ApiResponse<List<UserLevelDto>> getUsersBelowHierarchy(String userId,String orgId) {
+        List<UserLevelModel> models = userService.getUsersBelowHierarchy(userId,orgId);
+        List<UserLevelDto> dtoList = userDtoMapper.toDtoList(models);
+        return new ApiResponse<>(200, "Users fetched successfully", dtoList);
+    }
+
+    public ApiResponse<List<GroupDto>> getSupervisorGroups(String userId) {
+        List<GroupModel> model = userService.getSupervisorGroups(userId);
+        List<GroupDto> dto = userDtoMapper.todtoList(model);
+        return new ApiResponse<>(200, "Supervisor groups fetched successfully", dto);
+    }
+    public ApiResponse<List<UserLevelDto>>getGroupMembers(Long groupId){
+    List<UserLevelModel> model =userService.getGroupMembers(groupId);
+    List<UserLevelDto> dto=userDtoMapper.toDtoList(model);
+    return new ApiResponse<>(200,"Group members fetched successfully",dto);
+    }
+
+    public ApiResponse<List<UserLevelDto>>getUsersInGroup(){
+        List<UserLevelModel> model =userService.getUsersInGroup();
+        List<UserLevelDto> dto=userDtoMapper.toDtoList(model);
+        return new ApiResponse<>(200,"Group members fetched successfully",dto);
     }
 }

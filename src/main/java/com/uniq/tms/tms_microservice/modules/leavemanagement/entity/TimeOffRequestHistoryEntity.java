@@ -5,7 +5,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "timeoff_request_history")
-public class TimeoffRequestHistoryEntity {
+public class TimeOffRequestHistoryEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -14,7 +14,7 @@ public class TimeoffRequestHistoryEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "timeoff_request_id", nullable = false)
-    private TimeoffRequestEntity timeoffRequest;
+    private TimeOffRequestEntity timeOffRequest;
 
     @Column(name = "user_id", nullable = false, length = 20)
     private String userId;
@@ -36,12 +36,12 @@ public class TimeoffRequestHistoryEntity {
         this.id = id;
     }
 
-    public TimeoffRequestEntity getTimeoffRequest() {
-        return timeoffRequest;
+    public TimeOffRequestEntity getTimeOffRequest() {
+        return timeOffRequest;
     }
 
-    public void setTimeoffRequest(TimeoffRequestEntity timeoffRequest) {
-        this.timeoffRequest = timeoffRequest;
+    public void setTimeOffRequest(TimeOffRequestEntity timeOffRequest) {
+        this.timeOffRequest = timeOffRequest;
     }
 
     public String getUserId() {

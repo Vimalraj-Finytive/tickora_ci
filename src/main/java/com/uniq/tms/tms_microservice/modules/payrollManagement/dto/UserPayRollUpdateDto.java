@@ -4,20 +4,12 @@ import com.uniq.tms.tms_microservice.modules.payrollManagement.enums.PayRollStat
 import java.math.BigDecimal;
 
 public class UserPayRollUpdateDto {
-    private String userId;
+
     private PayRollStatusEnum payrollStatus;
     private String notes;
     private  BigDecimal totalAmount;
 
     public UserPayRollUpdateDto() {
-    }
-
-    public String getUserId() {
-        return userId;
-    }
-
-    public void setUserId(String userId) {
-        this.userId = userId;
     }
 
     public PayRollStatusEnum getPayrollStatus() {

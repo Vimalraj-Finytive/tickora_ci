@@ -4,9 +4,11 @@ import com.uniq.tms.tms_microservice.modules.timesheetManagement.projection.Time
 import com.uniq.tms.tms_microservice.modules.userManagement.dto.UserNameEmailDto;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserGroupEntity;
+import com.uniq.tms.tms_microservice.modules.userManagement.model.User;
 import com.uniq.tms.tms_microservice.modules.userManagement.model.UserResponse;
 import com.uniq.tms.tms_microservice.modules.userManagement.dto.UserNameSuggestionDto;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.projection.TimesheetProjection;
+import com.uniq.tms.tms_microservice.modules.userManagement.projections.UserCalendarProjection;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.WorkScheduleEntity;
 import jakarta.transaction.Transactional;
 import org.springframework.data.domain.Page;
@@ -196,21 +198,12 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
     @Query(value = """
     SELECT u.user_id AS userId,
            u.user_name AS userName,
-           u.mobile_number AS mobileNumber,
-           u.date_of_joining AS date,
-           r.name AS roleName,
-           ws.work_schedule_name AS workScheduleName,
-           STRING_AGG(g.group_name, ',') AS groupNames
     FROM users u
-    LEFT JOIN role r ON u.role_id = r.role_id
-    LEFT JOIN work_schedule ws ON u.work_schedule_id = ws.work_schedule_id
-    LEFT JOIN user_group ug ON ug.user_id = u.user_id
-    LEFT JOIN org_groups g ON g.group_id = ug.group_id
     WHERE u.user_id = ANY(:userIds)
       AND u.active = true
-    GROUP BY u.user_id, u.user_name, u.mobile_number, u.date_of_joining, r.name, ws.work_schedule_name
+    GROUP BY u.user_id, u.user_name
     """, nativeQuery = true)
-    List<TimesheetProjection> findUsersByUserIds(
+    List<TimesheetUserProjection> findUsersByUserIds(
             @Param("userIds") String[] userIds);
 
     List<UserEntity> findUserByOrganizationIdAndRole_RoleId(String orgId, int roleId);
@@ -258,4 +251,28 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
 
     @Query("SELECT u FROM UserEntity u WHERE u.userId IN :userIds AND u.active = true")
     List<UserEntity> findByUserIdAndActiveTrue(@Param("userIds") List<String> userIds);
+
+
+    @Query("SELECT u.userName FROM UserEntity u WHERE u.userId = :userId")
+    String findUsernameByUserId(@Param("userId") String userId);
+
+        @Query("""
+        SELECT u.userId AS userId, u.calendar.id AS calendarId
+        FROM UserEntity u
+        WHERE u.userId IN :userIds
+    """)
+    List<UserCalendarProjection> findCalendarIdsByUserIds(@Param("userIds") String[] userIds);
+
+    @Query("""
+        SELECT u
+        FROM UserEntity u
+        WHERE u.userId IN :userIds
+    """)
+    List<UserEntity> findUsersWithCalendars(@Param("userIds") String[] userIds);
+
+    List<UserEntity>findByActiveTrue();
+
+    @Query("SELECT u FROM UserEntity u WHERE u.role.roleId = 1 AND u.organizationId = :orgId")
+    Optional<UserEntity>findSuperAdminByOrgId(@Param("orgId") String orgId);
+
 }

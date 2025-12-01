@@ -10,6 +10,7 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.model.CalendarId;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.Holiday;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.services.CalendarService;
 import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
+import com.uniq.tms.tms_microservice.shared.helper.AuthHelper;
 import org.springframework.stereotype.Component;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.Calendar;
 import java.util.List;
@@ -21,16 +22,19 @@ public class CalendarFacade {
     private final CalendarService calendarService;
     private final CalendarDtoMapper calendarDtoMapper;
     private final HolidayDtoMapper holidayDtoMapper;
+    private final AuthHelper authHelper;
 
-    public CalendarFacade(CalendarService calendarService, CalendarDtoMapper calendarDtoMapper, HolidayDtoMapper holidayDtoMapper) {
+    public CalendarFacade(CalendarService calendarService, CalendarDtoMapper calendarDtoMapper, HolidayDtoMapper holidayDtoMapper, AuthHelper authHelper) {
         this.calendarService = calendarService;
         this.calendarDtoMapper = calendarDtoMapper;
         this.holidayDtoMapper = holidayDtoMapper;
+        this.authHelper = authHelper;
     }
 
     public ApiResponse<CalendarDto> create(CalendarDto calendarDto) {
+        String orgId= authHelper.getOrgId();
         Calendar calendarMiddleware = calendarDtoMapper.toMiddleware(calendarDto);
-        Calendar saveCalendar = calendarService.create(calendarMiddleware);
+        Calendar saveCalendar = calendarService.create(calendarMiddleware,orgId);
         calendarDtoMapper.toDto(saveCalendar);
         return new ApiResponse<>(200,"Calendar Created Successfully",null);
     }
@@ -59,8 +63,9 @@ public class CalendarFacade {
     }
 
     public CalendarDto update(CalendarDto dto) {
+        String orgId= authHelper.getOrgId();
         Calendar model = calendarDtoMapper.toMiddleware(dto);
-        Calendar calendarModel = calendarService.update(model);
+        Calendar calendarModel = calendarService.update(model,orgId);
         return calendarDtoMapper.toDto(calendarModel);
     }
 

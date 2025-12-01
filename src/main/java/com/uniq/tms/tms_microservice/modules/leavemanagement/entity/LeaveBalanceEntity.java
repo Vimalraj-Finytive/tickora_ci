@@ -1,8 +1,9 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.entity;
 
+import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
 import jakarta.persistence.*;
 import java.time.LocalDate;
-import java.util.List;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "leave_balance")
@@ -13,12 +14,13 @@ public class LeaveBalanceEntity {
     @Column(name = "leave_balance_id")
     private Long leaveBalanceId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "policy_id", nullable = false)
-    private TimeoffPolicyEntity policy;
+    private TimeOffPolicyEntity policy;
 
-    @Column(name = "user_id", length = 20, nullable = false)
-    private String userId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn (name = "user_id", nullable = false)
+    private UserEntity user;
 
     @Column(name = "period_start_date")
     private LocalDate periodStartDate;
@@ -27,16 +29,16 @@ public class LeaveBalanceEntity {
     private LocalDate periodEnd;
 
     @Column(name = "total_units")
-    private Integer totalUnits;
+    private Double totalUnits;
 
     @Column(name = "expired_units")
-    private Integer expiredUnits = 0;
+    private Double expiredUnits = 0.0;
 
     @Column(name = "leave_taken_units")
-    private Integer leaveTakenUnits = 0;
+    private Double leaveTakenUnits = 0.0;
 
     @Column(name = "balance_units")
-    private Integer balanceUnits;
+    private Double balanceUnits;
 
     @Column(name = "next_accrual_date")
     private LocalDate nextAccrualDate;
@@ -45,8 +47,16 @@ public class LeaveBalanceEntity {
     private LocalDate lastAccrualDate;
 
     @Column(name = "carry_forward_units")
-    private Integer carryForwardUnits = 0;
+    private Double carryForwardUnits;
 
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
+
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
+    public LeaveBalanceEntity() {
+    }
 
     public Long getLeaveBalanceId() {
         return leaveBalanceId;
@@ -56,20 +66,20 @@ public class LeaveBalanceEntity {
         this.leaveBalanceId = leaveBalanceId;
     }
 
-    public TimeoffPolicyEntity getPolicy() {
+    public TimeOffPolicyEntity getPolicy() {
         return policy;
     }
 
-    public void setPolicy(TimeoffPolicyEntity policy) {
+    public void setPolicy(TimeOffPolicyEntity policy) {
         this.policy = policy;
     }
 
-    public String getUserId() {
-        return userId;
+    public UserEntity getUser() {
+        return user;
     }
 
-    public void setUserId(String userId) {
-        this.userId = userId;
+    public void setUser(UserEntity user) {
+        this.user = user;
     }
 
     public LocalDate getPeriodStartDate() {
@@ -88,35 +98,35 @@ public class LeaveBalanceEntity {
         this.periodEnd = periodEnd;
     }
 
-    public Integer getTotalUnits() {
+    public Double getTotalUnits() {
         return totalUnits;
     }
 
-    public void setTotalUnits(Integer totalUnits) {
+    public void setTotalUnits(Double totalUnits) {
         this.totalUnits = totalUnits;
     }
 
-    public Integer getExpiredUnits() {
+    public Double getExpiredUnits() {
         return expiredUnits;
     }
 
-    public void setExpiredUnits(Integer expiredUnits) {
+    public void setExpiredUnits(Double expiredUnits) {
         this.expiredUnits = expiredUnits;
     }
 
-    public Integer getLeaveTakenUnits() {
+    public Double getLeaveTakenUnits() {
         return leaveTakenUnits;
     }
 
-    public void setLeaveTakenUnits(Integer leaveTakenUnits) {
+    public void setLeaveTakenUnits(Double leaveTakenUnits) {
         this.leaveTakenUnits = leaveTakenUnits;
     }
 
-    public Integer getBalanceUnits() {
+    public Double getBalanceUnits() {
         return balanceUnits;
     }
 
-    public void setBalanceUnits(Integer balanceUnits) {
+    public void setBalanceUnits(Double balanceUnits) {
         this.balanceUnits = balanceUnits;
     }
 
@@ -136,12 +146,30 @@ public class LeaveBalanceEntity {
         this.lastAccrualDate = lastAccrualDate;
     }
 
-    public Integer getCarryForwardUnits() {
+    public Double getCarryForwardUnits() {
         return carryForwardUnits;
     }
 
-    public void setCarryForwardUnits(Integer carryForwardUnits) {
+    public void setCarryForwardUnits(Double carryForwardUnits) {
         this.carryForwardUnits = carryForwardUnits;
     }
 
+    public void setUserId(String userId) {
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
 }

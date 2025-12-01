@@ -1,6 +1,7 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.entity;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.CreationTimestamp;
 import java.time.LocalDateTime;
 
 @Entity
@@ -13,10 +14,6 @@ public class MonthlySummaryEntity {
 
     @Column(name = "user_id", length = 20, nullable = false)
     private String userId;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "policy_id", nullable = false)
-    private TimeoffPolicyEntity policy;
 
     @Column(name = "month", nullable = false)
     private Integer month;
@@ -45,6 +42,10 @@ public class MonthlySummaryEntity {
     @Column(name = "full_day_units", nullable = false)
     private Integer fullDayUnits = 0;
 
+    @Column(name = "hours_units", nullable = false)
+    private Integer hoursUnits;
+
+    @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
@@ -62,14 +63,6 @@ public class MonthlySummaryEntity {
 
     public void setUserId(String userId) {
         this.userId = userId;
-    }
-
-    public TimeoffPolicyEntity getPolicy() {
-        return policy;
-    }
-
-    public void setPolicy(TimeoffPolicyEntity policy) {
-        this.policy = policy;
     }
 
     public Integer getMonth() {
@@ -150,5 +143,13 @@ public class MonthlySummaryEntity {
 
     public void setFullDayUnits(Integer fullDayUnits) {
         this.fullDayUnits = fullDayUnits;
+    }
+
+    public Integer getHoursUnits() {
+        return hoursUnits;
+    }
+
+    public void setHoursUnits(Integer hoursUnits) {
+        this.hoursUnits = hoursUnits;
     }
 }

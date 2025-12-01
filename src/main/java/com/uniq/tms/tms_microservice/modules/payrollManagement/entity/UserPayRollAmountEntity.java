@@ -1,8 +1,12 @@
 package com.uniq.tms.tms_microservice.modules.payrollManagement.entity;
 
+import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.MonthlySummaryEntity;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.enums.PayRollStatusEnum;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
 import jakarta.persistence.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -26,11 +30,6 @@ public class UserPayRollAmountEntity {
 
     @Column(name = "month",nullable = false)
     String month;
-
-
-//    @OneToOne
-//    @JoinColumn(name = "month_summary_id")
-//    private MonthSummaryEntity monthSummary;
 
     @Column(name = "unpaid_leave_deduction",nullable = false)
     BigDecimal unpaidLeaveDeduction;
@@ -64,16 +63,18 @@ public class UserPayRollAmountEntity {
     @Enumerated(EnumType.STRING)
     PayRollStatusEnum payrollStatus;
 
-    @Column(name = "created_at")
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
     LocalDateTime createdAt;
 
+    @UpdateTimestamp
     @Column(name = "updated_at")
     LocalDateTime updatedAt;
 
     @Column(name = "notes")
     String notes;
 
-    @OneToMany(mappedBy = "userPayrollAmount", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "userPayrollAmount")
     private List<UserPayRollHistoryEntity> userPayrollHistory = new ArrayList<>();
 
     public Integer getId() {

@@ -11,7 +11,6 @@ import com.uniq.tms.tms_microservice.modules.payrollManagement.repository.PayRol
 import com.uniq.tms.tms_microservice.modules.payrollManagement.repository.UserPayRollAmountRepository;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.repository.UserPayRollRepository;
 import org.springframework.stereotype.Service;
-
 import java.util.List;
 import java.util.Optional;
 
@@ -36,7 +35,7 @@ public class PayRollAdapterImpl implements PayRollAdapter {
         return repository.save(entity);
     }
 
-    public Optional<PayRollSettingEntity> findFirst(){
+    public Optional<PayRollSettingEntity> findFirst() {
         return repository.findFirstBy();
     }
 
@@ -45,7 +44,7 @@ public class PayRollAdapterImpl implements PayRollAdapter {
         return payrollRepo.save(entity);
     }
 
-    public PayRollEntity save(PayRollEntity entity){
+    public PayRollEntity save(PayRollEntity entity) {
         return payrollRepo.save(entity);
     }
 
@@ -90,7 +89,7 @@ public class PayRollAdapterImpl implements PayRollAdapter {
 
     @Override
     public List<UserPayRollAmountEntity> getAllByMonthAndYear(String month) {
-        return userPayrollAmountRepository.findAllByMonth( month);
+        return userPayrollAmountRepository.findAllByMonth(month);
     }
 
     @Override
@@ -98,10 +97,12 @@ public class PayRollAdapterImpl implements PayRollAdapter {
         return payrollRepo.findAllIdAndName();
     }
 
-    public Optional<UserPayRollAmountEntity> findUserPayrollAmountByUserId(String userId) {
-        return userPayrollAmountRepository.findByUser_UserId(userId);
+    @Override
+    public Optional<UserPayRollAmountEntity> findUserPayrollAmountByUserIdAndMonth(String userId, String month) {
+        return userPayrollAmountRepository.findByUser_UserIdAndMonth(userId, month);
     }
 
+    @Override
     public UserPayRollAmountEntity saveUserPayRollAmount(UserPayRollAmountEntity entity) {
         return userPayrollAmountRepository.save(entity);
     }
@@ -114,19 +115,17 @@ public class PayRollAdapterImpl implements PayRollAdapter {
 
     @Override
     public Optional<PayRollEntity> findById(String id) {
-        return payrollRepo.findById(id);
+        return payrollRepo.findActiveById(id);
     }
 
     @Override
     public List<PayRollEntity> findAll() {
-        return payrollRepo.findAll();
+        return payrollRepo.findByIsActiveTrue();
     }
 
     @Override
     public void deleteUserPayrollById(String payrollId) {
         userPayrollRepo.deleteByPayrollId(payrollId);
     }
-
-
 
 }
