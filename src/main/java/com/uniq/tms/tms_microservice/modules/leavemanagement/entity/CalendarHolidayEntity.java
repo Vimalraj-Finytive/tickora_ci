@@ -57,4 +57,3 @@ public class CalendarHolidayEntity {
         this.calendar = calendar;
     }
 }
-

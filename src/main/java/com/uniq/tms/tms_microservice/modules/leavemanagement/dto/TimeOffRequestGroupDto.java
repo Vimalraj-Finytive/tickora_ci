@@ -1,4 +1,5 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.dto;
+
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.ViewerType;
 import java.time.LocalDate;
 
@@ -12,7 +13,6 @@ public class TimeOffRequestGroupDto {
     private String startTime;
     private String endTime;
     private Integer unitsRequested;
-    private Double hoursRequested;
     private String reason;
     private String status;
     private ViewerType viewerType;
@@ -87,14 +87,6 @@ public class TimeOffRequestGroupDto {
 
     public void setUnitsRequested(Integer unitsRequested) {
         this.unitsRequested = unitsRequested;
-    }
-
-    public Double getHoursRequested() {
-        return hoursRequested;
-    }
-
-    public void setHoursRequested(Double hoursRequested) {
-        this.hoursRequested = hoursRequested;
     }
 
     public String getReason() {

@@ -55,7 +55,6 @@ public class PayRollEntity {
     @OneToMany(mappedBy = "payroll", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<PayRollHistoryEntity> payrollHistory;
 
-
     public String getId() {
         return id;
     }

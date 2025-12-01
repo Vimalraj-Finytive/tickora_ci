@@ -55,5 +55,3 @@ public interface TimeOffPolicyRepository extends JpaRepository<TimeOffPolicyEnti
 
     boolean existsByPolicyNameIgnoreCase(String policyName);
 }
-
-

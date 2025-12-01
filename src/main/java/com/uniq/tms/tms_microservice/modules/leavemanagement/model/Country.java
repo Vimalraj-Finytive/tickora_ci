@@ -2,7 +2,6 @@ package com.uniq.tms.tms_microservice.modules.leavemanagement.model;
 
 public class Country {
 
-
     private String id;
     private String name;
     private String code;

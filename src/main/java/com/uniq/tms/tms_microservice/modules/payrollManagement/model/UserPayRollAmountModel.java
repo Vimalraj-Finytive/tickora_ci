@@ -1,7 +1,6 @@
 package com.uniq.tms.tms_microservice.modules.payrollManagement.model;
 
 import com.uniq.tms.tms_microservice.modules.payrollManagement.enums.PayRollStatusEnum;
-
 import java.math.BigDecimal;
 
 public class UserPayRollAmountModel {

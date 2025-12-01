@@ -8,6 +8,7 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.AccrualType;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.Compensation;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.Status;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeOffRequestUserModel;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.projection.TimeOffExportView;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.repository.LeaveBalanceRepository;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.repository.TimeOffRequestRepository;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.repository.UsersRequestMappingRepository;
@@ -106,5 +107,32 @@ public class TimeOffRequestAdapterImpl implements TimeOffRequestAdapter {
     @Override
     public boolean existsOverlappingRequest(String userId, String policyId, LocalDate startDate, LocalDate endDate) {
         return timeoffRequestRepo.existsOverlappingRequest(userId,policyId,startDate,endDate);
+    }
+
+    @Override
+    public List<TimeOffExportView> fetchData(LocalDate fromDate, LocalDate toDate, List<String> status, List<String> policyIds) {
+        return timeoffRequestRepo.fetchRequestDate(fromDate,toDate,status,policyIds);
+    }
+
+    @Override
+    public List<TimeOffExportView> fetchCreatorRequests(
+            LocalDate fromDate,
+            LocalDate toDate,
+            String[] status,
+            String[] policies,
+            String userId
+    ) {
+        return timeoffRequestRepo.fetchCreatorRequests(fromDate, toDate, status, policies, userId);
+    }
+
+    @Override
+    public List<TimeOffExportView> fetchReceiverRequests(
+            LocalDate fromDate,
+            LocalDate toDate,
+            String[] status,
+            String[] policies,
+            String viewerId
+    ) {
+        return timeoffRequestRepo.fetchReceiverRequests(fromDate, toDate, status, policies, viewerId);
     }
 }

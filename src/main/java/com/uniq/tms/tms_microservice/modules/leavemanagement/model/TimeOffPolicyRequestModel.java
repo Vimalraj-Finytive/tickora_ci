@@ -4,7 +4,6 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.AccrualType;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.Compensation;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.EntitledType;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.ResetFrequency;
-
 import java.time.LocalDate;
 import java.util.List;
 
@@ -13,19 +12,15 @@ public class TimeOffPolicyRequestModel {
     private String policyName;
     private Compensation compensation;
     private AccrualType accrualType;
-
     private LocalDate validityStartDate;
     private LocalDate validityEndDate;
     private ResetFrequency resetFrequency;
     private EntitledType entitledType;
     private Integer entitledUnits;
-
     private Boolean carryForward;
     private Integer maxCarryForwardUnits;
-
     private LocalDate userValidFrom;
     private LocalDate userValidTo;
-
     private List<String> userIds;
     private List<Long> groupIds;
 
@@ -141,4 +136,3 @@ public class TimeOffPolicyRequestModel {
         this.resetFrequency = resetFrequency;
     }
 }
-

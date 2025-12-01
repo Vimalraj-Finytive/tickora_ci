@@ -328,4 +328,5 @@ public class LeaveBalanceServiceImpl implements LeaveBalanceService {
         leaveBalanceAdapter.saveAllSummary(summaryEntityList);
         log.info("saved all summary");
     }
+
 }

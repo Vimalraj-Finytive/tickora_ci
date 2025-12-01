@@ -1,6 +1,5 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.dto;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -10,18 +9,12 @@ import java.time.LocalDate;
 public class HolidayDto {
 
     private String id;
-
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     @NotNull(message = "Holiday date cannot be null")
     private LocalDate date;
-
     @NotBlank(message = "Holiday name is required")
     private String name;
-
     private String year;
-
     private String countryCode;
-
     private String holidayType;
 
     public String getId() {

@@ -1859,7 +1859,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public ResponseEntity<Resource> downloadSampleFile() {
         try {
-            Resource resource = new ClassPathResource("templates/Sample_Template.csv");
+            Resource resource = new ClassPathResource("templates/sampleReports/Sample_Template.csv");
 
             if (!resource.exists()) {
                 return ResponseEntity.notFound().build();

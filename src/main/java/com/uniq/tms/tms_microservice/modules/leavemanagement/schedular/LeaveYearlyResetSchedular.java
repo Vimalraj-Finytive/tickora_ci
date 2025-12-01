@@ -1,8 +1,6 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.schedular;
 
 import com.uniq.tms.tms_microservice.modules.leavemanagement.services.LeaveBalanceService;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.services.TimeOffPolicyService;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.services.TimeOffRequestService;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.OrganizationEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.OrganizationRepository;
 import com.uniq.tms.tms_microservice.shared.util.TenantUtil;
@@ -10,7 +8,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-
 import java.util.List;
 
 @Component
@@ -26,8 +23,8 @@ public class LeaveYearlyResetSchedular {
         this.organizationRepository = organizationRepository;
     }
 
-    @Scheduled(cron = "0 0 0 1 * ?", zone = "Asia/Kolkata")
-    public void autoUpdateMonthlyLeaveBalance(){
+    @Scheduled(cron = "0 0 0 1 1 ?", zone = "Asia/Kolkata")
+    public void autoUpdateYearlyLeaveBalance(){
         try {
             List<OrganizationEntity> orgIds = organizationRepository.findAll();
             for (OrganizationEntity orgId : orgIds) {

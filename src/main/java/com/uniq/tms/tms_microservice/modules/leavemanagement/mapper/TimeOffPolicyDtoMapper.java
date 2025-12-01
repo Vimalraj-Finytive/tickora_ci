@@ -56,11 +56,11 @@ public interface TimeOffPolicyDtoMapper {
 
     StatusEnumModel toModel(StatusEnumDto dto);
 
-
-     TimeOffRequestGroupDto toDto(TimeOffRequestGroupModel model) ;
+    TimeOffRequestGroupDto toDto(TimeOffRequestGroupModel model) ;
 
     List<TimeOffRequestGroupDto> toGroupDtoList(List<TimeOffRequestGroupModel> model);
 
     Map<String, List<TimeOffRequestGroupDto>> toDtoList(Map<String, List<TimeOffRequestGroupModel>> model);
 
+    TimeOffExportRequest toModel(TimeOffExportRequestDto dto);
 }
