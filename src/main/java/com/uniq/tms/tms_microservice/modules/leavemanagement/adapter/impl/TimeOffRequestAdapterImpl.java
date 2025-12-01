@@ -4,7 +4,9 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.TimeOffRequ
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.LeaveBalanceEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeOffRequestEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.UsersRequestMappingEntity;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeOffRequestGroupModel;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.AccrualType;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.Compensation;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.Status;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeOffRequestUserModel;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.repository.LeaveBalanceRepository;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.repository.TimeOffRequestRepository;
@@ -79,6 +81,21 @@ public class TimeOffRequestAdapterImpl implements TimeOffRequestAdapter {
     @Override
     public List<TimeOffRequestEntity> findByStartDate(LocalDate date) {
         return timeoffRequestRepo.findByStartDateAndStatusApproved(date);
+    }
+
+    @Override
+    public List<TimeOffRequestEntity> findAllUnpaidRequest(int month, int year, Compensation type, Status status) {
+        return timeoffRequestRepo.findAllUnpaidRequest(month, year, type, status);
+    }
+
+    @Override
+    public List<TimeOffRequestEntity> findAllAnnualRequests(int month, int year, Compensation compensation, Status status, AccrualType accrualType) {
+        return timeoffRequestRepo.findAllAnnualRequests(month, year, compensation, status, accrualType);
+    }
+
+    @Override
+    public List<TimeOffRequestEntity> findFixedRequests(int month, int year, Status status, AccrualType accrualType) {
+        return timeoffRequestRepo.findFixedRequests(month, year, status, accrualType);
     }
 
     @Override
