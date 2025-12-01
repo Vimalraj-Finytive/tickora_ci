@@ -238,7 +238,7 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
             entitlementChanged = true;
         }
 
-        if (request.getCarryForward().equals(Boolean.TRUE)) {
+        if (Boolean.TRUE.equals(request.getCarryForward())) {
             policy.setCarryForward(request.getCarryForward());
                 if (request.getMaxCarryForwardUnits() == null) {
                     throw new IllegalArgumentException("MaxCarryForwardUnits is required");
@@ -251,6 +251,7 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
         timeOffPolicyAdapter.savePolicy(policy);
 
         List<UserPolicyEntity> assignedUsers = userPolicyAdapter.findUserPoliciesByPolicyId(policy.getPolicyId());
+
 
         List<LeaveBalanceEntity> assignedLb =leaveBalanceAdapter.findLeaveBalancesByPolicyId(request.getPolicyId());
         Set<String> existingUserIds = assignedUsers.stream()
@@ -587,6 +588,8 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
     }
 
     private UserPolicyEntity buildUserPolicy(TimeOffPolicyEntity policy, UserEntity user, LocalDate validFrom, LocalDate validTo) {
+
+
         UserPolicyEntity up = new UserPolicyEntity();
         up.setUser(user);
         up.setPolicy(policy);
