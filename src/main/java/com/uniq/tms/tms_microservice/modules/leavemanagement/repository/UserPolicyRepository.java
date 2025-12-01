@@ -41,10 +41,10 @@ public interface UserPolicyRepository extends JpaRepository<UserPolicyEntity, Lo
     FROM UserPolicyEntity up
     WHERE up.policy.policyId = :policyId
       AND up.user.userId = :userId
-      AND up.validFrom <= :date
-      AND (up.validTo IS NULL OR :date <= up.validTo)
+      AND up.validFrom <= :startDate
+      AND (up.validTo IS NULL OR up.validTo >= :endDate)
     """)
-    boolean isUserPolicyActive(String policyId, String userId, LocalDate date);
+    boolean isUserPolicyActive(String policyId, String userId,  LocalDate startDate, LocalDate endDate);
 
     @Query("SELECT up FROM UserPolicyEntity up " +
             "WHERE up.user.userId = :userId AND up.policy.policyId = :policyId " +
