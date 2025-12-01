@@ -241,9 +241,8 @@ public class LeaveBalanceServiceImpl implements LeaveBalanceService {
         Map<String, Double> balanceMap = fixedLeaveBalance.stream()
                 .collect(Collectors.toMap(
                         lb -> lb.getUser().getUserId(),
-                        lb -> lb.getBalanceUnits() != null
-                                ? lb.getBalanceUnits()
-                                : 0.0
+                        lb -> lb.getBalanceUnits() != null ? lb.getBalanceUnits() : 0.0,
+                        (existing, replacement) -> existing
                 ));
 
         for (String userId : userIds){
@@ -309,6 +308,9 @@ public class LeaveBalanceServiceImpl implements LeaveBalanceService {
                 paidLeavesTaken += fullDayUnits;
                 totalUnitsAvailable += request.getPolicy().getEntitledUnits();
                 balanceUnits += balanceMap.getOrDefault(userId, 0.0);
+                if (effectiveStart.equals(request.getStartDate()) && !effectiveEnd.equals(request.getEndDate())){
+                    balanceUnits = balanceUnits - request.getEndDate().getDayOfMonth();
+                }
             }
             totalLeavesTaken = paidLeavesTaken + unpaidLeavesTaken;
             summaryEntity.setUserId(userId);
