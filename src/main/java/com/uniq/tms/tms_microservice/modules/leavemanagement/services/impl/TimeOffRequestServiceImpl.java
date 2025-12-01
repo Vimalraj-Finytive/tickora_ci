@@ -376,7 +376,7 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
     @Override
     public List<StatusEnumModel> getStatus() {
         List<StatusEnumModel> list = new ArrayList<>();
-        for (Compensation e : Compensation.values()) {
+        for (Status e : Status.values()) {
             StatusEnumModel model = new StatusEnumModel(e.name(), e.getValue());
             list.add(model);
         }
