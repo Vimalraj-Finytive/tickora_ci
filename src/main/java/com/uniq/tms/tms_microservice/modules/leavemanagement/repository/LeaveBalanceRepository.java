@@ -106,13 +106,11 @@ public interface LeaveBalanceRepository extends JpaRepository<LeaveBalanceEntity
     @Query("""
     SELECT lb
     FROM LeaveBalanceEntity lb
-    WHERE
-        (
-            (MONTH(lb.periodStartDate) = :month AND YEAR(lb.periodStartDate) = :year)
-            OR
-            (MONTH(lb.periodEnd) = :month AND YEAR(lb.periodEnd) = :year)
-        )
-        AND lb.policy.accrualType = :type
+            WHERE lb.policy.accrualType = :type
+            AND MONTH(lb.periodStartDate) <= :month
+            AND MONTH(lb.periodEnd) >= :month
+            AND YEAR(lb.periodStartDate) <= :year
+            AND YEAR(lb.periodEnd) >= :year
     """)
     List<LeaveBalanceEntity> findAllFixedAccrual(
             @Param("month") int month,
