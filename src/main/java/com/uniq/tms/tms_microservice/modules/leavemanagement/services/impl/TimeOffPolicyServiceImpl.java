@@ -723,4 +723,13 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
     }
 
 
+    @Override
+    public List<ResetFrequencyEnumModel> getResetFrequencyStatus() {
+        List<ResetFrequencyEnumModel> list = new ArrayList<>();
+        for (ResetFrequency e : ResetFrequency.values()) {
+            ResetFrequencyEnumModel model = new ResetFrequencyEnumModel(e.name(), e.getValue());
+            list.add(model);
+        }
+        return list;
+    }
 }
