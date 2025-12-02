@@ -19,7 +19,6 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.services.TimeOffReq
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
 import com.uniq.tms.tms_microservice.shared.helper.AuthHelper;
 import com.uniq.tms.tms_microservice.shared.util.ReportStyleUtil;
-import com.uniq.tms.tms_microservice.shared.util.ReportUtil;
 import jakarta.annotation.Nullable;
 import com.uniq.tms.tms_microservice.shared.util.CacheKeyUtil;
 import jakarta.transaction.Transactional;
@@ -150,9 +149,15 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
         entity.setStatus(Status.PENDING);
         entity.setReason(request.getReason());
         entity.setRequestDate(LocalDate.now(zoneId));
+        Set<String> uniqueCc=new HashSet<>(request.getCc());
+        if (uniqueCc.contains(request.getUserId()) || request.getTo().equals(request.getUserId())){
+            throw new IllegalArgumentException("User already included");
+        }
+
         TimeOffRequestEntity saved = timeOffRequestAdapter.saveRequest(entity);
         deductLeaveBalance(saved, requested);
-        Set<String> uniqueCc = new HashSet<>(request.getCc());
+
+
         uniqueCc.remove(request.getTo());
         List<UsersRequestMappingEntity> usersMapping =
                 Stream.concat(

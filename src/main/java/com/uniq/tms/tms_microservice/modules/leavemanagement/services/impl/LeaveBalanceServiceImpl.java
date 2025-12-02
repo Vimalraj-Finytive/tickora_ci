@@ -13,8 +13,6 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.mapper.TimeOffPolic
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.LeaveBalanceModel;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.record.UserPolicyProjection;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.services.LeaveBalanceService;
-import io.lettuce.core.dynamic.annotation.Param;
-import jakarta.persistence.Column;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -31,7 +29,7 @@ import java.util.stream.Collectors;
 public class LeaveBalanceServiceImpl implements LeaveBalanceService {
 
        private final ZoneId zoneId = ZoneId.of("Asia/Kolkata");
-       private static final Logger log = LoggerFactory.getLogger(TimeOffPolicyServiceImpl.class);
+       private static final Logger log = LoggerFactory.getLogger(LeaveBalanceServiceImpl.class);
 
        private final LeaveBalanceAdapter leaveBalanceAdapter;
        private final TimeOffPolicyAdapter timeOffPolicyAdapter;
