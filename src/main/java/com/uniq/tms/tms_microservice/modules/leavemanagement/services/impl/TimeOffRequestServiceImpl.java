@@ -18,6 +18,8 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.projection.TimeOffE
 import com.uniq.tms.tms_microservice.modules.leavemanagement.services.TimeOffRequestService;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
 import com.uniq.tms.tms_microservice.shared.helper.AuthHelper;
+import com.uniq.tms.tms_microservice.shared.util.ReportStyleUtil;
+import com.uniq.tms.tms_microservice.shared.util.ReportUtil;
 import jakarta.annotation.Nullable;
 import com.uniq.tms.tms_microservice.shared.util.CacheKeyUtil;
 import jakarta.transaction.Transactional;
@@ -32,9 +34,6 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.*;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
@@ -42,7 +41,6 @@ import java.util.List;
 import java.util.stream.Stream;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.FileSystemResource;
-
 
 @Service
 public class TimeOffRequestServiceImpl implements TimeOffRequestService {
@@ -59,11 +57,12 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
     private final UserPolicyAdapter userPolicyAdapter;
     private final AuthHelper authHelper;
     private final CacheKeyUtil cacheKeyUtil;
-    private final RedisTemplate<String,Object> redisTemplate;
+    private final RedisTemplate<String, Object> redisTemplate;
+    private final ReportStyleUtil reportStyleUtil;
 
     public TimeOffRequestServiceImpl(TimeOffRequestAdapter timeOffRequestAdapter, TimeOffPolicyEntityMapper TimeOffPolicyEntityMapper, TimeOffPolicyDtoMapper timeOffPolicyDtoMapper,
                                      LeaveBalanceAdapter leaveBalanceAdapter, TimeOffPolicyAdapter timeOffPolicyAdapter, UserPolicyAdapter userPolicyAdapter,
-                                     AuthHelper authHelper, CacheKeyUtil cacheKeyUtil, @Nullable RedisTemplate<String, Object> redisTemplate) {
+                                     AuthHelper authHelper, CacheKeyUtil cacheKeyUtil, @Nullable RedisTemplate<String, Object> redisTemplate, ReportStyleUtil reportStyleUtil) {
         this.timeOffRequestAdapter = timeOffRequestAdapter;
         this.TimeOffPolicyEntityMapper = TimeOffPolicyEntityMapper;
         this.timeOffPolicyDtoMapper = timeOffPolicyDtoMapper;
@@ -73,6 +72,7 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
         this.authHelper = authHelper;
         this.cacheKeyUtil = cacheKeyUtil;
         this.redisTemplate = redisTemplate;
+        this.reportStyleUtil = reportStyleUtil;
     }
 
     @Value("${csv.request.download.dir}")
@@ -82,27 +82,26 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
     public void createRequest(TimeOffRequest request) {
         boolean validPolicy = timeOffPolicyAdapter.existsValidPolicy(request.getPolicyId(), request.getStartDate(), request.getEndDate());
         boolean validUserPolicy = userPolicyAdapter.isUserPolicyActive(request.getPolicyId(), request.getUserId(), request.getStartDate(), request.getEndDate());
-        if (!validPolicy ){
+        if (!validPolicy) {
             throw new IllegalStateException("Invalid policy for the given date.");
         }
-        if (!validUserPolicy){
+        if (!validUserPolicy) {
             throw new IllegalStateException("Invalid user policy for the given date.");
         }
         boolean exists = timeOffRequestAdapter.existsTimeoffRequest(request.getUserId(), request.getPolicyId(), LocalDate.now(zoneId));
         if (exists) {
             throw new IllegalArgumentException("Request for today is already pending or approved");
         }
-        if ( LocalDate.now(zoneId).isAfter(request.getStartDate())){
+        if (LocalDate.now(zoneId).isAfter(request.getStartDate())) {
             throw new IllegalArgumentException("Invalid request format for the selected entitled type");
         }
-
         boolean overlap = timeOffRequestAdapter.existsOverlappingRequest(request.getUserId(), request.getPolicyId(), request.getStartDate(), request.getEndDate());
 
         if (overlap) {
             throw new IllegalArgumentException("Request already exists within this date range.");
         }
         TimeOffPolicyEntity policy = timeOffPolicyAdapter.findPolicyById(request.getPolicyId());
-        if (policy.getCompensation() == Compensation.UNPAID){
+        if (policy.getCompensation() == Compensation.UNPAID) {
             createUnpaidRequest(request, policy);
             return;
         }
@@ -115,7 +114,7 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
                         && (request.getStartTime() != null || request.getEndTime() != null || request.getUnitsRequested() != days);
         boolean invalidHour =
                 policy.getEntitledType() == EntitledType.HOURS
-                        && ( days != 1 ||
+                        && (days != 1 ||
                         request.getStartTime() == null || request.getEndTime() == null);
         boolean invalidHalfDay =
                 policy.getEntitledType() == EntitledType.HALF_DAY
@@ -123,7 +122,7 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
         if (invalidDayOrHalfDay || invalidHour || invalidHalfDay) {
             throw new IllegalArgumentException("Invalid request format for the selected entitled type");
         }
-        if (leaveBalance.getBalanceUnits() == 0.0){
+        if (leaveBalance.getBalanceUnits() == 0.0) {
             throw new IllegalArgumentException("Cannot take paid leave");
         }
         entity.setStartDate(request.getStartDate());
@@ -132,14 +131,12 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
             requested = request.getUnitsRequested();
             validateDays(days, leaveBalance.getBalanceUnits());
             entity.setUnitsRequested(request.getUnitsRequested());
-        }
-        else if (policy.getEntitledType() == EntitledType.HALF_DAY) {
+        } else if (policy.getEntitledType() == EntitledType.HALF_DAY) {
             requested = request.getUnitsRequested();
             days = request.getUnitsRequested() * 0.5;
             validateDays(days, leaveBalance.getBalanceUnits());
             entity.setUnitsRequested(request.getUnitsRequested());
-        }
-        else {
+        } else {
             requested = request.getUnitsRequested();
             validateHours(request.getStartTime(), request.getEndTime(), request.getUnitsRequested(), leaveBalance);
             entity.setStartTime(request.getStartTime());
@@ -155,10 +152,8 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
         entity.setRequestDate(LocalDate.now(zoneId));
         TimeOffRequestEntity saved = timeOffRequestAdapter.saveRequest(entity);
         deductLeaveBalance(saved, requested);
-
-        Set<String> uniqueCc=new HashSet<>(request.getCc());
+        Set<String> uniqueCc = new HashSet<>(request.getCc());
         uniqueCc.remove(request.getTo());
-
         List<UsersRequestMappingEntity> usersMapping =
                 Stream.concat(
                         Stream.of(buildMapping(ViewerType.APPROVER, request.getTo(), request.getUserId(), saved.getTimeOffRequestId())),
@@ -176,12 +171,12 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
         return m;
     }
 
-    private void validateHours( LocalTime startTime, LocalTime endTime, Integer hoursRequested, LeaveBalanceEntity leaveBalance){
-        if (startTime.isAfter(endTime)){
+    private void validateHours(LocalTime startTime, LocalTime endTime, Integer hoursRequested, LeaveBalanceEntity leaveBalance) {
+        if (startTime.isAfter(endTime)) {
             throw new IllegalArgumentException("Invalid duration");
         }
         long minutes = Duration.between(startTime, endTime).toMinutes();
-        if (minutes % 60 != 0 || (minutes / 60) != hoursRequested ) {
+        if (minutes % 60 != 0 || (minutes / 60) != hoursRequested) {
             throw new IllegalArgumentException("Invalid duration");
         }
         double hours = minutes / 60.0;
@@ -190,44 +185,44 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
         }
     }
 
-    private void validateDays(double days, Double balanceUnits){
-        if ( balanceUnits - days < 0) {
+    private void validateDays(double days, Double balanceUnits) {
+        if (balanceUnits - days < 0) {
             throw new IllegalArgumentException("Insufficient leave balance.");
         }
     }
 
-    private void createUnpaidRequest(TimeOffRequest request, TimeOffPolicyEntity policy){
-       TimeOffRequestEntity entity = new TimeOffRequestEntity();
+    private void createUnpaidRequest(TimeOffRequest request, TimeOffPolicyEntity policy) {
+        TimeOffRequestEntity entity = new TimeOffRequestEntity();
         double days = ChronoUnit.DAYS.between(request.getStartDate(), request.getEndDate()) + 1;
-       if (days != request.getUnitsRequested()){
-           throw new IllegalArgumentException("Invalid request format for the selected entitled type");
-       }
-       UserEntity user = new UserEntity();
-       user.setUserId(request.getUserId());
-       entity.setUser(user);
-       entity.setPolicy(policy);
-       entity.setStartDate(request.getStartDate());
-       entity.setEndDate(request.getEndDate());
-       entity.setReason(request.getReason());
-       entity.setUnitsRequested(request.getUnitsRequested());
-       entity.setRequestDate(LocalDate.now(zoneId));
-       entity.setStatus(Status.PENDING);
-       timeOffRequestAdapter.saveRequest(entity);
+        if (days != request.getUnitsRequested()) {
+            throw new IllegalArgumentException("Invalid request format for the selected entitled type");
+        }
+        UserEntity user = new UserEntity();
+        user.setUserId(request.getUserId());
+        entity.setUser(user);
+        entity.setPolicy(policy);
+        entity.setStartDate(request.getStartDate());
+        entity.setEndDate(request.getEndDate());
+        entity.setReason(request.getReason());
+        entity.setUnitsRequested(request.getUnitsRequested());
+        entity.setRequestDate(LocalDate.now(zoneId));
+        entity.setStatus(Status.PENDING);
+        timeOffRequestAdapter.saveRequest(entity);
     }
 
     @Override
     public void employeeUpdateStatus(EmployeeStatusUpdate model) {
-        if (model.getStartDate() != null){
+        if (model.getStartDate() != null) {
             boolean validUserPolicy = userPolicyAdapter.isUserPolicyActive(model.getPolicyId(), model.getUserId(), model.getStartDate(), model.getEndDate());
-            if ( !validUserPolicy){
+            if (!validUserPolicy) {
                 throw new IllegalStateException("Invalid policy for the given date.");
             }
         }
         TimeOffRequestEntity entity = timeOffRequestAdapter.getTimeoffRequest(model.getPolicyId(), model.getUserId(), model.getRequestDate());
-        if ( LocalDate.now(zoneId).isAfter(entity.getStartDate()) || (model.getStatus() != null && !handleEmployeeRules(entity.getStatus(), model.getStatus()))) {
+        if (LocalDate.now(zoneId).isAfter(entity.getStartDate()) || (model.getStatus() != null && !handleEmployeeRules(entity.getStatus(), model.getStatus()))) {
             throw new IllegalArgumentException("Update not allowed");
         }
-        if (model.getStatus() != null && model.getStatus() == Status.CANCELLED){
+        if (model.getStatus() != null && model.getStatus() == Status.CANCELLED) {
             if (entity.getPolicy().getCompensation() == Compensation.PAID) {
                 Integer requested = entity.getUnitsRequested();
                 addLeaveBalance(entity, requested);
@@ -237,52 +232,52 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
             return;
         }
 
-        double days =  ChronoUnit.DAYS.between(entity.getStartDate(), entity.getEndDate()) + 1;
+        double days = ChronoUnit.DAYS.between(entity.getStartDate(), entity.getEndDate()) + 1;
 
         if (model.getReason() != null) {
             entity.setReason(model.getReason());
         }
-        if (model.getStartDate() != null && model.getEndDate() != null){
-            days =  ChronoUnit.DAYS.between(model.getStartDate(), model.getEndDate()) + 1;
+        if (model.getStartDate() != null && model.getEndDate() != null) {
+            days = ChronoUnit.DAYS.between(model.getStartDate(), model.getEndDate()) + 1;
             entity.setStartDate(model.getStartDate());
             entity.setEndDate(model.getEndDate());
         }
-        if (entity.getPolicy().getCompensation() == Compensation.UNPAID){
-            if (model.getUnitsRequested() != null && days!= model.getUnitsRequested()){
+        if (entity.getPolicy().getCompensation() == Compensation.UNPAID) {
+            if (model.getUnitsRequested() != null && days != model.getUnitsRequested()) {
                 throw new IllegalArgumentException("Invalid paid leave request.");
             }
             timeOffRequestAdapter.saveRequest(entity);
             return;
         }
         LeaveBalanceEntity leaveBalance = leaveBalanceAdapter.findForPeriod(entity.getPolicy().getPolicyId(), entity.getUser().getUserId(), entity.getStartDate(), entity.getEndDate());
-        if ((entity.getPolicy().getEntitledType() == EntitledType.DAY || entity.getPolicy().getEntitledType() == EntitledType.HALF_DAY )&&(model.getUnitsRequested() != null && model.getStartDate() != null && model.getEndDate() != null)) {
+        if ((entity.getPolicy().getEntitledType() == EntitledType.DAY || entity.getPolicy().getEntitledType() == EntitledType.HALF_DAY) && (model.getUnitsRequested() != null && model.getStartDate() != null && model.getEndDate() != null)) {
 
-            if (model.getUnitsRequested() != days){
+            if (model.getUnitsRequested() != days) {
                 throw new IllegalArgumentException("Invalid paid leave request.");
             }
-            if (entity.getPolicy().getEntitledType() == EntitledType.DAY ){
-                if (model.getUnitsRequested() > entity.getUnitsRequested()){
+            if (entity.getPolicy().getEntitledType() == EntitledType.DAY) {
+                if (model.getUnitsRequested() > entity.getUnitsRequested()) {
                     days = model.getUnitsRequested() - entity.getUnitsRequested();
                     validateDays(days, leaveBalance.getBalanceUnits());
                 }
 
             }
             if (entity.getPolicy().getEntitledType() == EntitledType.HALF_DAY) {
-                if ( days != 1){
+                if (days != 1) {
                     throw new IllegalArgumentException("Invalid paid leave request.");
                 }
             }
         }
 
         if (entity.getPolicy().getEntitledType() == EntitledType.HOURS && (model.getStartTime() != null && model.getEndTime() != null &&
-                model.getUnitsRequested()!= null)) {
-            if (days != 1){
+                model.getUnitsRequested() != null)) {
+            if (days != 1) {
                 throw new IllegalArgumentException("Invalid paid leave request.");
             }
-            validateHours( model.getStartTime(), model.getEndTime(), model.getUnitsRequested(), leaveBalance);
+            validateHours(model.getStartTime(), model.getEndTime(), model.getUnitsRequested(), leaveBalance);
             if (model.getUnitsRequested() > entity.getUnitsRequested()) {
                 double hour = model.getUnitsRequested() - entity.getUnitsRequested();
-                if (leaveBalance.getBalanceUnits() < hour){
+                if (leaveBalance.getBalanceUnits() < hour) {
                     throw new IllegalArgumentException("Insufficient leave balance.");
                 }
             }
@@ -314,13 +309,13 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
     @Override
     public void adminUpdateStatus(AdminStatusUpdate model) {
         TimeOffRequestEntity entity = timeOffRequestAdapter.getTimeoffRequest(model.getPolicyId(), model.getUserId(), model.getRequestDate());
-        if (entity == null){
+        if (entity == null) {
             throw new IllegalArgumentException("No time-off request exists ");
         }
         if (LocalDate.now(zoneId).isAfter(entity.getStartDate()) || model.getStatus() != null && !handleAdminRules(entity.getStatus(), model.getStatus())) {
             throw new IllegalArgumentException("Update not allowed. Invalid date or status");
         }
-        if(model.getStatus() != null) {
+        if (model.getStatus() != null) {
             entity.setStatus(model.getStatus());
             TimeOffRequestEntity saved = timeOffRequestAdapter.saveRequest(entity);
             if (saved.getStatus() == Status.REJECTED) {
@@ -338,16 +333,15 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
         };
     }
 
-    public void deductLeaveBalance(TimeOffRequestEntity entity, Integer requested){
+    public void deductLeaveBalance(TimeOffRequestEntity entity, Integer requested) {
 
         LeaveBalanceEntity leaveBalance = leaveBalanceAdapter.findForPeriod(entity.getPolicy().getPolicyId(), entity.getUser().getUserId(), entity.getStartDate(), entity.getEndDate());
-        if(leaveBalance != null && entity.getPolicy().getEntitledType() == EntitledType.HALF_DAY ) {
+        if (leaveBalance != null && entity.getPolicy().getEntitledType() == EntitledType.HALF_DAY) {
             log.info("leave balance find");
-            leaveBalance.setLeaveTakenUnits(leaveBalance.getLeaveTakenUnits() + requested*0.5);
-            double balanceUnits = leaveBalance.getBalanceUnits() - requested*0.5;
+            leaveBalance.setLeaveTakenUnits(leaveBalance.getLeaveTakenUnits() + requested * 0.5);
+            double balanceUnits = leaveBalance.getBalanceUnits() - requested * 0.5;
             leaveBalance.setBalanceUnits(balanceUnits);
-        }
-        else if (leaveBalance != null &&  (entity.getPolicy().getEntitledType() == EntitledType.HOURS ||
+        } else if (leaveBalance != null && (entity.getPolicy().getEntitledType() == EntitledType.HOURS ||
                 entity.getPolicy().getEntitledType() == EntitledType.DAY)) {
             leaveBalance.setLeaveTakenUnits(leaveBalance.getLeaveTakenUnits() + requested);
             double balanceUnits = leaveBalance.getBalanceUnits() - requested;
@@ -356,15 +350,14 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
         leaveBalanceAdapter.saveLeaveBalance(leaveBalance);
     }
 
-    public void addLeaveBalance(TimeOffRequestEntity entity, Integer requested){
+    public void addLeaveBalance(TimeOffRequestEntity entity, Integer requested) {
         LeaveBalanceEntity leaveBalance = leaveBalanceAdapter.findForPeriod(entity.getPolicy().getPolicyId(), entity.getUser().getUserId(), entity.getStartDate(), entity.getEndDate());
-        if(leaveBalance != null && entity.getPolicy().getEntitledType() == EntitledType.HALF_DAY ) {
+        if (leaveBalance != null && entity.getPolicy().getEntitledType() == EntitledType.HALF_DAY) {
             log.info("leave balance finds");
-            leaveBalance.setLeaveTakenUnits(leaveBalance.getLeaveTakenUnits() - requested*0.5);
-            double balanceUnits = leaveBalance.getBalanceUnits() + requested*0.5;
+            leaveBalance.setLeaveTakenUnits(leaveBalance.getLeaveTakenUnits() - requested * 0.5);
+            double balanceUnits = leaveBalance.getBalanceUnits() + requested * 0.5;
             leaveBalance.setBalanceUnits(balanceUnits);
-        }
-        else if (leaveBalance != null &&  (entity.getPolicy().getEntitledType() == EntitledType.HOURS ||
+        } else if (leaveBalance != null && (entity.getPolicy().getEntitledType() == EntitledType.HOURS ||
                 entity.getPolicy().getEntitledType() == EntitledType.DAY)) {
             leaveBalance.setLeaveTakenUnits(leaveBalance.getLeaveTakenUnits() - requested);
             double balanceUnits = leaveBalance.getBalanceUnits() + requested;
@@ -388,24 +381,18 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
             LocalDate fromDate,
             LocalDate toDate,
             int minRoleLevel) {
-
         if (fromDate == null || toDate == null) {
             throw new IllegalArgumentException("fromDate and toDate are required");
         }
-
         List<TimeOffRequestUserModel> list =
                 timeOffRequestAdapter.filterWithUserAndRole(fromDate, toDate, minRoleLevel);
-
         List<TimeOffRequestResponseModel> result = new ArrayList<>();
-
         for (TimeOffRequestUserModel item : list) {
             TimeOffRequestResponseModel rm =
                     TimeOffPolicyEntityMapper.toModel(item.getRequest());
-
             rm.setUserName(item.getUserName());
             result.add(rm);
         }
-
         return result;
     }
 
@@ -413,7 +400,6 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
     public Map<String, List<TimeOffRequestGroupModel>> filterRequests(
             TimeOffExportRequest request,
             String loggedUserId) {
-
         boolean creatorMode =
                 request.getUserId() != null &&
                         !request.getUserId().trim().isEmpty() &&
@@ -422,35 +408,11 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
         if (request.getFromDate() == null || request.getToDate() == null) {
             throw new IllegalArgumentException("fromDate and toDate are required");
         }
-
-        String finalUserId = loggedUserId;
-
-        String[] statusArr =
-                (request.getStatus() == null || request.getStatus().isEmpty())
-                        ? new String[0]
-                        : request.getStatus().toArray(new String[0]);
-
-        String[] policyArr =
-                (request.getPolicyIds() == null || request.getPolicyIds().isEmpty())
-                        ? new String[0]
-                        : request.getPolicyIds().toArray(new String[0]);
-
-        List<TimeOffExportView> rows =
-                creatorMode
-                        ? timeOffRequestAdapter.fetchCreatorRequests(
-                        request.getFromDate(), request.getToDate(), statusArr, policyArr, finalUserId
-                )
-                        : timeOffRequestAdapter.fetchReceiverRequests(
-                        request.getFromDate(), request.getToDate(), statusArr, policyArr, finalUserId
-                );
-
+        List<TimeOffExportView> rows = fetchExportRows(request, loggedUserId);
         List<TimeOffRequestGroupModel> toList = new ArrayList<>();
         List<TimeOffRequestGroupModel> ccList = new ArrayList<>();
-
         for (TimeOffExportView row : rows) {
-
             TimeOffRequestGroupModel model = new TimeOffRequestGroupModel();
-
             model.setPolicyName(row.getPolicyName());
             model.setRequestDate(LocalDate.parse(row.getRequestedDate()));
             model.setStartDate(row.getLeaveStartDate());
@@ -460,6 +422,7 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
             model.setStatus(row.getStatus());
             model.setReason(row.getReason());
             model.setUnitsRequested(row.getUnitsRequested());
+            model.setLeaveType(row.getLeaveType());
             if (creatorMode) {
                 model.setUserId(row.getViewerId());
                 model.setUserName(row.getViewerName());
@@ -475,61 +438,92 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
                 toList.add(model);
             }
         }
-
         Map<String, List<TimeOffRequestGroupModel>> map = new HashMap<>();
         map.put("TO", toList);
         map.put("CC", ccList);
-
         return map;
+    }
+
+    public List<TimeOffExportView> fetchExportRows(TimeOffExportRequest request, String loggedUserId) {
+
+        boolean creatorMode =
+                request.getUserId() != null &&
+                        !request.getUserId().trim().isEmpty() &&
+                        request.getUserId().equals(loggedUserId);
+
+        String[] statusArr = (request.getStatus() == null || request.getStatus().isEmpty())
+                ? new String[0]
+                : request.getStatus().toArray(new String[0]);
+
+        String[] policyArr = (request.getPolicyIds() == null || request.getPolicyIds().isEmpty())
+                ? new String[0]
+                : request.getPolicyIds().toArray(new String[0]);
+
+        return creatorMode
+                ? timeOffRequestAdapter.fetchCreatorRequests(
+                request.getFromDate(), request.getToDate(), statusArr, policyArr, loggedUserId
+        )
+                : timeOffRequestAdapter.fetchReceiverRequests(
+                request.getFromDate(), request.getToDate(), statusArr, policyArr, loggedUserId
+        );
     }
 
     @Override
     @Transactional
     public String startExporting(TimeOffExportRequestDto request, String schema, String orgId) {
         TimeOffExportRequest model = timeOffPolicyDtoMapper.toModel(request);
-        String exportId = UUID.randomUUID().toString();
-        String exportKey = cacheKeyUtil.getExport(schema, orgId, exportId);
-        redisTemplate.opsForValue().set(exportKey, ReportType.PENDING, Duration.ofHours(12));
-        generateReportAsync(exportId, exportKey,model);
-        return exportId;
+        String format = request.getFormat() == null ? "xlsx" : request.getFormat().toLowerCase();
+        String baseName = "TimeOffRequest_" + request.getFromDate();
+        String extension = "." + format;
+        String finalName = baseName + extension;
+        File file = new File(downloadDir + finalName);
+        int count = 1;
+        while (file.exists()) {
+            finalName = baseName + "(" + count + ")" + extension;
+            file = new File(downloadDir + finalName);
+            count++;
+        }
+        String exportKey = cacheKeyUtil.getExport(schema, orgId, finalName);
+        if (redisTemplate != null) {
+            redisTemplate.opsForValue().set(exportKey, ReportType.PENDING, Duration.ofHours(12));
+        } else {
+            log.warn("Redis not available. Skipping export status tracking.");
+        }
+        generateReportAsync(file, exportKey, model);
+        return finalName;
     }
 
     @Async
-    public void generateReportAsync(String exportId, String exportKey, TimeOffExportRequest request) {
+    public void generateReportAsync(File file, String exportKey, TimeOffExportRequest request) {
         try {
-            redisTemplate.opsForValue().set(exportKey, ReportType.PROCESSING);
+            boolean redisAvailable = redisTemplate != null;
+            if (redisAvailable) {
+                redisTemplate.opsForValue().set(exportKey, ReportType.PROCESSING);
+            } else {
+                log.warn("Redis unavailable — proceeding without status tracking.");
+            }
             String loggedInUser = authHelper.getUserId();
-            List<TimeOffExportView> exportData = (List<TimeOffExportView>) filterRequests(request, loggedInUser);
-            Path dir = Paths.get(downloadDir);
-            if (!Files.exists(dir)) Files.createDirectories(dir);
-            String format =
-                    request.getFormat() == null ? "xlsx" : request.getFormat().toLowerCase();
-            File file = new File(downloadDir + exportId + "." + format);
-            if ("csv".equals(format)) {
+            List<TimeOffExportView> exportData = fetchExportRows(request, loggedInUser);
+            if ("csv".equalsIgnoreCase(request.getFormat())) {
                 generateCsv(exportData, file);
             } else {
                 generateXlsx(exportData, file);
             }
-            redisTemplate.opsForValue().set(exportKey, ReportType.COMPLETED);
+            if (redisAvailable) {
+                redisTemplate.opsForValue().set(exportKey, ReportType.COMPLETED);
+            }
         } catch (Exception e) {
             log.error("Export failed: {}", e.getMessage(), e);
-            redisTemplate.opsForValue().set(exportKey, ReportType.FAILED);
+            if (redisTemplate != null) {
+                redisTemplate.opsForValue().set(exportKey, ReportType.FAILED);
+            }
         }
     }
 
     private void generateCsv(List<TimeOffExportView> data, File file) throws Exception {
-        try (FileWriter fw = new FileWriter(file, StandardCharsets.UTF_8);
-             CSVWriter csv = new CSVWriter(
-                     fw,
-                     CSVWriter.DEFAULT_SEPARATOR,
-                     CSVWriter.DEFAULT_QUOTE_CHARACTER,
-                     CSVWriter.DEFAULT_ESCAPE_CHARACTER,
-                     CSVWriter.DEFAULT_LINE_END
-             )) {
+        try (FileWriter fw = new FileWriter(file, StandardCharsets.UTF_8); CSVWriter csv = new CSVWriter(fw, CSVWriter.DEFAULT_SEPARATOR, CSVWriter.DEFAULT_QUOTE_CHARACTER, CSVWriter.DEFAULT_ESCAPE_CHARACTER, CSVWriter.DEFAULT_LINE_END)) {
             ClassPathResource resource = new ClassPathResource("templates/text/timeoff_request_csv_header.txt");
-            try (BufferedReader br = new BufferedReader(
-                    new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8))) {
-
+            try (BufferedReader br = new BufferedReader(new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8))) {
                 String headerLine = br.readLine();
                 if (headerLine != null) {
                     csv.writeNext(headerLine.split(","));
@@ -543,61 +537,47 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
                         String.valueOf(v.getLeaveStartDate()),
                         String.valueOf(v.getLeaveEndDate()),
                         v.getLeaveType(),
-                        v.getStatus()
-                });
+                        v.getStatus(),
+                        v.getViewerType()});
             }
             csv.flush();
         }
     }
 
     private void generateXlsx(List<TimeOffExportView> data, File file) throws Exception {
-
         try (Workbook workbook = new XSSFWorkbook();
              FileOutputStream fos = new FileOutputStream(file)) {
-
             Sheet sheet = workbook.createSheet("TimeOff Report");
-
-            ClassPathResource resource = new ClassPathResource("templates/text/timeoff_request_excel_header.txt");
-
+            Resource resource =
+                    new ClassPathResource("templates/text/timeoff_request_excel_header.txt");
             List<String> headerLines;
             try (BufferedReader reader = new BufferedReader(
                     new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8))) {
                 headerLines = reader.lines().toList();
             }
-
             String[] headers = headerLines.getFirst().split("\\|");
-
-            CellStyle headerStyle = workbook.createCellStyle();
-            Font font = workbook.createFont();
-            font.setBold(true);
-            headerStyle.setFont(font);
-
+            CellStyle headerStyle = reportStyleUtil.createHeaderCellStyle(workbook);
+            CellStyle dataStyle = reportStyleUtil.createDataCellStyle(workbook);
             Row headerRow = sheet.createRow(0);
             for (int i = 0; i < headers.length; i++) {
-                Cell cell = headerRow.createCell(i);
-                cell.setCellValue(headers[i]);
-                cell.setCellStyle(headerStyle);
+                reportStyleUtil.createStyledCell(headerRow, i, " " + headers[i] + " ", headerStyle);
             }
-
             int rowIdx = 1;
             for (TimeOffExportView v : data) {
-
                 Row row = sheet.createRow(rowIdx++);
                 int col = 0;
-
-                row.createCell(col++).setCellValue(v.getCreatorId());
-                row.createCell(col++).setCellValue(v.getCreatorName());
-                row.createCell(col++).setCellValue(v.getPolicyName());
-                row.createCell(col++).setCellValue(v.getLeaveStartDate());
-                row.createCell(col++).setCellValue(v.getLeaveEndDate());
-                row.createCell(col++).setCellValue(v.getLeaveType());
-                row.createCell(col).setCellValue(v.getStatus());
+                reportStyleUtil.createStyledCell(row, col++, v.getCreatorId(), dataStyle);
+                reportStyleUtil.createStyledCell(row, col++, v.getCreatorName(), dataStyle);
+                reportStyleUtil.createStyledCell(row, col++, v.getPolicyName(), dataStyle);
+                reportStyleUtil.createStyledCell(row, col++, String.valueOf(v.getLeaveStartDate()), dataStyle);
+                reportStyleUtil.createStyledCell(row, col++, String.valueOf(v.getLeaveEndDate()), dataStyle);
+                reportStyleUtil.createStyledCell(row, col++, v.getLeaveType(), dataStyle);
+                reportStyleUtil.createStyledCell(row, col++, v.getStatus(), dataStyle);
+                reportStyleUtil.createStyledCell(row, col, v.getViewerType(), dataStyle);
             }
-
             for (int i = 0; i < headers.length; i++) {
                 sheet.autoSizeColumn(i);
             }
-
             workbook.write(fos);
         }
     }
@@ -605,8 +585,13 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
     @Override
     public String exportStatus(String exportId, String schema, String orgId) {
         String exportKey = cacheKeyUtil.getExport(schema, orgId, exportId);
+        if (redisTemplate == null) {
+            return "REDIS_UNAVAILABLE";
+        }
         Object val = redisTemplate.opsForValue().get(exportKey);
-        if (val == null) return "NOT_FOUND";
+        if (val == null) {
+            return "NOT_FOUND";
+        }
         return val.toString();
     }
 
@@ -615,18 +600,24 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
             String exportId,
             String schema,
             String orgId,
-            String type
-    ) {
+            String type) {
         String exportKey = cacheKeyUtil.getExport(schema, orgId, exportId);
-        String status = (String) redisTemplate.opsForValue().get(exportKey);
-        if (!ReportType.COMPLETED.getValues().equalsIgnoreCase(status)) {
-            throw new IllegalStateException("Report is not ready. Current status = " + status);
+        if (redisTemplate == null) {
+            throw new IllegalStateException("Redis unavailable. Cannot verify export status.");
         }
-        File file = new File(downloadDir + exportId + "." + type.toLowerCase());
+        Object redisValue = redisTemplate.opsForValue().get(exportKey);
+        if (redisValue == null) {
+            throw new IllegalStateException("Export ID not found.");
+        }
+        String[] parts = redisValue.toString().split("\\|");
+        if (!parts[0].equalsIgnoreCase(ReportType.COMPLETED.getValues())) {
+            throw new IllegalStateException("Report is not ready. Current status = " + parts[0]);
+        }
+        String fileName = parts[1];
+        File file = new File(downloadDir + fileName);
         if (!file.exists()) {
-            throw new RuntimeException("Report file not found");
+            throw new RuntimeException("Report file not found: " + fileName);
         }
         return new FileSystemResource(file);
     }
-
 }
