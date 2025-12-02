@@ -80,8 +80,8 @@ public class TimeoffPolicyAdapterImpl implements TimeOffPolicyAdapter {
     }
 
     @Override
-    public boolean existsValidPolicy(String policyId, LocalDate date) {
-        return timeoffPolicyRepo.existsValidPolicy(policyId, date);
+    public boolean existsValidPolicy(String policyId,  LocalDate startDate, LocalDate endDate) {
+        return timeoffPolicyRepo.existsValidPolicy(policyId, startDate, endDate);
     }
 
     @Override

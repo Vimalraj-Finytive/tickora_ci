@@ -80,8 +80,8 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
 
     @Override
     public void createRequest(TimeOffRequest request) {
-        boolean validPolicy = timeOffPolicyAdapter.existsValidPolicy(request.getPolicyId(), request.getStartDate());
-        boolean validUserPolicy = userPolicyAdapter.isUserPolicyActive(request.getPolicyId(), request.getUserId(), request.getStartDate());
+        boolean validPolicy = timeOffPolicyAdapter.existsValidPolicy(request.getPolicyId(), request.getStartDate(), request.getEndDate());
+        boolean validUserPolicy = userPolicyAdapter.isUserPolicyActive(request.getPolicyId(), request.getUserId(), request.getStartDate(), request.getEndDate());
         if (!validPolicy ){
             throw new IllegalStateException("Invalid policy for the given date.");
         }
@@ -218,7 +218,7 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
     @Override
     public void employeeUpdateStatus(EmployeeStatusUpdate model) {
         if (model.getStartDate() != null){
-            boolean validUserPolicy = userPolicyAdapter.isUserPolicyActive(model.getPolicyId(), model.getUserId(), model.getStartDate());
+            boolean validUserPolicy = userPolicyAdapter.isUserPolicyActive(model.getPolicyId(), model.getUserId(), model.getStartDate(), model.getEndDate());
             if ( !validUserPolicy){
                 throw new IllegalStateException("Invalid policy for the given date.");
             }
