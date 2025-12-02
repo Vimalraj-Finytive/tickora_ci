@@ -235,4 +235,14 @@ public class TimeOffFacade {
         Resource downloadStatus = timeOffRequestService.downloadReport(exportId, schema, orgId, type);
         return new ApiResponse<>(200,"Report Downloaded Successfully",downloadStatus);
     }
+
+    public ApiResponse<List<ResetFrequencyEnumDto>> getResetFrequencyStatus() {
+        List<ResetFrequencyEnumModel> model = timeOffPolicyService.getResetFrequencyStatus();
+        List<ResetFrequencyEnumDto> dto = model.stream()
+                .map(timeoffPolicyDtoMapper::toDto)
+                .toList();
+
+        return new ApiResponse<>(200, "ResetFrequency fetched successfully", dto);
+    }
+
 }
