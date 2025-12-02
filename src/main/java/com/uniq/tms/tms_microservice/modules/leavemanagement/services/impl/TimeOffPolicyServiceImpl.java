@@ -552,38 +552,27 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
         lb.setUser(userEntity);
         lb.setPolicy(policy);
 
-        LocalDate computedValidTo = validTo;
+        LocalDate computedValidTo = computeValidTo(policy, validFrom, validTo);
 
-        if (computedValidTo == null) {
-            if (policy.getAccrualType() == AccrualType.MONTHLY) {
-                computedValidTo = validFrom.withDayOfMonth(validFrom.lengthOfMonth());
-            } else if (policy.getAccrualType() == AccrualType.ANNUALLY) {
-                computedValidTo = LocalDate.of(validFrom.getYear(), 12, 31);
-            }
-        }
-
-        if(validTo !=null){
-            if(policy.getAccrualType() == AccrualType.MONTHLY && validTo.isAfter(validFrom.withDayOfMonth(validFrom.lengthOfMonth()))){
-                 lb.setPeriodEnd(validFrom.withDayOfMonth(validFrom.lengthOfMonth()));
-            }
-            else if (policy.getAccrualType() == AccrualType.ANNUALLY && validTo.isAfter(LocalDate.of(validFrom.getYear(), 12, 31))){
-                lb.setPeriodEnd(LocalDate.of(validFrom.getYear(), 12, 31));
-            }
-            else
-                lb.setPeriodEnd(validTo);
-        }
         lb.setPeriodStartDate(validFrom);
+        lb.setPeriodEnd(computedValidTo);
+
         lb.setTotalUnits(totalUnits);
         lb.setBalanceUnits(totalUnits);
         lb.setLeaveTakenUnits(0.0);
 
-        double carryForwardUnits = policy.getMaxCarryForwardUnits() == null ? 0 : policy.getMaxCarryForwardUnits();
+        double carryForwardUnits=policy.getMaxCarryForwardUnits() == null ?
+                0 : policy.getMaxCarryForwardUnits();
         lb.setCarryForwardUnits(carryForwardUnits);
 
         lb.setLastAccrualDate(computedValidTo);
-        LocalDate nextAccrualDate = resolveNextAccrualDate(validFrom, computedValidTo, policy.getValidityEndDate(), policy.getAccrualType());
+
+        LocalDate nextAccrualDate = resolveNextAccrualDate(
+                validFrom, computedValidTo, policy.getValidityEndDate(), policy.getAccrualType());
         lb.setNextAccrualDate(nextAccrualDate);
+
         lb.setUpdatedAt(LocalDateTime.now());
+
         return lb;
     }
 
@@ -594,7 +583,8 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
         up.setUser(user);
         up.setPolicy(policy);
         up.setValidFrom(validFrom);
-        up.setValidTo(validTo);
+        LocalDate computedValidTo = validTo == null ? policy.getValidityEndDate() : validTo ;
+        up.setValidTo(computedValidTo);
 
         if (policy.getAccrualType() == AccrualType.FIXED) {
             up.setEntitledUnits(policy.getEntitledUnits());
@@ -731,5 +721,21 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
             list.add(model);
         }
         return list;
+    }
+
+    private LocalDate computeValidTo(TimeOffPolicyEntity policy, LocalDate validFrom, LocalDate validTo) {
+
+        if (validTo != null) {
+            return validTo;
+        }
+
+        if (policy.getAccrualType() == AccrualType.MONTHLY) {
+            return validFrom.withDayOfMonth(validFrom.lengthOfMonth());
+        }
+
+        if (policy.getAccrualType() == AccrualType.ANNUALLY) {
+            return LocalDate.of(validFrom.getYear(), 12, 31);
+        }
+        return null;
     }
 }
