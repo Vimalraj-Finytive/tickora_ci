@@ -15,6 +15,7 @@ public class TimeOffRequestGroupModel {
         private String reason;
         private String status;
         private String viewerType;
+        private String leaveType;
 
     public String getUserId() {
         return userId;
@@ -112,5 +113,11 @@ public class TimeOffRequestGroupModel {
         this.viewerType = viewerType;
     }
 
+    public String getLeaveType() {
+        return leaveType;
+    }
 
+    public void setLeaveType(String leaveType) {
+        this.leaveType = leaveType;
+    }
 }

@@ -16,6 +16,7 @@ public class TimeOffRequestGroupDto {
     private String reason;
     private String status;
     private ViewerType viewerType;
+    private String leaveType;
 
     public String getUserId() {
         return userId;
@@ -111,5 +112,13 @@ public class TimeOffRequestGroupDto {
 
     public void setViewerType(ViewerType viewerType) {
         this.viewerType = viewerType;
+    }
+
+    public String getLeaveType() {
+        return leaveType;
+    }
+
+    public void setLeaveType(String leaveType) {
+        this.leaveType = leaveType;
     }
 }
