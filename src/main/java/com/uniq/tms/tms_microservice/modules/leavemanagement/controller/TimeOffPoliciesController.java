@@ -118,4 +118,12 @@ public class TimeOffPoliciesController {
         ApiResponse<List<TimeoffPolicyDto>> response = timeOffFacade.getPolicyByUserId(userId);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
+
+    @GetMapping("/resetFrequency")
+    public ResponseEntity<ApiResponse<List<ResetFrequencyEnumDto>>> getResetFrequency(
+            @RequestHeader("Authorization") String token) {
+
+        ApiResponse<List<ResetFrequencyEnumDto>> response = timeOffFacade.getResetFrequencyStatus();
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
 }

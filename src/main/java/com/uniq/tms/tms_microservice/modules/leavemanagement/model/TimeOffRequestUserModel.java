@@ -20,6 +20,11 @@ public class TimeOffRequestUserModel {
         this.type = type;
     }
 
+    public TimeOffRequestUserModel(TimeOffRequestEntity request, String userName) {
+        this.request = request;
+        this.userName = userName;
+    }
+
     public String getUserId() {
         return userId;
     }

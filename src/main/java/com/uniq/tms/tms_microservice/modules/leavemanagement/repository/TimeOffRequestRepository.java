@@ -93,8 +93,8 @@ public interface TimeOffRequestRepository extends JpaRepository<TimeOffRequestEn
               AND role.hierarchyLevel > :minRoleLevel
             """)
     List<TimeOffRequestUserModel> filterWithUserAndRole(
-            @Param("from") LocalDate from,
-            @Param("to") LocalDate to,
+            @Param("fromDate") LocalDate fromDate,
+            @Param("toDate") LocalDate toDate,
             @Param("minRoleLevel") int minRoleLevel);
 
     @Query("SELECT t FROM TimeOffRequestEntity t " +
