@@ -13,7 +13,6 @@ import com.uniq.tms.tms_microservice.modules.userManagement.enums.UserRole;
 import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
 import com.uniq.tms.tms_microservice.shared.helper.AuthHelper;
 import org.springframework.core.io.Resource;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.*;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.mapper.TimeOffPolicyDtoMapper;
@@ -55,7 +54,7 @@ public class TimeOffFacade {
         return new ApiResponse<>(200,"Requested TimeOff Successfully",null);
     }
 
-    public ApiResponse employeeUpdateStatus(EmployeeStatusUpdateDto dto){
+    public ApiResponse<EmployeeStatusUpdateDto> employeeUpdateStatus(EmployeeStatusUpdateDto dto){
         String userId= authHelper.getUserId();
         dto.setUserId(userId);
         EmployeeStatusUpdate model = timeoffPolicyDtoMapper.toStatusModel(dto);
@@ -63,7 +62,7 @@ public class TimeOffFacade {
         return new ApiResponse<>(200,"Update TimeOff Request Successfully",null);
     }
 
-    public ApiResponse adminUpdateStatus(AdminStatusUpdateDto dto) {
+    public ApiResponse<AdminStatusUpdateDto> adminUpdateStatus(AdminStatusUpdateDto dto) {
         AdminStatusUpdate model = timeoffPolicyDtoMapper.toAdminStatusModel(dto);
         timeOffRequestService.adminUpdateStatus(model);
         return new ApiResponse<>(200, "Update TimeOff Request status Successfully", null);

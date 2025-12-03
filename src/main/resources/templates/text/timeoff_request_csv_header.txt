@@ -1,1 +1,1 @@
-User ID,User Name,User Policy,Leave Start Date,Leave End Date,Leave Type,Status, ViewerType
+User ID,User Name,Policy Name,Leave Start Date,Leave End Date,Leave Type,Status,ViewerTyp

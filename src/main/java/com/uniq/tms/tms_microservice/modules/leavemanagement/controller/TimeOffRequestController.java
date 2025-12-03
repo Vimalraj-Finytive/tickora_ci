@@ -6,9 +6,20 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.facade.TimeOffFacad
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeOffExportRequest;
 import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
 import com.uniq.tms.tms_microservice.shared.helper.AuthHelper;
-import org.springframework.core.io.Resource;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -16,6 +27,8 @@ import java.util.Map;
 @RestController
 @RequestMapping(LeaveConstant.TIMEOFF_REQUEST_URL)
 public class TimeOffRequestController {
+
+    private static final Logger log = LogManager.getLogger(TimeOffRequestController.class);
 
     private final TimeOffFacade timeOffFacade;
     private final AuthHelper authHelper;
@@ -25,21 +38,24 @@ public class TimeOffRequestController {
         this.authHelper = authHelper;
     }
 
+    @Value("${csv.request.download.dir}")
+    private String downloadDir;
+
     @PostMapping("/create")
-    public ResponseEntity<ApiResponse> createRequest(@RequestHeader("Authorization") String token, @RequestBody TimeOffRequestDto requestDto) {
-        ApiResponse createdRequest = timeOffFacade.createRequest(requestDto);
+    public ResponseEntity<ApiResponse<TimeOffRequestDto>> createRequest(@RequestHeader("Authorization") String token, @RequestBody TimeOffRequestDto requestDto) {
+        ApiResponse<TimeOffRequestDto> createdRequest = timeOffFacade.createRequest(requestDto);
         return ResponseEntity.ok(createdRequest);
     }
 
     @PutMapping("/update")
-    public ResponseEntity<ApiResponse> employeeUpdateStatus(@RequestHeader("Authorization") String token, @RequestBody EmployeeStatusUpdateDto dto){
-        ApiResponse updateRequest = timeOffFacade.employeeUpdateStatus(dto);
+    public ResponseEntity<ApiResponse<EmployeeStatusUpdateDto>> employeeUpdateStatus(@RequestHeader("Authorization") String token, @RequestBody EmployeeStatusUpdateDto dto){
+        ApiResponse<EmployeeStatusUpdateDto> updateRequest = timeOffFacade.employeeUpdateStatus(dto);
         return ResponseEntity.ok(updateRequest);
     }
 
     @PatchMapping("/update")
-    public ResponseEntity<ApiResponse> adminUpdateStatus(@RequestHeader("Authorization") String token, @RequestBody AdminStatusUpdateDto dto){
-        ApiResponse updateRequest = timeOffFacade.adminUpdateStatus(dto);
+    public ResponseEntity<ApiResponse<AdminStatusUpdateDto>> adminUpdateStatus(@RequestHeader("Authorization") String token, @RequestBody AdminStatusUpdateDto dto){
+        ApiResponse<AdminStatusUpdateDto> updateRequest = timeOffFacade.adminUpdateStatus(dto);
         return ResponseEntity.ok(updateRequest);
     }
 
@@ -87,14 +103,52 @@ public class TimeOffRequestController {
         return ResponseEntity.status(reportStatus.getStatusCode()).body(reportStatus);
     }
 
-    @GetMapping("/download/{exportId}")
-    public ResponseEntity<ApiResponse<Resource>> downloadReport(
-            @PathVariable String exportId,
-            @RequestParam String type) throws Exception {
-        String schema = authHelper.getSchema();
-        String orgId = authHelper.getOrgId();
-        ApiResponse<Resource> downloadStatus = timeOffFacade.downloadExport(schema, orgId, exportId, type);
-        return ResponseEntity.status(downloadStatus.getStatusCode()).body(downloadStatus);
+    @GetMapping("/download")
+    public ResponseEntity<InputStreamResource> downloadTimesheet(
+            @RequestHeader("Authorization") String token,
+            @RequestParam String fileName) {
+        try {
+            log.info("Downloading file: {}", fileName);
+
+            if (fileName.contains("..") || fileName.contains("/") || fileName.contains("\\")) {
+                return ResponseEntity.badRequest().build();
+            }
+
+            Path filePath = Paths.get(downloadDir).resolve(fileName);
+            log.info("File path: {}", filePath);
+
+            if (!Files.exists(filePath)) {
+                log.warn("File not found: {}", filePath);
+                return ResponseEntity.notFound().build();
+            }
+
+            long fileSize = Files.size(filePath);
+            InputStreamResource resource = new InputStreamResource(Files.newInputStream(filePath));
+            MediaType mediaType = determineMediaType(fileName);
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=\"" + fileName + "\"; filename*=UTF-8''" +
+                                    URLEncoder.encode(fileName, StandardCharsets.UTF_8))
+                    .contentType(mediaType)
+                    .contentLength(fileSize)
+                    .body(resource);
+
+        } catch (io.jsonwebtoken.io.IOException | java.io.IOException e) {
+            log.error("Error downloading file: {}", fileName, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
+
+    private MediaType determineMediaType(String fileName) {
+        if (fileName.toLowerCase().endsWith(".csv")) {
+            return MediaType.parseMediaType("text/csv");
+        } else if (fileName.toLowerCase().endsWith(".xlsx")) {
+            return MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        } else {
+            return MediaType.APPLICATION_OCTET_STREAM;
+        }
+    }
+
 
 }
