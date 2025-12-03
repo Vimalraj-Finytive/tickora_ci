@@ -57,9 +57,9 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
             if (request.getEntitledType() != null ||
                     request.getEntitledUnits() != null ||
                     Boolean.TRUE.equals(request.getCarryForward()) ||
-                    request.getMaxCarryForwardUnits() != null) {
+                    request.getMaxCarryForwardUnits() != null || request.getAccrualType() != null){
                 throw new IllegalArgumentException(
-                        "Entitlement and carry-forward fields are not allowed for UNPAID compensation."
+                        "Accrual, Entitlement and carry-forward fields should be null  for UNPAID compensation."
                 );
             }
         }
@@ -89,7 +89,7 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
                             "For FIXED accrual, entitledType must be DAY");
                     }
         }
-        else {
+        else if (accrual == AccrualType.MONTHLY || accrual == AccrualType.ANNUALLY){
             if (reset == null) {
                 throw new IllegalArgumentException("resetFrequency is required.");
             }
@@ -403,11 +403,16 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
         List<LeaveBalanceEntity> balanceList = new ArrayList<>();
         for (TimeOffPolicyEntity policy : policies) {
 
+            validateUserValidDates(userFrom, userTo, policy.getValidityStartDate(), policy.getValidityEndDate());
+
             if (policy.getAccrualType() == AccrualType.FIXED && userTo == null) {
                 throw new IllegalArgumentException("For FIXED policies userTo is required");
             }
 
-            double totalUnits = policy.getEntitledUnits();
+            Double totalUnits = null;
+            if (policy.getCompensation() != Compensation.UNPAID) {
+                totalUnits = (double) policy.getEntitledUnits();
+            }
 
             for (String userId : finalUsers) {
 
@@ -443,9 +448,11 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
                 UserPolicyEntity upe = buildUserPolicy(policy, userEntity, userFrom, userTo);
                 assignList.add(upe);
 
-                LeaveBalanceEntity lb = buildLeaveBalance(policy, userId, userFrom, userTo, totalUnits);
+                if (policy.getCompensation() != Compensation.UNPAID) {
+                    LeaveBalanceEntity lb = buildLeaveBalance(policy, userId, userFrom, userTo, totalUnits);
+                    balanceList.add(lb);
+                }
 
-                balanceList.add(lb);
             }
         }
 
@@ -568,9 +575,9 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
         lb.setLastAccrualDate(computedValidTo);
 
         LocalDate nextAccrualDate = resolveNextAccrualDate(
-                validFrom, computedValidTo, policy.getValidityEndDate(), policy.getAccrualType());
+                validFrom, validTo, policy.getValidityEndDate(), policy.getAccrualType());
         lb.setNextAccrualDate(nextAccrualDate);
-
+        lb.setCreatedAt(LocalDateTime.now());
         lb.setUpdatedAt(LocalDateTime.now());
 
         return lb;
@@ -694,19 +701,19 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
 
             if (newAccrualType == AccrualType.MONTHLY && existingAccrual == AccrualType.ANNUALLY) {
                 throw new IllegalArgumentException(
-                        "User already has an ANNUALLY policy. Cannot assign MONTHLY policy."
+                        "User " + up.getUser().getUserName() + " already has ANNUALLY "+up.getPolicy().getPolicyName() +")."
                 );
             }
 
             if (newAccrualType == AccrualType.ANNUALLY && existingAccrual == AccrualType.MONTHLY) {
                 throw new IllegalArgumentException(
-                        "User already has a MONTHLY policy. Cannot assign ANNUALLY policy."
+                        "User " + up.getUser().getUserName() + " already has MONTHLY "+up.getPolicy().getPolicyName() +")."
                 );
             }
 
             if (newAccrualType == existingAccrual && newEntitledType == existingType) {
                 throw new IllegalArgumentException(
-                        "User already has a same accrual and entitled type policy."
+                        "User " + up.getUser().getUserName() + " already has same accrual & entitled type in "+up.getPolicy().getPolicyName() +")."
                 );
             }
         }

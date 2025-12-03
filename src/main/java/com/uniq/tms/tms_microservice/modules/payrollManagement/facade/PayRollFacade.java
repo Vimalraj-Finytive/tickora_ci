@@ -1,12 +1,17 @@
 package com.uniq.tms.tms_microservice.modules.payrollManagement.facade;
 
+import com.uniq.tms.tms_microservice.modules.leavemanagement.model.ExportStatus;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.dto.*;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.mapper.PayRollDtoMapper;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.model.*;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.services.PayRollService;
 import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
 import com.uniq.tms.tms_microservice.shared.helper.AuthHelper;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
+
+import java.io.File;
 import java.util.List;
 
 @Component
@@ -133,4 +138,18 @@ public class PayRollFacade {
         }
     }
 
+    public ApiResponse<String> startExport(String month, String format, String schema, String orgId) {
+        String exportId = service.startExportPayroll(month, format, schema, orgId);
+        return new ApiResponse<>(200, "Export started", exportId);
+    }
+
+    public ApiResponse<String> checkStatus(String schema, String orgId, String exportId) {
+        String status = service.getExportStatus(exportId, schema, orgId);
+        return new ApiResponse<>(200, "Status fetched", status);
+    }
+
+    public ApiResponse<Resource> download(String schema, String orgId, String exportId) {
+        File file = service.downloadPayroll(exportId, schema, orgId);
+        return new ApiResponse<>(200, "Download ready", new FileSystemResource(file));
+    }
 }

@@ -23,7 +23,7 @@ public class LeaveYearlyResetSchedular {
         this.organizationRepository = organizationRepository;
     }
 
-    @Scheduled(cron = "0 0 0 1 1 ?", zone = "Asia/Kolkata")
+    @Scheduled(cron = "0 0 0 1 * ?", zone = "Asia/Kolkata")
     public void autoUpdateYearlyLeaveBalance(){
         try {
             List<OrganizationEntity> orgIds = organizationRepository.findAll();
