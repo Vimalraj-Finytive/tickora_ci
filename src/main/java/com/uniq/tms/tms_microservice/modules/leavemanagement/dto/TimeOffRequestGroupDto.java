@@ -6,6 +6,7 @@ import java.time.LocalDate;
 public class TimeOffRequestGroupDto {
     private String userId;
     private String policyName;
+    private String policyId;
     private String userName;
     private LocalDate requestDate;
     private LocalDate startDate;
@@ -120,5 +121,13 @@ public class TimeOffRequestGroupDto {
 
     public void setLeaveType(String leaveType) {
         this.leaveType = leaveType;
+    }
+
+    public String getPolicyId() {
+        return policyId;
+    }
+
+    public void setPolicyId(String policyId) {
+        this.policyId = policyId;
     }
 }

@@ -1,8 +1,13 @@
 package com.uniq.tms.tms_microservice.modules.payrollManagement.services.impl;
 
+import com.opencsv.CSVWriter;
 import com.uniq.tms.tms_microservice.modules.identityManagement.service.IdGenerationService;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.LeaveBalanceAdapter;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeOffExportRequestDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.MonthlySummaryEntity;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.ReportType;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.model.ExportStatus;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeOffExportRequest;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.adapter.PayRollAdapter;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.entity.PayRollEntity;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.entity.PayRollSettingEntity;
@@ -15,20 +20,34 @@ import com.uniq.tms.tms_microservice.modules.payrollManagement.enums.PayRollStat
 import com.uniq.tms.tms_microservice.modules.payrollManagement.model.PayRollModel;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.model.PayRollSettingModel;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.model.UserPayRollAmountModel;
+import com.uniq.tms.tms_microservice.modules.payrollManagement.projection.UserPayRollAmount;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.services.PayRollService;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.adapter.TimesheetAdapter;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.entity.TimesheetEntity;
 import com.uniq.tms.tms_microservice.modules.userManagement.adapter.UserAdapter;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
 import com.uniq.tms.tms_microservice.shared.helper.TimesheetHelper;
+import com.uniq.tms.tms_microservice.shared.util.CacheKeyUtil;
+import com.uniq.tms.tms_microservice.shared.util.ReportStyleUtil;
 import jakarta.transaction.Transactional;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpStatus;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+import java.io.*;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.nio.charset.StandardCharsets;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -44,21 +63,30 @@ public class PayRollServiceImpl implements PayRollService {
     private final UserAdapter userAdapter;
     private final IdGenerationService idGenerationService;
     private final TimesheetAdapter timesheetAdapter;
-    private final TimesheetHelper timesheetHelper;
     private final PayRollEntityMapper payRollEntityMapper;
     private final LeaveBalanceAdapter leaveBalanceAdapter;
+    private final RedisTemplate<String,Object>redisTemplate;
+    private final CacheKeyUtil cacheKeyUtil;
+    private final ReportStyleUtil reportStyleUtil;
 
     public PayRollServiceImpl(PayRollAdapter payRollAdapter, PayRollEntityMapper entityMapper, UserAdapter userAdapter,
-                              IdGenerationService idGenerationService, TimesheetAdapter timesheetAdapter, TimesheetHelper timesheetHelper, PayRollEntityMapper payRollEntityMapper, LeaveBalanceAdapter leaveBalanceAdapter) {
+                              IdGenerationService idGenerationService, TimesheetAdapter timesheetAdapter,
+                              PayRollEntityMapper payRollEntityMapper, LeaveBalanceAdapter leaveBalanceAdapter,
+                              RedisTemplate<String, Object> redisTemplate, CacheKeyUtil cacheKeyUtil, ReportStyleUtil reportStyleUtil) {
         this.payRollAdapter = payRollAdapter;
         this.entityMapper = entityMapper;
         this.userAdapter = userAdapter;
         this.idGenerationService = idGenerationService;
         this.timesheetAdapter = timesheetAdapter;
-        this.timesheetHelper = timesheetHelper;
         this.payRollEntityMapper = payRollEntityMapper;
         this.leaveBalanceAdapter = leaveBalanceAdapter;
+        this.redisTemplate = redisTemplate;
+        this.cacheKeyUtil = cacheKeyUtil;
+        this.reportStyleUtil = reportStyleUtil;
     }
+
+    @Value("${csv.payroll.download.dir}")
+    private String downloadDir;
 
     @Override
     public PayRollSettingModel createOrUpdate(PayRollSettingModel model) {
@@ -367,20 +395,14 @@ public class PayRollServiceImpl implements PayRollService {
     public void assignPayroll(PayRollUpdate model) {
         List<UserEntity> users = userAdapter.getUsersByIds(model.getUserId());
         PayRollEntity payroll = payRollAdapter.getPayRoll(model.getPayRollId());
-
         List<UserPayRollEntity> existingMappings = payRollAdapter.
                 findExistingUserPayrolls(model.getUserId());
-
         Map<String, UserPayRollEntity> existingMap = existingMappings.stream()
                 .collect(Collectors.toMap(e -> e.getUser().getUserId(), e -> e));
-
         List<UserPayRollEntity> toUpdate = new ArrayList<>();
         List<UserPayRollEntity> toInsert = new ArrayList<>();
-
         for (UserEntity user : users) {
-
             UserPayRollEntity mapping = existingMap.get(user.getUserId());
-
             if (mapping != null) {
                 mapping.setPayroll(payroll);
                 toUpdate.add(mapping);
@@ -394,7 +416,6 @@ public class PayRollServiceImpl implements PayRollService {
         if (!toUpdate.isEmpty()) {
             payRollAdapter.saveAllUserPayroll(toUpdate);
         }
-
         if (!toInsert.isEmpty()) {
             payRollAdapter.saveAllUserPayroll(toInsert);
         }
@@ -402,31 +423,178 @@ public class PayRollServiceImpl implements PayRollService {
 
     @Override
     public void updatePayroll(PayRollEditRequestModel editModel) {
-
         PayRollEntity payroll = payRollAdapter.findById(editModel.getPayrollId())
                 .orElseThrow(() -> new IllegalArgumentException("Payroll not found"));
-
         if (editModel.getPayrollName() != null)
             payroll.setPayrollName(editModel.getPayrollName());
-
         if (editModel.getYearlySalary() != null)
             payroll.setYearlySalary(editModel.getYearlySalary());
-
         if (editModel.getMonthlySalary() != null)
             payroll.setMonthlySalary(editModel.getMonthlySalary());
-
         if (editModel.getPf() != null)
             payroll.setPf(editModel.getPf());
-
         if (editModel.getOthers() != null)
             payroll.setOthers(editModel.getOthers());
-
         if (editModel.getOvertimeAmount() != null)
             payroll.setOvertimeAmount(editModel.getOvertimeAmount());
-
         payroll.setUpdatedAt(LocalDateTime.now());
-
         payRollAdapter.savePayRoll(payroll);
-
     }
+
+    @Override
+    @Transactional
+    public String startExportPayroll(String month, String format, String schema, String orgId) {
+        File folder = new File(downloadDir);
+        if (!folder.exists()) {
+            folder.mkdirs();
+        }
+        String fileFormat = (format == null ? "xlsx" : format.toLowerCase());
+        String baseName = "Payroll_" + month;
+        String extension = "." + fileFormat;
+        String finalName = baseName + extension;
+        File file = new File(downloadDir + finalName);
+        int count = 1;
+        while (file.exists()) {
+            finalName = baseName + "(" + count + ")" + extension;
+            file = new File(downloadDir + finalName);
+            count++;
+        }
+        String exportKey = cacheKeyUtil.getPayRollExport(schema, orgId, finalName);
+        if (redisTemplate != null) {
+            redisTemplate.opsForValue().set(exportKey, ReportType.PENDING.getValues(), Duration.ofHours(12));
+        }
+        generateAsync(file, exportKey, month, fileFormat);
+        return finalName;
+    }
+
+    @Async
+    public void generateAsync(File file, String redisKey, String month, String format) {
+        try {
+            redisTemplate.opsForValue().set(redisKey, ReportType.PROCESSING.getValues());
+            List<UserPayRollAmount> data = payRollAdapter.findAllByMonth(month);
+            if ("csv".equalsIgnoreCase(format)) {
+                generateCsv(data, file);
+            } else {
+                generateXlsx(data, file);
+            }
+            redisTemplate.opsForValue().set(redisKey, ReportType.COMPLETED.getValues());
+        } catch (Exception ex) {
+            redisTemplate.opsForValue().set(redisKey, ReportType.FAILED.getValues());
+            log.error("Payroll export failed", ex);
+        }
+    }
+
+    private void generateCsv(List<UserPayRollAmount> data, File file) {
+        try (FileWriter fw = new FileWriter(file);
+             CSVWriter csv = new CSVWriter(fw)) {
+            ClassPathResource resource =
+                    new ClassPathResource("templates/text/payroll_amount_csv_header.txt");
+            try (BufferedReader br = new BufferedReader(
+                    new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8))) {
+
+                String headerLine = br.readLine();
+                if (headerLine != null) {
+                    csv.writeNext(headerLine.split(","));
+                }
+            }
+            for (UserPayRollAmount p : data) {
+                csv.writeNext(new String[]{
+                        p.getUserId(),
+                        p.getUserName(),
+                        String.valueOf(p.getUnpaidLeaveDeduction()),
+                        String.valueOf(p.getRegularDays()),
+                        String.valueOf(p.getRegularHrs()),
+                        String.valueOf(p.getOvertimeHrs()),
+                        String.valueOf(p.getTotalHrs()),
+                        String.valueOf(p.getRegularPayrollAmount()),
+                        String.valueOf(p.getOvertimePayrollAmount()),
+                        String.valueOf(p.getTotalPayrollAmount()),
+                        String.valueOf(p.getMonthlyNetSalary()),
+                        p.getPayrollName(),
+                        String.valueOf(p.getPayrollStatus()),
+                        p.getNotes(),
+                        String.valueOf(p.getTotalAmount()),
+                        p.getMonth()
+                });
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("CSV export failed", e);
+        }
+    }
+
+    private void generateXlsx(List<UserPayRollAmount> data, File file) {
+        try (Workbook workbook = new XSSFWorkbook();
+             FileOutputStream fos = new FileOutputStream(file)) {
+            Sheet sheet = workbook.createSheet("Payroll Report");
+            CellStyle headerStyle = reportStyleUtil.createHeaderCellStyle(workbook);
+            CellStyle dataStyle = reportStyleUtil.createDataCellStyle(workbook);
+            ClassPathResource resource =
+                    new ClassPathResource("templates/text/payroll_amount_excel_header.txt");
+            List<String> headerLines;
+            try (BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8))) {
+                headerLines = reader.lines().toList();
+            }
+            String[] headers = headerLines.getFirst().split("\\|");
+            Row headerRow = sheet.createRow(0);
+            for (int i = 0; i < headers.length; i++) {
+                reportStyleUtil.createStyledCell(headerRow, i, headers[i], headerStyle);
+            }
+            int rowIdx = 1;
+            for (UserPayRollAmount p : data) {
+                Row row = sheet.createRow(rowIdx++);
+                int col = 0;
+                reportStyleUtil.createStyledCell(row, col++, p.getUserId(), dataStyle);
+                reportStyleUtil.createStyledCell(row, col++, p.getUserName(), dataStyle);
+                reportStyleUtil.createStyledCell(row, col++, String.valueOf(p.getUnpaidLeaveDeduction()), dataStyle);
+                reportStyleUtil.createStyledCell(row, col++, p.getRegularDays(), dataStyle);
+                reportStyleUtil.createStyledCell(row, col++, p.getRegularHrs(), dataStyle);
+                reportStyleUtil.createStyledCell(row, col++, p.getOvertimeHrs(), dataStyle);
+                reportStyleUtil.createStyledCell(row, col++, p.getTotalHrs(), dataStyle);
+                reportStyleUtil.createStyledCell(row, col++, String.valueOf(p.getRegularPayrollAmount()), dataStyle);
+                reportStyleUtil.createStyledCell(row, col++, String.valueOf(p.getOvertimePayrollAmount()), dataStyle);
+                reportStyleUtil.createStyledCell(row, col++, String.valueOf(p.getTotalPayrollAmount()), dataStyle);
+                reportStyleUtil.createStyledCell(row, col++, String.valueOf(p.getMonthlyNetSalary()), dataStyle);
+                reportStyleUtil.createStyledCell(row, col++, p.getPayrollName(), dataStyle);
+                reportStyleUtil.createStyledCell(row, col++, p.getPayrollStatus(), dataStyle);
+                reportStyleUtil.createStyledCell(row, col++, p.getNotes(), dataStyle);
+                reportStyleUtil.createStyledCell(row, col++, String.valueOf(p.getTotalAmount()), dataStyle);
+                reportStyleUtil.createStyledCell(row, col, p.getMonth(), dataStyle);
+            }
+            for (int i = 0; i < headers.length; i++) {
+                sheet.autoSizeColumn(i);
+            }
+            workbook.write(fos);
+        } catch (Exception e) {
+            throw new RuntimeException("XLSX export failed", e);
+        }
+    }
+
+    @Override
+    public String getExportStatus(String exportId, String schema, String orgId) {
+        String exportKey = cacheKeyUtil.getPayRollExport(schema, orgId, exportId);
+        if (redisTemplate == null) {
+            return "REDIS_UNAVAILABLE";
+        }
+        Object val = redisTemplate.opsForValue().get(exportKey);
+        if (val == null) {
+            return "NOT_FOUND";
+        }
+        return val.toString();
+    }
+
+    @Override
+    public File downloadPayroll(String exportId, String schema, String orgId) {
+        String redisKey = cacheKeyUtil.getPayRollExport(schema, orgId, exportId);
+        String status = (String) redisTemplate.opsForValue().get(redisKey);
+        if (status == null || !ReportType.COMPLETED.getValues().equalsIgnoreCase(status)) {
+            throw new RuntimeException("Payroll export not ready. Current status = " + status);
+        }
+        File file = new File(downloadDir + exportId);
+        if (!file.exists()) {
+            throw new RuntimeException("Report file missing");
+        }
+        return file;
+    }
+
 }
