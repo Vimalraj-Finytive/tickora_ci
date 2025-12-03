@@ -145,14 +145,13 @@ public class PayRollController {
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
-    @PostMapping("/{month}")
+    @PostMapping("/generate")
     public ResponseEntity<ApiResponse<String>> startExport(
-            @PathVariable String month,
-            @RequestParam(defaultValue = "xlsx") String format) {
+            @RequestBody PayRollExportDto request) {
         String schema = authHelper.getSchema();
         String orgId = authHelper.getOrgId();
         return ResponseEntity.ok(
-                facade.startExport(month, format, schema, orgId)
+                facade.startExport(request.getMonth(), request.getFormat(), schema, orgId)
         );
     }
 
