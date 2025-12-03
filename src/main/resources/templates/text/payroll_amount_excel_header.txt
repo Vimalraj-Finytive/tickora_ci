@@ -1,0 +1,1 @@
+User ID|User Name|Unpaid Leave Deduction|Regular Days|Regular Hours|Overtime Hours|Total Hours|Regular Payroll Amount|Overtime Payroll Amount|Total Payroll Amount|Monthly Net Salary|Payroll Name|Payroll Status|Notes|Total Amount|Month
