@@ -421,6 +421,7 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
         for (TimeOffExportView row : rows) {
             TimeOffRequestGroupModel model = new TimeOffRequestGroupModel();
             model.setPolicyName(row.getPolicyName());
+            model.setPolicyId(row.getPolicyId());
             model.setRequestDate(LocalDate.parse(row.getRequestedDate()));
             model.setStartDate(row.getLeaveStartDate());
             model.setEndDate(row.getLeaveEndDate());

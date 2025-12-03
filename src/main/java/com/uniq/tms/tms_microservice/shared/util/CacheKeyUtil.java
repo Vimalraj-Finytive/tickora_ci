@@ -30,6 +30,8 @@ public class CacheKeyUtil {
     private String paymentUsedOrder;
     @Value("${cache.keys.timeoff.requestExport}")
     private String export;
+    @Value("${cache.keys.timeoff.payRollExport}")
+    private String payRollExport;
 
     private static final Logger log = LogManager.getLogger(CacheKeyUtil.class);
 
@@ -75,5 +77,9 @@ public class CacheKeyUtil {
 
     public String getExport(String schema, String orgId, String exportId) {
         return export + ":" + schema + ":" + orgId + ":" + exportId;
+    }
+
+    public String getPayRollExport(String schema, String orgId, String exportId){
+        return payRollExport + ":" + schema + ":" + orgId + ":" + exportId;
     }
 }

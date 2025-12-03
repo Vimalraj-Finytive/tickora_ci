@@ -1,6 +1,9 @@
 package com.uniq.tms.tms_microservice.modules.payrollManagement.services;
 
+import com.uniq.tms.tms_microservice.modules.leavemanagement.model.ExportStatus;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.model.*;
+
+import java.io.File;
 import java.util.List;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.model.PayRollModel;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.model.PayRollSettingModel;
@@ -36,4 +39,10 @@ public interface PayRollService {
     PayRollSettingModel getSetting();
 
     void updatePayroll(PayRollEditRequestModel editModel);
+
+    String startExportPayroll(String month, String format, String schema, String orgId);
+
+    String getExportStatus(String exportId, String schema, String orgId);
+
+    File downloadPayroll(String exportId, String schema, String orgId);
 }
