@@ -137,7 +137,10 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
             entity.setUnitsRequested(request.getUnitsRequested());
         } else {
             requested = request.getUnitsRequested();
-            validateHours(request.getStartTime(), request.getEndTime(), request.getUnitsRequested(), leaveBalance);
+            double hours = validateHours(request.getStartTime(), request.getEndTime(), request.getUnitsRequested(), leaveBalance);
+            if (hours > leaveBalance.getBalanceUnits()) {
+                throw new IllegalArgumentException("Insufficient leave balance.");
+            }
             entity.setStartTime(request.getStartTime());
             entity.setEndTime(request.getEndTime());
             entity.setUnitsRequested(request.getUnitsRequested());
@@ -176,7 +179,7 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
         return m;
     }
 
-    private void validateHours(LocalTime startTime, LocalTime endTime, Integer hoursRequested, LeaveBalanceEntity leaveBalance) {
+    private double validateHours(LocalTime startTime, LocalTime endTime, Integer hoursRequested, LeaveBalanceEntity leaveBalance) {
         if (startTime.isAfter(endTime)) {
             throw new IllegalArgumentException("Invalid duration");
         }
@@ -184,10 +187,8 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
         if (minutes % 60 != 0 || (minutes / 60) != hoursRequested) {
             throw new IllegalArgumentException("Invalid duration");
         }
-        double hours = minutes / 60.0;
-        if (hours > leaveBalance.getBalanceUnits()) {
-            throw new IllegalArgumentException("Insufficient leave balance.");
-        }
+        return minutes / 60.0;
+
     }
 
     private void validateDays(double days, Double balanceUnits) {
@@ -279,9 +280,9 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
             if (days != 1) {
                 throw new IllegalArgumentException("Invalid paid leave request.");
             }
-            validateHours(model.getStartTime(), model.getEndTime(), model.getUnitsRequested(), leaveBalance);
+            double modelUnitsRequested = validateHours(model.getStartTime(), model.getEndTime(), model.getUnitsRequested(), leaveBalance);
             if (model.getUnitsRequested() > entity.getUnitsRequested()) {
-                double hour = model.getUnitsRequested() - entity.getUnitsRequested();
+                double hour = modelUnitsRequested - entity.getUnitsRequested();
                 if (leaveBalance.getBalanceUnits() < hour) {
                     throw new IllegalArgumentException("Insufficient leave balance.");
                 }
@@ -308,7 +309,8 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
     }
 
     private boolean handleEmployeeRules(Status current, Status next) {
-        return (current == Status.PENDING || current == Status.APPROVED) && next == Status.CANCELLED;
+        return ((current == Status.PENDING || current == Status.APPROVED) && (next == Status.CANCELLED ) ||
+        (current == Status.PENDING && next == Status.PENDING));
     }
 
     @Override
@@ -332,8 +334,8 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
 
     private boolean handleAdminRules(Status current, Status next) {
         return switch (current) {
-            case PENDING -> next == Status.APPROVED || next == Status.REJECTED;
-            case APPROVED -> next == Status.REJECTED;
+            case PENDING -> next == Status.APPROVED || next == Status.REJECTED || next == Status.PENDING;
+            case APPROVED -> next == Status.REJECTED ;
             default -> false;
         };
     }
