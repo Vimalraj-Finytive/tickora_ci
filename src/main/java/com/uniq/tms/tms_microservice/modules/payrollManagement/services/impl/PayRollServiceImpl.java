@@ -3,11 +3,8 @@ package com.uniq.tms.tms_microservice.modules.payrollManagement.services.impl;
 import com.opencsv.CSVWriter;
 import com.uniq.tms.tms_microservice.modules.identityManagement.service.IdGenerationService;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.LeaveBalanceAdapter;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeOffExportRequestDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.MonthlySummaryEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.ReportType;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.model.ExportStatus;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeOffExportRequest;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.adapter.PayRollAdapter;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.entity.PayRollEntity;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.entity.PayRollSettingEntity;
@@ -26,9 +23,9 @@ import com.uniq.tms.tms_microservice.modules.timesheetManagement.adapter.Timeshe
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.entity.TimesheetEntity;
 import com.uniq.tms.tms_microservice.modules.userManagement.adapter.UserAdapter;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
-import com.uniq.tms.tms_microservice.shared.helper.TimesheetHelper;
 import com.uniq.tms.tms_microservice.shared.util.CacheKeyUtil;
 import com.uniq.tms.tms_microservice.shared.util.ReportStyleUtil;
+import io.micrometer.common.lang.Nullable;
 import jakarta.transaction.Transactional;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -72,7 +69,7 @@ public class PayRollServiceImpl implements PayRollService {
     public PayRollServiceImpl(PayRollAdapter payRollAdapter, PayRollEntityMapper entityMapper, UserAdapter userAdapter,
                               IdGenerationService idGenerationService, TimesheetAdapter timesheetAdapter,
                               PayRollEntityMapper payRollEntityMapper, LeaveBalanceAdapter leaveBalanceAdapter,
-                              RedisTemplate<String, Object> redisTemplate, CacheKeyUtil cacheKeyUtil, ReportStyleUtil reportStyleUtil) {
+                              @Nullable RedisTemplate<String, Object> redisTemplate, CacheKeyUtil cacheKeyUtil, ReportStyleUtil reportStyleUtil) {
         this.payRollAdapter = payRollAdapter;
         this.entityMapper = entityMapper;
         this.userAdapter = userAdapter;
