@@ -100,20 +100,20 @@ public class UserPayRollAmountModel {
         this.totalPayrollAmount = totalPayrollAmount;
     }
 
-    public PayRollStatusEnum getPayrollStatus() {
-        return payrollStatus;
-    }
-
-    public void setPayrollStatus(PayRollStatusEnum payrollStatus) {
-        this.payrollStatus = payrollStatus;
-    }
-
     public BigDecimal getMonthlyNetSalary() {
         return monthlyNetSalary;
     }
 
     public void setMonthlyNetSalary(BigDecimal monthlyNetSalary) {
         this.monthlyNetSalary = monthlyNetSalary;
+    }
+
+    public PayRollStatusEnum getPayrollStatus() {
+        return payrollStatus;
+    }
+
+    public void setPayrollStatus(PayRollStatusEnum payrollStatus) {
+        this.payrollStatus = payrollStatus;
     }
 
     public String getNotes() {

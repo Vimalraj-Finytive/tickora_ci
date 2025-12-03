@@ -1,6 +1,9 @@
 package com.uniq.tms.tms_microservice.modules.payrollManagement.repository;
 
+import com.uniq.tms.tms_microservice.modules.payrollManagement.entity.UserPayRollAmountEntity;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.entity.UserPayRollEntity;
+import com.uniq.tms.tms_microservice.modules.payrollManagement.model.UserPayRollAmountModel;
+import com.uniq.tms.tms_microservice.modules.payrollManagement.projection.UserPayRollAmount;
 import io.lettuce.core.dynamic.annotation.Param;
 import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -22,4 +25,11 @@ public interface UserPayRollRepository extends JpaRepository<UserPayRollEntity, 
     @Transactional
     @Query("DELETE FROM UserPayRollEntity up WHERE up.payroll.id = :payrollId")
     void deleteByPayrollId(String payrollId);
+
+    @Query(value = """
+    SELECT *
+    FROM payroll_amount_view
+    WHERE LOWER(month) = LOWER(:month)
+    """, nativeQuery = true)
+    List<UserPayRollAmount> findAllByMonth(@Param("month") String month);
 }
