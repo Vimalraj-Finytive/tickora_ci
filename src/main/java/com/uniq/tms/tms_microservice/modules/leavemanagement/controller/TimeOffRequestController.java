@@ -42,20 +42,20 @@ public class TimeOffRequestController {
     private String downloadDir;
 
     @PostMapping("/create")
-    public ResponseEntity<ApiResponse> createRequest(@RequestHeader("Authorization") String token, @RequestBody TimeOffRequestDto requestDto) {
-        ApiResponse createdRequest = timeOffFacade.createRequest(requestDto);
+    public ResponseEntity<ApiResponse<TimeOffRequestDto>> createRequest(@RequestHeader("Authorization") String token, @RequestBody TimeOffRequestDto requestDto) {
+        ApiResponse<TimeOffRequestDto> createdRequest = timeOffFacade.createRequest(requestDto);
         return ResponseEntity.ok(createdRequest);
     }
 
     @PutMapping("/update")
-    public ResponseEntity<ApiResponse> employeeUpdateStatus(@RequestHeader("Authorization") String token, @RequestBody EmployeeStatusUpdateDto dto){
-        ApiResponse updateRequest = timeOffFacade.employeeUpdateStatus(dto);
+    public ResponseEntity<ApiResponse<EmployeeStatusUpdateDto>> employeeUpdateStatus(@RequestHeader("Authorization") String token, @RequestBody EmployeeStatusUpdateDto dto){
+        ApiResponse<EmployeeStatusUpdateDto> updateRequest = timeOffFacade.employeeUpdateStatus(dto);
         return ResponseEntity.ok(updateRequest);
     }
 
     @PatchMapping("/update")
-    public ResponseEntity<ApiResponse> adminUpdateStatus(@RequestHeader("Authorization") String token, @RequestBody AdminStatusUpdateDto dto){
-        ApiResponse updateRequest = timeOffFacade.adminUpdateStatus(dto);
+    public ResponseEntity<ApiResponse<AdminStatusUpdateDto>> adminUpdateStatus(@RequestHeader("Authorization") String token, @RequestBody AdminStatusUpdateDto dto){
+        ApiResponse<AdminStatusUpdateDto> updateRequest = timeOffFacade.adminUpdateStatus(dto);
         return ResponseEntity.ok(updateRequest);
     }
 
