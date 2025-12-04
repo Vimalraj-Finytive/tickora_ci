@@ -1,5 +1,6 @@
 package com.uniq.tms.tms_microservice.modules.payrollManagement.controller;
 
+import com.uniq.tms.tms_microservice.modules.leavemanagement.model.ExportStatus;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.constant.PayRollConstant;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.dto.*;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.dto.PayRollDto;
@@ -7,8 +8,19 @@ import com.uniq.tms.tms_microservice.modules.payrollManagement.dto.PayRollSettin
 import com.uniq.tms.tms_microservice.modules.payrollManagement.dto.UserPayRollUpdateDto;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.facade.PayRollFacade;
 import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
+import com.uniq.tms.tms_microservice.shared.helper.AuthHelper;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 
 @RestController
@@ -16,10 +28,15 @@ import java.util.List;
 public class PayRollController {
 
     private final PayRollFacade facade;
+    private final AuthHelper authHelper;
 
-    public PayRollController(PayRollFacade facade) {
+    public PayRollController(PayRollFacade facade, AuthHelper authHelper) {
         this.facade = facade;
+        this.authHelper = authHelper;
     }
+
+    @Value("${csv.payroll.download.dir}")
+    private String downloadDir;
 
     @PutMapping("/settings/update")
     public ResponseEntity<ApiResponse<Object>> createOrUpdate(
@@ -128,4 +145,59 @@ public class PayRollController {
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
+    @PostMapping("/generate")
+    public ResponseEntity<ApiResponse<String>> startExport(
+            @RequestBody PayRollExportDto request) {
+        String schema = authHelper.getSchema();
+        String orgId = authHelper.getOrgId();
+        return ResponseEntity.ok(
+                facade.startExport(request.getMonth(), request.getFormat(), schema, orgId)
+        );
+    }
+
+    @GetMapping("/status/{exportId}")
+    public ResponseEntity<ApiResponse<String>> status(@PathVariable String exportId) {
+        String schema = authHelper.getSchema();
+        String orgId = authHelper.getOrgId();
+        return ResponseEntity.ok(
+                facade.checkStatus(schema, orgId, exportId)
+        );
+    }
+
+    @GetMapping("/download")
+    public ResponseEntity<InputStreamResource> downloadTimesheet(
+            @RequestHeader("Authorization") String token,
+            @RequestParam String fileName) {
+        try {
+            if (fileName.contains("..") || fileName.contains("/") || fileName.contains("\\")) {
+                return ResponseEntity.badRequest().build();
+            }
+            Path filePath = Paths.get(downloadDir).resolve(fileName);
+            if (!Files.exists(filePath)) {
+                return ResponseEntity.notFound().build();
+            }
+            long fileSize = Files.size(filePath);
+            InputStreamResource resource = new InputStreamResource(Files.newInputStream(filePath));
+            MediaType mediaType = determineMediaType(fileName);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=\"" + fileName + "\"; filename*=UTF-8''" +
+                                    URLEncoder.encode(fileName, StandardCharsets.UTF_8))
+                    .contentType(mediaType)
+                    .contentLength(fileSize)
+                    .body(resource);
+        } catch (io.jsonwebtoken.io.IOException | java.io.IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    private MediaType determineMediaType(String fileName) {
+        if (fileName.toLowerCase().endsWith(".csv")) {
+            return MediaType.parseMediaType("text/csv");
+        } else if (fileName.toLowerCase().endsWith(".xlsx")) {
+            return MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        } else {
+            return MediaType.APPLICATION_OCTET_STREAM;
+        }
+    }
 }
