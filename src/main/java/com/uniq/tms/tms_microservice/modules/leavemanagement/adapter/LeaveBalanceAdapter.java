@@ -24,4 +24,8 @@ public interface LeaveBalanceAdapter {
     void saveAllSummary(List<MonthlySummaryEntity> summaryEntityList);
     List<LeaveBalanceEntity> findAllFixedAccrual(int month, int year, AccrualType type);
     List<MonthlySummaryEntity> findByMonthAndYear(Integer month, Integer year);
+    LeaveBalanceEntity findMonthlyBalance(String userId, LocalDate userFrom);
+    LeaveBalanceEntity findAnnualBalance(String userId, LocalDate date);
+
+
 }

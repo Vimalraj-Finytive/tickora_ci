@@ -2,7 +2,7 @@ package com.uniq.tms.tms_microservice.modules.leavemanagement.enums;
 
 public enum Compensation {
     PAID("Paid"),
-    UNPAID("Unpaid");
+    UNPAID("UnPaid");
     private final String value;
 
     Compensation(String value) {
