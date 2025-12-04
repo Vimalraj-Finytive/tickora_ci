@@ -5,7 +5,9 @@ import com.uniq.tms.tms_microservice.modules.payrollManagement.entity.PayRollEnt
 import com.uniq.tms.tms_microservice.modules.payrollManagement.entity.PayRollSettingEntity;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.entity.UserPayRollAmountEntity;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.entity.UserPayRollEntity;
+import com.uniq.tms.tms_microservice.modules.payrollManagement.model.UserPayRollAmountModel;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.projection.PayRollProjection;
+import com.uniq.tms.tms_microservice.modules.payrollManagement.projection.UserPayRollAmount;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.repository.PayRollRepository;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.repository.PayRollSettingRepository;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.repository.UserPayRollAmountRepository;
@@ -128,4 +130,7 @@ public class PayRollAdapterImpl implements PayRollAdapter {
         userPayrollRepo.deleteByPayrollId(payrollId);
     }
 
+    public List<UserPayRollAmount> findAllByMonth(String month) {
+        return userPayrollRepo.findAllByMonth(month);
+    }
 }
