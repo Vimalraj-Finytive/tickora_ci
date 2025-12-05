@@ -292,6 +292,17 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
             throw new IllegalArgumentException("Invalid Policy ID");
         }
 
+        Set<String> newUserSet = getFinalUserSet(request.getUserIds(), request.getGroupIds());
+
+        boolean hasUsers = !newUserSet.isEmpty();
+        if (hasUsers && request.getUserValidFrom() == null) {
+            throw new IllegalArgumentException("User Valid tFrom is required when assigning users.");
+        }
+
+        if (policy.getPolicyName().equalsIgnoreCase("Custom Policy") || policy.getPolicyId().equalsIgnoreCase("TOP00001")){
+            throw new IllegalArgumentException("Custom Policy cannot be edited");
+        }
+
         LocalDate today = LocalDate.now();
         LocalDate userFrom = request.getUserValidFrom();
         LocalDate userTo = request.getUserValidTo();
@@ -307,9 +318,6 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
         }
 
         if (policy.getAccrualType()==AccrualType.FIXED){
-            if (userTo==null){
-                throw new IllegalArgumentException("For FIXED policies, userValidTo is required");
-            }
 
             if (Boolean.TRUE.equals(request.getCarryForward())){
                 throw  new IllegalArgumentException("For Fixed carry forward is not required");
@@ -371,13 +379,6 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
                 .map(up -> up.getUser().getUserId())
                 .collect(Collectors.toSet());
 
-
-        Set<String> newUserSet = getFinalUserSet(request.getUserIds(), request.getGroupIds());
-
-        boolean hasUsers = !newUserSet.isEmpty();
-        if (hasUsers && request.getUserValidFrom() == null) {
-            throw new IllegalArgumentException("User Valid tFrom is required when assigning users.");
-        }
 
         Set<String> removedUsers = existingUserIds.stream()
                 .filter(u -> !newUserSet.contains(u))
