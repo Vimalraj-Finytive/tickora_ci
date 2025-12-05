@@ -1,5 +1,7 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.model;
 
+import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.HourType;
+
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
@@ -14,6 +16,7 @@ public class TimeOffRequest {
     private LocalTime endTime;
     private Integer unitsRequested;
     private String reason;
+    private HourType hourType;
     private String to;
     private List<String> cc;
 
@@ -87,6 +90,14 @@ public class TimeOffRequest {
 
     public void setTo(String to) {
         this.to = to;
+    }
+
+    public HourType getHourType() {
+        return hourType;
+    }
+
+    public void setHourType(HourType hourType) {
+        this.hourType = hourType;
     }
 
     public List<String> getCc() {
