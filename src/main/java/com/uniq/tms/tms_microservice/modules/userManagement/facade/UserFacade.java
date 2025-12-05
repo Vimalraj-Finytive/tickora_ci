@@ -55,7 +55,6 @@ public class UserFacade {
     }
 
     public ApiResponse getUsers() {
-
         String orgId = authHelper.getOrgId();
         String role = authHelper.getRole();
         role = role.replace("ROLE_", "").toUpperCase();
