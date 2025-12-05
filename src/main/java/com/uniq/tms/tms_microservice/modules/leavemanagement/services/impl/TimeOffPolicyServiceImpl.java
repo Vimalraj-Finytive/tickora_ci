@@ -17,6 +17,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.web.server.ResponseStatusException;
 import java.time.*;
 import java.util.*;
@@ -142,12 +143,11 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
         policy.setValidityStartDate(request.getValidityStartDate());
         policy.setValidityEndDate(request.getValidityEndDate());
         policy.setActive(true);
+        policy.setDefault(false);
         policy.setCreatedAt(LocalDateTime.now());
         policy.setUpdatedAt(LocalDateTime.now());
         policy = timeOffPolicyAdapter.savePolicy(policy);
 
-//        if (request.getCompensation() == Compensation.UNPAID)
-//            return timeOffPolicyEntityMapper.toResponseModel(policy);
 
         Set<String> finalUserSet = getFinalUserSet(request.getUserIds(), request.getGroupIds());
 
