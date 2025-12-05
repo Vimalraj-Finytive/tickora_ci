@@ -19,12 +19,14 @@ public class UserResponseDto {
     private LocalDate dateOfJoining;
     private SecondaryDetailsDto secondaryDetails;
     private String scheduleName;
+    private List<String> policyName;
+    private String calendarName;
 
     public UserResponseDto() {
     }
 
-    public UserResponseDto(String userId, String userName, String email, String mobileNumber, String scheduleName,List<String> groupName,
-                           String roleName, LocalDate dateOfJoining, List<String> locationName, String secName, String secMobile, String secEmail, String relation) {
+    public UserResponseDto(String userId, String userName, String email, String mobileNumber, String scheduleName, List<String> groupName,
+                           String roleName, LocalDate dateOfJoining, List<String> locationName, String secName, String secMobile, String secEmail, String relation,List<String> policyName,String calendarName) {
         this.userId = userId;
         this.userName = userName;
         this.email = email;
@@ -36,6 +38,9 @@ public class UserResponseDto {
         this.dateOfJoining = dateOfJoining;
         this.locationName = new ArrayList<>();
         this.locationName.addAll(locationName);
+        this.policyName = new ArrayList<>();
+        this.policyName.addAll(policyName);
+        this.calendarName =calendarName;
 
         if(secName!= null && secMobile != null){
             this.secondaryDetails = new SecondaryDetailsDto();
@@ -107,5 +112,21 @@ public class UserResponseDto {
 
     public void setScheduleName(String scheduleName) {
         this.scheduleName = scheduleName;
+    }
+
+    public List<String> getPolicyName() {
+        return policyName;
+    }
+
+    public void setPolicyName(List<String> policyName) {
+        this.policyName = policyName;
+    }
+
+    public String getCalendarName() {
+        return calendarName;
+    }
+
+    public void setCalendarName(String calendarName) {
+        this.calendarName = calendarName;
     }
 }

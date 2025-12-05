@@ -44,20 +44,34 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
 
     UserEntity findByMobileNumber(String mobile);
 
+
     @Query("SELECT new com.uniq.tms.tms_microservice.modules.userManagement.model.UserResponse(" +
-            "u.userId, u.userName, u.email, u.mobileNumber, w.scheduleName, " +
-            "COALESCE(g.groupName, '-'), r.name, l.name, u.dateOfJoining, " +
-            "sd.userName, sd.mobile, sd.email, sd.relation) " +
+            "  u.userId, u.userName, u.email, u.mobileNumber, " +
+            "  w.scheduleName, " +
+            "  COALESCE(g.groupName, '-'), " +
+            "  r.name, " +
+            "  l.name, " +
+            "  u.dateOfJoining, " +
+            "  sd.userName, sd.mobile, sd.email, sd.relation, " +
+            "  p.policyName, " +
+            "  c.name" +
+            ") " +
             "FROM UserEntity u " +
-            "LEFT JOIN UserGroupEntity ug ON ug.user.userId = u.userId " +
-            "LEFT JOIN GroupEntity g ON ug.group.groupId = g.groupId " +
             "LEFT JOIN u.workSchedule w " +
+            "LEFT JOIN u.calendar c " +
+            "LEFT JOIN UserGroupEntity ug ON ug.user = u " +
+            "LEFT JOIN GroupEntity g ON ug.group = g " +
             "JOIN RoleEntity r ON u.role = r " +
-            "LEFT JOIN UserLocationEntity ul ON ul.user.userId= u.userId " +
-            "LEFT JOIN LocationEntity l ON ul.location.locationId = l.locationId " +
-            "LEFT JOIN SecondaryDetailsEntity sd ON sd.user.userId = u.userId " +
-            "WHERE u.organizationId = :orgId AND u.active = true AND r.hierarchyLevel > :hierarchyLevel")
-    List<UserResponse> findAllUsers(@Param("orgId") String orgId, @Param("hierarchyLevel") int hierarchyLevel);
+            "LEFT JOIN UserLocationEntity ul ON ul.user = u " +
+            "LEFT JOIN LocationEntity l ON ul.location = l " +
+            "LEFT JOIN SecondaryDetailsEntity sd ON sd.user = u " +
+            "LEFT JOIN UserPolicyEntity up ON up.user = u " +
+            "JOIN TimeOffPolicyEntity p ON up.policy = p AND p.isActive = true " +
+            "WHERE u.organizationId = :orgId " +
+            "  AND u.active = true " +
+            "  AND r.hierarchyLevel > :hierarchyLevel")
+    List<UserResponse> findAllUsers(@Param("orgId") String orgId,
+                                    @Param("hierarchyLevel") int hierarchyLevel);
 
     @Query("SELECT new com.uniq.tms.tms_microservice.modules.userManagement.dto.UserNameSuggestionDto(u.userId, u.userName) " +
             "FROM UserEntity u WHERE LOWER(u.userName) LIKE LOWER(CONCAT('%', :keyword, '%'))")
