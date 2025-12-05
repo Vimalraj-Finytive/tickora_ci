@@ -2,6 +2,8 @@ package com.uniq.tms.tms_microservice.modules.leavemanagement.mapper;
 
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.*;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.*;
+import com.uniq.tms.tms_microservice.shared.dto.EnumDto;
+import com.uniq.tms.tms_microservice.shared.dto.EnumModel;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.ReportingPolicy;
@@ -16,9 +18,6 @@ public interface TimeOffPolicyDtoMapper {
     TimeOffPolicyEditRequestModel toEditRequestModel(TimeOffPolicyEditRequestDto dto);
 
     TimeOffPolicyResponseDto toResponseDto(TimeOffPolicyResponseModel model);
-
-    EntitledTypeDropdownDto toDto(EntitledTypeDropdownModel model);
-
 
     TimeOffPolicyBulkAssignModel toBulkAssignModel(TimeOffPolicyBulkAssignRequestDto dto);
 
@@ -36,14 +35,6 @@ public interface TimeOffPolicyDtoMapper {
 
     TimeoffPolicyDto toPolicyDto(TimeOffPoliciesModel model);
 
-    AccrualTypeEnumDto toDto(AccrualTypeEnumModel model);
-
-    AccrualTypeEnumModel toModel(AccrualTypeEnumDto dto);
-
-    CompensationEnumModel toModel(CompensationEnumDto dto);
-
-    CompensationEnumDto toDto(CompensationEnumModel model);
-
     LeaveBalanceDto toDto(LeaveBalanceModel model);
 
     LeaveBalanceModel toModel(LeaveBalanceDto dto);
@@ -52,9 +43,9 @@ public interface TimeOffPolicyDtoMapper {
 
     List<TimeoffRequestResponseDto> toDtoList(List<TimeOffRequestResponseModel> models);
 
-    StatusEnumDto toDto (StatusEnumModel model);
+      EnumDto toDto (EnumModel model);
 
-    StatusEnumModel toModel(StatusEnumDto dto);
+      EnumModel toModel(EnumDto dto);
 
     TimeOffRequestGroupDto toDto(TimeOffRequestGroupModel model) ;
 
@@ -64,5 +55,4 @@ public interface TimeOffPolicyDtoMapper {
 
     TimeOffExportRequest toModel(TimeOffExportRequestDto dto);
 
-    ResetFrequencyEnumDto toDto(ResetFrequencyEnumModel model);
 }

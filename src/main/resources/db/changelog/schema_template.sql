@@ -569,10 +569,6 @@ CREATE TABLE IF NOT EXISTS ${schemaName}.payroll_history (
     action_by VARCHAR(100) NOT NULL,
     payroll_id VARCHAR(50) NOT NULL,
 
-    CONSTRAINT fk_payroll_history
-        FOREIGN KEY (payroll_id)
-        REFERENCES ${schemaName}.payroll(id)
-        ON DELETE CASCADE
 );
 
 -- ===========================================================

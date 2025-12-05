@@ -3,13 +3,12 @@ package com.uniq.tms.tms_microservice.modules.leavemanagement.controller;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.constant.LeaveConstant;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.facade.TimeOffFacade;
 import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
+import com.uniq.tms.tms_microservice.shared.dto.EnumDto;
 import com.uniq.tms.tms_microservice.shared.helper.AuthHelper;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.*;
 import org.springframework.http.HttpStatus;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.AccrualTypeEnumDto;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.CompensationEnumDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeoffPoliciesDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeoffPolicyDto;
 import java.util.List;
@@ -34,8 +33,8 @@ public class TimeOffPoliciesController {
     }
 
     @GetMapping("/entitleType")
-    public ResponseEntity<ApiResponse<EntitledTypeDropdownDto>> getDropDowns(@RequestHeader("Authorization") String token) {
-        ApiResponse<EntitledTypeDropdownDto> response = timeOffFacade.getDropDowns();
+    public ResponseEntity<ApiResponse<List<EnumDto>>> getDropDowns(@RequestHeader("Authorization") String token) {
+        ApiResponse<List<EnumDto>> response = timeOffFacade.getDropDowns();
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
@@ -82,17 +81,17 @@ public class TimeOffPoliciesController {
     }
 
     @GetMapping("/accrualType")
-    public ResponseEntity<ApiResponse<List<AccrualTypeEnumDto>>> getAccrualStatus(
+    public ResponseEntity<ApiResponse<List<EnumDto>>> getAccrualStatus(
             @RequestHeader("Authorization") String token) {
-        ApiResponse<List<AccrualTypeEnumDto>> response = timeOffFacade.getAccrualStatus();
+        ApiResponse<List<EnumDto>> response = timeOffFacade.getAccrualStatus();
         return ResponseEntity.status(response.getStatusCode()).body(response);
 
     }
 
     @GetMapping("/compensation")
-    public ResponseEntity<ApiResponse<List<CompensationEnumDto>>> getCompensation(
+    public ResponseEntity<ApiResponse<List<EnumDto>>> getCompensation(
             @RequestHeader("Authorization") String token) {
-        ApiResponse<List<CompensationEnumDto>> response = timeOffFacade.getCompensation();
+        ApiResponse<List<EnumDto>> response = timeOffFacade.getCompensation();
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
@@ -120,10 +119,10 @@ public class TimeOffPoliciesController {
     }
 
     @GetMapping("/resetFrequency")
-    public ResponseEntity<ApiResponse<List<ResetFrequencyEnumDto>>> getResetFrequency(
+    public ResponseEntity<ApiResponse<List<EnumDto>>> getResetFrequency(
             @RequestHeader("Authorization") String token) {
 
-        ApiResponse<List<ResetFrequencyEnumDto>> response = timeOffFacade.getResetFrequencyStatus();
+        ApiResponse<List<EnumDto>> response = timeOffFacade.getResetFrequencyStatus();
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 }
