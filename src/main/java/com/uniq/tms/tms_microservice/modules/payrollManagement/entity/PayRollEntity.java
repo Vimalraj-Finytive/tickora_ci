@@ -52,9 +52,6 @@ public class PayRollEntity {
     @OneToMany(mappedBy = "payroll", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<UserPayRollAmountEntity> userPayrollAmounts = new ArrayList<>();
 
-    @OneToMany(mappedBy = "payroll", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    private List<PayRollHistoryEntity> payrollHistory;
-
     public String getId() {
         return id;
     }
@@ -159,11 +156,4 @@ public class PayRollEntity {
         this.userPayrollAmounts = userPayrollAmounts;
     }
 
-    public List<PayRollHistoryEntity> getPayrollHistory() {
-        return payrollHistory;
-    }
-
-    public void setPayrollHistory(List<PayRollHistoryEntity> payrollHistory) {
-        this.payrollHistory = payrollHistory;
-    }
 }

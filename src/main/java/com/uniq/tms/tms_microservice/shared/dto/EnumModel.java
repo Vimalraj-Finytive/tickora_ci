@@ -1,14 +1,13 @@
-package com.uniq.tms.tms_microservice.modules.leavemanagement.model;
+package com.uniq.tms.tms_microservice.shared.dto;
 
-public class StatusEnumModel {
-
+public class EnumModel {
     private String key;
     private String value;
 
-    public StatusEnumModel() {
+    public EnumModel() {
     }
 
-    public StatusEnumModel(String key, String value) {
+    public EnumModel(String key, String value) {
         this.key = key;
         this.value = value;
     }

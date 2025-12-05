@@ -17,6 +17,7 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.model.*;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.projection.TimeOffExportView;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.services.TimeOffRequestService;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
+import com.uniq.tms.tms_microservice.shared.dto.EnumModel;
 import com.uniq.tms.tms_microservice.shared.helper.AuthHelper;
 import com.uniq.tms.tms_microservice.shared.util.ReportStyleUtil;
 import jakarta.annotation.Nullable;
@@ -374,10 +375,10 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
     }
 
     @Override
-    public List<StatusEnumModel> getStatus() {
-        List<StatusEnumModel> list = new ArrayList<>();
+    public List<EnumModel> getStatus() {
+        List<EnumModel> list = new ArrayList<>();
         for (Status e : Status.values()) {
-            StatusEnumModel model = new StatusEnumModel(e.name(), e.getValue());
+            EnumModel model = new EnumModel(e.name(), e.getValue());
             list.add(model);
         }
         return list;
@@ -627,5 +628,15 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
             throw new RuntimeException("Report file not found: " + fileName);
         }
         return new FileSystemResource(file);
+    }
+
+    @Override
+    public List<EnumModel> getHourType() {
+        List<EnumModel> list = new ArrayList<>();
+        for (HourType e : HourType.values()) {
+            EnumModel model = new EnumModel(e.name(), e.getValue());
+            list.add(model);
+        }
+        return list;
     }
 }
