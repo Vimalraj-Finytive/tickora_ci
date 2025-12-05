@@ -1,7 +1,7 @@
 package com.uniq.tms.tms_microservice.shared.util;
 
 import org.springframework.data.util.Pair;
-
+import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
@@ -56,5 +56,14 @@ public class DateTimeUtil {
         seconds = Math.max(seconds, 0);
         seconds = Math.min(seconds, 24 * 3600 - 1);
         return LocalTime.ofSecondOfDay(seconds);
+    }
+
+    public static void validateDuration(Long minutes, Integer hoursRequested, double duration){
+        if (minutes <= 0) {
+            minutes += 24 * 60;
+        }
+        if (minutes % 60 != 0 || (minutes / 60) != hoursRequested || (minutes/60.0) > duration) {
+            throw new IllegalArgumentException("Invalid duration");
+        }
     }
 }

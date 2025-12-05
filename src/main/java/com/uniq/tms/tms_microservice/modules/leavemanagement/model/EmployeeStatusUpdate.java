@@ -1,5 +1,6 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.model;
 
+import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.HourType;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.Status;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -15,6 +16,7 @@ public class EmployeeStatusUpdate {
     private LocalTime startTime;
     private LocalTime endTime;
     private LocalDate requestDate;
+    private HourType hourType;
 
     public Status getStatus() {
         return status;
@@ -95,6 +97,15 @@ public class EmployeeStatusUpdate {
     public void setRequestDate(LocalDate requestDate) {
         this.requestDate = requestDate;
     }
+
+    public HourType getHourType() {
+        return hourType;
+    }
+
+    public void setHourType(HourType hourType) {
+        this.hourType = hourType;
+    }
+
     @Override
     public String toString() {
         return "TimeOffRequestEntity {" +

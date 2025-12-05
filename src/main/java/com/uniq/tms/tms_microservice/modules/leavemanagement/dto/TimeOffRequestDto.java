@@ -1,5 +1,6 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.dto;
 
+import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.HourType;
 import jakarta.validation.constraints.NotNull;
 
 import java.time.LocalDate;
@@ -21,6 +22,7 @@ public class TimeOffRequestDto {
     @NotNull(message = "unitsRequested cannot be null")
     private Integer unitsRequested;
     private String reason;
+    private HourType hourType;
     private String to;
     private List<String> cc;
 
@@ -94,6 +96,14 @@ public class TimeOffRequestDto {
 
     public void setTo(String to) {
         this.to = to;
+    }
+
+    public HourType getHourType() {
+        return hourType;
+    }
+
+    public void setHourType(HourType hourType) {
+        this.hourType = hourType;
     }
 
     public List<String> getCc() {
