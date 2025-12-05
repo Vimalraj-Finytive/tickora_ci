@@ -1,6 +1,7 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.repository;
 
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.UserPolicyEntity;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.AccrualType;
 import io.lettuce.core.dynamic.annotation.Param;
 import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -74,5 +75,23 @@ public interface UserPolicyRepository extends JpaRepository<UserPolicyEntity, Lo
     FROM UserPolicyEntity up
     """)
     List<String> findAllUserIdsInUserPolicies();
+
+
+    @Query("""
+        SELECT up FROM UserPolicyEntity up
+        WHERE up.user.userId = :userId
+          AND up.policy.accrualType = :accrualType
+    """)
+    List<UserPolicyEntity> findByUserIdAndAccrualType(
+            @Param("userId") String userId,
+            @Param("accrualType") AccrualType accrualType
+    );
+
+
+    @Query("""
+    SELECT up FROM UserPolicyEntity up
+    WHERE up.user.userId = :userId
+""")
+    List<UserPolicyEntity> findUserPoliciesByUserId(@Param("userId") String userId);
 
 }

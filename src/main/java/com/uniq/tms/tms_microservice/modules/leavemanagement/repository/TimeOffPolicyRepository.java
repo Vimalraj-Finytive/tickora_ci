@@ -54,4 +54,10 @@ public interface TimeOffPolicyRepository extends JpaRepository<TimeOffPolicyEnti
     boolean existsValidPolicy(String policyId, LocalDate startDate, LocalDate endDate);
 
     boolean existsByPolicyNameIgnoreCase(String policyName);
+
+    @Query("""
+            SELECT t from TimeOffPolicyEntity t
+            WHERE t.isDefault = true
+            """)
+    TimeOffPolicyEntity findDefaultPolicy();
 }
