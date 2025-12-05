@@ -11,6 +11,7 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.model.*;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.services.TimeOffPolicyService;
 import com.uniq.tms.tms_microservice.modules.userManagement.adapter.UserAdapter;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
+import com.uniq.tms.tms_microservice.shared.dto.EnumModel;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -174,16 +175,13 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
     }
 
     @Override
-    public EntitledTypeDropdownModel getDropDowns() {
-
-        List<Map<String, Object>> entitledTypes = Arrays.stream(EntitledType.values())
-                .map(type -> Map.<String, Object>of(
-                        "key", type.name(),
-                        "value", type.getValue()
-                ))
-                .toList();
-
-        return new EntitledTypeDropdownModel(entitledTypes);
+    public List<EnumModel> getDropDowns() {
+        List<EnumModel> list=new ArrayList<>();
+        for(EntitledType e:EntitledType.values()){
+            EnumModel model= new EnumModel(e.name(),e.getValue());
+            list.add(model);
+        }
+        return list;
     }
 
     @Override
@@ -511,20 +509,20 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
     }
 
     @Override
-    public List<AccrualTypeEnumModel> getAccrualTypeStatus() {
-        List<AccrualTypeEnumModel> list = new ArrayList<>();
+    public List<EnumModel> getAccrualTypeStatus() {
+        List<EnumModel> list = new ArrayList<>();
         for (AccrualType e : AccrualType.values()) {
-            AccrualTypeEnumModel model = new AccrualTypeEnumModel(e.name(), e.getValue());
+            EnumModel model = new EnumModel(e.name(), e.getValue());
             list.add(model);
         }
         return list;
     }
 
     @Override
-    public List<CompensationEnumModel> getCompensation() {
-        List<CompensationEnumModel> list=new ArrayList<>();
+    public List<EnumModel> getCompensation() {
+        List<EnumModel> list=new ArrayList<>();
         for(Compensation e:Compensation.values()){
-            CompensationEnumModel model= new CompensationEnumModel(e.name(),e.getValue());
+            EnumModel model= new EnumModel(e.name(),e.getValue());
             list.add(model);
         }
         return list;
@@ -721,10 +719,10 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
 
 
     @Override
-    public List<ResetFrequencyEnumModel> getResetFrequencyStatus() {
-        List<ResetFrequencyEnumModel> list = new ArrayList<>();
+    public List<EnumModel> getResetFrequencyStatus() {
+        List<EnumModel> list = new ArrayList<>();
         for (ResetFrequency e : ResetFrequency.values()) {
-            ResetFrequencyEnumModel model = new ResetFrequencyEnumModel(e.name(), e.getValue());
+            EnumModel model = new EnumModel(e.name(), e.getValue());
             list.add(model);
         }
         return list;

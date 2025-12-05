@@ -5,6 +5,7 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.*;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.facade.TimeOffFacade;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeOffExportRequest;
 import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
+import com.uniq.tms.tms_microservice.shared.dto.EnumDto;
 import com.uniq.tms.tms_microservice.shared.helper.AuthHelper;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -62,7 +63,7 @@ public class TimeOffRequestController {
     @GetMapping("/status")
     public ResponseEntity<ApiResponse> getStatus(
             @RequestHeader("Authorization") String token) {
-        ApiResponse<List<StatusEnumDto>> response = timeOffFacade.getStatus();
+        ApiResponse<List<EnumDto>> response = timeOffFacade.getStatus();
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
@@ -150,5 +151,11 @@ public class TimeOffRequestController {
         }
     }
 
+    @GetMapping("/HourType")
+    public ResponseEntity<ApiResponse> getHourType(
+            @RequestHeader("Authorization") String token) {
+        ApiResponse<List<EnumDto>> response = timeOffFacade.getHourType();
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
 
 }

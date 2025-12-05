@@ -18,9 +18,9 @@ public class PayRollHistoryEntity {
     @Column(name = "action_by")
     String actionBy;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "payroll_id", nullable = false, unique = true)
-    PayRollEntity payroll;
+
+    @Column(name = "payroll_id")
+    String payrollId;
 
 
     public Integer getId() {
@@ -55,12 +55,11 @@ public class PayRollHistoryEntity {
         this.actionBy = actionBy;
     }
 
-    public PayRollEntity getPayroll() {
-        return payroll;
+    public String getPayrollId() {
+        return payrollId;
     }
 
-    public void setPayroll(PayRollEntity payroll) {
-        this.payroll = payroll;
+    public void setPayrollId(String payrollId) {
+        this.payrollId = payrollId;
     }
-
 }
