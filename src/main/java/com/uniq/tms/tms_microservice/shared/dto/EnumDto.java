@@ -1,14 +1,10 @@
-package com.uniq.tms.tms_microservice.modules.leavemanagement.dto;
+package com.uniq.tms.tms_microservice.shared.dto;
 
-public class CompensationEnumDto {
-
+public class EnumDto {
     private String key;
     private String value;
 
-    public CompensationEnumDto() {
-    }
-
-    public CompensationEnumDto(String key, String value) {
+    public EnumDto(String key, String value) {
         this.key = key;
         this.value = value;
     }

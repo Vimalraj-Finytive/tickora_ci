@@ -1,23 +1,22 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.services;
 
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.*;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.model.AccrualTypeEnumModel;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.model.CompensationEnumModel;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeOffPoliciesModel;
+import com.uniq.tms.tms_microservice.shared.dto.EnumModel;
 import java.util.List;
 
 public interface TimeOffPolicyService {
 
       TimeOffPolicyResponseModel createPolicy(TimeOffPolicyRequestModel model);
-      EntitledTypeDropdownModel getDropDowns();
+      List<EnumModel> getDropDowns();
       void editPolicy(TimeOffPolicyEditRequestModel model);
       void assignPolicies(TimeOffPolicyBulkAssignModel request);
       void inactivatePolicy(String policyId, TimeOffPolicyInactivateModel model);
       List<TimeOffPoliciesModel> getAllPolicies();
       List<TimeOffPoliciesModel> getAllPolicy();
-      List<AccrualTypeEnumModel>getAccrualTypeStatus();
-      List<CompensationEnumModel>getCompensation();
+      List<EnumModel>getAccrualTypeStatus();
+      List<EnumModel>getCompensation();
       TimeOffPoliciesModel getPolicyById(String id);
       List<TimeOffPoliciesModel> getPolicyByUserId(String userId);
-      List<ResetFrequencyEnumModel> getResetFrequencyStatus();
+      List<EnumModel> getResetFrequencyStatus();
 }
