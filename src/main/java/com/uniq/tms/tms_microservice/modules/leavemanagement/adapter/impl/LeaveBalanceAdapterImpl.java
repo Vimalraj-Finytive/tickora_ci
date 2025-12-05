@@ -110,4 +110,9 @@ public class LeaveBalanceAdapterImpl implements LeaveBalanceAdapter {
     public LeaveBalanceEntity findAnnualBalance(String userId, LocalDate date) {
         return leaveBalanceRepo.findAnnualBalance(userId, date);
     }
+
+    @Override
+    public LeaveBalanceEntity findByUserIdAndPolicyId(String userId, String policyId) {
+        return leaveBalanceRepo.findByUserIdAndPolicyId(userId, policyId);
+    }
 }

@@ -87,4 +87,10 @@ public class UserPolicyAdapterImpl implements UserPolicyAdapter {
         userPolicyRepo.deleteById(id);
     }
 
+    @Override
+    public List<UserPolicyEntity> findUserPoliciesByUserId(String userId) {
+        return userPolicyRepo.findUserPoliciesByUserId(userId);
+    }
+
+
 }

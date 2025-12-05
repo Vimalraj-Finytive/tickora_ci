@@ -137,4 +137,13 @@ public interface LeaveBalanceRepository extends JpaRepository<LeaveBalanceEntity
     LeaveBalanceEntity findAnnualBalance(@Param("userId") String userId,
                                          @Param("date") LocalDate date);
 
+    @Query("""
+    SELECT lb FROM LeaveBalanceEntity lb
+    WHERE lb.user.userId = :userId
+      AND lb.policy.policyId = :policyId
+""")
+    LeaveBalanceEntity findByUserIdAndPolicyId(@Param("userId") String userId,
+                                               @Param("policyId") String policyId);
+
+
 }

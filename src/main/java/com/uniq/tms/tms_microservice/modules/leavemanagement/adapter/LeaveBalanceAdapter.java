@@ -26,6 +26,8 @@ public interface LeaveBalanceAdapter {
     List<MonthlySummaryEntity> findByMonthAndYear(Integer month, Integer year);
     LeaveBalanceEntity findMonthlyBalance(String userId, LocalDate userFrom);
     LeaveBalanceEntity findAnnualBalance(String userId, LocalDate date);
+    LeaveBalanceEntity findByUserIdAndPolicyId(String userId, String policyId);
+
 
 
 }

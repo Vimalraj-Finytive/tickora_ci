@@ -33,4 +33,7 @@ public interface UserPolicyAdapter {
     List<UserPolicyEntity> findByUserIdAndAccrualType(String userId, AccrualType accrualType);
 
     void deleteById(Long id);
+
+    List<UserPolicyEntity> findUserPoliciesByUserId(String userId);
+
 }

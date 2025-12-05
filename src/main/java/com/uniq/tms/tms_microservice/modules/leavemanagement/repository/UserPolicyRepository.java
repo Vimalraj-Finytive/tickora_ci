@@ -86,4 +86,12 @@ public interface UserPolicyRepository extends JpaRepository<UserPolicyEntity, Lo
             @Param("userId") String userId,
             @Param("accrualType") AccrualType accrualType
     );
+
+
+    @Query("""
+    SELECT up FROM UserPolicyEntity up
+    WHERE up.user.userId = :userId
+""")
+    List<UserPolicyEntity> findUserPoliciesByUserId(@Param("userId") String userId);
+
 }
