@@ -1,5 +1,6 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.dto;
 
+import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.HourType;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.Status;
 import jakarta.validation.constraints.NotNull;
 
@@ -20,7 +21,7 @@ public class EmployeeStatusUpdateDto {
     private LocalTime endTime;
     @NotNull(message = "Request date cannot be null")
     private LocalDate requestDate;
-
+    private HourType hourType;
 
     public Status getStatus() {
         return status;
@@ -101,5 +102,13 @@ public class EmployeeStatusUpdateDto {
 
     public void setRequestDate(LocalDate requestDate) {
         this.requestDate = requestDate;
+    }
+
+    public HourType getHourType() {
+        return hourType;
+    }
+
+    public void setHourType(HourType hourType) {
+        this.hourType = hourType;
     }
 }

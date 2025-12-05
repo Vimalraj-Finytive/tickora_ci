@@ -11,10 +11,8 @@ public class WorkScheduleDto {
     private boolean isDefault;
     private String type;
     private boolean isAutoClockOut;
-
     @Pattern(regexp = "^(?:[01]\\d|2[0-3]):00$", message = "Invalid time. Minutes not allowed")
     private String splitTime;
-
     @JsonIgnore
     private String orgId;
     private Double duration;
@@ -22,7 +20,6 @@ public class WorkScheduleDto {
     private List<FixedScheduleDto> fixedSchedule;
     private List<FlexibleScheduleDto> flexibleSchedule;
     private WeeklyScheduleDto weeklySchedule;
-
 
     public String getScheduleId() {
         return scheduleId;

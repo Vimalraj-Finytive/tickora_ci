@@ -19,9 +19,11 @@ public class UserResponse {
     private LocalDate dateOfJoining;
     private SecondaryDetailsDto secondaryDetails;
     private String scheduleName;
+    private  List<String> policyName;
+    private  String calendarName;
 
     public UserResponse(String userId, String userName, String email, String mobileNumber, String scheduleName, String groupName, String roleName,
-                        String locationName, LocalDate dateOfJoining,String secName, String secMobile, String secEmail, String relation) {
+                        String locationName, LocalDate dateOfJoining,String secName, String secMobile, String secEmail, String relation, String policyName,String calendarName) {
         this.userId = userId;
         this.userName = userName;
         this.email = email;
@@ -33,6 +35,9 @@ public class UserResponse {
         this.locationName = new ArrayList<>();
         this.locationName.add(locationName);
         this.dateOfJoining = dateOfJoining;
+        this.policyName=new ArrayList<>();
+        this.policyName.add(policyName);
+        this.calendarName=calendarName;
 
         if (secName != null && secMobile != null){
             this.secondaryDetails = new SecondaryDetailsDto();
@@ -118,8 +123,25 @@ public class UserResponse {
     public String getScheduleName() {
         return scheduleName;
     }
-
     public void setScheduleName(String scheduleName) {
         this.scheduleName = scheduleName;
     }
+
+
+    public List<String> getPolicyName() {
+        return policyName;
+    }
+
+    public void setPolicyName(List<String> policyName) {
+        this.policyName = policyName;
+    }
+
+    public String getCalendarName() {
+        return calendarName;
+    }
+
+    public void setCalendarName(String calendarName) {
+        this.calendarName = calendarName;
+    }
 }
+

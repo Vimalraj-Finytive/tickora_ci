@@ -1,7 +1,7 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.enums;
 
 public enum HourType {
-    FIRST_Half("First Half"),
+    FIRST_HALF("First Half"),
     SECOND_HALF("Second Half");
 
    private String value;
