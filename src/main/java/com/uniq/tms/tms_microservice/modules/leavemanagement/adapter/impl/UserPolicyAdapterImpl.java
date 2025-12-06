@@ -79,7 +79,7 @@ public class UserPolicyAdapterImpl implements UserPolicyAdapter {
 
     @Override
     public List<UserPolicyEntity> findByUserIdAndAccrualType(String userId, AccrualType accrualType) {
-        return userPolicyRepo.findByUserIdAndAccrualType(userId, accrualType);
+        return userPolicyRepo.findByUser_UserIdAndPolicy_AccrualType(userId, accrualType);
     }
 
     @Override
@@ -89,7 +89,7 @@ public class UserPolicyAdapterImpl implements UserPolicyAdapter {
 
     @Override
     public List<UserPolicyEntity> findUserPoliciesByUserId(String userId) {
-        return userPolicyRepo.findUserPoliciesByUserId(userId);
+        return userPolicyRepo.findByUser_UserId(userId);
     }
 
 

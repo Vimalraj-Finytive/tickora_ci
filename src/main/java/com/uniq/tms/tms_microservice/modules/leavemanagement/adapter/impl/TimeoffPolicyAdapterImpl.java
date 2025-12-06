@@ -96,7 +96,7 @@ public class TimeoffPolicyAdapterImpl implements TimeOffPolicyAdapter {
     }
     @Override
     public TimeOffPolicyEntity findDefaultPolicy(){
-        return timeoffPolicyRepo.findDefaultPolicy();
+        return timeoffPolicyRepo.findByIsDefaultTrue();
     }
 }
 

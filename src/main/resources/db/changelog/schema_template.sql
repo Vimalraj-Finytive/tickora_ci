@@ -753,22 +753,22 @@ INSERT INTO ${schemaName}.timeoff_policies (
 SELECT * FROM (
     VALUES
     (
-        'TOP00001',               -- policy_id
-        'Custom Policy',          -- policy_name
-        'UNPAID',                 -- compensation
-        NULL::VARCHAR,            -- accrual_type
-        NOW()::DATE,              -- validity_start_date
-        NULL::DATE,               -- validity_end_date
-        NOW()::DATE,              -- accrual_start_date
-        NULL::VARCHAR,            -- reset_frequency
-        NULL::INT,                -- entitled_units
-        NULL::VARCHAR,            -- entitled_type
-        TRUE,                     -- is_active
-        FALSE,                    -- is_carry_forward
-        NULL::INT,                -- max_carry_forward_units
-        TRUE,                     -- is_default
-        NOW(),                    -- created_at
-        NOW()                     -- updated_at
+        'TOP00001',              
+        'Custom Policy',
+        'UNPAID',
+        NULL::VARCHAR,
+        NOW()::DATE,
+        NULL::DATE,
+        NOW()::DATE,
+        NULL::VARCHAR,
+        NULL::INT,
+        NULL::VARCHAR,
+        TRUE,
+        FALSE,
+        NULL::INT,
+        TRUE,
+        NOW(),
+        NOW()
     )
 ) AS tmp(
     policy_id,
