@@ -94,5 +94,9 @@ public class TimeoffPolicyAdapterImpl implements TimeOffPolicyAdapter {
     public boolean existsByPolicyNameIgnoreCase(String policyName) {
         return timeoffPolicyRepo.existsByPolicyNameIgnoreCase(policyName);
     }
+    @Override
+    public TimeOffPolicyEntity findDefaultPolicy(){
+        return timeoffPolicyRepo.findByIsDefaultTrue();
+    }
 }
 

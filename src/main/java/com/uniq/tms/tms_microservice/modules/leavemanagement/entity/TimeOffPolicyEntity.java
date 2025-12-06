@@ -39,7 +39,7 @@ public class TimeOffPolicyEntity {
     private LocalDate accrualStartDate;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "reset_frequency", nullable = false)
+    @Column(name = "reset_frequency")
     private ResetFrequency resetFrequency;
 
     @Column(name = "entitled_units")
@@ -58,6 +58,9 @@ public class TimeOffPolicyEntity {
     @Column(name = "is_carry_forward")
     private Boolean isCarryForward;
 
+    @Column(name = "is_default")
+    private Boolean isDefault;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
@@ -69,6 +72,8 @@ public class TimeOffPolicyEntity {
 
     @OneToMany(mappedBy = "policy", cascade = CascadeType.ALL)
     private List<TimeOffRequestEntity> requests = new ArrayList<>();
+
+
 
     public String getPolicyId() {
         return policyId;
@@ -197,6 +202,22 @@ public class TimeOffPolicyEntity {
 
     public List<TimeOffRequestEntity> getRequests() {
         return requests;
+    }
+
+    public Boolean getActive() {
+        return isActive;
+    }
+
+    public void setActive(Boolean active) {
+        isActive = active;
+    }
+
+    public Boolean getDefault() {
+        return isDefault;
+    }
+
+    public void setDefault(Boolean aDefault) {
+        isDefault = aDefault;
     }
 
     public void setRequests(List<TimeOffRequestEntity> requests) {

@@ -2,7 +2,11 @@ package com.uniq.tms.tms_microservice.modules.userManagement.services.impl;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.CalendarAdapter;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.TimeOffPolicyAdapter;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.CalendarEntity;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeOffPolicyEntity;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeOffPolicyBulkAssignModel;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.services.TimeOffPolicyService;
 import com.uniq.tms.tms_microservice.modules.locationManagement.adapter.LocationAdapter;
 import com.uniq.tms.tms_microservice.modules.locationManagement.dto.LocationDto;
 import com.uniq.tms.tms_microservice.modules.locationManagement.entity.UserLocationEntity;
@@ -127,6 +131,8 @@ public class UserServiceImpl implements UserService {
     private final LocationAdapter locationAdapter;
     private final OrganizationEntityMapper organizationEntityMapper;
     private final AuthHelper authHelper;
+    private final TimeOffPolicyAdapter timeOffPolicyAdapter;
+    private final TimeOffPolicyService timeOffPolicyService;
 
     public UserServiceImpl(Validator validator, UserAdapter userAdapter, TimesheetAdapter timesheetAdapter,
                            UserEntityMapper userEntityMapper, CalendarAdapter calendarAdapter, OrganizationRepository organizationRepository,
@@ -136,7 +142,7 @@ public class UserServiceImpl implements UserService {
                            ApplicationEventPublisher publisher, WorkScheduleAdapter workScheduleAdapter, UserCacheService userCacheService,
                            CacheKeyUtil cacheKeyUtil, GroupRepository groupRepository, CacheKeyConfig cacheKeyConfig, CacheReloadHandlerRegistry cacheReloadHandlerRegistry,
                            OrganizationTypeRepository organizationTypeRepository, IdGenerationService idGenerationService, SecondaryDetailsRepository secondaryDetailsRepository,
-                           RolePrivilegeHelper rolePrivilegeHelper, ExceptionHelper exceptionHelper, OrganizationCacheService organizationCacheService, LocationDtoMapper locationDtoMapper, LocationService locationService, OrganizationAdapter organizationAdapter, LocationAdapter locationAdapter, OrganizationEntityMapper organizationEntityMapper, AuthHelper authHelper) {
+                           RolePrivilegeHelper rolePrivilegeHelper, ExceptionHelper exceptionHelper, OrganizationCacheService organizationCacheService, LocationDtoMapper locationDtoMapper, LocationService locationService, OrganizationAdapter organizationAdapter, LocationAdapter locationAdapter, OrganizationEntityMapper organizationEntityMapper, AuthHelper authHelper, TimeOffPolicyAdapter timeOffPolicyAdapter, TimeOffPolicyService timeOffPolicyService) {
 
         this.validator = validator;
         this.userAdapter = userAdapter;
@@ -169,6 +175,8 @@ public class UserServiceImpl implements UserService {
         this.locationAdapter = locationAdapter;
         this.organizationEntityMapper = organizationEntityMapper;
         this.authHelper = authHelper;
+        this.timeOffPolicyAdapter = timeOffPolicyAdapter;
+        this.timeOffPolicyService = timeOffPolicyService;
     }
 
     private static final Logger log = LoggerFactory.getLogger(UserServiceImpl.class);
@@ -430,7 +438,6 @@ public class UserServiceImpl implements UserService {
             }
 
             userAdapter.saveAllUsers(userEntities);
-
             Map<String, UserEntity> savedUserByEmail = userEntities.stream()
                     .collect(Collectors.toMap(
                             u -> u.getEmail().trim().toLowerCase(),
@@ -489,6 +496,29 @@ public class UserServiceImpl implements UserService {
             }
 
             userAdapter.saveAllSecondaryDetails(secondaryDetailsEntities);
+
+            List<String> userIds = userEntities.stream()
+                    .map(UserEntity::getUserId)
+                    .toList();
+
+            TimeOffPolicyEntity defaultPolicyEntity = timeOffPolicyAdapter.findDefaultPolicy();
+            if (defaultPolicyEntity == null) {
+                log.warn("Default time-off policy not found for orgId={}", orgId);
+            } else {
+                TimeOffPolicyBulkAssignModel assignModel = new TimeOffPolicyBulkAssignModel();
+                assignModel.setUserIds(userIds);
+                assignModel.setPolicyIds(List.of(defaultPolicyEntity.getPolicyId()));
+                assignModel.setUserValidFrom(LocalDate.now());
+                assignModel.setUserValidTo(defaultPolicyEntity.getValidityEndDate());
+
+                try {
+                    timeOffPolicyService.assignPolicies(assignModel);
+                } catch (Exception ex) {
+                    log.error("Default policy assignment failed for {} users. Error: {}", userIds.size(), ex.getMessage(), ex);
+
+                }
+            }
+
             int uploadedCount = userEntities.size();
             int skippedCount = invalidRecords.size();
             sendEmailsAsync(emailRequests);
@@ -669,8 +699,20 @@ public class UserServiceImpl implements UserService {
             entity.setCalendar(null);
 
         entity.setCreatedAt(LocalDateTime.now());
+
+
         log.info("Saving user: {}", userMiddleware.getUserName());
         UserEntity savedUserEntity = userAdapter.saveUser(entity);
+        TimeOffPolicyBulkAssignModel defaultPolicy = new TimeOffPolicyBulkAssignModel();
+        TimeOffPolicyEntity timeOffPolicyEntity=timeOffPolicyAdapter.findDefaultPolicy();
+        defaultPolicy.setUserIds(List.of(customUserId));
+        defaultPolicy.setPolicyIds(List.of(timeOffPolicyEntity.getPolicyId()));
+        defaultPolicy.setUserValidFrom(LocalDate.now());
+        defaultPolicy.setUserValidTo(timeOffPolicyEntity.getValidityEndDate());
+
+        timeOffPolicyService.assignPolicies(defaultPolicy);
+
+
         List<Long> locationIds = null;
         List<Long> groupIds = null;
         SecondaryDetailsEntity saveSecondaryUser = null;

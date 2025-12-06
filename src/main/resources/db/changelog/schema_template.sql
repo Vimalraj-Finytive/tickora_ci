@@ -726,8 +726,67 @@ CREATE TABLE IF NOT EXISTS timeoff_policies (
     is_active BOOLEAN,
     max_carry_forward_units INT,
     is_carry_forward BOOLEAN,
+    is_default BOOLEAN,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+--changeset system:insert-default-timeoff-policy
+INSERT INTO ${schemaName}.timeoff_policies (
+    policy_id,
+    policy_name,
+    compensation,
+    accrual_type,
+    validity_start_date,
+    validity_end_date,
+    accrual_start_date,
+    reset_frequency,
+    entitled_units,
+    entitled_type,
+    is_active,
+    is_carry_forward,
+    max_carry_forward_units,
+    is_default,
+    created_at,
+    updated_at
+)
+SELECT * FROM (
+    VALUES
+    (
+        'TOP00001',              
+        'Custom Policy',
+        'UNPAID',
+        NULL::VARCHAR,
+        NOW()::DATE,
+        NULL::DATE,
+        NOW()::DATE,
+        NULL::VARCHAR,
+        NULL::INT,
+        NULL::VARCHAR,
+        TRUE,
+        FALSE,
+        NULL::INT,
+        TRUE,
+        NOW(),
+        NOW()
+    )
+) AS tmp(
+    policy_id,
+    policy_name,
+    compensation,
+    accrual_type,
+    validity_start_date,
+    validity_end_date,
+    accrual_start_date,
+    reset_frequency,
+    entitled_units,
+    entitled_type,
+    is_active,
+    is_carry_forward,
+    max_carry_forward_units,
+    is_default,
+    created_at,
+    updated_at
 );
 
 -- ===========================================================
