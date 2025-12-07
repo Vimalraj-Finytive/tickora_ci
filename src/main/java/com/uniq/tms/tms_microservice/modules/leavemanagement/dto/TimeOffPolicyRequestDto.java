@@ -25,7 +25,6 @@ public class TimeOffPolicyRequestDto {
     private Boolean carryForward;
     private Integer maxCarryForwardUnits;
 
-    @NotNull
     private LocalDate userValidFrom;
 
     private LocalDate userValidTo;
