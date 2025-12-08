@@ -3,6 +3,7 @@ package com.uniq.tms.tms_microservice.modules.userManagement.repository;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.GroupEntity;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserGroupEntity;
+import com.uniq.tms.tms_microservice.modules.userManagement.enums.MemberType;
 import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -106,5 +107,15 @@ public interface UserGroupRepository extends JpaRepository<UserGroupEntity,Long>
             @Param("groupIds") List<Long> groupIds,
             @Param("supervisorId") String userId
     );
+
+    @Query("""
+    SELECT ug.user.userId
+    FROM UserGroupEntity ug
+    WHERE ug.group.groupId IN :groupIds
+      AND ug.type = :type
+      AND ug.user.userId <> :userId
+    """)
+    Set<String> findAllSupervisorUserIds(@Param("groupIds") List<Long> groupIds,
+                                         @Param("userId") String userId, @Param("type") String type);
 
 }

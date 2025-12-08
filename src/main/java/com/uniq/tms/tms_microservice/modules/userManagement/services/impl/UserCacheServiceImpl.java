@@ -243,7 +243,6 @@ public class UserCacheServiceImpl implements UserCacheService {
         } catch (Exception e) {
             log.warn("Redis putAll failed for orgId {}: {}", orgId, e.getMessage());
         }
-
         return CompletableFuture.completedFuture(userProfileMap);
     }
 

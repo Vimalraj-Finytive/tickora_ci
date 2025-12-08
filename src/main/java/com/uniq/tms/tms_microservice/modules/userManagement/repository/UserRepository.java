@@ -290,13 +290,13 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
     @Query("SELECT u FROM UserEntity u WHERE u.role.roleId = 1 AND u.organizationId = :orgId")
     Optional<UserEntity>findSuperAdminByOrgId(@Param("orgId") String orgId);
 
-    List<UserEntity>findByApproverIdAndActiveTrue(String approverId);
+    List<UserEntity>findByRequestApproverIdAndActiveTrue(String approverId);
 
     List<UserEntity>findAllByUserIdInAndActiveTrue(List<String> userIds);
 
     @Modifying
     @Transactional
-    @Query("UPDATE UserEntity u SET u.approverId = :approverId WHERE u.id IN (:requestedUserIds)")
+    @Query("UPDATE UserEntity u SET u.requestApproverId = :approverId WHERE u.id IN (:requestedUserIds)")
     void updateApproverForUsers(@Param("approverId") String approverId,
                                 @Param("requestedUserIds") List<String> requestedUserIds);
 }

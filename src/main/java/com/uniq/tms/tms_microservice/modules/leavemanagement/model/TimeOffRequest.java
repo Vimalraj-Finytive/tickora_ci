@@ -4,7 +4,6 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.HourType;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.util.List;
 
 public class TimeOffRequest {
 
@@ -17,8 +16,6 @@ public class TimeOffRequest {
     private Integer unitsRequested;
     private String reason;
     private HourType hourType;
-    private String to;
-    private List<String> cc;
 
     public String getPolicyId() {
         return policyId;
@@ -84,27 +81,11 @@ public class TimeOffRequest {
         this.reason = reason;
     }
 
-    public String getTo() {
-        return to;
-    }
-
-    public void setTo(String to) {
-        this.to = to;
-    }
-
     public HourType getHourType() {
         return hourType;
     }
 
     public void setHourType(HourType hourType) {
         this.hourType = hourType;
-    }
-
-    public List<String> getCc() {
-        return cc;
-    }
-
-    public void setCc(List<String> cc) {
-        this.cc = cc;
     }
 }
