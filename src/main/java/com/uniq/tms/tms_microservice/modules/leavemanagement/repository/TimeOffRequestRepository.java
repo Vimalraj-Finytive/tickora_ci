@@ -193,19 +193,38 @@ public interface TimeOffRequestRepository extends JpaRepository<TimeOffRequestEn
     @Query(value = """
     SELECT *
     FROM timeoff_request_view
-    WHERE viewer_id = :viewerId
+    WHERE timeoff_request_id IN (
+        SELECT timeoff_request_id
+        FROM users_request_mapping
+        WHERE viewer_id = :viewerId
+    )
       AND leave_start_date >= :fromDate
       AND leave_end_date <= :toDate
       AND (array_length(:policies, 1) IS NULL OR policy_id = ANY(:policies))
       AND (array_length(:status, 1) IS NULL OR status = ANY(:status))
-    """,
-            nativeQuery = true)
+    """, nativeQuery = true)
     List<TimeOffExportView> fetchReceiverRequests(
             @Param("fromDate") LocalDate fromDate,
             @Param("toDate") LocalDate toDate,
             @Param("status") String[] status,
             @Param("policies") String[] policies,
             @Param("viewerId") String viewerId
+    );
+
+    @Query(value = """
+    SELECT *
+    FROM timeoff_request_view
+    WHERE leave_start_date >= :fromDate
+      AND leave_end_date <= :toDate
+      AND (array_length(:policies, 1) IS NULL OR policy_id = ANY(:policies))
+      AND (array_length(:status, 1) IS NULL OR status = ANY(:status))
+    """,
+            nativeQuery = true)
+    List<TimeOffExportView> fetchAllRequests(
+            @Param("fromDate") LocalDate fromDate,
+            @Param("toDate") LocalDate toDate,
+            @Param("status") String[] status,
+            @Param("policies") String[] policies
     );
 
 

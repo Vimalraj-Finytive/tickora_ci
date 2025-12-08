@@ -68,14 +68,15 @@ public class TimeOffRequestController {
     }
 
     @PostMapping
-    public ResponseEntity<ApiResponse<Map<String, List<TimeOffRequestGroupDto>>>> getRequests(
+    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getRequests(
             @RequestHeader("Authorization") String token,
             @RequestBody TimeOffExportRequest dto) {
         String loggedUserId = authHelper.getUserId();
-        ApiResponse<Map<String, List<TimeOffRequestGroupDto>>> result =
-                timeOffFacade.filterRequests(dto,loggedUserId);
+        ApiResponse<List<Map<String, Object>>> result =
+                timeOffFacade.filterRequests(dto, loggedUserId);
         return ResponseEntity.status(result.getStatusCode()).body(result);
     }
+
 
     @GetMapping("/requests/filter/role/{fromDate}/{toDate}")
     public ResponseEntity<ApiResponse<List<TimeoffRequestResponseDto>>> filterRequestsBasedOnRole(
