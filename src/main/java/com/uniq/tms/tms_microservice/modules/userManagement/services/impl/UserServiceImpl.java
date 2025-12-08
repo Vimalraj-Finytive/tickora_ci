@@ -3,6 +3,7 @@ package com.uniq.tms.tms_microservice.modules.userManagement.services.impl;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.CalendarAdapter;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.TimeOffPolicyAdapter;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.UserPolicyAdapter;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.CalendarEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeOffPolicyEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeOffPolicyBulkAssignModel;
@@ -133,6 +134,7 @@ public class UserServiceImpl implements UserService {
     private final AuthHelper authHelper;
     private final TimeOffPolicyAdapter timeOffPolicyAdapter;
     private final TimeOffPolicyService timeOffPolicyService;
+    private final UserPolicyAdapter userPolicyAdapter;
 
     public UserServiceImpl(Validator validator, UserAdapter userAdapter, TimesheetAdapter timesheetAdapter,
                            UserEntityMapper userEntityMapper, CalendarAdapter calendarAdapter, OrganizationRepository organizationRepository,
@@ -142,7 +144,7 @@ public class UserServiceImpl implements UserService {
                            ApplicationEventPublisher publisher, WorkScheduleAdapter workScheduleAdapter, UserCacheService userCacheService,
                            CacheKeyUtil cacheKeyUtil, GroupRepository groupRepository, CacheKeyConfig cacheKeyConfig, CacheReloadHandlerRegistry cacheReloadHandlerRegistry,
                            OrganizationTypeRepository organizationTypeRepository, IdGenerationService idGenerationService, SecondaryDetailsRepository secondaryDetailsRepository,
-                           RolePrivilegeHelper rolePrivilegeHelper, ExceptionHelper exceptionHelper, OrganizationCacheService organizationCacheService, LocationDtoMapper locationDtoMapper, LocationService locationService, OrganizationAdapter organizationAdapter, LocationAdapter locationAdapter, OrganizationEntityMapper organizationEntityMapper, AuthHelper authHelper, TimeOffPolicyAdapter timeOffPolicyAdapter, TimeOffPolicyService timeOffPolicyService) {
+                           RolePrivilegeHelper rolePrivilegeHelper, ExceptionHelper exceptionHelper, OrganizationCacheService organizationCacheService, LocationDtoMapper locationDtoMapper, LocationService locationService, OrganizationAdapter organizationAdapter, LocationAdapter locationAdapter, OrganizationEntityMapper organizationEntityMapper, AuthHelper authHelper, TimeOffPolicyAdapter timeOffPolicyAdapter, TimeOffPolicyService timeOffPolicyService, UserPolicyAdapter userPolicyAdapter) {
 
         this.validator = validator;
         this.userAdapter = userAdapter;
@@ -177,6 +179,7 @@ public class UserServiceImpl implements UserService {
         this.authHelper = authHelper;
         this.timeOffPolicyAdapter = timeOffPolicyAdapter;
         this.timeOffPolicyService = timeOffPolicyService;
+        this.userPolicyAdapter = userPolicyAdapter;
     }
 
     private static final Logger log = LoggerFactory.getLogger(UserServiceImpl.class);
@@ -648,7 +651,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public ApiResponse createUser(UserDto userDto, SecondaryDetailsDto secondaryDetailsDto, String organizationId) {
+    public ApiResponse<UserDto> createUser(UserDto userDto, SecondaryDetailsDto secondaryDetailsDto, String organizationId) {
         String schema = TenantUtil.getCurrentTenant();
         log.info("Checking if the user is student: {}", userDto.getRoleId());
         Optional<RoleEntity> roleName = organizationAdapter.findRoleById(userDto.getRoleId());
@@ -691,27 +694,25 @@ public class UserServiceImpl implements UserService {
         entity.setWorkSchedule(scheduleToSet);
         entity.setActive(true);
 
-        CalendarEntity calendarEntity=calendarAdapter.findDefaultCalendar();
-        if(calendarEntity!=null)
-            entity.setCalendar(calendarEntity);
-
-        else
-            entity.setCalendar(null);
-
+        CalendarEntity calendarEntity;
+        if(userDto.getCalendarId() != null) {
+            calendarEntity = calendarAdapter.findByCalendarId(userDto.getCalendarId())
+            .orElseThrow(() ->
+                    new NoSuchElementException("Calendar not found with ID: " + userDto.getCalendarId()));
+        }
+        else {
+            calendarEntity = calendarAdapter.findDefaultCalendar();
+        }
+        entity.setCalendar(calendarEntity);
+        if (userDto.getRequestApproverId() != null){
+            entity.setRequestApproverId(userDto.getRequestApproverId());
+        }
         entity.setCreatedAt(LocalDateTime.now());
-
-
         log.info("Saving user: {}", userMiddleware.getUserName());
         UserEntity savedUserEntity = userAdapter.saveUser(entity);
-        TimeOffPolicyBulkAssignModel defaultPolicy = new TimeOffPolicyBulkAssignModel();
         TimeOffPolicyEntity timeOffPolicyEntity=timeOffPolicyAdapter.findDefaultPolicy();
-        defaultPolicy.setUserIds(List.of(customUserId));
-        defaultPolicy.setPolicyIds(List.of(timeOffPolicyEntity.getPolicyId()));
-        defaultPolicy.setUserValidFrom(LocalDate.now());
-        defaultPolicy.setUserValidTo(timeOffPolicyEntity.getValidityEndDate());
-
-        timeOffPolicyService.assignPolicies(defaultPolicy);
-
+        List<String> policyIds = new ArrayList<>();
+        policyIds.add(timeOffPolicyEntity.getPolicyId());
 
         List<Long> locationIds = null;
         List<Long> groupIds = null;
@@ -792,6 +793,12 @@ public class UserServiceImpl implements UserService {
                     .toList();
         }
 
+        if (!(userDto.getPolicyIds() == null || userDto.getPolicyIds().isEmpty())) {
+            log.info("Adding user to policy: {}", userDto.getPolicyIds());
+              policyIds.addAll(userDto.getPolicyIds());
+        }
+        assignPolicy(policyIds, customUserId);
+
         if (!isBlank(userDto.getGroupId())) {
             log.info("Adding user to group: {}", userDto.getGroupId());
             List<UserGroupEntity> userGroupEntities = new ArrayList<>();
@@ -815,7 +822,6 @@ public class UserServiceImpl implements UserService {
         User finalUser = userEntityMapper.toMiddleware(savedUserEntity);
         finalUser.setLocationId(locationIds);
         finalUser.setGroupId(groupIds);
-
         boolean isNewUser = savedUserEntity.isDefaultPassword();
         emailHelper.sendAccountCreationEmail(
                 userMiddleware.getEmail(), userMiddleware.getUserName(), defaultPassword, isNewUser,userMiddleware.getRoleId()
@@ -832,7 +838,16 @@ public class UserServiceImpl implements UserService {
         } else {
             log.info("Redis is not enabled or RedisTemplate is null. Skipping cache Create user reload.");
         }
-        return new ApiResponse(201, "Successfully saved user", finalUser);
+        return new ApiResponse<UserDto>(201, "Successfully saved user", userDto);
+    }
+
+    private void assignPolicy(List<String> policyIds, String customUserId){
+        TimeOffPolicyBulkAssignModel defaultPolicy = new TimeOffPolicyBulkAssignModel();
+        defaultPolicy.setUserIds(List.of(customUserId));
+        defaultPolicy.setPolicyIds(policyIds);
+        defaultPolicy.setUserValidFrom(LocalDate.now());
+        defaultPolicy.setUserValidTo(null);
+        timeOffPolicyService.assignPolicies(defaultPolicy);
     }
 
     public boolean validateSecondaryUser(SecondaryDetailsDto dto) {

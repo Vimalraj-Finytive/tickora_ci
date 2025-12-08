@@ -203,19 +203,19 @@ public class UserFacade {
         }
     }
 
-    public ApiResponse createUser(UserDto userDto, SecondaryDetailsDto secondaryDetailsDto) {
+    public ApiResponse<UserDto> createUser(UserDto userDto, SecondaryDetailsDto secondaryDetailsDto) {
         String orgId = authHelper.getOrgId();
         if (orgId == null) {
-            return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
+            return new ApiResponse<UserDto>(401, "Unauthorized - Invalid Organization", null);
         }
         Long currentCount = userService.getCurrentUserCount(orgId);
         Long subscribedLimit = userService.getSubscribedUserLimit(orgId);
 
         if (!(currentCount < subscribedLimit)) {
-            return new ApiResponse(404, "User creation limit reached. Please upgrade your plan.", null);
+            return new ApiResponse<UserDto>(404, "User creation limit reached. Please upgrade your plan.", null);
         } else {
-            ApiResponse user = userService.createUser(userDto, secondaryDetailsDto, orgId);
-            return new ApiResponse(HttpStatus.CREATED.value(),
+            ApiResponse<UserDto> user = userService.createUser(userDto, secondaryDetailsDto, orgId);
+            return new ApiResponse<UserDto>(HttpStatus.CREATED.value(),
                     "User created successfully",
                     user);
         }

@@ -11,6 +11,7 @@ import com.uniq.tms.tms_microservice.modules.userManagement.adapter.UserAdapter;
 import com.uniq.tms.tms_microservice.modules.userManagement.dto.GroupDto;
 import com.uniq.tms.tms_microservice.modules.userManagement.dto.UserNameEmailDto;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.*;
+import com.uniq.tms.tms_microservice.modules.userManagement.enums.MemberType;
 import com.uniq.tms.tms_microservice.modules.userManagement.repository.*;
 import com.uniq.tms.tms_microservice.modules.locationManagement.mapper.LocationEntityMapper;
 import com.uniq.tms.tms_microservice.modules.userManagement.model.UserResponse;
@@ -625,7 +626,7 @@ public class UserAdapterImpl implements UserAdapter {
 
     @Override
     public List<UserEntity> findByApproverId(String approverId){
-        return userRepository.findByApproverIdAndActiveTrue(approverId);
+        return userRepository.findByRequestApproverIdAndActiveTrue(approverId);
     }
     @Override
     public List<UserEntity>findAllById(List<String> userIds){
@@ -637,4 +638,9 @@ public class UserAdapterImpl implements UserAdapter {
          userRepository.updateApproverForUsers(approverId,requestedUserIds);
     }
 
+
+    @Override
+    public Set<String> getAllSupervisorIds(List<Long> groupIds, String userId, String type) {
+        return userGroupRepository.findAllSupervisorUserIds(groupIds, userId, type);
+    }
 }
