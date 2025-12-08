@@ -5,7 +5,9 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.LeaveBalanc
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.TimeOffPolicyAdapter;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.TimeOffRequestAdapter;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.UserPolicyAdapter;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeOffExportDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeOffExportRequestDto;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.ViewerDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.LeaveBalanceEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeOffPolicyEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeOffRequestEntity;
@@ -440,15 +442,11 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
     }
 
     @Override
-    public List<Map<String, Object>> filterRequests(TimeOffExportRequest request, String loggedUserId) {
-
-        if (request.getFromDate() == null || request.getToDate() == null) {
-            throw new IllegalArgumentException("fromDate and toDate are required");
-        }
+    public List<TimeOffExportModel> filterRequests(TimeOffExportRequest request, String loggedUserId) {
 
         List<TimeOffExportView> rows = fetchExportRows(request, loggedUserId);
 
-        Map<String, Map<String, Object>> grouped = new LinkedHashMap<>();
+        Map<String, TimeOffExportModel> grouped = new LinkedHashMap<>();
 
         for (TimeOffExportView row : rows) {
 
@@ -458,44 +456,48 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
                     + "|" + row.getLeaveStartDate()
                     + "|" + row.getLeaveEndDate();
 
-            Map<String, Object> record = grouped.get(key);
+            TimeOffExportModel model = grouped.get(key);
 
-            if (record == null) {
-                record = new LinkedHashMap<>();
-                record.put("userId", row.getCreatorId());
-                record.put("userName", row.getCreatorName());
-                record.put("policyName", row.getPolicyName());
-                record.put("policyId", row.getPolicyId());
-                record.put("requestDate", LocalDate.parse(row.getRequestedDate()));
-                record.put("startDate", row.getLeaveStartDate());
-                record.put("endDate", row.getLeaveEndDate());
-                record.put("startTime", row.getLeaveStartTime());
-                record.put("endTime", row.getLeaveEndTime());
-                record.put("unitsRequested", row.getUnitsRequested());
-                record.put("reason", row.getReason());
-                record.put("status", row.getStatus());
-                record.put("leaveType", row.getLeaveType());
+            if (model == null) {
+                model = new TimeOffExportModel();
+                model.setUserId(row.getCreatorId());
+                model.setUserName(row.getCreatorName());
+                model.setPolicyName(row.getPolicyName());
+                model.setPolicyId(row.getPolicyId());
+                model.setRequestDate(LocalDate.parse(row.getRequestedDate()));
+                model.setStartDate(row.getLeaveStartDate());
+                model.setEndDate(row.getLeaveEndDate());
+                model.setStartTime(row.getLeaveStartTime());
+                model.setEndTime(row.getLeaveEndTime());
+                model.setUnitsRequested(Double.valueOf(row.getUnitsRequested()));
+                model.setReason(row.getReason());
+                model.setStatus(row.getStatus());
+                model.setLeaveType(row.getLeaveType());
+                model.setViewers(new ArrayList<>());
+                model.setApprover(new ArrayList<>());
 
-                record.put("viewers", new ArrayList<Map<String, Object>>());
-                record.put("approver", new ArrayList<Map<String, Object>>());
-
-                grouped.put(key, record);
+                grouped.put(key, model);
             }
 
-            if (ViewerType.VIEWER.equals(row.getViewerType())) {
-                Map<String, Object> v = new HashMap<>();
-                v.put("userId", row.getViewerId());
-                v.put("userName", row.getViewerName());
-                v.put("viewerType", "VIEWER");
-                ((List<Map<String, Object>>) record.get("viewers")).add(v);
+            ViewerType viewerType = null;
+            if (row.getViewerType() != null) {
+                viewerType = ViewerType.valueOf(row.getViewerType().toUpperCase());
             }
 
-            if (ViewerType.APPROVER.equals(row.getViewerType())) {
-                Map<String, Object> a = new HashMap<>();
-                a.put("userId", row.getViewerId());
-                a.put("userName", row.getViewerName());
-                a.put("viewerType", "APPROVER");
-                ((List<Map<String, Object>>) record.get("approver")).add(a);
+            if (viewerType == ViewerType.VIEWER) {
+                ViewerModel v = new ViewerModel();
+                v.setUserId(row.getViewerId());
+                v.setUserName(row.getViewerName());
+                v.setViewerType("VIEWER");
+                model.getViewers().add(v);
+            }
+
+            if (viewerType == ViewerType.APPROVER) {
+                ViewerModel a = new ViewerModel();
+                a.setUserId(row.getViewerId());
+                a.setUserName(row.getViewerName());
+                a.setViewerType("APPROVER");
+                model.getApprover().add(a);
             }
         }
 

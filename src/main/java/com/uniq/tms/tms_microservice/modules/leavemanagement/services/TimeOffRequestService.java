@@ -1,5 +1,6 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.services;
 
+import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeOffExportDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeOffExportRequestDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.*;
 import com.uniq.tms.tms_microservice.shared.dto.EnumModel;
@@ -13,7 +14,7 @@ public interface TimeOffRequestService {
     void createRequest(TimeOffRequest request);
     void employeeUpdateStatus(EmployeeStatusUpdate model);
     void adminUpdateStatus(AdminStatusUpdate model);
-    List<Map<String, Object>> filterRequests(TimeOffExportRequest dto, String loggedUserId);
+    List<TimeOffExportModel> filterRequests(TimeOffExportRequest request, String loggedUserId);
     List<TimeOffRequestResponseModel> filterRequestsByRole(LocalDate fromDate, LocalDate toDate, int minRoleLevel);
     List<EnumModel> getStatus();
     String startExporting(TimeOffExportRequestDto request, String schema, String orgId);
