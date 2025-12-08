@@ -234,6 +234,7 @@ CREATE TABLE IF NOT EXISTS ${schemaName}.users (
     is_register_user BOOLEAN NOT NULL DEFAULT FALSE,
     active BOOLEAN NOT NULL,
     calendar_id VARCHAR(20) ,
+    request_approver_id VARCHAR(20),
     CONSTRAINT fk_role
         FOREIGN KEY (role_id)
         REFERENCES ${schemaName}.role(role_id)

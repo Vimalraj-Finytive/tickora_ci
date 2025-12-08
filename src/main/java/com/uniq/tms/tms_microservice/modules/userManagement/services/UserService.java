@@ -8,7 +8,6 @@ import com.uniq.tms.tms_microservice.modules.userManagement.model.*;
 import org.springframework.core.io.Resource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.multipart.MultipartFile;
-
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -19,7 +18,7 @@ public interface UserService {
 
     ApiResponse bulkCreateUsers(MultipartFile file, String orgId, String userId);
 
-    ApiResponse createUser(UserDto userDto, SecondaryDetailsDto secondaryDetailsDto, String organizationId);
+    ApiResponse<UserDto> createUser(UserDto userDto, SecondaryDetailsDto secondaryDetailsDto, String organizationId);
 
     User updateUser(CreateUserDto updates, String orgId, String userId);
 
@@ -36,9 +35,7 @@ public interface UserService {
     List<User> getMembers(String orgId, Long roleId);
 
     boolean updateUserGroupType(UserGroup userGroup);
-
     List<GroupDto> getUserGroups(String userId, String role, String orgId);
-
     List<Map<String, Object>> getGroupMembers(Long groupId, String orgId, LocalDate date, String userIdFromToken);
 
     ApiResponse addUserToGroup(AddMember addMemberMiddleware, String orgId);

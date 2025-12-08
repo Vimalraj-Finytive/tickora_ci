@@ -21,6 +21,7 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.services.TimeOffReq
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.adapter.TimesheetAdapter;
 import com.uniq.tms.tms_microservice.modules.userManagement.adapter.UserAdapter;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
+import com.uniq.tms.tms_microservice.modules.userManagement.enums.MemberType;
 import com.uniq.tms.tms_microservice.modules.userManagement.enums.RoleName;
 import com.uniq.tms.tms_microservice.modules.userManagement.enums.UserRole;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.FixedWorkScheduleEntity;
@@ -119,6 +120,9 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
         }
         TimeOffPolicyEntity policy = timeOffPolicyAdapter.findPolicyById(request.getPolicyId());
         UserEntity user = userAdapter.getUserById(request.getUserId());
+        if (user.getRequestApproverId() == null || user.getUserId().equals(user.getRequestApproverId())){
+            throw new IllegalArgumentException("requestId is missing or invalid.");
+        }
         WorkScheduleEntity workSchedule = user.getWorkSchedule();
         double days = ChronoUnit.DAYS.between(request.getStartDate(), request.getEndDate()) + 1;
         if (policy.getEntitledType() == EntitledType.DAY && days != request.getUnitsRequested()) {
@@ -170,18 +174,24 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
         entity.setStatus(Status.PENDING);
         entity.setReason(request.getReason());
         entity.setRequestDate(LocalDate.now(zoneId));
-        Set<String> viewers=new HashSet<>(request.getCc());
-        if (viewers.contains(request.getUserId()) || request.getTo().equals(request.getUserId())){
-            throw new IllegalArgumentException("User already included");
-        }
+        List<Long> groupIds = user.getUserGroups().stream()
+                .map(g -> g.getGroup().getGroupId())
+                .toList();
+        Set<String> viewers = userAdapter.getAllSupervisorIds(groupIds, user.getUserId(), MemberType.SUPERVISOR.getValue());
+        log.info("viewers size{}",viewers.size());
+        String superAdminId =userAdapter.findSuperAdminByOrgId(authHelper.getOrgId())
+                .map(UserEntity::getUserId)
+                .orElseThrow(() -> new IllegalArgumentException("Super admin not found"));
+        viewers.remove(user.getRequestApproverId());
+        viewers.remove(superAdminId);
 
         TimeOffRequestEntity saved = timeOffRequestAdapter.saveRequest(entity);
         deductLeaveBalance(saved, requested);
 
-        viewers.remove(request.getTo());
         List<UsersRequestMappingEntity> usersMapping =
                 Stream.concat(
-                        Stream.of(buildMapping(ViewerType.APPROVER, request.getTo(), request.getUserId(), saved.getTimeOffRequestId())),
+                        Stream.of(buildMapping(ViewerType.APPROVER, superAdminId, request.getUserId(), saved.getTimeOffRequestId()),
+                        (buildMapping(ViewerType.APPROVER, user.getRequestApproverId(), request.getUserId(), saved.getTimeOffRequestId()))),
                         viewers.stream().map(viewer -> buildMapping(ViewerType.VIEWER, viewer, request.getUserId(), saved.getTimeOffRequestId()))
                 ).toList();
         List<UsersRequestMappingEntity> entities = timeOffRequestAdapter.saveUsersRequestMapping(usersMapping);

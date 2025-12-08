@@ -16,6 +16,9 @@ public class UserDto {
     private List<Long> groupId;
     private boolean active;
     private String workSchedule;
+    private String requestApproverId;
+    private String calendarId;
+    private List<String> policyIds;
 
     public UserDto() {}
 
@@ -109,5 +112,29 @@ public class UserDto {
 
     public void setWorkSchedule(String workSchedule) {
         this.workSchedule = workSchedule;
+    }
+
+    public String getRequestApproverId() {
+        return requestApproverId;
+    }
+
+    public void setRequestApproverId(String requestApproverId) {
+        this.requestApproverId = requestApproverId;
+    }
+
+    public String getCalendarId() {
+        return calendarId;
+    }
+
+    public void setCalendarId(String calendarId) {
+        this.calendarId = calendarId;
+    }
+
+    public List<String> getPolicyIds() {
+        return policyIds;
+    }
+
+    public void setPolicyIds(List<String> policyIds) {
+        this.policyIds = policyIds;
     }
 }
