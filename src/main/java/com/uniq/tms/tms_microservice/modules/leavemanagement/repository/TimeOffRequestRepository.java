@@ -33,7 +33,6 @@ public interface TimeOffRequestRepository extends JpaRepository<TimeOffRequestEn
     @Query("SELECT t FROM TimeOffRequestEntity t " +
             "WHERE t.policy.policyId = :policyId " +
             "AND t.user.userId = :userId " +
-            "AND t.status IN ('PENDING','APPROVED')"+
             "AND t.requestDate = :requestDate")
     TimeOffRequestEntity findByUser_UserIdAndRequestDate(
             @Param("policyId") String policyId,

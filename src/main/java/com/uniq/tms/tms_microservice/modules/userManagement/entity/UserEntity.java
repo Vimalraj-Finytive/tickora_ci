@@ -59,7 +59,7 @@ public class UserEntity {
     @JoinColumn(name = "work_schedule_id")
     private WorkScheduleEntity workSchedule;
 
-    @OneToMany(mappedBy = "user")
+    @OneToMany(mappedBy = "user", fetch = FetchType.EAGER)
     private List<UserGroupEntity> userGroups;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -71,7 +71,10 @@ public class UserEntity {
     @ManyToOne
     @JoinColumn(name = "calendar_id")
     private CalendarEntity calendar;
-    
+
+    @Column(name = "request_approver_id")
+    private String requestApproverId;
+
     public UserEntity(String userId){
         this.userId = userId;
     }
@@ -226,6 +229,14 @@ public class UserEntity {
 
     public void setCalendar(CalendarEntity calendar) {
         this.calendar = calendar;
+    }
+
+    public String getRequestApproverId() {
+        return requestApproverId;
+    }
+
+    public void setRequestApproverId(String requestApproverId) {
+        this.requestApproverId = requestApproverId;
     }
 
     @Override
