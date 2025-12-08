@@ -13,7 +13,7 @@ public interface TimeOffRequestService {
     void createRequest(TimeOffRequest request);
     void employeeUpdateStatus(EmployeeStatusUpdate model);
     void adminUpdateStatus(AdminStatusUpdate model);
-    Map<String, List<TimeOffRequestGroupModel>> filterRequests(TimeOffExportRequest dto,String loggedUserId);
+    List<Map<String, Object>> filterRequests(TimeOffExportRequest dto, String loggedUserId);
     List<TimeOffRequestResponseModel> filterRequestsByRole(LocalDate fromDate, LocalDate toDate, int minRoleLevel);
     List<EnumModel> getStatus();
     String startExporting(TimeOffExportRequestDto request, String schema, String orgId);
