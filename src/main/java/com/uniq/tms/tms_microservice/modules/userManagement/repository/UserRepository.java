@@ -86,7 +86,7 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
     @Query("SELECT u FROM UserEntity u WHERE u.userId IN :userIds AND u.organizationId = :orgId AND u.active = true")
     List<UserEntity> findByUserIdAndOrgIdAndActiveTrue(@Param("userIds") List<String> userIds, @Param("orgId") String orgId);
 
-    Optional<UserEntity> findByUserId(String userId);
+    Optional<UserEntity> findByUserIdAndActiveTrue(String userId);
 
     Optional<UserEntity> findOptionalByMobileNumber(String mobileNumber);
 
@@ -284,9 +284,19 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
     """)
     List<UserEntity> findUsersWithCalendars(@Param("userIds") String[] userIds);
 
-    List<UserEntity>findByActiveTrue();
+    @Query("SELECT u FROM UserEntity u WHERE u.active = true AND u.userId <> :excludeId")
+    List<UserEntity>findByActiveTrue(@Param("excludeId") String excludeId);
 
     @Query("SELECT u FROM UserEntity u WHERE u.role.roleId = 1 AND u.organizationId = :orgId")
     Optional<UserEntity>findSuperAdminByOrgId(@Param("orgId") String orgId);
 
+    List<UserEntity>findByApproverIdAndActiveTrue(String approverId);
+
+    List<UserEntity>findAllByUserIdInAndActiveTrue(List<String> userIds);
+
+    @Modifying
+    @Transactional
+    @Query("UPDATE UserEntity u SET u.approverId = :approverId WHERE u.id IN (:requestedUserIds)")
+    void updateApproverForUsers(@Param("approverId") String approverId,
+                                @Param("requestedUserIds") List<String> requestedUserIds);
 }
