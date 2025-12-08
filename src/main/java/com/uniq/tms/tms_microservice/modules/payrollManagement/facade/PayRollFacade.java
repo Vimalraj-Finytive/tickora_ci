@@ -6,9 +6,11 @@ import com.uniq.tms.tms_microservice.modules.payrollManagement.mapper.PayRollDto
 import com.uniq.tms.tms_microservice.modules.payrollManagement.model.*;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.services.PayRollService;
 import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
+import com.uniq.tms.tms_microservice.shared.exception.CommonExceptionHandler;
 import com.uniq.tms.tms_microservice.shared.helper.AuthHelper;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
@@ -75,7 +77,7 @@ public class PayRollFacade {
             boolean isActive = model.isActive();
             service.updatePayrollStatus(payrollId, model);
             String message = isActive ? "Payroll activated successfully" : "Payroll inactivated successfully";
-            return new ApiResponse<>(200, message, null);
+            return new ApiResponse<>(204, message, null);
         } catch (Exception e) {
             return new ApiResponse<>(400, "Failed to update payroll: " + e.getMessage(), null
             );
@@ -140,16 +142,20 @@ public class PayRollFacade {
 
     public ApiResponse<String> startExport(String month, String format, String schema, String orgId) {
         String exportId = service.startExportPayroll(month, format, schema, orgId);
-        return new ApiResponse<>(200, "Export started", exportId);
+        return new ApiResponse<>(
+                HttpStatus.ACCEPTED.value(),
+                "Export started",
+                exportId
+        );
     }
 
     public ApiResponse<String> checkStatus(String schema, String orgId, String exportId) {
         String status = service.getExportStatus(exportId, schema, orgId);
-        return new ApiResponse<>(200, "Status fetched", status);
+        return new ApiResponse<>(
+                HttpStatus.OK.value(),
+                "Status fetched",
+                status
+        );
     }
 
-    public ApiResponse<Resource> download(String schema, String orgId, String exportId) {
-        File file = service.downloadPayroll(exportId, schema, orgId);
-        return new ApiResponse<>(200, "Download ready", new FileSystemResource(file));
-    }
 }

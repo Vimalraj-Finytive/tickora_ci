@@ -20,6 +20,8 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.projection.TimeOffE
 import com.uniq.tms.tms_microservice.modules.leavemanagement.services.TimeOffRequestService;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.adapter.TimesheetAdapter;
 import com.uniq.tms.tms_microservice.modules.userManagement.adapter.UserAdapter;
+import com.uniq.tms.tms_microservice.modules.timesheetManagement.enums.TimesheetStatusEnum;
+import com.uniq.tms.tms_microservice.modules.timesheetManagement.services.TimesheetService;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
 import com.uniq.tms.tms_microservice.modules.userManagement.enums.MemberType;
 import com.uniq.tms.tms_microservice.modules.userManagement.enums.RoleName;
@@ -32,12 +34,14 @@ import com.uniq.tms.tms_microservice.modules.workScheduleManagement.enums.WorkSc
 import com.uniq.tms.tms_microservice.shared.dto.EnumModel;
 import com.uniq.tms.tms_microservice.shared.helper.AuthHelper;
 import com.uniq.tms.tms_microservice.shared.util.DateTimeUtil;
+import com.uniq.tms.tms_microservice.shared.util.ExportStatusTracker;
 import com.uniq.tms.tms_microservice.shared.util.ReportStyleUtil;
 import jakarta.annotation.Nullable;
 import com.uniq.tms.tms_microservice.shared.util.CacheKeyUtil;
 import jakarta.transaction.Transactional;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.bouncycastle.oer.Switch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -54,7 +58,6 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.springframework.core.io.Resource;
-import org.springframework.core.io.FileSystemResource;
 
 @Service
 public class TimeOffRequestServiceImpl implements TimeOffRequestService {
@@ -75,10 +78,12 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
     private final ReportStyleUtil reportStyleUtil;
     private final UserAdapter userAdapter;
     private final TimesheetAdapter timesheetAdapter;
+    private final TimesheetService timesheetService;
+    private final ExportStatusTracker exportStatusTracker;
 
     public TimeOffRequestServiceImpl(TimeOffRequestAdapter timeOffRequestAdapter, TimeOffPolicyEntityMapper TimeOffPolicyEntityMapper, TimeOffPolicyDtoMapper timeOffPolicyDtoMapper,
                                      LeaveBalanceAdapter leaveBalanceAdapter, TimeOffPolicyAdapter timeOffPolicyAdapter, UserPolicyAdapter userPolicyAdapter,
-                                     AuthHelper authHelper, CacheKeyUtil cacheKeyUtil, @Nullable RedisTemplate<String, Object> redisTemplate, ReportStyleUtil reportStyleUtil, UserAdapter userAdapter, TimesheetAdapter timesheetAdapter) {
+                                     AuthHelper authHelper, CacheKeyUtil cacheKeyUtil, @Nullable RedisTemplate<String, Object> redisTemplate, ReportStyleUtil reportStyleUtil, UserAdapter userAdapter, TimesheetAdapter timesheetAdapter, TimesheetService timesheetService, ExportStatusTracker exportStatusTracker) {
         this.timeOffRequestAdapter = timeOffRequestAdapter;
         this.TimeOffPolicyEntityMapper = TimeOffPolicyEntityMapper;
         this.timeOffPolicyDtoMapper = timeOffPolicyDtoMapper;
@@ -91,6 +96,8 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
         this.reportStyleUtil = reportStyleUtil;
         this.userAdapter = userAdapter;
         this.timesheetAdapter = timesheetAdapter;
+        this.timesheetService = timesheetService;
+        this.exportStatusTracker = exportStatusTracker;
     }
 
     @Value("${csv.request.download.dir}")
@@ -262,6 +269,7 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
     }
 
     @Override
+    @Transactional
     public void employeeUpdateStatus(EmployeeStatusUpdate model) {
         checkCredentials(model.getPolicyId(), model.getRequestDate());
         if (model.getStartDate() != null) {
@@ -283,6 +291,7 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
             }
             entity.setStatus(model.getStatus());
             timeOffRequestAdapter.saveRequest(entity);
+            timesheetService.deleteTimesheet(model.getUserId(),model.getStartDate());
             return;
         }
 
@@ -359,23 +368,73 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
     }
 
     @Override
+    @Transactional
     public void adminUpdateStatus(AdminStatusUpdate model) {
         checkCredentials(model.getPolicyId(), model.getRequestDate());
         TimeOffRequestEntity entity = timeOffRequestAdapter.getTimeoffRequest(model.getPolicyId(), model.getUserId(), model.getRequestDate());
-        if (entity == null) {
-            throw new IllegalArgumentException("No time-off request exists ");
-        }
-        if (LocalDate.now(zoneId).isAfter(entity.getStartDate()) || model.getStatus() != null && !handleAdminRules(entity.getStatus(), model.getStatus())) {
+        boolean dateInvalid = LocalDate.now(zoneId).isAfter(entity.getStartDate());
+        boolean statusInvalid = (model.getStatus() != null && !handleAdminRules(entity.getStatus(), model.getStatus()));
+        if (dateInvalid || statusInvalid) {
+            log.warn("Update not allowed. Date invalid = {}, Status invalid = {}", dateInvalid, statusInvalid);
             throw new IllegalArgumentException("Update not allowed. Invalid date or status");
         }
         if (model.getStatus() != null) {
+            log.info("Updating status from {} → {}", entity.getStatus(), model.getStatus());
             entity.setStatus(model.getStatus());
             TimeOffRequestEntity saved = timeOffRequestAdapter.saveRequest(entity);
-            if (saved.getStatus() == Status.REJECTED) {
+            log.info("Status updated successfully. Saved status: {}", saved.getStatus());
+            if (saved.getStatus().equals(Status.APPROVED)) {
+                if(entity.getPolicy().getCompensation().equals(Compensation.PAID)) {
+                    log.info("Policy is PAID. Applying entitled type: {}", entity.getPolicy().getEntitledType());
+                    switch (entity.getPolicy().getEntitledType()) {
+
+                        case DAY -> {
+                            log.info("Applying PAID_LEAVE to timesheet");
+                            timesheetService.createTimesheet(
+                                    TimesheetStatusEnum.PAID_LEAVE,
+                                    model.getUserId(),
+                                    entity.getStartDate()
+                            );
+                        }
+                        case HALF_DAY -> {
+                            log.info("Applying HALF_DAY leave to timesheet");
+                            timesheetService.createTimesheet(
+                                    TimesheetStatusEnum.HALF_DAY,
+                                    model.getUserId(),
+                                    entity.getStartDate()
+                            );
+                        }
+                        case HOURS -> {
+                            log.info("Applying PERMISSION leave (Hours type)");
+                            timesheetService.createTimesheet(
+                                    TimesheetStatusEnum.PERMISSION,
+                                    model.getUserId(),
+                                    entity.getStartDate()
+                            );
+                        }
+                    }
+                }else {
+                    log.info("Policy is UNPAID → Marking ABSENT in timesheet");
+                    timesheetService.createTimesheet(
+                            TimesheetStatusEnum.ABSENT,
+                            model.getUserId(),
+                            entity.getStartDate()
+                    );
+                }
+            } else if (saved.getStatus() == Status.REJECTED) {
+                log.info("Request REJECTED → Restoring leave balance and deleting timesheet entry");
                 Integer requested = saved.getUnitsRequested();
                 addLeaveBalance(saved, requested);
+                log.info("Leave balance restored for {} units", requested);
+                timesheetService.deleteTimesheet(
+                        model.getUserId(),
+                        entity.getStartDate()
+                );
+                log.info("Timesheet entry deleted for rejected request");
             }
         }
+        log.info("adminUpdateStatus completed successfully for User: {}, Policy: {}",
+                model.getUserId(), model.getPolicyId());
     }
 
     private boolean handleAdminRules(Status current, Status next) {
@@ -573,6 +632,8 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
     @Override
     @Transactional
     public String startExporting(TimeOffExportRequestDto request, String schema, String orgId) {
+        File folder = new File(downloadDir);
+        if (!folder.exists()) folder.mkdirs();
         TimeOffExportRequest model = timeOffPolicyDtoMapper.toModel(request);
         String format = request.getFormat() == null ? "xlsx" : request.getFormat().toLowerCase();
         String baseName = "TimeOffRequest_" + request.getFromDate();
@@ -589,7 +650,7 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
         if (redisTemplate != null) {
             redisTemplate.opsForValue().set(exportKey, ReportType.PENDING, Duration.ofHours(12));
         } else {
-            log.warn("Redis not available. Skipping export status tracking.");
+            exportStatusTracker.writeStatus(file, ReportType.PENDING.getValues());
         }
         generateReportAsync(file, exportKey, model);
         return finalName;
@@ -599,31 +660,51 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
     public void generateReportAsync(File file, String exportKey, TimeOffExportRequest request) {
         try {
             boolean redisAvailable = redisTemplate != null;
+
             if (redisAvailable) {
                 redisTemplate.opsForValue().set(exportKey, ReportType.PROCESSING);
             } else {
-                log.warn("Redis unavailable — proceeding without status tracking.");
+                exportStatusTracker.writeStatus(file, ReportType.PROCESSING.getValues());
             }
+
             String loggedInUser = authHelper.getUserId();
             List<TimeOffExportView> exportData = fetchExportRows(request, loggedInUser);
+
             if ("csv".equalsIgnoreCase(request.getFormat())) {
                 generateCsv(exportData, file);
             } else {
                 generateXlsx(exportData, file);
             }
+
             if (redisAvailable) {
                 redisTemplate.opsForValue().set(exportKey, ReportType.COMPLETED);
+            } else {
+                exportStatusTracker.writeStatus(file, ReportType.COMPLETED.getValues());
             }
         } catch (Exception e) {
-            log.error("Export failed: {}", e.getMessage(), e);
+            log.error("Timeoff request failed", e);
+            try {
+                if (file.exists()) {
+                    boolean deleted = file.delete();
+                    if (!deleted) {
+                        log.warn("Failed to delete file after export failure: {}", file.getAbsolutePath());
+                    }
+                }
+            } catch (Exception deleteEx) {
+                log.error("Error deleting failed export file: {}", deleteEx.getMessage());
+            }
             if (redisTemplate != null) {
-                redisTemplate.opsForValue().set(exportKey, ReportType.FAILED);
+                redisTemplate.opsForValue().set(exportKey, ReportType.FAILED.getValues());
+            } else {
+                exportStatusTracker.writeStatus(file, ReportType.FAILED.getValues());
             }
         }
     }
 
     private void generateCsv(List<TimeOffExportView> data, File file) throws Exception {
-        try (FileWriter fw = new FileWriter(file, StandardCharsets.UTF_8); CSVWriter csv = new CSVWriter(fw, CSVWriter.DEFAULT_SEPARATOR, CSVWriter.DEFAULT_QUOTE_CHARACTER, CSVWriter.DEFAULT_ESCAPE_CHARACTER, CSVWriter.DEFAULT_LINE_END)) {
+        file.getParentFile().mkdirs();
+        try (FileWriter fw = new FileWriter(file, StandardCharsets.UTF_8);
+             CSVWriter csv = new CSVWriter(fw, CSVWriter.DEFAULT_SEPARATOR, CSVWriter.DEFAULT_QUOTE_CHARACTER, CSVWriter.DEFAULT_ESCAPE_CHARACTER, CSVWriter.DEFAULT_LINE_END)) {
             ClassPathResource resource = new ClassPathResource("templates/text/timeoff_request_csv_header.txt");
             try (BufferedReader br = new BufferedReader(new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8))) {
                 String headerLine = br.readLine();
@@ -647,6 +728,7 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
     }
 
     private void generateXlsx(List<TimeOffExportView> data, File file) throws Exception {
+        file.getParentFile().mkdirs();
         try (Workbook workbook = new XSSFWorkbook();
              FileOutputStream fos = new FileOutputStream(file)) {
             Sheet sheet = workbook.createSheet("TimeOff Report");
@@ -687,40 +769,13 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
     @Override
     public String exportStatus(String exportId, String schema, String orgId) {
         String exportKey = cacheKeyUtil.getExport(schema, orgId, exportId);
-        if (redisTemplate == null) {
-            return "REDIS_UNAVAILABLE";
+        if (redisTemplate != null) {
+            Object val = redisTemplate.opsForValue().get(exportKey);
+            return (val == null ? "NOT_FOUND" : val.toString());
         }
-        Object val = redisTemplate.opsForValue().get(exportKey);
-        if (val == null) {
-            return "NOT_FOUND";
-        }
-        return val.toString();
-    }
-
-    @Override
-    public Resource downloadReport(
-            String exportId,
-            String schema,
-            String orgId,
-            String type) {
-        String exportKey = cacheKeyUtil.getExport(schema, orgId, exportId);
-        if (redisTemplate == null) {
-            throw new IllegalStateException("Redis unavailable. Cannot verify export status.");
-        }
-        Object redisValue = redisTemplate.opsForValue().get(exportKey);
-        if (redisValue == null) {
-            throw new IllegalStateException("Export ID not found.");
-        }
-        String[] parts = redisValue.toString().split("\\|");
-        if (!parts[0].equalsIgnoreCase(ReportType.COMPLETED.getValues())) {
-            throw new IllegalStateException("Report is not ready. Current status = " + parts[0]);
-        }
-        String fileName = parts[1];
-        File file = new File(downloadDir + fileName);
-        if (!file.exists()) {
-            throw new RuntimeException("Report file not found: " + fileName);
-        }
-        return new FileSystemResource(file);
+        File file = new File(downloadDir + exportId);
+        String status = exportStatusTracker.readStatus(file);
+        return status == null ? "NOT_FOUND" : status;
     }
 
     @Override

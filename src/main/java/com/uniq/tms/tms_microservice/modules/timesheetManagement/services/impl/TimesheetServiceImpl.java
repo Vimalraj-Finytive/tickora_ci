@@ -1,5 +1,6 @@
 package com.uniq.tms.tms_microservice.modules.timesheetManagement.services.impl;
 
+import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.Status;
 import com.uniq.tms.tms_microservice.modules.locationManagement.adapter.LocationAdapter;
 import com.uniq.tms.tms_microservice.modules.locationManagement.entity.LocationEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.OrganizationAdapter;
@@ -47,6 +48,9 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.logging.log4j.Logger;
+
+import javax.swing.text.html.Option;
+
 import static com.uniq.tms.tms_microservice.modules.timesheetManagement.enums.TimesheetStatusEnum.*;
 import static com.uniq.tms.tms_microservice.modules.workScheduleManagement.enums.WorkScheduleTypeEnum.FIXED;
 import static com.uniq.tms.tms_microservice.modules.workScheduleManagement.enums.WorkScheduleTypeEnum.FLEXIBLE;
@@ -81,6 +85,8 @@ public class TimesheetServiceImpl implements TimesheetService {
         this.organizationAdapter = organizationAdapter;
     }
 
+    private final ZoneId zoneId = ZoneId.of("Asia/Kolkata");
+
     public PaginationResponseDto getAllTimesheets(String userIdFromToken, String orgId, String role, TimesheetReportDto request) {
         LocalDate fromDate = request.getFromDate();
         LocalDate toDate = request.getToDate();
@@ -114,9 +120,7 @@ public class TimesheetServiceImpl implements TimesheetService {
                 log.info("endDate: {}", endDate);
             }
         }
-
         List<UserEntity> targetUsers ;
-
         if ((groupIds == null && roleIds == null && locationIds == null) && keyword != null && !keyword.isBlank()) {
             log.info("Group, role is null");
             String normalizaedKeyword = normalizeKeyword(keyword);
@@ -127,7 +131,6 @@ public class TimesheetServiceImpl implements TimesheetService {
         }else{
             targetUsers = resolveTargetUsers(userIdFromToken, groupIds, userId, orgId, roleIds, locationIds, statusIds,startDate, endDate);
         }
-
         if ((groupIds != null || roleIds != null || locationIds != null) && keyword != null && !keyword.isBlank()) {
             log.info("Group, role is not null");
             String normalizedKeyword = normalizeKeyword(keyword);
@@ -180,34 +183,25 @@ public class TimesheetServiceImpl implements TimesheetService {
             LocalDate endDate
     ) {
         log.info("userId : {} , userIdFromToken : {}", userId, userIdFromToken);
-
         UserEntity currentUser = userAdapter.getUserById(userIdFromToken);
         String roleName = currentUser.getRole().getName().toUpperCase();
         log.info("Role name: {}", roleName);
-
-        // Privilege checks
         boolean canSeeOwn = rolePrivilegeHelper.roleHasPrivilege(roleName,
                 organizationCacheService.getPrivilegeKey(PrivilegeConstants.CAN_SEE_OWN_TIMESHEET));
         boolean canSeeGroup = rolePrivilegeHelper.roleHasPrivilege(roleName,
                 organizationCacheService.getPrivilegeKey(PrivilegeConstants.CAN_SEE_GROUP_LEVEL_TIMESHEETS));
         boolean canSeeAll = rolePrivilegeHelper.roleHasPrivilege(roleName,
                 organizationCacheService.getPrivilegeKey(PrivilegeConstants.CAN_SEE_ALL_TIMESHEETS));
-
         log.info("Privileges - Own: {}, Group: {}, All: {}", canSeeOwn, canSeeGroup, canSeeAll);
-
-
         Set<String> userIdSet = userId != null ? new HashSet<>(userId) : Collections.emptySet();
         Set<Long> roleIdSet = roleIds != null ? new HashSet<>(roleIds) : Collections.emptySet();
         Set<Long> groupIdSet = groupIds != null ? new HashSet<>(groupIds) : Collections.emptySet();
         Set<Long> locationIdSet = locationIds != null ? new HashSet<>(locationIds) : Collections.emptySet();
-
-        // Flags
         boolean hasGroupFilter = !groupIdSet.isEmpty();
         boolean hasRoleFilter = !roleIdSet.isEmpty();
         boolean hasLocationFilter = !locationIdSet.isEmpty();
         boolean hasStatusFilter = statusId != null && !statusId.isEmpty();
         boolean hasUserFilter = !userIdSet.isEmpty();
-        // Own + Group + All
         if (canSeeOwn && canSeeGroup && canSeeAll) {
             if (!userIdSet.isEmpty()){
                 if (userIdSet.contains(userIdFromToken)){
@@ -215,7 +209,6 @@ public class TimesheetServiceImpl implements TimesheetService {
                     return List.of(currentUser);
                 }
             }
-
             List<UserEntity> allUsers = userAdapter.getAllUsers(orgId, userIdFromToken,
                     UserRole.SUPERADMIN.getHierarchyLevel());
 
@@ -223,11 +216,8 @@ public class TimesheetServiceImpl implements TimesheetService {
                 return applyFilters(allUsers, userIdSet, groupIdSet, locationIdSet, roleIdSet,
                         statusId, startDate, endDate, userIdFromToken);
             }
-
             return allUsers;
         }
-
-        // Own + Group
         if (canSeeOwn && canSeeGroup) {
             if (!userIdSet.isEmpty()){
               if (userIdSet.contains(userIdFromToken)){
@@ -235,10 +225,8 @@ public class TimesheetServiceImpl implements TimesheetService {
                     return List.of(currentUser);
                 }
             }
-
             List<Long> supervisedGroupIds = userAdapter.findGroupIdsBySupervisorId(userIdFromToken);
             log.info("Supervised group ids: {}", supervisedGroupIds);
-
             List<UserEntity> supervisedUsers = userAdapter.findMembersByGroupIds(supervisedGroupIds, userIdFromToken);
             if(hasUserFilter || hasLocationFilter || hasRoleFilter || hasGroupFilter || hasStatusFilter) {
                 return applyFilters(supervisedUsers, userIdSet, groupIdSet, locationIdSet, roleIdSet,
@@ -246,8 +234,6 @@ public class TimesheetServiceImpl implements TimesheetService {
             }
             return supervisedUsers;
         }
-
-        //  Own only
         if (canSeeOwn) {
             if (hasGroupFilter || hasUserFilter || hasRoleFilter || hasLocationFilter || hasStatusFilter) {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not supervise the selected group(s)");
@@ -257,7 +243,6 @@ public class TimesheetServiceImpl implements TimesheetService {
             }
             return List.of(currentUser);
         }
-        // No Access
         throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied based on role privileges.");
     }
 
@@ -294,12 +279,10 @@ public class TimesheetServiceImpl implements TimesheetService {
 
         Stream<UserEntity> stream = baseUsers.stream();
 
-        // User filter
         if (!userIdSet.isEmpty()) {
             stream = stream.filter(user -> userIdSet.contains(user.getUserId()));
         }
 
-        // Location filter
         if (!locationIdSet.isEmpty()) {
             List<UserLocationEntity> userLocations = locationAdapter.findUserLocationsByLocationId(new ArrayList<>(locationIdSet));
             List<Long> locationIds = userLocations.stream()
@@ -327,7 +310,6 @@ public class TimesheetServiceImpl implements TimesheetService {
             stream = stream.filter(user -> locationUserIds.contains(user.getUserId()));
         }
 
-        // Group filter
         if (!groupIdSet.isEmpty()) {
             List<Long> validGroupIds = supervisedGroupIds != null
                     ? groupIdSet.stream().filter(supervisedGroupIds::contains).toList()
@@ -352,12 +334,10 @@ public class TimesheetServiceImpl implements TimesheetService {
             stream = stream.filter(user -> groupUserIds.contains(user.getUserId()));
         }
 
-        // Role filter
         if (!roleIdSet.isEmpty()) {
             stream = stream.filter(user -> roleIdSet.contains(user.getRole().getRoleId()));
         }
 
-        // Status filter
         if (statusId != null && !statusId.isEmpty()) {
 
             Set<String> specialStatusId = Set.of(ABSENT.getId(), NOT_MARKED.getId());
@@ -422,7 +402,6 @@ public class TimesheetServiceImpl implements TimesheetService {
     @Override
     @Transactional
     public List<TimesheetHistory> processTimesheetLogs(List<TimesheetHistory> timesheetMiddlewareLogs) {
-
         List<TimesheetHistoryEntity> entities = timesheetMiddlewareLogs.stream()
                 .map(timesheetEntityMapper::toDto)
                 .map(timesheetEntityMapper::toEntity)
@@ -461,7 +440,6 @@ public class TimesheetServiceImpl implements TimesheetService {
                 LocalTime lastClockOut = timesheet.getLastClockOut();
                 long trackedSeconds = timesheet.getTrackedHours().toSecondOfDay();
                 long breakSeconds = timesheet.getTotalBreakHours().toSecondOfDay();
-
                 for (TimesheetHistoryEntity log : logs) {
                     log.setTimesheet(timesheet);
                     log.setLoggedTimestamp(LocalDateTime.now(ZoneId.of("Asia/Kolkata")));
@@ -514,17 +492,10 @@ public class TimesheetServiceImpl implements TimesheetService {
             TimesheetDto request,
             String orgId) {
         boolean isSuperAdmin = UserRoleName.SUPERADMIN.getRoleName().equalsIgnoreCase(roleName);
-
         if (!isSuperAdmin && userIdFromToken.equals(userId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "Access denied: you cannot edit your own timesheet.");
         }
-
-        if (!isSuperAdmin) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                    "Access denied: only superadmin can edit other users' timesheets.");
-        }
-
         try {
             TimesheetEntity timesheet = timesheetAdapter.findUserIdAndDate(userId, date);
             boolean isNew = false;
@@ -608,7 +579,7 @@ public class TimesheetServiceImpl implements TimesheetService {
                 clockInHistory.setLogTime(request.getFirstClockIn());
                 clockInHistory.setLogType(LogType.CLOCK_IN);
                 clockInHistory.setLogFrom(LogFrom.MANUAL_ENTRY);
-                clockInHistory.setLocationId(locationEntity.getLocationId());
+                clockInHistory.setLocationId(locationEntity);
                 clockInHistory.setLoggedTimestamp(LocalDateTime.now());
                 timesheetAdapter.saveTimesheetHistory(clockInHistory);
             }
@@ -618,7 +589,7 @@ public class TimesheetServiceImpl implements TimesheetService {
                 clockOutHistory.setLogTime(request.getLastClockOut());
                 clockOutHistory.setLogType(LogType.CLOCK_OUT);
                 clockOutHistory.setLogFrom(LogFrom.MANUAL_ENTRY);
-                clockOutHistory.setLocationId(locationEntity.getLocationId());
+                clockOutHistory.setLocationId(locationEntity);
                 clockOutHistory.setLoggedTimestamp(LocalDateTime.now());
                 timesheetAdapter.saveTimesheetHistory(clockOutHistory);
             }
@@ -627,7 +598,6 @@ public class TimesheetServiceImpl implements TimesheetService {
         log.error("Unhandled error in updateClockInOut", e);
         throw e;
     }
-
 }
 
 private void calculateHours(TimesheetEntity timesheet, WorkScheduleEntity workSchedule, boolean isManualClockOut) {
@@ -793,7 +763,7 @@ private void calculateHours(TimesheetEntity timesheet, WorkScheduleEntity workSc
                         entry.setLastClockOut(splitLocalTime.minusMinutes(1));
                         calculateHours(entry, workSchedule, false);
                         TimesheetHistoryEntity history = new TimesheetHistoryEntity();
-                        history.setLocationId(location.getLocationId());
+                        history.setLocationId(location);
                         history.setLogTime(splitLocalTime.minusMinutes(1));
                         history.setLogType(LogType.CLOCK_OUT);
                         history.setLogFrom(LogFrom.SYSTEM_GENERATED);
@@ -826,7 +796,7 @@ private void calculateHours(TimesheetEntity timesheet, WorkScheduleEntity workSc
                             calculateHours(entry, workSchedule, false);
                             log.info("Calculated Duration for Yesterday schedule");
                             TimesheetHistoryEntity history = new TimesheetHistoryEntity();
-                            history.setLocationId(location.getLocationId());
+                            history.setLocationId(location);
                             history.setLogTime(splitLocalTime.minusMinutes(1));
                             history.setLogType(LogType.CLOCK_OUT);
                             history.setLogFrom(LogFrom.SYSTEM_GENERATED);
@@ -1080,6 +1050,41 @@ private void calculateHours(TimesheetEntity timesheet, WorkScheduleEntity workSc
             }
 
             return result;
-        }
+    }
 
+    @Override
+    public void createTimesheet(TimesheetStatusEnum status, String userId, LocalDate date){
+        Optional<UserEntity> userEntity = userAdapter.findById(userId);
+        if (userEntity.isEmpty()) {
+            throw new IllegalArgumentException("User not found: " + userId);
+        }
+        TimesheetStatusEntity timesheetStatus =
+                timesheetAdapter.findByStatusName(status.getLabel())
+                        .orElseThrow(() ->
+                                new IllegalArgumentException("Invalid Timesheet Status: " + status));
+        TimesheetEntity entity = new TimesheetEntity();
+        entity.setUser(userEntity.get());
+        entity.setDate(date);
+        entity.setCreatedAt(LocalDateTime.now(zoneId));
+        entity.setUpdatedAt(LocalDateTime.now(zoneId));
+        entity.setStatus(timesheetStatus);
+        TimesheetEntity savedTimesheet = timesheetAdapter.save(entity);
+        TimesheetHistoryEntity timesheetHistoryEntity = new TimesheetHistoryEntity();
+        timesheetHistoryEntity.setTimesheet(savedTimesheet);
+        timesheetHistoryEntity.setLoggedTimestamp(LocalDateTime.now(zoneId));
+        LocationEntity locationEntity = locationAdapter.findDefaultLocation();
+        if(locationEntity == null){
+            throw new CommonExceptionHandler.DefaultLocationNotFoundException("Default location not found");
+        }
+        timesheetHistoryEntity.setLocationId(locationEntity);
+        timesheetHistoryEntity.setLogFrom(LogFrom.SYSTEM_GENERATED);
+        timesheetHistoryEntity.setLogTime(LocalTime.now(zoneId));
+        timesheetHistoryEntity.setLogType(null);
+        timesheetAdapter.saveTimesheetHistory(timesheetHistoryEntity);
+    }
+
+    @Override
+    public void deleteTimesheet(String userId, LocalDate date){
+        timesheetAdapter.deleteTimesheet(userId,date);
+    }
 }

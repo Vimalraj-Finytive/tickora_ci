@@ -178,4 +178,9 @@ public class LocationAdapterImpl implements LocationAdapter {
     public List<UserEntity> findUsersByIdsAndLocationIds(List<String> userIds, List<Long> locationIds) {
         return userLocationRepository.findUsersByIdsAndLocationIds(userIds, locationIds);
     }
+
+    @Override
+    public LocationEntity findDefaultLocation() {
+        return locationRepository.findByIsDefaultTrue();
+    }
 }
