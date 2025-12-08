@@ -9,7 +9,8 @@ public enum TimesheetStatusEnum {
     PUBLIC_HOLIDAY("TSS005","Public Holiday"),
     HALF_DAY( "TSS006","Half Day"),
     PERMISSION("TSS007","Permission"),
-    REST_DAY("TSS008","Rest Day");
+    REST_DAY("TSS008","Rest Day"),
+    UNPAID_LEAVE("TSS0009","Unpaid Leave");
 
     private final String id;
     private final String label;

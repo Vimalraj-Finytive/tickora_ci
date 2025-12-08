@@ -378,9 +378,11 @@ SELECT * FROM (VALUES
     ('TSS002', 'Absent'),
     ('TSS003', 'Paid Leave'),
     ('TSS004', 'Not Marked'),
-    ('TSS005', 'Holiday'),
+    ('TSS005', 'Public Holiday'),
     ('TSS006', 'Half Day'),
-    ('TSS007', 'Permission')
+    ('TSS007', 'Permission'),
+    ('TSS008', 'Rest Day'),
+    ('TSS0009', 'Unpaid Leave')
 ) AS tmp(status_id, status_name)
 WHERE NOT EXISTS (SELECT 1 FROM ${schemaName}.timesheet_status);
 
