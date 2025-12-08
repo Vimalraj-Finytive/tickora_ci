@@ -13,8 +13,6 @@ public class TimeOffPolicyEditRequestDto {
     private LocalDate validityEndDate;
     private LocalDate userValidFrom;
     private LocalDate userValidTo;
-    private List<String> userIds;
-    private List<Long> groupIds;
 
     public String getPolicyName() {
         return policyName;
@@ -80,20 +78,5 @@ public class TimeOffPolicyEditRequestDto {
         this.userValidFrom = userValidFrom;
     }
 
-    public List<String> getUserIds() {
-        return userIds;
-    }
-
-    public void setUserIds(List<String> userIds) {
-        this.userIds = userIds;
-    }
-
-    public List<Long> getGroupIds() {
-        return groupIds;
-    }
-
-    public void setGroupIds(List<Long> groupIds) {
-        this.groupIds = groupIds;
-    }
 }
 

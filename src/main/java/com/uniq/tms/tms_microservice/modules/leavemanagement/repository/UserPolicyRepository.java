@@ -71,10 +71,12 @@ public interface UserPolicyRepository extends JpaRepository<UserPolicyEntity, Lo
     );
 
     @Query("""
-    SELECT DISTINCT up.user.userId
-    FROM UserPolicyEntity up
-    """)
-    List<String> findAllUserIdsInUserPolicies();
+   SELECT DISTINCT up.user.userId
+   FROM UserPolicyEntity up
+   WHERE up.validFrom <= :date
+   """)
+    List<String> findAllUserIdsInUserPolicies(
+            @Param("date") LocalDate date);
 
 
     List<UserPolicyEntity> findByUser_UserIdAndPolicy_AccrualType(
