@@ -2349,29 +2349,41 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public List<UserLevelModel> getUsersInGroup() {
-        String userId=authHelper.getUserId();
+    public List<UserLevelModel> getRequesters() {
+        String approverId = authHelper.getUserId();
         String role = authHelper.getRole();
+        List<UserEntity> users;
         if (RoleName.SUPERADMIN.getRoleName().equalsIgnoreCase(role)) {
-            List<UserEntity> allUsers = userAdapter.getallUsers();
-            if (allUsers.isEmpty()) {
-                throw new IllegalArgumentException("No users found");
-            }
-            return userEntityMapper.toUserModelList(allUsers);
+            users = userAdapter.getallUsers(approverId);
+        }else{
+            users = userAdapter.findByApproverId(approverId);}
+        if (users.isEmpty()) {
+            throw new IllegalArgumentException("No users found");
         }
-        List<GroupEntity> supervisorGroups = userAdapter.getSupervisorGroups(userId);
+        return userEntityMapper.toUserModelList(users);
+    }
 
-        if (supervisorGroups == null || supervisorGroups.isEmpty()) {
-            throw new IllegalArgumentException("Access Denied: User is not a supervisor");
+    @Override
+    public RequestApproverModel assignRequestApprover(RequestApproverDto dto) {
+        String approverId = dto.getRequestId();
+        List<String> requestedUserIds = dto.getUserId();
+        UserEntity approver = userAdapter.findById(approverId)
+                .orElseThrow(() -> new IllegalArgumentException("Approver not found or inactive"));
+        if (requestedUserIds.contains(approverId)) {
+            throw new IllegalArgumentException("A user cannot assign himself as approver");
         }
-        List<Long> groupIds = supervisorGroups.stream()
-                .map(GroupEntity::getGroupId)
-                .toList();
-        List<UserEntity> members = userAdapter.findusersInGroup(groupIds, userId);
-
-        if (members.isEmpty()) {
-            throw new IllegalArgumentException("No group members found");
+        List<UserEntity> activeUsers = userAdapter.findAllById(requestedUserIds);
+        Set<String> foundIds = activeUsers.stream()
+                .map(UserEntity::getUserId)
+                .collect(Collectors.toSet());
+        List<String> invalidIds = requestedUserIds.stream()
+                .filter(id -> !foundIds.contains(id)).toList();
+        if (!invalidIds.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "These userIds are invalid or inactive: " + String.join(", ", invalidIds)
+            );
         }
-        return userEntityMapper.toUserModelList(members);
+        userAdapter.updateApproverForUsers(approverId, requestedUserIds);
+        return userEntityMapper.toModel(approverId, requestedUserIds);
     }
 }
