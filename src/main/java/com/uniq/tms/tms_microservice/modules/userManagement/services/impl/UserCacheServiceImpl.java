@@ -157,93 +157,94 @@ public class UserCacheServiceImpl implements UserCacheService {
     @Override
     public CompletableFuture<Map<String, UserProfileResponseDto>> loadUsersProfile(String orgId, String schema) {
 
-        log.info("Current User profile tenant:{}", schema);
-        List<UserEntity> users = userRepository.findAllActiveUsersByOrganizationId(orgId);
-        Map<String, UserProfileResponseDto> userProfileMap = new HashMap<>();
-
-        if (users.isEmpty()) {
-            log.warn("No active users found for orgId: {}", orgId);
-            return CompletableFuture.completedFuture(userProfileMap);
-        }
-
-        // Fetch organization + type
-        OrganizationEntity org = organizationRepository.findByOrganizationId(orgId).orElse(null);
-        Optional<OrganizationTypeEntity> organizationType =
-                (org != null && org.getOrgType() != null)
-                        ? organizationTypeRepository.findById(org.getOrgType())
-                        : Optional.empty();
-
-        for (UserEntity user : users) {
-            String userId = user.getUserId();
-
-            // Fetch locations
-            List<UserLocationEntity> userLocations = userLocationRepository.findByUser_UserId(userId);
-            List<LocationDto> locationDtos;
-
-            if (userLocations.isEmpty()) {
-                log.warn("No locations found for userId {}", userId);
-                locationDtos = Collections.emptyList();
-            } else {
-                locationDtos = userLocations.stream()
-                        .filter(ul -> ul.getLocation() != null)
-                        .map(ul -> locationDtoMapper.toDto(ul.getLocation()))
-                        .toList();
-            }
-
-            // Fetch groups
-            List<UserGroupEntity> userGroups = userRepository.findUserByOrganizationIdAndUserId(orgId, userId);
-            List<UserGroupProfileDto> groupDtos = userGroups.isEmpty()
-                    ? Collections.emptyList()
-                    : userGroups.stream().map(userDtoMapper::toGroupsDto).toList();
-
-            // Parent details if student
-            AtomicReference<List<ParentDto>> parentDto = new AtomicReference<>(Collections.emptyList());
-
-            if (UserRole.STUDENT.name().equalsIgnoreCase(user.getRole().getName())) {
-                userRepository.findByUserId(userId).ifPresent(sp -> {
-                    secondaryDetailsRepository.findByUserId(sp.getUserId()).ifPresent(parentEntity -> {
-                        parentDto.set(List.of(new ParentDto(
-                                parentEntity.getId(),
-                                parentEntity.getUserName(),
-                                parentEntity.getEmail(),
-                                parentEntity.getMobile()
-                        )));
-                    });
-                });
-            }
-
-            // Build profile
-            UserProfileResponseDto profile = new UserProfileResponseDto(
-                    userId,
-                    user.getUserName(),
-                    user.getEmail(),
-                    user.getMobileNumber(),
-                    user.getRole().getName(),
-                    user.getDateOfJoining(),
-                    locationDtos,
-                    groupDtos,
-                    org != null ? org.getOrgName() : null,
-                    (user.getWorkSchedule() != null ? user.getWorkSchedule().getScheduleName() : "-"),
-                    organizationType.map(OrganizationTypeEntity::getOrgTypeName).orElse("-"),
-                    parentDto.get()
-            );
-
-            userProfileMap.put(userId, profile);
-        }
-
-        // Cache all profiles
-        try {
-            if (redisTemplate != null) {
-                String redisKey = cacheKeyUtil.getProfileKey(orgId, schema);
-                redisTemplate.opsForHash().putAll(redisKey, userProfileMap);
-                log.info("Cached {} profiles under key: {}", userProfileMap.size(), redisKey);
-            } else {
-                log.warn("RedisTemplate is null, skipping cache for user profiles for orgId: {}", orgId);
-            }
-        } catch (Exception e) {
-            log.warn("Redis putAll failed for orgId {}: {}", orgId, e.getMessage());
-        }
-        return CompletableFuture.completedFuture(userProfileMap);
+//        log.info("Current User profile tenant:{}", schema);
+//        List<UserEntity> users = userRepository.findAllActiveUsersByOrganizationId(orgId);
+//        Map<String, UserProfileResponseDto> userProfileMap = new HashMap<>();
+//
+//        if (users.isEmpty()) {
+//            log.warn("No active users found for orgId: {}", orgId);
+//            return CompletableFuture.completedFuture(userProfileMap);
+//        }
+//
+//        // Fetch organization + type
+//        OrganizationEntity org = organizationRepository.findByOrganizationId(orgId).orElse(null);
+//        Optional<OrganizationTypeEntity> organizationType =
+//                (org != null && org.getOrgType() != null)
+//                        ? organizationTypeRepository.findById(org.getOrgType())
+//                        : Optional.empty();
+//
+//        for (UserEntity user : users) {
+//            String userId = user.getUserId();
+//
+//            // Fetch locations
+//            List<UserLocationEntity> userLocations = userLocationRepository.findByUser_UserId(userId);
+//            List<LocationDto> locationDtos;
+//
+//            if (userLocations.isEmpty()) {
+//                log.warn("No locations found for userId {}", userId);
+//                locationDtos = Collections.emptyList();
+//            } else {
+//                locationDtos = userLocations.stream()
+//                        .filter(ul -> ul.getLocation() != null)
+//                        .map(ul -> locationDtoMapper.toDto(ul.getLocation()))
+//                        .toList();
+//            }
+//
+//            // Fetch groups
+//            List<UserGroupEntity> userGroups = userRepository.findUserByOrganizationIdAndUserId(orgId, userId);
+//            List<UserGroupProfileDto> groupDtos = userGroups.isEmpty()
+//                    ? Collections.emptyList()
+//                    : userGroups.stream().map(userDtoMapper::toGroupsDto).toList();
+//
+//            // Parent details if student
+//            AtomicReference<List<ParentDto>> parentDto = new AtomicReference<>(Collections.emptyList());
+//
+//            if (UserRole.STUDENT.name().equalsIgnoreCase(user.getRole().getName())) {
+//                userRepository.findByUserId(userId).ifPresent(sp -> {
+//                    secondaryDetailsRepository.findByUserId(sp.getUserId()).ifPresent(parentEntity -> {
+//                        parentDto.set(List.of(new ParentDto(
+//                                parentEntity.getId(),
+//                                parentEntity.getUserName(),
+//                                parentEntity.getEmail(),
+//                                parentEntity.getMobile()
+//                        )));
+//                    });
+//                });
+//            }
+//
+//            // Build profile
+//            UserProfileResponseDto profile = new UserProfileResponseDto(
+//                    userId,
+//                    user.getUserName(),
+//                    user.getEmail(),
+//                    user.getMobileNumber(),
+//                    user.getRole().getName(),
+//                    user.getDateOfJoining(),
+//                    locationDtos,
+//                    groupDtos,
+//                    org != null ? org.getOrgName() : null,
+//                    (user.getWorkSchedule() != null ? user.getWorkSchedule().getScheduleName() : "-"),
+//                    organizationType.map(OrganizationTypeEntity::getOrgTypeName).orElse("-"),
+//                    parentDto.get()
+//            );
+//
+//            userProfileMap.put(userId, profile);
+//        }
+//
+//        // Cache all profiles
+//        try {
+//            if (redisTemplate != null) {
+//                String redisKey = cacheKeyUtil.getProfileKey(orgId, schema);
+//                redisTemplate.opsForHash().putAll(redisKey, userProfileMap);
+//                log.info("Cached {} profiles under key: {}", userProfileMap.size(), redisKey);
+//            } else {
+//                log.warn("RedisTemplate is null, skipping cache for user profiles for orgId: {}", orgId);
+//            }
+//        } catch (Exception e) {
+//            log.warn("Redis putAll failed for orgId {}: {}", orgId, e.getMessage());
+//        }
+//        return CompletableFuture.completedFuture(userProfileMap);
+        return null;
     }
 
     /**
