@@ -57,8 +57,8 @@ public class UserPolicyAdapterImpl implements UserPolicyAdapter {
     }
 
     @Override
-    public List<String> findAllUserIdsInUserPolicies() {
-        return userPolicyRepo.findAllUserIdsInUserPolicies();
+    public List<String> findAllUserIdsInUserPolicies(LocalDate date) {
+        return userPolicyRepo.findAllUserIdsInUserPolicies(date);
     }
 
     @Override

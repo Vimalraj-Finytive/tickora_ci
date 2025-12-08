@@ -27,7 +27,7 @@ public interface UserPolicyAdapter {
 
     boolean isUserPolicyActive(String policyId, String userId,  LocalDate startDate, LocalDate endDate);
 
-    List<String> findAllUserIdsInUserPolicies();
+    List<String> findAllUserIdsInUserPolicies(LocalDate date);
 
 
     List<UserPolicyEntity> findByUserIdAndAccrualType(String userId, AccrualType accrualType);
