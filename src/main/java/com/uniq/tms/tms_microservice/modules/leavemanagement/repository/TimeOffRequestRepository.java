@@ -207,5 +207,21 @@ public interface TimeOffRequestRepository extends JpaRepository<TimeOffRequestEn
             @Param("viewerId") String viewerId
     );
 
+    @Query(value = """
+    SELECT *
+    FROM timeoff_request_view
+    WHERE leave_start_date >= :fromDate
+      AND leave_end_date <= :toDate
+      AND (array_length(:policies, 1) IS NULL OR policy_id = ANY(:policies))
+      AND (array_length(:status, 1) IS NULL OR status = ANY(:status))
+    """,
+            nativeQuery = true)
+    List<TimeOffExportView> fetchAllRequests(
+            @Param("fromDate") LocalDate fromDate,
+            @Param("toDate") LocalDate toDate,
+            @Param("status") String[] status,
+            @Param("policies") String[] policies
+    );
+
 
 }

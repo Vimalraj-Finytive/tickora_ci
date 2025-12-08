@@ -568,7 +568,7 @@ CREATE TABLE IF NOT EXISTS ${schemaName}.payroll_history (
     action_at TIMESTAMP NOT NULL,
     action_type VARCHAR(50) NOT NULL,
     action_by VARCHAR(100) NOT NULL,
-    payroll_id VARCHAR(50) NOT NULL,
+    payroll_id VARCHAR(50) NOT NULL
 
 );
 

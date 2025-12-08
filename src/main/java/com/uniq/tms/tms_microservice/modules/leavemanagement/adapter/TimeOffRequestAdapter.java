@@ -62,4 +62,12 @@ public interface TimeOffRequestAdapter {
             String[] policyList,
             String finalUserId
     );
+
+    List<TimeOffExportView> fetchAllRequests(
+            LocalDate fromDate,
+            LocalDate toDate,
+            String[] status,
+            String[] policies
+    );
+
 }
