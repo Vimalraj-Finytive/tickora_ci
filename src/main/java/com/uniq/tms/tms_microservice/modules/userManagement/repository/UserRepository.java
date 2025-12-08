@@ -299,4 +299,6 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
     @Query("UPDATE UserEntity u SET u.requestApproverId = :approverId WHERE u.id IN (:requestedUserIds)")
     void updateApproverForUsers(@Param("approverId") String approverId,
                                 @Param("requestedUserIds") List<String> requestedUserIds);
+
+    Optional<UserEntity> findByUserId(String userId);
 }

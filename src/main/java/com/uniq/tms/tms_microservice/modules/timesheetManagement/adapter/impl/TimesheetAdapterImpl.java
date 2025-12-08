@@ -672,9 +672,9 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
 
     @Override
     public TimesheetHistoryEntity saveTimesheetHistory(TimesheetHistoryEntity history) {
+        log.info("userid:{},date:{}",history.getTimesheet().getUser().getUserId(),history.getTimesheet().getDate());
         TimesheetEntity timesheet = timesheetRepository.findByUser_UserIdAndDate(history.getTimesheet().getUser().getUserId(), history.getTimesheet().getDate())
                 .orElseThrow(() -> new IllegalArgumentException("Timesheet not found for user: " + history.getTimesheet().getUser().getUserId()));
-
         history.setTimesheet(timesheet);
         return timesheetHistoryRepository.save(history);
     }
@@ -1006,5 +1006,10 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
     @Override
     public List<TimesheetEntity> getTimesheetByUserIds(String userId, int year, int month) {
         return timesheetRepository.findByUserAndMonth(userId, year, month);
+    }
+
+    @Override
+    public void deleteTimesheet(String userId, LocalDate date) {
+        timesheetRepository.deleteByUser_UserIdAndDate(userId,date);
     }
 }
