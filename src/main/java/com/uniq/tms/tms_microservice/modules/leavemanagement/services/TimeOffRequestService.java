@@ -19,6 +19,5 @@ public interface TimeOffRequestService {
     List<EnumModel> getStatus();
     String startExporting(TimeOffExportRequestDto request, String schema, String orgId);
     String exportStatus(String exportId, String schema, String orgId);
-    Resource downloadReport(String exportId, String schema, String orgId, String type);
     List<EnumModel> getHourType();
 }

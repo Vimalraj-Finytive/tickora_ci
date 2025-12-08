@@ -44,5 +44,4 @@ public interface PayRollService {
 
     String getExportStatus(String exportId, String schema, String orgId);
 
-    File downloadPayroll(String exportId, String schema, String orgId);
 }

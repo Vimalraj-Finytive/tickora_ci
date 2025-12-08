@@ -105,39 +105,36 @@ public class TimeOffRequestController {
     }
 
     @GetMapping("/download")
-    public ResponseEntity<InputStreamResource> downloadTimesheet(
+    public ResponseEntity<?> downloadTimeoffRequest(
             @RequestHeader("Authorization") String token,
             @RequestParam String fileName) {
         try {
-            log.info("Downloading file: {}", fileName);
-
             if (fileName.contains("..") || fileName.contains("/") || fileName.contains("\\")) {
-                return ResponseEntity.badRequest().build();
+                return ResponseEntity.badRequest().body(
+                        new ApiResponse<>(400, "Invalid file name", null)
+                );
             }
-
             Path filePath = Paths.get(downloadDir).resolve(fileName);
-            log.info("File path: {}", filePath);
-
             if (!Files.exists(filePath)) {
-                log.warn("File not found: {}", filePath);
-                return ResponseEntity.notFound().build();
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                        new ApiResponse<>(404, "File not generated yet. Please try again later.", null)
+                );
             }
-
             long fileSize = Files.size(filePath);
             InputStreamResource resource = new InputStreamResource(Files.newInputStream(filePath));
             MediaType mediaType = determineMediaType(fileName);
-
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "attachment; filename=\"" + fileName + "\"; filename*=UTF-8''" +
-                                    URLEncoder.encode(fileName, StandardCharsets.UTF_8))
+                            "attachment; filename=\"" + fileName +
+                                    "\"; filename*=UTF-8''" + URLEncoder.encode(fileName, StandardCharsets.UTF_8))
                     .contentType(mediaType)
                     .contentLength(fileSize)
                     .body(resource);
 
-        } catch (io.jsonwebtoken.io.IOException | java.io.IOException e) {
-            log.error("Error downloading file: {}", fileName, e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                    new ApiResponse<>(500, "Error reading file", null)
+            );
         }
     }
 
@@ -151,8 +148,8 @@ public class TimeOffRequestController {
         }
     }
 
-    @GetMapping("/HourType")
-    public ResponseEntity<ApiResponse> getHourType(
+    @GetMapping("/hourType")
+    public ResponseEntity<ApiResponse<List<EnumDto>>> getHourType(
             @RequestHeader("Authorization") String token) {
         ApiResponse<List<EnumDto>> response = timeOffFacade.getHourType();
         return ResponseEntity.status(response.getStatusCode()).body(response);

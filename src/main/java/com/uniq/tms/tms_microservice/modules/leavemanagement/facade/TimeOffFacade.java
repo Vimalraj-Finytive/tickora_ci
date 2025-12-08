@@ -15,6 +15,7 @@ import com.uniq.tms.tms_microservice.shared.dto.EnumDto;
 import com.uniq.tms.tms_microservice.shared.dto.EnumModel;
 import com.uniq.tms.tms_microservice.shared.helper.AuthHelper;
 import org.springframework.core.io.Resource;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.*;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.mapper.TimeOffPolicyDtoMapper;
@@ -221,17 +222,20 @@ public class TimeOffFacade {
 
     public ApiResponse<Map<String,String>> startExportJob(TimeOffExportRequestDto request, String schema, String orgId) {
         String exportId = timeOffRequestService.startExporting(request, schema, orgId);
-        return new ApiResponse<>(202,"Report generation Started",exportId);
+        return new ApiResponse<>(
+                HttpStatus.ACCEPTED.value(),
+                "Export started",
+                exportId
+        );
     }
 
     public ApiResponse<Map<String, String>> getExportStatus(String schema, String orgId, String exportId) {
         String exportStatus = timeOffRequestService.exportStatus(exportId, schema, orgId);
-        return new ApiResponse<>(200,"Fetched Report Status Successfully",exportStatus);
-    }
-
-    public ApiResponse<Resource> downloadExport(String schema, String orgId, String exportId, String type) {
-        Resource downloadStatus = timeOffRequestService.downloadReport(exportId, schema, orgId, type);
-        return new ApiResponse<>(200,"Report Downloaded Successfully",downloadStatus);
+        return new ApiResponse<>(
+                HttpStatus.OK.value(),
+                "Status fetched",
+                exportStatus
+        );
     }
 
     public ApiResponse<List<EnumDto>> getResetFrequencyStatus() {

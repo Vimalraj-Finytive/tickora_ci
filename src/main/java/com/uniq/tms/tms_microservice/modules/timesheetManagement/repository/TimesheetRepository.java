@@ -7,6 +7,7 @@ import com.uniq.tms.tms_microservice.modules.timesheetManagement.projection.Time
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.projection.TimesheetUserProjection;
 import com.uniq.tms.tms_microservice.modules.userManagement.projections.UserDashboard;
 import com.uniq.tms.tms_microservice.modules.userManagement.projections.UserGroupProjection;
+import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -125,4 +126,6 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
             @Param("month") int month
     );
 
+    @Transactional
+    void deleteByUser_UserIdAndDate(String userId, LocalDate date);
 }
