@@ -482,7 +482,7 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
                 grouped.put(key, record);
             }
 
-            if ("VIEWER".equals(row.getViewerType())) {
+            if (ViewerType.VIEWER.equals(row.getViewerType())) {
                 Map<String, Object> v = new HashMap<>();
                 v.put("userId", row.getViewerId());
                 v.put("userName", row.getViewerName());
@@ -490,7 +490,7 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
                 ((List<Map<String, Object>>) record.get("viewers")).add(v);
             }
 
-            if ("APPROVER".equals(row.getViewerType())) {
+            if (ViewerType.APPROVER.equals(row.getViewerType())) {
                 Map<String, Object> a = new HashMap<>();
                 a.put("userId", row.getViewerId());
                 a.put("userName", row.getViewerName());
@@ -504,7 +504,6 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
 
     public List<TimeOffExportView> fetchExportRows(TimeOffExportRequest request, String loggedUserId) {
 
-
         String[] statusArr = request.getStatus() == null ? new String[0] : request.getStatus().toArray(new String[0]);
         String[] policyArr = request.getPolicyIds() == null ? new String[0] : request.getPolicyIds().toArray(new String[0]);
 
@@ -516,6 +515,7 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
         boolean creatorMode = hasUserId && request.getUserId().equals(loggedUserId);
 
         if (isSuperAdmin) {
+
             if (creatorMode) {
                 return timeOffRequestAdapter.fetchCreatorRequests(
                         request.getFromDate(),
@@ -524,7 +524,7 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
                         policyArr,
                         loggedUserId
                 );
-            } else if (!hasUserId) {
+            } else {
                 return timeOffRequestAdapter.fetchAllRequests(
                         request.getFromDate(),
                         request.getToDate(),
@@ -532,12 +532,20 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
                         policyArr
                 );
             }
-        }
 
+        } else {
 
+            if (creatorMode) {
+                return timeOffRequestAdapter.fetchCreatorRequests(
+                        request.getFromDate(),
+                        request.getToDate(),
+                        statusArr,
+                        policyArr,
+                        loggedUserId
+                );
+            }
 
-        if (creatorMode) {
-            return timeOffRequestAdapter.fetchCreatorRequests(
+            return timeOffRequestAdapter.fetchReceiverRequests(
                     request.getFromDate(),
                     request.getToDate(),
                     statusArr,
@@ -545,15 +553,9 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
                     loggedUserId
             );
         }
-
-        return timeOffRequestAdapter.fetchReceiverRequests(
-                request.getFromDate(),
-                request.getToDate(),
-                statusArr,
-                policyArr,
-                loggedUserId
-        );
     }
+
+
 
 
     @Override
