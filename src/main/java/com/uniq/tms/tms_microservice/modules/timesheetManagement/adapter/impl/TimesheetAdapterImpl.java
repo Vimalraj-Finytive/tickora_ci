@@ -422,7 +422,8 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
             log.info("Status : {}", timesheet.getStatus());
             if (TimesheetStatusEnum.PAID_LEAVE.getLabel().equals(timesheet.getStatus())
                     || TimesheetStatusEnum.PERMISSION.getLabel().equals(timesheet.getStatus())
-                    || TimesheetStatusEnum.HALF_DAY.getLabel().equals(timesheet.getStatus())) {
+                    || TimesheetStatusEnum.HALF_DAY.getLabel().equals(timesheet.getStatus())
+                    || TimesheetStatusEnum.UNPAID_LEAVE.getLabel().equals(timesheet.getStatus())) {
                 timesheet.setUserDayType(TimesheetWorkStatusEnum.TIME_OFF.getLabel());
                 timesheet.setWorkStatus(TimesheetStatusEnum.NOT_MARKED.getLabel());
                 timesheet.setStatus(timesheet.getStatus());

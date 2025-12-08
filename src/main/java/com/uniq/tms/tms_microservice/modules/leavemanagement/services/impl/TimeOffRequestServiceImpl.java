@@ -416,7 +416,7 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
                 }else {
                     log.info("Policy is UNPAID → Marking ABSENT in timesheet");
                     timesheetService.createTimesheet(
-                            TimesheetStatusEnum.ABSENT,
+                            TimesheetStatusEnum.UNPAID_LEAVE,
                             model.getUserId(),
                             entity.getStartDate()
                     );
