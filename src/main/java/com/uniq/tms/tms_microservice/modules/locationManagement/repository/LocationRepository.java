@@ -52,4 +52,5 @@ public interface LocationRepository extends JpaRepository<LocationEntity, Long> 
 
     List<LocationEntity> findByLocationIdInAndActiveTrue(List<Long> locationIds);
 
+    LocationEntity findByIsDefaultTrue();
 }

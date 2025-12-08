@@ -36,4 +36,5 @@ public interface LocationAdapter {
     List<UserLocationEntity> findUserLocationsByLocationId(List<Long> locationIds);
     List<UserEntity> findUsersByIdsAndLocationIds(List<String> list, List<Long> locationIds);
     List<UserEntity> findMembersByLocationIds(List<Long> locationIds, String userIdFromToken);
+    LocationEntity findDefaultLocation();
 }

@@ -11,6 +11,7 @@ import com.uniq.tms.tms_microservice.modules.userManagement.adapter.UserAdapter;
 import com.uniq.tms.tms_microservice.modules.userManagement.dto.GroupDto;
 import com.uniq.tms.tms_microservice.modules.userManagement.dto.UserNameEmailDto;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.*;
+import com.uniq.tms.tms_microservice.modules.userManagement.enums.MemberType;
 import com.uniq.tms.tms_microservice.modules.userManagement.repository.*;
 import com.uniq.tms.tms_microservice.modules.locationManagement.mapper.LocationEntityMapper;
 import com.uniq.tms.tms_microservice.modules.userManagement.model.UserResponse;
@@ -96,7 +97,7 @@ public class UserAdapterImpl implements UserAdapter {
 
     @Override
     public Optional<UserEntity> findById(String userId) {
-        return userRepository.findByUserId(userId);
+        return userRepository.findByUserIdAndActiveTrue(userId);
     }
 
     @Override
@@ -181,7 +182,7 @@ public class UserAdapterImpl implements UserAdapter {
 
     @Override
     public UserEntity getUserById(String userId) {
-        return userRepository.findByUserId(userId)
+        return userRepository.findByUserIdAndActiveTrue(userId)
                 .orElseThrow(() -> new NoSuchElementException("User not found with ID: " + userId));
     }
 
@@ -609,8 +610,8 @@ public class UserAdapterImpl implements UserAdapter {
         return userGroupRepository.findUsersByGroupId(Collections.singletonList(groupId));
     }
     @Override
-    public   List<UserEntity> getallUsers(){
-        return userRepository.findByActiveTrue();
+    public   List<UserEntity> getallUsers(String approverId){
+        return userRepository.findByActiveTrue(approverId);
     }
 
     @Override
@@ -621,5 +622,25 @@ public class UserAdapterImpl implements UserAdapter {
     @Override
     public Optional<UserEntity>findSuperAdminByOrgId(String orgId){
         return userRepository.findSuperAdminByOrgId(orgId);
+    }
+
+    @Override
+    public List<UserEntity> findByApproverId(String approverId){
+        return userRepository.findByRequestApproverIdAndActiveTrue(approverId);
+    }
+    @Override
+    public List<UserEntity>findAllById(List<String> userIds){
+        return userRepository.findAllByUserIdInAndActiveTrue(userIds);
+    }
+
+    @Override
+    public void updateApproverForUsers(String approverId, List<String> requestedUserIds) {
+         userRepository.updateApproverForUsers(approverId,requestedUserIds);
+    }
+
+
+    @Override
+    public Set<String> getAllSupervisorIds(List<Long> groupIds, String userId, String type) {
+        return userGroupRepository.findAllSupervisorUserIds(groupIds, userId, type);
     }
 }

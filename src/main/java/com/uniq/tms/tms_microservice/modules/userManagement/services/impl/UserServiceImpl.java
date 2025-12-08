@@ -2,7 +2,12 @@ package com.uniq.tms.tms_microservice.modules.userManagement.services.impl;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.CalendarAdapter;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.TimeOffPolicyAdapter;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.UserPolicyAdapter;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.CalendarEntity;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeOffPolicyEntity;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeOffPolicyBulkAssignModel;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.services.TimeOffPolicyService;
 import com.uniq.tms.tms_microservice.modules.locationManagement.adapter.LocationAdapter;
 import com.uniq.tms.tms_microservice.modules.locationManagement.dto.LocationDto;
 import com.uniq.tms.tms_microservice.modules.locationManagement.entity.UserLocationEntity;
@@ -127,6 +132,9 @@ public class UserServiceImpl implements UserService {
     private final LocationAdapter locationAdapter;
     private final OrganizationEntityMapper organizationEntityMapper;
     private final AuthHelper authHelper;
+    private final TimeOffPolicyAdapter timeOffPolicyAdapter;
+    private final TimeOffPolicyService timeOffPolicyService;
+    private final UserPolicyAdapter userPolicyAdapter;
 
     public UserServiceImpl(Validator validator, UserAdapter userAdapter, TimesheetAdapter timesheetAdapter,
                            UserEntityMapper userEntityMapper, CalendarAdapter calendarAdapter, OrganizationRepository organizationRepository,
@@ -136,7 +144,7 @@ public class UserServiceImpl implements UserService {
                            ApplicationEventPublisher publisher, WorkScheduleAdapter workScheduleAdapter, UserCacheService userCacheService,
                            CacheKeyUtil cacheKeyUtil, GroupRepository groupRepository, CacheKeyConfig cacheKeyConfig, CacheReloadHandlerRegistry cacheReloadHandlerRegistry,
                            OrganizationTypeRepository organizationTypeRepository, IdGenerationService idGenerationService, SecondaryDetailsRepository secondaryDetailsRepository,
-                           RolePrivilegeHelper rolePrivilegeHelper, ExceptionHelper exceptionHelper, OrganizationCacheService organizationCacheService, LocationDtoMapper locationDtoMapper, LocationService locationService, OrganizationAdapter organizationAdapter, LocationAdapter locationAdapter, OrganizationEntityMapper organizationEntityMapper, AuthHelper authHelper) {
+                           RolePrivilegeHelper rolePrivilegeHelper, ExceptionHelper exceptionHelper, OrganizationCacheService organizationCacheService, LocationDtoMapper locationDtoMapper, LocationService locationService, OrganizationAdapter organizationAdapter, LocationAdapter locationAdapter, OrganizationEntityMapper organizationEntityMapper, AuthHelper authHelper, TimeOffPolicyAdapter timeOffPolicyAdapter, TimeOffPolicyService timeOffPolicyService, UserPolicyAdapter userPolicyAdapter) {
 
         this.validator = validator;
         this.userAdapter = userAdapter;
@@ -169,6 +177,9 @@ public class UserServiceImpl implements UserService {
         this.locationAdapter = locationAdapter;
         this.organizationEntityMapper = organizationEntityMapper;
         this.authHelper = authHelper;
+        this.timeOffPolicyAdapter = timeOffPolicyAdapter;
+        this.timeOffPolicyService = timeOffPolicyService;
+        this.userPolicyAdapter = userPolicyAdapter;
     }
 
     private static final Logger log = LoggerFactory.getLogger(UserServiceImpl.class);
@@ -430,7 +441,6 @@ public class UserServiceImpl implements UserService {
             }
 
             userAdapter.saveAllUsers(userEntities);
-
             Map<String, UserEntity> savedUserByEmail = userEntities.stream()
                     .collect(Collectors.toMap(
                             u -> u.getEmail().trim().toLowerCase(),
@@ -489,6 +499,29 @@ public class UserServiceImpl implements UserService {
             }
 
             userAdapter.saveAllSecondaryDetails(secondaryDetailsEntities);
+
+            List<String> userIds = userEntities.stream()
+                    .map(UserEntity::getUserId)
+                    .toList();
+
+            TimeOffPolicyEntity defaultPolicyEntity = timeOffPolicyAdapter.findDefaultPolicy();
+            if (defaultPolicyEntity == null) {
+                log.warn("Default time-off policy not found for orgId={}", orgId);
+            } else {
+                TimeOffPolicyBulkAssignModel assignModel = new TimeOffPolicyBulkAssignModel();
+                assignModel.setUserIds(userIds);
+                assignModel.setPolicyIds(List.of(defaultPolicyEntity.getPolicyId()));
+                assignModel.setUserValidFrom(LocalDate.now());
+                assignModel.setUserValidTo(defaultPolicyEntity.getValidityEndDate());
+
+                try {
+                    timeOffPolicyService.assignPolicies(assignModel);
+                } catch (Exception ex) {
+                    log.error("Default policy assignment failed for {} users. Error: {}", userIds.size(), ex.getMessage(), ex);
+
+                }
+            }
+
             int uploadedCount = userEntities.size();
             int skippedCount = invalidRecords.size();
             sendEmailsAsync(emailRequests);
@@ -618,7 +651,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public ApiResponse createUser(UserDto userDto, SecondaryDetailsDto secondaryDetailsDto, String organizationId) {
+    public ApiResponse<UserDto> createUser(UserDto userDto, SecondaryDetailsDto secondaryDetailsDto, String organizationId) {
         String schema = TenantUtil.getCurrentTenant();
         log.info("Checking if the user is student: {}", userDto.getRoleId());
         Optional<RoleEntity> roleName = organizationAdapter.findRoleById(userDto.getRoleId());
@@ -661,16 +694,26 @@ public class UserServiceImpl implements UserService {
         entity.setWorkSchedule(scheduleToSet);
         entity.setActive(true);
 
-        CalendarEntity calendarEntity=calendarAdapter.findDefaultCalendar();
-        if(calendarEntity!=null)
-            entity.setCalendar(calendarEntity);
-
-        else
-            entity.setCalendar(null);
-
+        CalendarEntity calendarEntity;
+        if(userDto.getCalendarId() != null) {
+            calendarEntity = calendarAdapter.findByCalendarId(userDto.getCalendarId())
+            .orElseThrow(() ->
+                    new NoSuchElementException("Calendar not found with ID: " + userDto.getCalendarId()));
+        }
+        else {
+            calendarEntity = calendarAdapter.findDefaultCalendar();
+        }
+        entity.setCalendar(calendarEntity);
+        if (userDto.getRequestApproverId() != null){
+            entity.setRequestApproverId(userDto.getRequestApproverId());
+        }
         entity.setCreatedAt(LocalDateTime.now());
         log.info("Saving user: {}", userMiddleware.getUserName());
         UserEntity savedUserEntity = userAdapter.saveUser(entity);
+        TimeOffPolicyEntity timeOffPolicyEntity=timeOffPolicyAdapter.findDefaultPolicy();
+        List<String> policyIds = new ArrayList<>();
+        policyIds.add(timeOffPolicyEntity.getPolicyId());
+
         List<Long> locationIds = null;
         List<Long> groupIds = null;
         SecondaryDetailsEntity saveSecondaryUser = null;
@@ -750,6 +793,12 @@ public class UserServiceImpl implements UserService {
                     .toList();
         }
 
+        if (!(userDto.getPolicyIds() == null || userDto.getPolicyIds().isEmpty())) {
+            log.info("Adding user to policy: {}", userDto.getPolicyIds());
+              policyIds.addAll(userDto.getPolicyIds());
+        }
+        assignPolicy(policyIds, customUserId);
+
         if (!isBlank(userDto.getGroupId())) {
             log.info("Adding user to group: {}", userDto.getGroupId());
             List<UserGroupEntity> userGroupEntities = new ArrayList<>();
@@ -773,7 +822,6 @@ public class UserServiceImpl implements UserService {
         User finalUser = userEntityMapper.toMiddleware(savedUserEntity);
         finalUser.setLocationId(locationIds);
         finalUser.setGroupId(groupIds);
-
         boolean isNewUser = savedUserEntity.isDefaultPassword();
         emailHelper.sendAccountCreationEmail(
                 userMiddleware.getEmail(), userMiddleware.getUserName(), defaultPassword, isNewUser,userMiddleware.getRoleId()
@@ -790,7 +838,16 @@ public class UserServiceImpl implements UserService {
         } else {
             log.info("Redis is not enabled or RedisTemplate is null. Skipping cache Create user reload.");
         }
-        return new ApiResponse(201, "Successfully saved user", finalUser);
+        return new ApiResponse<UserDto>(201, "Successfully saved user", userDto);
+    }
+
+    private void assignPolicy(List<String> policyIds, String customUserId){
+        TimeOffPolicyBulkAssignModel defaultPolicy = new TimeOffPolicyBulkAssignModel();
+        defaultPolicy.setUserIds(List.of(customUserId));
+        defaultPolicy.setPolicyIds(policyIds);
+        defaultPolicy.setUserValidFrom(LocalDate.now());
+        defaultPolicy.setUserValidTo(null);
+        timeOffPolicyService.assignPolicies(defaultPolicy);
     }
 
     public boolean validateSecondaryUser(SecondaryDetailsDto dto) {
@@ -2307,29 +2364,41 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public List<UserLevelModel> getUsersInGroup() {
-        String userId=authHelper.getUserId();
+    public List<UserLevelModel> getRequesters() {
+        String approverId = authHelper.getUserId();
         String role = authHelper.getRole();
+        List<UserEntity> users;
         if (RoleName.SUPERADMIN.getRoleName().equalsIgnoreCase(role)) {
-            List<UserEntity> allUsers = userAdapter.getallUsers();
-            if (allUsers.isEmpty()) {
-                throw new IllegalArgumentException("No users found");
-            }
-            return userEntityMapper.toUserModelList(allUsers);
+            users = userAdapter.getallUsers(approverId);
+        }else{
+            users = userAdapter.findByApproverId(approverId);}
+        if (users.isEmpty()) {
+            throw new IllegalArgumentException("No users found");
         }
-        List<GroupEntity> supervisorGroups = userAdapter.getSupervisorGroups(userId);
+        return userEntityMapper.toUserModelList(users);
+    }
 
-        if (supervisorGroups == null || supervisorGroups.isEmpty()) {
-            throw new IllegalArgumentException("Access Denied: User is not a supervisor");
+    @Override
+    public RequestApproverModel assignRequestApprover(RequestApproverDto dto) {
+        String approverId = dto.getRequestId();
+        List<String> requestedUserIds = dto.getUserId();
+        UserEntity approver = userAdapter.findById(approverId)
+                .orElseThrow(() -> new IllegalArgumentException("Approver not found or inactive"));
+        if (requestedUserIds.contains(approverId)) {
+            throw new IllegalArgumentException("A user cannot assign himself as approver");
         }
-        List<Long> groupIds = supervisorGroups.stream()
-                .map(GroupEntity::getGroupId)
-                .toList();
-        List<UserEntity> members = userAdapter.findusersInGroup(groupIds, userId);
-
-        if (members.isEmpty()) {
-            throw new IllegalArgumentException("No group members found");
+        List<UserEntity> activeUsers = userAdapter.findAllById(requestedUserIds);
+        Set<String> foundIds = activeUsers.stream()
+                .map(UserEntity::getUserId)
+                .collect(Collectors.toSet());
+        List<String> invalidIds = requestedUserIds.stream()
+                .filter(id -> !foundIds.contains(id)).toList();
+        if (!invalidIds.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "These userIds are invalid or inactive: " + String.join(", ", invalidIds)
+            );
         }
-        return userEntityMapper.toUserModelList(members);
+        userAdapter.updateApproverForUsers(approverId, requestedUserIds);
+        return userEntityMapper.toModel(approverId, requestedUserIds);
     }
 }

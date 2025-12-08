@@ -8,6 +8,7 @@ import com.uniq.tms.tms_microservice.modules.userManagement.dto.GroupDto;
 import com.uniq.tms.tms_microservice.modules.userManagement.dto.UserNameEmailDto;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.*;
 import com.uniq.tms.tms_microservice.modules.userManagement.dto.UserNameSuggestionDto;
+import com.uniq.tms.tms_microservice.modules.userManagement.enums.MemberType;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.WorkScheduleEntity;
 import java.lang.String;
 import java.util.List;
@@ -119,8 +120,11 @@ public interface UserAdapter {
     List<String> findUserIdsByGroupIds(List<Long> groupIds);
     List<GroupEntity> getSupervisorGroups(String supervisorId);
     List<UserEntity>getGroupMembers(Long groupId);
-    List<UserEntity>  getallUsers();
+    List<UserEntity>  getallUsers(String approverId);
     List<UserEntity> findusersInGroup(List<Long> groupIds, String userId);
     Optional<UserEntity>findSuperAdminByOrgId(String orgId);
-
+    List<UserEntity> findByApproverId(String approverId);
+    List<UserEntity>findAllById(List<String>userIds);
+    void updateApproverForUsers( String approverId, List<String> requestedUserIds);
+    Set<String> getAllSupervisorIds(List<Long> groupIds, String userId, String type);
 }

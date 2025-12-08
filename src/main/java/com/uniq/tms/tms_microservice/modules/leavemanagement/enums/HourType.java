@@ -1,11 +1,12 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.enums;
 
-public enum ViewerType {
-    APPROVER("Approver"),VIEWER("Viewer");
+public enum HourType {
+    FIRST_HALF("First Half"),
+    SECOND_HALF("Second Half");
 
-    private final String value;
+   private String value;
 
-    ViewerType(String value){
+     HourType(String value) {
         this.value = value;
     }
 

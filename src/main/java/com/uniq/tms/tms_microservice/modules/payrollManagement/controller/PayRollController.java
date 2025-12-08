@@ -1,6 +1,5 @@
 package com.uniq.tms.tms_microservice.modules.payrollManagement.controller;
 
-import com.uniq.tms.tms_microservice.modules.leavemanagement.model.ExportStatus;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.constant.PayRollConstant;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.dto.*;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.dto.PayRollDto;
@@ -165,29 +164,44 @@ public class PayRollController {
     }
 
     @GetMapping("/download")
-    public ResponseEntity<InputStreamResource> downloadTimesheet(
+    public ResponseEntity<?> downloadPayRoll(
             @RequestHeader("Authorization") String token,
             @RequestParam String fileName) {
         try {
+
+            // Security validation
             if (fileName.contains("..") || fileName.contains("/") || fileName.contains("\\")) {
-                return ResponseEntity.badRequest().build();
+                return ResponseEntity.badRequest().body(
+                        new ApiResponse<>(400, "Invalid file name", null)
+                );
             }
+
             Path filePath = Paths.get(downloadDir).resolve(fileName);
+
+            // File NOT FOUND --> return JSON error
             if (!Files.exists(filePath)) {
-                return ResponseEntity.notFound().build();
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                        new ApiResponse<>(404, "File not generated yet. Please try again later.", null)
+                );
             }
+
+            // File FOUND --> return file stream
             long fileSize = Files.size(filePath);
             InputStreamResource resource = new InputStreamResource(Files.newInputStream(filePath));
             MediaType mediaType = determineMediaType(fileName);
+
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "attachment; filename=\"" + fileName + "\"; filename*=UTF-8''" +
-                                    URLEncoder.encode(fileName, StandardCharsets.UTF_8))
+                            "attachment; filename=\"" + fileName +
+                                    "\"; filename*=UTF-8''" + URLEncoder.encode(fileName, StandardCharsets.UTF_8))
                     .contentType(mediaType)
                     .contentLength(fileSize)
                     .body(resource);
-        } catch (io.jsonwebtoken.io.IOException | java.io.IOException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                    new ApiResponse<>(500, "Error reading file", null)
+            );
         }
     }
 

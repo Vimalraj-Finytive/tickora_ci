@@ -2,6 +2,7 @@ package com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.impl;
 
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.UserPolicyAdapter;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.UserPolicyEntity;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.AccrualType;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.repository.UserPolicyRepository;
 import org.springframework.stereotype.Component;
 import java.util.*;
@@ -56,8 +57,8 @@ public class UserPolicyAdapterImpl implements UserPolicyAdapter {
     }
 
     @Override
-    public List<String> findAllUserIdsInUserPolicies() {
-        return userPolicyRepo.findAllUserIdsInUserPolicies();
+    public List<String> findAllUserIdsInUserPolicies(LocalDate date) {
+        return userPolicyRepo.findAllUserIdsInUserPolicies(date);
     }
 
     @Override
@@ -75,5 +76,21 @@ public class UserPolicyAdapterImpl implements UserPolicyAdapter {
     public List<UserPolicyEntity> findAllByPolicyIdsAndUserIds(List<String> policyIds, Set<String> userIds) {
         return userPolicyRepo.findAllByPolicyIdsAndUserIds(policyIds, userIds);
     }
+
+    @Override
+    public List<UserPolicyEntity> findByUserIdAndAccrualType(String userId, AccrualType accrualType) {
+        return userPolicyRepo.findByUser_UserIdAndPolicy_AccrualType(userId, accrualType);
+    }
+
+    @Override
+    public void deleteById(Long id) {
+        userPolicyRepo.deleteById(id);
+    }
+
+    @Override
+    public List<UserPolicyEntity> findUserPoliciesByUserId(String userId) {
+        return userPolicyRepo.findByUser_UserId(userId);
+    }
+
 
 }

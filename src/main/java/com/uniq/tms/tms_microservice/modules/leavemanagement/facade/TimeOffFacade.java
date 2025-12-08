@@ -11,18 +11,18 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.services.TimeOffPol
 import com.uniq.tms.tms_microservice.modules.leavemanagement.services.TimeOffRequestService;
 import com.uniq.tms.tms_microservice.modules.userManagement.enums.UserRole;
 import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
+import com.uniq.tms.tms_microservice.shared.dto.EnumDto;
+import com.uniq.tms.tms_microservice.shared.dto.EnumModel;
 import com.uniq.tms.tms_microservice.shared.helper.AuthHelper;
 import org.springframework.core.io.Resource;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.*;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.mapper.TimeOffPolicyDtoMapper;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.*;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.AccrualTypeEnumDto;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.CompensationEnumDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeoffPoliciesDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeoffPolicyDto;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.model.AccrualTypeEnumModel;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.model.CompensationEnumModel;
+
 import java.time.LocalDate;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeOffPoliciesModel;
 import java.util.List;
@@ -82,10 +82,10 @@ public class TimeOffFacade {
         }
     }
 
-    public ApiResponse<EntitledTypeDropdownDto> getDropDowns() {
+    public ApiResponse<List<EnumDto>> getDropDowns() {
         try {
-            EntitledTypeDropdownModel model = timeOffPolicyService.getDropDowns();
-            EntitledTypeDropdownDto dto = timeoffPolicyDtoMapper.toDto(model);
+            List<EnumModel> model = timeOffPolicyService.getDropDowns();
+            List<EnumDto> dto = model.stream().map(timeoffPolicyDtoMapper::toDto).toList();;
             return new ApiResponse<>(200, "DropDowns Fetched Successfully", dto);
 
         } catch (IllegalArgumentException ex) {
@@ -160,15 +160,15 @@ public class TimeOffFacade {
         return new ApiResponse<>(200,"policies fetched successfully",dto);
     }
 
-    public ApiResponse<List<AccrualTypeEnumDto>> getAccrualStatus(){
-        List<AccrualTypeEnumModel> model =timeOffPolicyService.getAccrualTypeStatus();
-        List<AccrualTypeEnumDto> dto=model.stream().map(timeoffPolicyDtoMapper::toDto).toList();
+    public ApiResponse<List<EnumDto>> getAccrualStatus(){
+        List<EnumModel> model =timeOffPolicyService.getAccrualTypeStatus();
+        List<EnumDto> dto=model.stream().map(timeoffPolicyDtoMapper::toDto).toList();
         return new ApiResponse<>(200,"AccrualType fetched successfully",dto);
     }
 
-    public ApiResponse<List<CompensationEnumDto>>getCompensation(){
-        List<CompensationEnumModel> model=timeOffPolicyService.getCompensation();
-             List<CompensationEnumDto> dto = model.stream().map(timeoffPolicyDtoMapper::toDto).toList();
+    public ApiResponse<List<EnumDto>>getCompensation(){
+        List<EnumModel> model=timeOffPolicyService.getCompensation();
+             List<EnumDto> dto = model.stream().map(timeoffPolicyDtoMapper::toDto).toList();
               return new ApiResponse<>(200,"Compensation fetched successfully",dto);
     }
 
@@ -191,10 +191,10 @@ public class TimeOffFacade {
         return new ApiResponse<>(200, "Policies fetched successfully", dto);
     }
 
-    public ApiResponse<Map<String, List<TimeOffRequestGroupDto>>> filterRequests(TimeOffExportRequest dto,String loggedUserId) {
-        Map<String, List<TimeOffRequestGroupModel>> model = timeOffRequestService.filterRequests(dto,loggedUserId);
-        Map<String, List<TimeOffRequestGroupDto>> dtoMap = timeoffPolicyDtoMapper.toDtoList(model);
-        return new ApiResponse<>(200, "Requests fetched successfully", dtoMap);
+    public ApiResponse<List<TimeOffExportDto>> filterRequests(TimeOffExportRequest dto, String loggedUserId) {
+        List<TimeOffExportModel> models = timeOffRequestService.filterRequests(dto, loggedUserId);
+        List<TimeOffExportDto> dtoList = timeoffPolicyDtoMapper.toDtoLists(models);
+        return new ApiResponse<>(200, "Requests fetched successfully", dtoList);
     }
 
     public ApiResponse<List<TimeoffRequestResponseDto>> filterRequestsBasedOnRole(LocalDate fromDate, LocalDate toDate) {
@@ -213,35 +213,44 @@ public class TimeOffFacade {
         }
     }
 
-    public ApiResponse<List<StatusEnumDto>> getStatus() {
-        List<StatusEnumModel> model = timeOffRequestService.getStatus();
-        List<StatusEnumDto> dto = model.stream().map(timeoffPolicyDtoMapper::toDto).toList();
+    public ApiResponse<List<EnumDto>> getStatus() {
+        List<EnumModel> model = timeOffRequestService.getStatus();
+        List<EnumDto> dto = model.stream().map(timeoffPolicyDtoMapper::toDto).toList();
         return new ApiResponse<>(200, "Status fetched", dto);
     }
 
 
     public ApiResponse<Map<String,String>> startExportJob(TimeOffExportRequestDto request, String schema, String orgId) {
         String exportId = timeOffRequestService.startExporting(request, schema, orgId);
-        return new ApiResponse<>(202,"Report generation Started",exportId);
+        return new ApiResponse<>(
+                HttpStatus.ACCEPTED.value(),
+                "Export started",
+                exportId
+        );
     }
 
     public ApiResponse<Map<String, String>> getExportStatus(String schema, String orgId, String exportId) {
         String exportStatus = timeOffRequestService.exportStatus(exportId, schema, orgId);
-        return new ApiResponse<>(200,"Fetched Report Status Successfully",exportStatus);
+        return new ApiResponse<>(
+                HttpStatus.OK.value(),
+                "Status fetched",
+                exportStatus
+        );
     }
 
-    public ApiResponse<Resource> downloadExport(String schema, String orgId, String exportId, String type) {
-        Resource downloadStatus = timeOffRequestService.downloadReport(exportId, schema, orgId, type);
-        return new ApiResponse<>(200,"Report Downloaded Successfully",downloadStatus);
-    }
-
-    public ApiResponse<List<ResetFrequencyEnumDto>> getResetFrequencyStatus() {
-        List<ResetFrequencyEnumModel> model = timeOffPolicyService.getResetFrequencyStatus();
-        List<ResetFrequencyEnumDto> dto = model.stream()
+    public ApiResponse<List<EnumDto>> getResetFrequencyStatus() {
+        List<EnumModel> model = timeOffPolicyService.getResetFrequencyStatus();
+        List<EnumDto> dto = model.stream()
                 .map(timeoffPolicyDtoMapper::toDto)
                 .toList();
 
         return new ApiResponse<>(200, "ResetFrequency fetched successfully", dto);
+    }
+
+    public ApiResponse<List<EnumDto>> getHourType() {
+        List<EnumModel> model = timeOffRequestService.getHourType();
+        List<EnumDto> dto = model.stream().map(timeoffPolicyDtoMapper::toDto).toList();
+        return new ApiResponse<>(200, "Status fetched", dto);
     }
 
 }

@@ -234,6 +234,7 @@ CREATE TABLE IF NOT EXISTS ${schemaName}.users (
     is_register_user BOOLEAN NOT NULL DEFAULT FALSE,
     active BOOLEAN NOT NULL,
     calendar_id VARCHAR(20) ,
+    request_approver_id VARCHAR(20),
     CONSTRAINT fk_role
         FOREIGN KEY (role_id)
         REFERENCES ${schemaName}.role(role_id)
@@ -377,9 +378,11 @@ SELECT * FROM (VALUES
     ('TSS002', 'Absent'),
     ('TSS003', 'Paid Leave'),
     ('TSS004', 'Not Marked'),
-    ('TSS005', 'Holiday'),
+    ('TSS005', 'Public Holiday'),
     ('TSS006', 'Half Day'),
-    ('TSS007', 'Permission')
+    ('TSS007', 'Permission'),
+    ('TSS008', 'Rest Day'),
+    ('TSS0009', 'Unpaid Leave')
 ) AS tmp(status_id, status_name)
 WHERE NOT EXISTS (SELECT 1 FROM ${schemaName}.timesheet_status);
 
@@ -567,12 +570,8 @@ CREATE TABLE IF NOT EXISTS ${schemaName}.payroll_history (
     action_at TIMESTAMP NOT NULL,
     action_type VARCHAR(50) NOT NULL,
     action_by VARCHAR(100) NOT NULL,
-    payroll_id VARCHAR(50) NOT NULL,
+    payroll_id VARCHAR(50) NOT NULL
 
-    CONSTRAINT fk_payroll_history
-        FOREIGN KEY (payroll_id)
-        REFERENCES ${schemaName}.payroll(id)
-        ON DELETE CASCADE
 );
 
 -- ===========================================================
@@ -730,8 +729,67 @@ CREATE TABLE IF NOT EXISTS timeoff_policies (
     is_active BOOLEAN,
     max_carry_forward_units INT,
     is_carry_forward BOOLEAN,
+    is_default BOOLEAN,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+--changeset system:insert-default-timeoff-policy
+INSERT INTO ${schemaName}.timeoff_policies (
+    policy_id,
+    policy_name,
+    compensation,
+    accrual_type,
+    validity_start_date,
+    validity_end_date,
+    accrual_start_date,
+    reset_frequency,
+    entitled_units,
+    entitled_type,
+    is_active,
+    is_carry_forward,
+    max_carry_forward_units,
+    is_default,
+    created_at,
+    updated_at
+)
+SELECT * FROM (
+    VALUES
+    (
+        'TOP00001',              
+        'Custom Policy',
+        'UNPAID',
+        NULL::VARCHAR,
+        NOW()::DATE,
+        NULL::DATE,
+        NOW()::DATE,
+        NULL::VARCHAR,
+        NULL::INT,
+        NULL::VARCHAR,
+        TRUE,
+        FALSE,
+        NULL::INT,
+        TRUE,
+        NOW(),
+        NOW()
+    )
+) AS tmp(
+    policy_id,
+    policy_name,
+    compensation,
+    accrual_type,
+    validity_start_date,
+    validity_end_date,
+    accrual_start_date,
+    reset_frequency,
+    entitled_units,
+    entitled_type,
+    is_active,
+    is_carry_forward,
+    max_carry_forward_units,
+    is_default,
+    created_at,
+    updated_at
 );
 
 -- ===========================================================

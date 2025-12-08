@@ -1,7 +1,6 @@
 package com.uniq.tms.tms_microservice.modules.userManagement.facade;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.uniq.tms.tms_microservice.modules.userManagement.entity.GroupEntity;
 import com.uniq.tms.tms_microservice.modules.userManagement.model.*;
 import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
 import com.uniq.tms.tms_microservice.modules.userManagement.dto.*;
@@ -55,7 +54,6 @@ public class UserFacade {
     }
 
     public ApiResponse getUsers() {
-
         String orgId = authHelper.getOrgId();
         String role = authHelper.getRole();
         role = role.replace("ROLE_", "").toUpperCase();
@@ -79,7 +77,7 @@ public class UserFacade {
         return new ApiResponse(200, "Users Inactived Successfully", null);
     }
 
-    public ApiResponse createGroup( AddGroupDto addGroupDto) {
+    public ApiResponse createGroup(AddGroupDto addGroupDto) {
         String orgId = authHelper.getOrgId();
         if (orgId == null) {
             return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
@@ -95,7 +93,7 @@ public class UserFacade {
         }
     }
 
-    public ApiResponse addUserToGroup( AddMemberDto addMemberDto) {
+    public ApiResponse addUserToGroup(AddMemberDto addMemberDto) {
         String orgId = authHelper.getOrgId();
         if (orgId == null) {
             return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
@@ -113,7 +111,7 @@ public class UserFacade {
         }
     }
 
-    public ApiResponse updateGroupDetails( AddGroupDto addGroupDto, Long groupId) {
+    public ApiResponse updateGroupDetails(AddGroupDto addGroupDto, Long groupId) {
         String orgId = authHelper.getOrgId();
         if (orgId == null) {
             return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
@@ -140,8 +138,8 @@ public class UserFacade {
         if (orgId == null) {
             return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
         }
-        DeleteMemberModel model= userDtoMapper.toModel(request);
-        userService.deleteMember(model,orgId);
+        DeleteMemberModel model = userDtoMapper.toModel(request);
+        userService.deleteMember(model, orgId);
         return new ApiResponse(204, "Member Deleted successfully", "No Content");
     }
 
@@ -155,7 +153,7 @@ public class UserFacade {
         return "Groups deleted successfully";
     }
 
-    public ApiResponse getMembers( Long roleId) {
+    public ApiResponse getMembers(Long roleId) {
 
         String orgId = authHelper.getOrgId();
         if (orgId == null) {
@@ -176,7 +174,7 @@ public class UserFacade {
         return new ApiResponse(200, "Members fetched successfully", result);
     }
 
-    public ApiResponse updateUserGroupType( EditUserGroupDto editUserGroupDto) {
+    public ApiResponse updateUserGroupType(EditUserGroupDto editUserGroupDto) {
 
         String orgId = authHelper.getOrgId();
         if (orgId == null) {
@@ -199,27 +197,25 @@ public class UserFacade {
         Long currentCount = userService.getCurrentUserCount(orgId);
         Long subscribedLimit = userService.getSubscribedUserLimit(orgId);
         if (!(currentCount < subscribedLimit)) {
-            return new ApiResponse(404,"User creation limit reached. Please upgrade your plan.",null);
-        }
-        else {
+            return new ApiResponse(404, "User creation limit reached. Please upgrade your plan.", null);
+        } else {
             return userService.bulkCreateUsers(file, orgId, userId);
         }
     }
 
-    public ApiResponse createUser(UserDto userDto, SecondaryDetailsDto secondaryDetailsDto) {
+    public ApiResponse<UserDto> createUser(UserDto userDto, SecondaryDetailsDto secondaryDetailsDto) {
         String orgId = authHelper.getOrgId();
         if (orgId == null) {
-            return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
+            return new ApiResponse<UserDto>(401, "Unauthorized - Invalid Organization", null);
         }
         Long currentCount = userService.getCurrentUserCount(orgId);
         Long subscribedLimit = userService.getSubscribedUserLimit(orgId);
 
         if (!(currentCount < subscribedLimit)) {
-            return new ApiResponse(404,"User creation limit reached. Please upgrade your plan.",null);
-        }
-        else {
-            ApiResponse user = userService.createUser(userDto, secondaryDetailsDto, orgId);
-            return new ApiResponse(HttpStatus.CREATED.value(),
+            return new ApiResponse<UserDto>(404, "User creation limit reached. Please upgrade your plan.", null);
+        } else {
+            ApiResponse<UserDto> user = userService.createUser(userDto, secondaryDetailsDto, orgId);
+            return new ApiResponse<UserDto>(HttpStatus.CREATED.value(),
                     "User created successfully",
                     user);
         }
@@ -249,7 +245,7 @@ public class UserFacade {
         return new ApiResponse(200, "User Groups fetched successfully", groups);
     }
 
-    public ApiResponse getUserGroupMembers( Long groupId, LocalDate date) {
+    public ApiResponse getUserGroupMembers(Long groupId, LocalDate date) {
 
         String orgId = authHelper.getOrgId();
         if (orgId == null) {
@@ -263,7 +259,7 @@ public class UserFacade {
         return new ApiResponse(200, "Student members fetched successfully", response);
     }
 
-    public ApiResponse searchUsernames( String keyword) {
+    public ApiResponse searchUsernames(String keyword) {
         String orgId = authHelper.getOrgId();
         if (orgId == null) {
             return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
@@ -272,7 +268,7 @@ public class UserFacade {
         return new ApiResponse(200, "Usernames fetched successfully", usernames);
     }
 
-    public ApiResponse getGroupUsers( List<Long> groupIds) {
+    public ApiResponse getGroupUsers(List<Long> groupIds) {
         String orgId = authHelper.getOrgId();
         String loggedInUserId = authHelper.getUserId();
         String role = authHelper.getRole();
@@ -307,7 +303,7 @@ public class UserFacade {
             return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
         }
         List<EditUserDto> editUserDtos = userService.updateIsActive(userDtoMapper.toMiddleware(editUserDto), orgId, userNameFromToken);
-        return new ApiResponse(200,"User is activated", null);
+        return new ApiResponse(200, "User is activated", null);
     }
 
     public ApiResponse<List<UserHistoryResponseDto>> getUserHistoryLog(String userId) {
@@ -319,8 +315,8 @@ public class UserFacade {
         BulkRoleUpdateModel model = userDtoMapper.toModel(request);
         BulkRoleUpdateModel updateRole = userService.updateMultipleUserRoles(model, orgId);
         BulkRoleUpdateDto dto = userDtoMapper.toDto(updateRole);
-        String message = String.format("Role Updated successfully. Uploaded Count : %d , SkippedCount : %d", dto.getUpdateCount(),dto.getSkippedCount());
-        return new ApiResponse<>(200, message,null);
+        String message = String.format("Role Updated successfully. Uploaded Count : %d , SkippedCount : %d", dto.getUpdateCount(), dto.getSkippedCount());
+        return new ApiResponse<>(200, message, null);
     }
 
     public ApiResponse updateWorkSchedules(BulkWorkScheduleUpdateRequestDto requestDto) {
@@ -391,22 +387,22 @@ public class UserFacade {
     public ApiResponse<BulkUserLocationDto> assignLocations(BulkUserLocationDto dto) {
         String orgId = authHelper.getOrgId();
         BulkUserLocationModel model = userDtoMapper.toModel(dto);
-        BulkUserLocationModel saveUserLocation = userService.assignLocations(model,orgId);
-        BulkUserLocationDto Dto=userDtoMapper.toDto(saveUserLocation);
+        BulkUserLocationModel saveUserLocation = userService.assignLocations(model, orgId);
+        BulkUserLocationDto Dto = userDtoMapper.toDto(saveUserLocation);
         return new ApiResponse<>(200, "Locations assigned successfully", null);
     }
 
-    public ApiResponse<UserCalendarRequestDto> updateCalendar(UserCalendarRequestDto updates){
+    public ApiResponse<UserCalendarRequestDto> updateCalendar(UserCalendarRequestDto updates) {
         boolean success = userService.UpdateCalendar(updates);
         if (!success) {
             return new ApiResponse<>(401, "Unauthorized - Invalid users", null);
         }
-        return new ApiResponse<>(200, "User Updated successfully",null);
+        return new ApiResponse<>(200, "User Updated successfully", null);
 
     }
 
-    public ApiResponse<List<UserLevelDto>> getUsersBelowHierarchy(String userId,String orgId) {
-        List<UserLevelModel> models = userService.getUsersBelowHierarchy(userId,orgId);
+    public ApiResponse<List<UserLevelDto>> getUsersBelowHierarchy(String userId, String orgId) {
+        List<UserLevelModel> models = userService.getUsersBelowHierarchy(userId, orgId);
         List<UserLevelDto> dtoList = userDtoMapper.toDtoList(models);
         return new ApiResponse<>(200, "Users fetched successfully", dtoList);
     }
@@ -416,15 +412,24 @@ public class UserFacade {
         List<GroupDto> dto = userDtoMapper.todtoList(model);
         return new ApiResponse<>(200, "Supervisor groups fetched successfully", dto);
     }
-    public ApiResponse<List<UserLevelDto>>getGroupMembers(Long groupId){
-    List<UserLevelModel> model =userService.getGroupMembers(groupId);
-    List<UserLevelDto> dto=userDtoMapper.toDtoList(model);
-    return new ApiResponse<>(200,"Group members fetched successfully",dto);
+
+    public ApiResponse<List<UserLevelDto>> getGroupMembers(Long groupId) {
+        List<UserLevelModel> model = userService.getGroupMembers(groupId);
+        List<UserLevelDto> dto = userDtoMapper.toDtoList(model);
+        return new ApiResponse<>(200, "Group members fetched successfully", dto);
     }
 
-    public ApiResponse<List<UserLevelDto>>getUsersInGroup(){
-        List<UserLevelModel> model =userService.getUsersInGroup();
-        List<UserLevelDto> dto=userDtoMapper.toDtoList(model);
-        return new ApiResponse<>(200,"Group members fetched successfully",dto);
+    public ApiResponse<List<UserLevelDto>> getRequesters() {
+        List<UserLevelModel> model = userService.getRequesters();
+        List<UserLevelDto> dto = userDtoMapper.toDtoList(model);
+        return new ApiResponse<>(200, "Members fetched successfully", dto);
     }
+
+    public ApiResponse<RequestApproverDto> assignRequestApprover(RequestApproverDto dto) {
+            RequestApproverModel model = userService.assignRequestApprover(dto);
+            RequestApproverDto Dto=userDtoMapper.toDto(model);
+            return new ApiResponse<>(200,"approver assigned successfully",Dto);
+
+    }
+
 }

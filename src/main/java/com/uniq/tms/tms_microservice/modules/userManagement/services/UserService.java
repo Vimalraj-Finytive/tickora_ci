@@ -15,40 +15,76 @@ import java.util.Map;
 public interface UserService {
 
     List<Group> getAllGroup(String orgId);
+
     ApiResponse bulkCreateUsers(MultipartFile file, String orgId, String userId);
-    ApiResponse createUser(UserDto userDto, SecondaryDetailsDto secondaryDetailsDto, String organizationId);
+
+    ApiResponse<UserDto> createUser(UserDto userDto, SecondaryDetailsDto secondaryDetailsDto, String organizationId);
+
     User updateUser(CreateUserDto updates, String orgId, String userId);
+
     List<UserResponseDto> getUsers(String orgId, String role);
+
     void deleteUsers(String orgId, List<String> userIds, String userNameFromToken, String comments);
+
     AddGroup createGroup(AddGroup groupMiddleware, String orgId);
-    void deleteMember(DeleteMemberModel model,String orgId);
+
+    void deleteMember(DeleteMemberModel model, String orgId);
+
     void deleteGroups(GroupBulkDeleteModel model, String orgId);
+
     List<User> getMembers(String orgId, Long roleId);
+
     boolean updateUserGroupType(UserGroup userGroup);
-    List<GroupDto>getUserGroups(String userId, String role, String orgId);
+    List<GroupDto> getUserGroups(String userId, String role, String orgId);
     List<Map<String, Object>> getGroupMembers(Long groupId, String orgId, LocalDate date, String userIdFromToken);
+
     ApiResponse addUserToGroup(AddMember addMemberMiddleware, String orgId);
+
     List<GroupResponseDto> getAllGroups(String orgId, String userId) throws JsonProcessingException;
+
     UserGroup createUserGroup(UserGroup userGroupMiddleware, String orgId);
+
     ApiResponse updateGroupDetails(AddGroupDto addGroupDto, Long groupId, String orgId);
+
     List<UserNameSuggestionDto> searchUsernames(String keywords);
+
     UserProfileResponseDto getUserProfile(String orgId, String userId);
+
     List<UserNameSuggestionDto> getGroupUsers(List<Long> groupIds, String orgId, String loggedInUserId, String role);
+
     ResponseEntity<Resource> downloadSampleFile();
+
     String findGroupName(Long requestedGroupId);
+
     List<UserResponseDto> getInactiveUsers(String orgId, String role);
+
     List<EditUserDto> updateIsActive(EditUser editUser, String orgId, String userNameFromToken);
+
     ApiResponse createSuperAdminUser(Organization organization, String orgId, String schemaName);
+
     ApiResponse<List<UserHistoryResponseDto>> getUserHistoryLog(String userId);
+
     BulkRoleUpdateModel updateMultipleUserRoles(BulkRoleUpdateModel model, String orgId);
-    List<BulkWorkScheduleUpdateResponseDto> updateWorkSchedules(BulkWorkScheduleUpdateRequestDto requestDto, String userNameFromToken,String orgId);
+
+    List<BulkWorkScheduleUpdateResponseDto> updateWorkSchedules(BulkWorkScheduleUpdateRequestDto requestDto, String userNameFromToken, String orgId);
+
     ApiResponse addOrUpdateGroupMembers(String orgId, UserGroupModel model);
+
     Long getSubscribedUserLimit(String orgId);
+
     Long getCurrentUserCount(String orgId);
-    BulkUserLocationModel assignLocations(BulkUserLocationModel model,String orgId);
+
+    BulkUserLocationModel assignLocations(BulkUserLocationModel model, String orgId);
+
     boolean UpdateCalendar(UserCalendarRequestDto updates);
-    List<UserLevelModel> getUsersBelowHierarchy(String userId,String orgId);
-     List<GroupModel> getSupervisorGroups(String userId);
-     List<UserLevelModel>getGroupMembers(Long groupId);
-     List<UserLevelModel>getUsersInGroup();
+
+    List<UserLevelModel> getUsersBelowHierarchy(String userId, String orgId);
+
+    List<GroupModel> getSupervisorGroups(String userId);
+
+    List<UserLevelModel> getGroupMembers(Long groupId);
+
+    List<UserLevelModel> getRequesters();
+
+    RequestApproverModel assignRequestApprover(RequestApproverDto dto);
 }

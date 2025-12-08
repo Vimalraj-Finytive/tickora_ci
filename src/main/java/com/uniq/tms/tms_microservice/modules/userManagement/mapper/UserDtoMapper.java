@@ -98,4 +98,8 @@ public interface UserDtoMapper {
 
     List<GroupDto> todtoList(List<GroupModel> model);
 
+    RequestApproverDto toDto(RequestApproverModel model);
+
+    RequestApproverModel toModel(RequestApproverDto dto);
+
 }

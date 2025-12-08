@@ -116,4 +116,43 @@ public interface LeaveBalanceRepository extends JpaRepository<LeaveBalanceEntity
             @Param("month") int month,
             @Param("year") int year,
             @Param("type") AccrualType type);
+
+    @Query("""
+SELECT lb FROM LeaveBalanceEntity lb
+WHERE lb.user.userId = :userId
+  AND lb.policy.accrualType = 'MONTHLY'
+  AND FUNCTION('DATE_TRUNC', 'month', lb.periodStartDate) =
+      FUNCTION('DATE_TRUNC', 'month', CAST(:date AS timestamp))
+ORDER BY lb.periodStartDate DESC
+""")
+    List<LeaveBalanceEntity> findMonthlyBalances(
+            @Param("userId") String userId,
+            @Param("date") LocalDate date
+    );
+
+
+
+
+    @Query("""
+SELECT lb FROM LeaveBalanceEntity lb
+WHERE lb.user.userId = :userId
+  AND lb.policy.accrualType = 'ANNUALLY'
+  AND :date BETWEEN lb.periodStartDate AND lb.periodEnd
+ORDER BY lb.periodStartDate DESC
+""")
+    List<LeaveBalanceEntity> findAnnualBalances(
+            @Param("userId") String userId,
+            @Param("date") LocalDate date
+    );
+
+
+    @Query("""
+    SELECT lb FROM LeaveBalanceEntity lb
+    WHERE lb.user.userId = :userId
+      AND lb.policy.policyId = :policyId
+""")
+    LeaveBalanceEntity findByUserIdAndPolicyId(@Param("userId") String userId,
+                                               @Param("policyId") String policyId);
+
+
 }

@@ -71,14 +71,14 @@ public class UserController {
     }
 
     @PostMapping("/createUser")
-    public ResponseEntity<ApiResponse> createUser(
+    public ResponseEntity<ApiResponse<UserDto>> createUser(
             @Valid @RequestBody CreateUserDto request,
             @RequestHeader("Authorization") String token) {
         if (request == null || request.getUser() == null) {
             throw new IllegalArgumentException("Request body or user details cannot be null.");
         }
         UserDto userDto = request.getUser();
-        ApiResponse response = userFacade.createUser(userDto, request.getSecondaryDetails());
+        ApiResponse<UserDto> response = userFacade.createUser(userDto, request.getSecondaryDetails());
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
@@ -288,10 +288,17 @@ public class UserController {
     }
 
     @GetMapping("/userList")
-    public ResponseEntity<ApiResponse<List<UserLevelDto>>> getUsersInGroup(
+    public ResponseEntity<ApiResponse<List<UserLevelDto>>> getRequesters(
             @RequestHeader("Authorization") String token){
-        ApiResponse<List<UserLevelDto>> response = userFacade.getUsersInGroup();
+        ApiResponse<List<UserLevelDto>> response = userFacade.getRequesters();
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
+
+   @PostMapping("/bulk/approver")
+   public ResponseEntity<ApiResponse<RequestApproverDto>> assignRequestApprover(@RequestHeader("Authorization") String token,
+                                                            @RequestBody RequestApproverDto dto) {
+       ApiResponse<RequestApproverDto> response = userFacade.assignRequestApprover(dto);
+       return ResponseEntity.status(response.getStatusCode()).body(response);
+   }
 
 }

@@ -1,6 +1,7 @@
 package com.uniq.tms.tms_microservice.modules.timesheetManagement.entity;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.uniq.tms.tms_microservice.modules.locationManagement.entity.LocationEntity;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.enums.LogFrom;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.enums.LogType;
 import jakarta.persistence.Column;
@@ -23,13 +24,12 @@ public class TimesheetHistoryEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
     @ManyToOne
     @JoinColumn(name = "timesheet_id", referencedColumnName = "id", nullable = false)
     private TimesheetEntity timesheet;
-
-    @Column(nullable = false)
-    private Long locationId;
+    @ManyToOne
+    @JoinColumn(name = "location_id", referencedColumnName = "location_id", nullable = false)
+    private LocationEntity locationId;
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "HH:mm")
     private LocalTime logTime;
     @Enumerated(EnumType.STRING)
@@ -54,11 +54,11 @@ public class TimesheetHistoryEntity {
         this.timesheet = timesheet;
     }
 
-    public Long getLocationId() {
+    public LocationEntity getLocationId() {
         return locationId;
     }
 
-    public void setLocationId(Long locationId) {
+    public void setLocationId(LocationEntity locationId) {
         this.locationId = locationId;
     }
 

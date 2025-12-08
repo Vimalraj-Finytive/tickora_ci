@@ -1,6 +1,8 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.adapter;
 
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.UserPolicyEntity;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.AccrualType;
+
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -25,5 +27,13 @@ public interface UserPolicyAdapter {
 
     boolean isUserPolicyActive(String policyId, String userId,  LocalDate startDate, LocalDate endDate);
 
-    List<String> findAllUserIdsInUserPolicies();
+    List<String> findAllUserIdsInUserPolicies(LocalDate date);
+
+
+    List<UserPolicyEntity> findByUserIdAndAccrualType(String userId, AccrualType accrualType);
+
+    void deleteById(Long id);
+
+    List<UserPolicyEntity> findUserPoliciesByUserId(String userId);
+
 }

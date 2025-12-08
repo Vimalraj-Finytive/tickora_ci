@@ -135,4 +135,15 @@ public class TimeOffRequestAdapterImpl implements TimeOffRequestAdapter {
     ) {
         return timeoffRequestRepo.fetchReceiverRequests(fromDate, toDate, status, policies, viewerId);
     }
+
+    @Override
+    public List<TimeOffExportView> fetchAllRequests(
+            LocalDate fromDate,
+            LocalDate toDate,
+            String[] status,
+            String[] policies
+    ) {
+        return timeoffRequestRepo.fetchAllRequests(fromDate, toDate, status, policies);
+    }
+
 }

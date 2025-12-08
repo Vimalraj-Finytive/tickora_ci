@@ -2,6 +2,8 @@ package com.uniq.tms.tms_microservice.modules.leavemanagement.entity;
 
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
 import jakarta.persistence.*;
+import org.hibernate.annotations.CreationTimestamp;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -30,6 +32,7 @@ public class UserPolicyEntity {
     @Column(name = "entitled_units")
     private Integer entitledUnits;
 
+    @CreationTimestamp
     @Column(name = "assigned_at")
     private LocalDateTime assignedAt;
 

@@ -107,12 +107,16 @@ public class UserCacheServiceImpl implements UserCacheService {
                         if (existing == null) return user;
 
                         // Merge group names
-                        if (!existing.getGroupName().contains(user.getGroupName().get(0))) {
-                            existing.getGroupName().add(user.getGroupName().get(0));
+                        if (!existing.getGroupName().contains(user.getGroupName().getFirst())) {
+                            existing.getGroupName().add(user.getGroupName().getFirst());
                         }
                         // Merge location names
-                        if (!existing.getLocationName().contains(user.getLocationName().get(0))) {
-                            existing.getLocationName().add(user.getLocationName().get(0));
+                        if (!existing.getLocationName().contains(user.getLocationName().getFirst())) {
+                            existing.getLocationName().add(user.getLocationName().getFirst());
+                        }
+                        //Merge Policy names
+                        if(!existing.getPolicyName().contains(user.getPolicyName().getFirst())){
+                            existing.getPolicyName().add(user.getPolicyName().getFirst());
                         }
                         return existing;
                     });
@@ -239,7 +243,6 @@ public class UserCacheServiceImpl implements UserCacheService {
         } catch (Exception e) {
             log.warn("Redis putAll failed for orgId {}: {}", orgId, e.getMessage());
         }
-
         return CompletableFuture.completedFuture(userProfileMap);
     }
 
