@@ -83,4 +83,9 @@ public interface UserEntityMapper {
 
     GroupModel toModel(GroupEntity entity);
     List<GroupModel> toModelList(List<GroupEntity> entities);
+
+    @Mapping(target = "requestId", source = "requestId")
+    @Mapping(target = "userId", source = "userIds")
+    RequestApproverModel toModel(String requestId, List<String> userIds);
+
 }

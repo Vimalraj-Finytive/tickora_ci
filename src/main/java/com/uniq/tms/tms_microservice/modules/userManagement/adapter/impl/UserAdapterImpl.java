@@ -96,7 +96,7 @@ public class UserAdapterImpl implements UserAdapter {
 
     @Override
     public Optional<UserEntity> findById(String userId) {
-        return userRepository.findByUserId(userId);
+        return userRepository.findByUserIdAndActiveTrue(userId);
     }
 
     @Override
@@ -181,7 +181,7 @@ public class UserAdapterImpl implements UserAdapter {
 
     @Override
     public UserEntity getUserById(String userId) {
-        return userRepository.findByUserId(userId)
+        return userRepository.findByUserIdAndActiveTrue(userId)
                 .orElseThrow(() -> new NoSuchElementException("User not found with ID: " + userId));
     }
 
@@ -609,8 +609,8 @@ public class UserAdapterImpl implements UserAdapter {
         return userGroupRepository.findUsersByGroupId(Collections.singletonList(groupId));
     }
     @Override
-    public   List<UserEntity> getallUsers(){
-        return userRepository.findByActiveTrue();
+    public   List<UserEntity> getallUsers(String approverId){
+        return userRepository.findByActiveTrue(approverId);
     }
 
     @Override
@@ -622,4 +622,19 @@ public class UserAdapterImpl implements UserAdapter {
     public Optional<UserEntity>findSuperAdminByOrgId(String orgId){
         return userRepository.findSuperAdminByOrgId(orgId);
     }
+
+    @Override
+    public List<UserEntity> findByApproverId(String approverId){
+        return userRepository.findByApproverIdAndActiveTrue(approverId);
+    }
+    @Override
+    public List<UserEntity>findAllById(List<String> userIds){
+        return userRepository.findAllByUserIdInAndActiveTrue(userIds);
+    }
+
+    @Override
+    public void updateApproverForUsers(String approverId, List<String> requestedUserIds) {
+         userRepository.updateApproverForUsers(approverId,requestedUserIds);
+    }
+
 }
