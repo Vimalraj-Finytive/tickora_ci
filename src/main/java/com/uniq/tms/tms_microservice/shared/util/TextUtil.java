@@ -51,6 +51,10 @@ public class TextUtil {
         return input == null || input.isEmpty();
     }
 
+//    public static boolean isBlank(List<String> input){
+//        return input == null || input.isEmpty();
+//    }
+
     public List<UserGroupDto> parseMembers(String json) {
         try {
             if (json == null || json.isBlank()) return Collections.emptyList();
