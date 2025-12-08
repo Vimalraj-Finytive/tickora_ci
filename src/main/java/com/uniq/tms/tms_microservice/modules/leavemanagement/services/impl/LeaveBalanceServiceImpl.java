@@ -17,6 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -199,7 +200,7 @@ public class LeaveBalanceServiceImpl implements LeaveBalanceService {
         }
         List<MonthlySummaryEntity> summaryEntityList = new ArrayList<>();
         log.info(" fetch userPolicy list");
-        List<String> userIds = userPolicyAdapter.findAllUserIdsInUserPolicies();
+        List<String> userIds = userPolicyAdapter.findAllUserIdsInUserPolicies(LocalDate.of(year, month, YearMonth.of(year, month).lengthOfMonth()));
 
         log.info("fetch monthly leaveBalance");
         List<LeaveBalanceEntity> list =
