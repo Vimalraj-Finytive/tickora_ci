@@ -118,24 +118,33 @@ public interface LeaveBalanceRepository extends JpaRepository<LeaveBalanceEntity
             @Param("type") AccrualType type);
 
     @Query("""
-    SELECT lb FROM LeaveBalanceEntity lb 
-    WHERE lb.user.userId = :userId
-      AND FUNCTION('DATE_TRUNC', 'month', lb.periodStartDate) =
-          FUNCTION('DATE_TRUNC', 'month', CAST(:date AS timestamp))
+SELECT lb FROM LeaveBalanceEntity lb
+WHERE lb.user.userId = :userId
+  AND lb.policy.accrualType = 'MONTHLY'
+  AND FUNCTION('DATE_TRUNC', 'month', lb.periodStartDate) =
+      FUNCTION('DATE_TRUNC', 'month', CAST(:date AS timestamp))
+ORDER BY lb.periodStartDate DESC
 """)
-    LeaveBalanceEntity findMonthlyBalance(@Param("userId") String userId,
-                                          @Param("date") LocalDate date);
+    List<LeaveBalanceEntity> findMonthlyBalances(
+            @Param("userId") String userId,
+            @Param("date") LocalDate date
+    );
+
 
 
 
     @Query("""
-    SELECT lb FROM LeaveBalanceEntity lb
-    WHERE lb.user.userId = :userId
-      AND EXTRACT(YEAR FROM lb.periodStartDate) =
-          EXTRACT(YEAR FROM CAST(:date AS date))
+SELECT lb FROM LeaveBalanceEntity lb
+WHERE lb.user.userId = :userId
+  AND lb.policy.accrualType = 'ANNUALLY'
+  AND :date BETWEEN lb.periodStartDate AND lb.periodEnd
+ORDER BY lb.periodStartDate DESC
 """)
-    LeaveBalanceEntity findAnnualBalance(@Param("userId") String userId,
-                                         @Param("date") LocalDate date);
+    List<LeaveBalanceEntity> findAnnualBalances(
+            @Param("userId") String userId,
+            @Param("date") LocalDate date
+    );
+
 
     @Query("""
     SELECT lb FROM LeaveBalanceEntity lb

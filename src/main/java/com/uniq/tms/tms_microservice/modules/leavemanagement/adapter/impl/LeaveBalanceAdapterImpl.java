@@ -101,15 +101,17 @@ public class LeaveBalanceAdapterImpl implements LeaveBalanceAdapter {
         return monthlySummaryRepository.findByMonthAndYear(month, year);
     }
 
-    @Override
-    public LeaveBalanceEntity findMonthlyBalance(String userId, LocalDate userFrom) {
-        return leaveBalanceRepo.findMonthlyBalance(userId, userFrom);
+    public LeaveBalanceEntity findMonthlyBalance(String userId, LocalDate date) {
+        List<LeaveBalanceEntity> list = leaveBalanceRepo.findMonthlyBalances(userId, date);
+        return list.isEmpty() ? null : list.get(0);
     }
 
-    @Override
+
     public LeaveBalanceEntity findAnnualBalance(String userId, LocalDate date) {
-        return leaveBalanceRepo.findAnnualBalance(userId, date);
+        List<LeaveBalanceEntity> list = leaveBalanceRepo.findAnnualBalances(userId, date);
+        return list.isEmpty() ? null : list.get(0);
     }
+
 
     @Override
     public LeaveBalanceEntity findByUserIdAndPolicyId(String userId, String policyId) {
