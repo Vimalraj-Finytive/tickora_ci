@@ -23,7 +23,9 @@ import com.uniq.tms.tms_microservice.modules.timesheetManagement.adapter.Timeshe
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.entity.TimesheetEntity;
 import com.uniq.tms.tms_microservice.modules.userManagement.adapter.UserAdapter;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
+import com.uniq.tms.tms_microservice.shared.exception.CommonExceptionHandler;
 import com.uniq.tms.tms_microservice.shared.util.CacheKeyUtil;
+import com.uniq.tms.tms_microservice.shared.util.ExportStatusTracker;
 import com.uniq.tms.tms_microservice.shared.util.ReportStyleUtil;
 import io.micrometer.common.lang.Nullable;
 import jakarta.transaction.Transactional;
@@ -41,6 +43,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+
 import java.io.*;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -62,14 +65,15 @@ public class PayRollServiceImpl implements PayRollService {
     private final TimesheetAdapter timesheetAdapter;
     private final PayRollEntityMapper payRollEntityMapper;
     private final LeaveBalanceAdapter leaveBalanceAdapter;
-    private final RedisTemplate<String,Object>redisTemplate;
+    private final RedisTemplate<String, Object> redisTemplate;
     private final CacheKeyUtil cacheKeyUtil;
     private final ReportStyleUtil reportStyleUtil;
+    private final ExportStatusTracker exportStatusTracker;
 
     public PayRollServiceImpl(PayRollAdapter payRollAdapter, PayRollEntityMapper entityMapper, UserAdapter userAdapter,
                               IdGenerationService idGenerationService, TimesheetAdapter timesheetAdapter,
                               PayRollEntityMapper payRollEntityMapper, LeaveBalanceAdapter leaveBalanceAdapter,
-                              @Nullable RedisTemplate<String, Object> redisTemplate, CacheKeyUtil cacheKeyUtil, ReportStyleUtil reportStyleUtil) {
+                              @Nullable RedisTemplate<String, Object> redisTemplate, CacheKeyUtil cacheKeyUtil, ReportStyleUtil reportStyleUtil, ExportStatusTracker exportStatusTracker) {
         this.payRollAdapter = payRollAdapter;
         this.entityMapper = entityMapper;
         this.userAdapter = userAdapter;
@@ -80,6 +84,7 @@ public class PayRollServiceImpl implements PayRollService {
         this.redisTemplate = redisTemplate;
         this.cacheKeyUtil = cacheKeyUtil;
         this.reportStyleUtil = reportStyleUtil;
+        this.exportStatusTracker = exportStatusTracker;
     }
 
     @Value("${csv.payroll.download.dir}")
@@ -144,7 +149,7 @@ public class PayRollServiceImpl implements PayRollService {
         LocalDate date = LocalDate.now(ZoneId.of("Asia/Kolkata"));
         int year = date.getYear();
         int month = date.getMonthValue() - 1;
-        if(month == 0){
+        if (month == 0) {
             month = 12;
             year = year - 1;
         }
@@ -156,7 +161,7 @@ public class PayRollServiceImpl implements PayRollService {
                                 MonthlySummaryEntity::getUnpaidLeavesTaken
                         ));
         List<UserPayRollAmountEntity> userPayrollAmountList = new ArrayList<>();
-        for(UserPayRollEntity entity : entities){
+        for (UserPayRollEntity entity : entities) {
             log.info("loop started");
             UserPayRollAmountEntity userPayrollAmount = new UserPayRollAmountEntity();
             userPayrollAmount.setUser(entity.getUser());
@@ -196,8 +201,8 @@ public class PayRollServiceImpl implements PayRollService {
     }
 
 
-    public Integer calculateRegularDays(int days, BigDecimal unpaidLeave){
-            return BigDecimal.valueOf(days).subtract(unpaidLeave).intValue();
+    public Integer calculateRegularDays(int days, BigDecimal unpaidLeave) {
+        return BigDecimal.valueOf(days).subtract(unpaidLeave).intValue();
     }
 
     // NOTE: Keeping this for future requirement changes
@@ -442,9 +447,7 @@ public class PayRollServiceImpl implements PayRollService {
     @Transactional
     public String startExportPayroll(String month, String format, String schema, String orgId) {
         File folder = new File(downloadDir);
-        if (!folder.exists()) {
-            folder.mkdirs();
-        }
+        if (!folder.exists()) folder.mkdirs();
         String fileFormat = (format == null ? "xlsx" : format.toLowerCase());
         String baseName = "Payroll_" + month;
         String extension = "." + fileFormat;
@@ -458,7 +461,13 @@ public class PayRollServiceImpl implements PayRollService {
         }
         String exportKey = cacheKeyUtil.getPayRollExport(schema, orgId, finalName);
         if (redisTemplate != null) {
-            redisTemplate.opsForValue().set(exportKey, ReportType.PENDING.getValues(), Duration.ofHours(12));
+            redisTemplate.opsForValue().set(
+                    exportKey,
+                    ReportType.PENDING.getValues(),
+                    Duration.ofHours(12)
+            );
+        } else {
+            exportStatusTracker.writeStatus(file, ReportType.PENDING.getValues());
         }
         generateAsync(file, exportKey, month, fileFormat);
         return finalName;
@@ -467,21 +476,50 @@ public class PayRollServiceImpl implements PayRollService {
     @Async
     public void generateAsync(File file, String redisKey, String month, String format) {
         try {
-            redisTemplate.opsForValue().set(redisKey, ReportType.PROCESSING.getValues());
+            boolean redisAvailable = redisTemplate != null;
+
+            if (redisAvailable) {
+                redisTemplate.opsForValue().set(redisKey, ReportType.PROCESSING.getValues());
+            } else {
+                exportStatusTracker.writeStatus(file, ReportType.PROCESSING.getValues());
+            }
             List<UserPayRollAmount> data = payRollAdapter.findAllByMonth(month);
+
             if ("csv".equalsIgnoreCase(format)) {
                 generateCsv(data, file);
             } else {
                 generateXlsx(data, file);
             }
-            redisTemplate.opsForValue().set(redisKey, ReportType.COMPLETED.getValues());
+
+            if (redisAvailable) {
+                redisTemplate.opsForValue().set(redisKey, ReportType.COMPLETED.getValues());
+            } else {
+                exportStatusTracker.writeStatus(file, ReportType.COMPLETED.getValues());
+            }
         } catch (Exception ex) {
-            redisTemplate.opsForValue().set(redisKey, ReportType.FAILED.getValues());
             log.error("Payroll export failed", ex);
+            try {
+                if (file.exists()) {
+                    boolean deleted = file.delete();
+                    if (!deleted) {
+                        log.warn("Failed to delete file after export failure: {}", file.getAbsolutePath());
+                    }
+                }
+            } catch (Exception deleteEx) {
+                log.error("Error deleting failed export file: {}", deleteEx.getMessage());
+            }
+
+            if (redisTemplate != null) {
+                redisTemplate.opsForValue().set(redisKey, ReportType.FAILED.getValues());
+            } else {
+                exportStatusTracker.writeStatus(file, ReportType.FAILED.getValues());
+            }
         }
+
     }
 
     private void generateCsv(List<UserPayRollAmount> data, File file) {
+        file.getParentFile().mkdirs();
         try (FileWriter fw = new FileWriter(file);
              CSVWriter csv = new CSVWriter(fw)) {
             ClassPathResource resource =
@@ -520,6 +558,7 @@ public class PayRollServiceImpl implements PayRollService {
     }
 
     private void generateXlsx(List<UserPayRollAmount> data, File file) {
+        file.getParentFile().mkdirs();
         try (Workbook workbook = new XSSFWorkbook();
              FileOutputStream fos = new FileOutputStream(file)) {
             Sheet sheet = workbook.createSheet("Payroll Report");
@@ -570,28 +609,13 @@ public class PayRollServiceImpl implements PayRollService {
     @Override
     public String getExportStatus(String exportId, String schema, String orgId) {
         String exportKey = cacheKeyUtil.getPayRollExport(schema, orgId, exportId);
-        if (redisTemplate == null) {
-            return "REDIS_UNAVAILABLE";
-        }
-        Object val = redisTemplate.opsForValue().get(exportKey);
-        if (val == null) {
-            return "NOT_FOUND";
-        }
-        return val.toString();
-    }
-
-    @Override
-    public File downloadPayroll(String exportId, String schema, String orgId) {
-        String redisKey = cacheKeyUtil.getPayRollExport(schema, orgId, exportId);
-        String status = (String) redisTemplate.opsForValue().get(redisKey);
-        if (status == null || !ReportType.COMPLETED.getValues().equalsIgnoreCase(status)) {
-            throw new RuntimeException("Payroll export not ready. Current status = " + status);
+        if (redisTemplate != null) {
+            Object val = redisTemplate.opsForValue().get(exportKey);
+            return (val == null ? "NOT_FOUND" : val.toString());
         }
         File file = new File(downloadDir + exportId);
-        if (!file.exists()) {
-            throw new RuntimeException("Report file missing");
-        }
-        return file;
+        String status = exportStatusTracker.readStatus(file);
+        return status == null ? "NOT_FOUND" : status;
     }
 
 }

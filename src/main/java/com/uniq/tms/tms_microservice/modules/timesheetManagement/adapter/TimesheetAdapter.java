@@ -55,4 +55,5 @@ public interface TimesheetAdapter {
     FixedWorkScheduleEntity findByWorkScheduleIdAndDay(String workScheduleId, DayOfWeekEnum day);
     FlexibleWorkScheduleEntity findByWorkScheduleIdAndDays(String workScheduleId, DayOfWeekEnum day);
     List<TimesheetEntity> getTimesheetByUserIds(String userId, int year, int month);
+    void deleteTimesheet(String userId, LocalDate date);
 }
