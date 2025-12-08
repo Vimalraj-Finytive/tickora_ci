@@ -71,18 +71,7 @@ public class UserEntity {
     @ManyToOne
     @JoinColumn(name = "calendar_id")
     private CalendarEntity calendar;
-
-    @Column(name = "request_approver_id")
-    private String approverId;
-
-    public String getApproverId() {
-        return approverId;
-    }
-
-    public void setApproverId(String approverId) {
-        this.approverId = approverId;
-    }
-
+    
     public UserEntity(String userId){
         this.userId = userId;
     }

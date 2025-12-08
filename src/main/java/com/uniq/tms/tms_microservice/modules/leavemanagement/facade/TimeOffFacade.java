@@ -190,11 +190,11 @@ public class TimeOffFacade {
         return new ApiResponse<>(200, "Policies fetched successfully", dto);
     }
 
-    public ApiResponse<List<Map<String, Object>>> filterRequests(TimeOffExportRequest dto, String loggedUserId) {
-        List<Map<String, Object>> model = timeOffRequestService.filterRequests(dto, loggedUserId);
-        return new ApiResponse<>(200, "Requests fetched successfully", model);
+    public ApiResponse<List<TimeOffExportDto>> filterRequests(TimeOffExportRequest dto, String loggedUserId) {
+        List<TimeOffExportModel> models = timeOffRequestService.filterRequests(dto, loggedUserId);
+        List<TimeOffExportDto> dtoList = timeoffPolicyDtoMapper.toDtoLists(models);
+        return new ApiResponse<>(200, "Requests fetched successfully", dtoList);
     }
-
 
     public ApiResponse<List<TimeoffRequestResponseDto>> filterRequestsBasedOnRole(LocalDate fromDate, LocalDate toDate) {
         try {
