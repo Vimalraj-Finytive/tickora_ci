@@ -5,7 +5,9 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.LeaveBalanc
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.TimeOffPolicyAdapter;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.TimeOffRequestAdapter;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.UserPolicyAdapter;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeOffExportDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeOffExportRequestDto;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.ViewerDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.LeaveBalanceEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeOffPolicyEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeOffRequestEntity;
@@ -19,6 +21,8 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.services.TimeOffReq
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.adapter.TimesheetAdapter;
 import com.uniq.tms.tms_microservice.modules.userManagement.adapter.UserAdapter;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
+import com.uniq.tms.tms_microservice.modules.userManagement.enums.RoleName;
+import com.uniq.tms.tms_microservice.modules.userManagement.enums.UserRole;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.FixedWorkScheduleEntity;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.FlexibleWorkScheduleEntity;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.WorkScheduleEntity;
@@ -46,6 +50,7 @@ import java.time.*;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.List;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.FileSystemResource;
@@ -437,77 +442,123 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
     }
 
     @Override
-    public Map<String, List<TimeOffRequestGroupModel>> filterRequests(
-            TimeOffExportRequest request,
-            String loggedUserId) {
-        boolean creatorMode =
-                request.getUserId() != null &&
-                        !request.getUserId().trim().isEmpty() &&
-                        request.getUserId().equals(loggedUserId);
+    public List<TimeOffExportModel> filterRequests(TimeOffExportRequest request, String loggedUserId) {
 
-        if (request.getFromDate() == null || request.getToDate() == null) {
-            throw new IllegalArgumentException("fromDate and toDate are required");
-        }
         List<TimeOffExportView> rows = fetchExportRows(request, loggedUserId);
-        List<TimeOffRequestGroupModel> toList = new ArrayList<>();
-        List<TimeOffRequestGroupModel> ccList = new ArrayList<>();
+
+        Map<String, TimeOffExportModel> grouped = new LinkedHashMap<>();
+
         for (TimeOffExportView row : rows) {
-            TimeOffRequestGroupModel model = new TimeOffRequestGroupModel();
-            model.setPolicyName(row.getPolicyName());
-            model.setPolicyId(row.getPolicyId());
-            model.setRequestDate(LocalDate.parse(row.getRequestedDate()));
-            model.setStartDate(row.getLeaveStartDate());
-            model.setEndDate(row.getLeaveEndDate());
-            model.setStartTime(row.getLeaveStartTime());
-            model.setEndTime(row.getLeaveEndTime());
-            model.setStatus(row.getStatus());
-            model.setReason(row.getReason());
-            model.setUnitsRequested(row.getUnitsRequested());
-            model.setLeaveType(row.getLeaveType());
-            if (creatorMode) {
-                model.setUserId(row.getViewerId());
-                model.setUserName(row.getViewerName());
-                model.setViewerType(null);
-                if ("APPROVER".equals(row.getViewerType()))
-                    toList.add(model);
-                else if ("VIEWER".equals(row.getViewerType()))
-                    ccList.add(model);
-            } else {
+
+            String key = row.getCreatorId()
+                    + "|" + row.getPolicyId()
+                    + "|" + row.getRequestedDate()
+                    + "|" + row.getLeaveStartDate()
+                    + "|" + row.getLeaveEndDate();
+
+            TimeOffExportModel model = grouped.get(key);
+
+            if (model == null) {
+                model = new TimeOffExportModel();
                 model.setUserId(row.getCreatorId());
                 model.setUserName(row.getCreatorName());
-                model.setViewerType(row.getViewerType());
-                toList.add(model);
+                model.setPolicyName(row.getPolicyName());
+                model.setPolicyId(row.getPolicyId());
+                model.setRequestDate(LocalDate.parse(row.getRequestedDate()));
+                model.setStartDate(row.getLeaveStartDate());
+                model.setEndDate(row.getLeaveEndDate());
+                model.setStartTime(row.getLeaveStartTime());
+                model.setEndTime(row.getLeaveEndTime());
+                model.setUnitsRequested(Double.valueOf(row.getUnitsRequested()));
+                model.setReason(row.getReason());
+                model.setStatus(row.getStatus());
+                model.setLeaveType(row.getLeaveType());
+                model.setViewers(new ArrayList<>());
+                model.setApprover(new ArrayList<>());
+
+                grouped.put(key, model);
+            }
+
+            ViewerType viewerType = null;
+            if (row.getViewerType() != null) {
+                viewerType = ViewerType.valueOf(row.getViewerType().toUpperCase());
+            }
+
+            if (viewerType == ViewerType.VIEWER) {
+                ViewerModel v = new ViewerModel();
+                v.setUserId(row.getViewerId());
+                v.setUserName(row.getViewerName());
+                v.setViewerType("VIEWER");
+                model.getViewers().add(v);
+            }
+
+            if (viewerType == ViewerType.APPROVER) {
+                ViewerModel a = new ViewerModel();
+                a.setUserId(row.getViewerId());
+                a.setUserName(row.getViewerName());
+                a.setViewerType("APPROVER");
+                model.getApprover().add(a);
             }
         }
-        Map<String, List<TimeOffRequestGroupModel>> map = new HashMap<>();
-        map.put("TO", toList);
-        map.put("CC", ccList);
-        return map;
+
+        return new ArrayList<>(grouped.values());
     }
 
     public List<TimeOffExportView> fetchExportRows(TimeOffExportRequest request, String loggedUserId) {
 
-        boolean creatorMode =
-                request.getUserId() != null &&
-                        !request.getUserId().trim().isEmpty() &&
-                        request.getUserId().equals(loggedUserId);
+        String[] statusArr = request.getStatus() == null ? new String[0] : request.getStatus().toArray(new String[0]);
+        String[] policyArr = request.getPolicyIds() == null ? new String[0] : request.getPolicyIds().toArray(new String[0]);
 
-        String[] statusArr = (request.getStatus() == null || request.getStatus().isEmpty())
-                ? new String[0]
-                : request.getStatus().toArray(new String[0]);
+        String loggedInUserId = authHelper.getUserId();
+        UserEntity user = userAdapter.findById(loggedInUserId).orElseThrow();
 
-        String[] policyArr = (request.getPolicyIds() == null || request.getPolicyIds().isEmpty())
-                ? new String[0]
-                : request.getPolicyIds().toArray(new String[0]);
+        boolean isSuperAdmin = user.getRole().getHierarchyLevel() == UserRole.SUPERADMIN.getHierarchyLevel();
+        boolean hasUserId = request.getUserId() != null && !request.getUserId().trim().isEmpty();
+        boolean creatorMode = hasUserId && request.getUserId().equals(loggedUserId);
 
-        return creatorMode
-                ? timeOffRequestAdapter.fetchCreatorRequests(
-                request.getFromDate(), request.getToDate(), statusArr, policyArr, loggedUserId
-        )
-                : timeOffRequestAdapter.fetchReceiverRequests(
-                request.getFromDate(), request.getToDate(), statusArr, policyArr, loggedUserId
-        );
+        if (isSuperAdmin) {
+
+            if (creatorMode) {
+                return timeOffRequestAdapter.fetchCreatorRequests(
+                        request.getFromDate(),
+                        request.getToDate(),
+                        statusArr,
+                        policyArr,
+                        loggedUserId
+                );
+            } else {
+                return timeOffRequestAdapter.fetchAllRequests(
+                        request.getFromDate(),
+                        request.getToDate(),
+                        statusArr,
+                        policyArr
+                );
+            }
+
+        } else {
+
+            if (creatorMode) {
+                return timeOffRequestAdapter.fetchCreatorRequests(
+                        request.getFromDate(),
+                        request.getToDate(),
+                        statusArr,
+                        policyArr,
+                        loggedUserId
+                );
+            }
+
+            return timeOffRequestAdapter.fetchReceiverRequests(
+                    request.getFromDate(),
+                    request.getToDate(),
+                    statusArr,
+                    policyArr,
+                    loggedUserId
+            );
+        }
     }
+
+
+
 
     @Override
     @Transactional

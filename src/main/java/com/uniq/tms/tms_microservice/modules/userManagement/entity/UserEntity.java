@@ -71,7 +71,7 @@ public class UserEntity {
     @ManyToOne
     @JoinColumn(name = "calendar_id")
     private CalendarEntity calendar;
-
+    
     public UserEntity(String userId){
         this.userId = userId;
     }
