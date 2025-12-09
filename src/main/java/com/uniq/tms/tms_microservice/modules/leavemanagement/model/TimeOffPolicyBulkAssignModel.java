@@ -4,7 +4,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 public class TimeOffPolicyBulkAssignModel {
-    private List<String> policyIds;
+    private String policyId;
     private List<String> userIds;
     private List<Long> groupIds;
 
@@ -27,12 +27,12 @@ public class TimeOffPolicyBulkAssignModel {
         this.userValidTo = userValidTo;
     }
 
-    public List<String> getPolicyIds() {
-        return policyIds;
+    public String getPolicyId() {
+        return policyId;
     }
 
-    public void setPolicyIds(List<String> policyIds) {
-        this.policyIds = policyIds;
+    public void setPolicyId(String policyId) {
+        this.policyId = policyId;
     }
 
     public List<String> getUserIds() {

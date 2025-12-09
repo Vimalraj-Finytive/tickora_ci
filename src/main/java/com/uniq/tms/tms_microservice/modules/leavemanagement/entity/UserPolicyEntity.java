@@ -32,6 +32,9 @@ public class UserPolicyEntity {
     @Column(name = "entitled_units")
     private Integer entitledUnits;
 
+    @Column(name = "is_active")
+    private Boolean active;
+
     @CreationTimestamp
     @Column(name = "assigned_at")
     private LocalDateTime assignedAt;
@@ -91,5 +94,13 @@ public class UserPolicyEntity {
 
     public void setAssignedAt(LocalDateTime assignedAt) {
         this.assignedAt = assignedAt;
+    }
+
+    public Boolean getActive() {
+        return active;
+    }
+
+    public void setActive(Boolean active) {
+        this.active = active;
     }
 }

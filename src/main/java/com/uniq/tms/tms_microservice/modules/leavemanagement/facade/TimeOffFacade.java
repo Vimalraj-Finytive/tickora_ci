@@ -77,8 +77,6 @@ public class TimeOffFacade {
         } catch (IllegalArgumentException ex) {
             return new ApiResponse<>(400, ex.getMessage(), null);
 
-        } catch (Exception ex) {
-            return new ApiResponse<>(409, ex.getMessage(), null);
         }
     }
 

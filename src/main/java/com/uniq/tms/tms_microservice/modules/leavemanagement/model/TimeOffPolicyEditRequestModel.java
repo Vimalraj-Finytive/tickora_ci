@@ -11,8 +11,6 @@ public class TimeOffPolicyEditRequestModel {
     private Boolean carryForward;
     private Integer maxCarryForwardUnits;
     private LocalDate validityEndDate;
-    private LocalDate userValidFrom;
-    private LocalDate userValidTo;
 
     public String getPolicyName() {
         return policyName;
@@ -62,21 +60,5 @@ public class TimeOffPolicyEditRequestModel {
         this.validityEndDate = validityEndDate;
     }
 
-
-    public LocalDate getUserValidTo() {
-        return userValidTo;
-    }
-
-    public void setUserValidTo(LocalDate userValidTo) {
-        this.userValidTo = userValidTo;
-    }
-
-    public LocalDate getUserValidFrom() {
-        return userValidFrom;
-    }
-
-    public void setUserValidFrom(LocalDate userValidFrom) {
-        this.userValidFrom = userValidFrom;
-    }
 
 }

@@ -19,7 +19,7 @@ public class User {
     private String workSchedule;
     private String requestApproverId;
     private String calendarId;
-    private List<String> policyIds;
+    private String policyId;
 
     public boolean isActive() {
         return active;
@@ -133,11 +133,11 @@ public class User {
         this.calendarId = calendarId;
     }
 
-    public List<String> getPolicyIds() {
-        return policyIds;
+    public String getPolicyId() {
+        return policyId;
     }
 
-    public void setPolicyIds(List<String> policyIds) {
-        this.policyIds = policyIds;
+    public void setPolicyId(String policyId) {
+        this.policyId = policyId;
     }
 }

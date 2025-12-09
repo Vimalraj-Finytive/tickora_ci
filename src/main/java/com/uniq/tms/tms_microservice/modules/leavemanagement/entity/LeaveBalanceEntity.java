@@ -49,6 +49,9 @@ public class LeaveBalanceEntity {
     @Column(name = "carry_forward_units")
     private Double carryForwardUnits;
 
+    @Column(name = "is_active")
+    private Boolean active;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
@@ -171,5 +174,13 @@ public class LeaveBalanceEntity {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public Boolean getActive() {
+        return active;
+    }
+
+    public void setActive(Boolean active) {
+        this.active = active;
     }
 }
