@@ -12,6 +12,7 @@ import com.uniq.tms.tms_microservice.modules.userManagement.dto.GroupDto;
 import com.uniq.tms.tms_microservice.modules.userManagement.dto.UserNameEmailDto;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.*;
 import com.uniq.tms.tms_microservice.modules.userManagement.enums.MemberType;
+import com.uniq.tms.tms_microservice.modules.userManagement.projections.UserProjection;
 import com.uniq.tms.tms_microservice.modules.userManagement.repository.*;
 import com.uniq.tms.tms_microservice.modules.locationManagement.mapper.LocationEntityMapper;
 import com.uniq.tms.tms_microservice.modules.userManagement.model.UserResponse;
@@ -105,7 +106,7 @@ public class UserAdapterImpl implements UserAdapter {
         return roleRepository.findById(roleId);
     }
 
-    public List<UserResponse> findByOrganizationId(String orgId, int hierarchyLevel){
+    public List<UserProjection> findByOrganizationId(String orgId, int hierarchyLevel){
         return userRepository.findAllUsers(orgId,hierarchyLevel);
     }
 

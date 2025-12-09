@@ -805,7 +805,6 @@ CREATE TABLE IF NOT EXISTS user_policies (
     valid_to DATE,
     is_active BOOLEAN,
     assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    is_active BOOLEAN,
     CONSTRAINT fk_user_policies_policy
         FOREIGN KEY (policy_id) REFERENCES timeoff_policies(policy_id)
         ON DELETE CASCADE,
@@ -884,7 +883,6 @@ CREATE TABLE IF NOT EXISTS leave_balance (
     is_active BOOLEAN,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    is_active BOOLEAN,
     CONSTRAINT fk_leave_balance_policy
         FOREIGN KEY (policy_id) REFERENCES timeoff_policies(policy_id)
         ON DELETE CASCADE,
