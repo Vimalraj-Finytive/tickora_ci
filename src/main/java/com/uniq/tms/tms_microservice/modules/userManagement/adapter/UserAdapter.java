@@ -127,4 +127,8 @@ public interface UserAdapter {
     List<UserEntity>findAllById(List<String>userIds);
     void updateApproverForUsers( String approverId, List<String> requestedUserIds);
     Set<String> getAllSupervisorIds(List<Long> groupIds, String userId, String type);
+    String findApproverIdByUserId(String userId);
+    String getCalendarIdByUserId(String userId);
+     void updateUserApprover(String newApproverId, List<String> userIds);
+
 }
