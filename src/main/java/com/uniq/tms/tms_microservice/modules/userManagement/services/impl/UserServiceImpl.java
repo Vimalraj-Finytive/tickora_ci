@@ -510,7 +510,7 @@ public class UserServiceImpl implements UserService {
             } else {
                 TimeOffPolicyBulkAssignModel assignModel = new TimeOffPolicyBulkAssignModel();
                 assignModel.setUserIds(userIds);
-                assignModel.setPolicyIds(List.of(defaultPolicyEntity.getPolicyId()));
+                assignModel.setPolicyId(defaultPolicyEntity.getPolicyId());
                 assignModel.setUserValidFrom(LocalDate.now());
                 assignModel.setUserValidTo(defaultPolicyEntity.getValidityEndDate());
 
@@ -711,8 +711,7 @@ public class UserServiceImpl implements UserService {
         log.info("Saving user: {}", userMiddleware.getUserName());
         UserEntity savedUserEntity = userAdapter.saveUser(entity);
         TimeOffPolicyEntity timeOffPolicyEntity=timeOffPolicyAdapter.findDefaultPolicy();
-        List<String> policyIds = new ArrayList<>();
-        policyIds.add(timeOffPolicyEntity.getPolicyId());
+        assignPolicy(timeOffPolicyEntity.getPolicyId(), customUserId);
 
         List<Long> locationIds = null;
         List<Long> groupIds = null;
@@ -793,11 +792,11 @@ public class UserServiceImpl implements UserService {
                     .toList();
         }
 
-        if (!(userDto.getPolicyIds() == null || userDto.getPolicyIds().isEmpty())) {
-            log.info("Adding user to policy: {}", userDto.getPolicyIds());
-              policyIds.addAll(userDto.getPolicyIds());
+        if (!(userDto.getPolicyId() == null)) {
+            log.info("Adding user to policy: {}", userDto.getPolicyId());
+            assignPolicy(userDto.getPolicyId(), customUserId);
         }
-        assignPolicy(policyIds, customUserId);
+
 
         if (!isBlank(userDto.getGroupId())) {
             log.info("Adding user to group: {}", userDto.getGroupId());
@@ -841,10 +840,10 @@ public class UserServiceImpl implements UserService {
         return new ApiResponse<UserDto>(201, "Successfully saved user", userDto);
     }
 
-    private void assignPolicy(List<String> policyIds, String customUserId){
+    private void assignPolicy(String policyId, String customUserId){
         TimeOffPolicyBulkAssignModel defaultPolicy = new TimeOffPolicyBulkAssignModel();
         defaultPolicy.setUserIds(List.of(customUserId));
-        defaultPolicy.setPolicyIds(policyIds);
+        defaultPolicy.setPolicyId(policyId);
         defaultPolicy.setUserValidFrom(LocalDate.now());
         defaultPolicy.setUserValidTo(null);
         timeOffPolicyService.assignPolicies(defaultPolicy);
