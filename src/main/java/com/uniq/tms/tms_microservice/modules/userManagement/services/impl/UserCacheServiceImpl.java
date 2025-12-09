@@ -7,6 +7,7 @@ import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.Organ
 import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.OrganizationRepository;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.OrganizationTypeRepository;
 import com.uniq.tms.tms_microservice.modules.userManagement.dto.*;
+import com.uniq.tms.tms_microservice.modules.userManagement.projections.UserProjection;
 import com.uniq.tms.tms_microservice.shared.util.CacheKeyUtil;
 import com.uniq.tms.tms_microservice.shared.util.TextUtil;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
@@ -88,7 +89,7 @@ public class UserCacheServiceImpl implements UserCacheService {
                 int hierarchyLevel = UserRole.getLevel(role.name());
 
                 // Fetch from DB
-                List<UserResponse> users = userRepository.findAllUsers(orgId, hierarchyLevel);
+                List<UserProjection> users = userRepository.findAllUsers(orgId, hierarchyLevel);
 
                 if (users.isEmpty()) {
                     log.warn("No users found for orgId={} and role={}", orgId, role);
@@ -97,27 +98,49 @@ public class UserCacheServiceImpl implements UserCacheService {
 
                 // Convert to DTO
                 List<UserResponseDto> usersDto = users.stream()
-                        .map(userDtoMapper::toDto)
+                        .map(userDtoMapper::toUserDto)
                         .toList();
 
                 // Merge duplicates based on userId
                 Map<String, UserResponseDto> mergedUserMap = new LinkedHashMap<>();
+
                 for (UserResponseDto user : usersDto) {
+
+                    // Ensure lists are always initialized
+                    if (user.getGroupName() == null) user.setGroupName(new ArrayList<>());
+                    if (user.getLocationName() == null) user.setLocationName(new ArrayList<>());
+                    if (user.getPolicies() == null) user.setPolicies(new ArrayList<>());
+
                     mergedUserMap.compute(user.getUserId(), (id, existing) -> {
+
                         if (existing == null) return user;
 
-                        // Merge group names
-                        if (!existing.getGroupName().contains(user.getGroupName().getFirst())) {
-                            existing.getGroupName().add(user.getGroupName().getFirst());
+                        // GROUP merge
+                        String incomingGroup = !user.getGroupName().isEmpty() ? user.getGroupName().get(0) : null;
+                        if (incomingGroup != null &&
+                                !existing.getGroupName().contains(incomingGroup)) {
+                            existing.getGroupName().add(incomingGroup);
                         }
-                        // Merge location names
-                        if (!existing.getLocationName().contains(user.getLocationName().getFirst())) {
-                            existing.getLocationName().add(user.getLocationName().getFirst());
+
+                        // LOCATION merge
+                        String incomingLocation = !user.getLocationName().isEmpty() ? user.getLocationName().get(0) : null;
+                        if (incomingLocation != null &&
+                                !existing.getLocationName().contains(incomingLocation)) {
+                            existing.getLocationName().add(incomingLocation);
                         }
-                        //Merge Policy names
-                        if(!existing.getPolicyName().contains(user.getPolicyName().getFirst())){
-                            existing.getPolicyName().add(user.getPolicyName().getFirst());
+
+                        // POLICY merge
+                        if (!user.getPolicies().isEmpty()) {
+                            UserPolicyDto incomingPolicy = user.getPolicies().get(0);
+                            boolean alreadyExists = existing.getPolicies()
+                                    .stream()
+                                    .anyMatch(p -> p.getPolicyName().equals(incomingPolicy.getPolicyName()));
+
+                            if (!alreadyExists) {
+                                existing.getPolicies().add(incomingPolicy);
+                            }
                         }
+
                         return existing;
                     });
                 }
@@ -350,6 +373,13 @@ public class UserCacheServiceImpl implements UserCacheService {
                         if (!existing.getLocationName().contains(user.getLocationName().getFirst())) {
                             existing.getLocationName().add(user.getLocationName().getFirst());
                         }
+                        if (existing.getPolicies()
+                                .stream()
+                                .noneMatch(p -> p.getPolicyName()
+                                        .equals(user.getPolicies().getFirst().getPolicyName()))) {
+
+                            existing.getPolicies().add(user.getPolicies().getFirst());
+                        }
                         return existing;
                     });
                 }
@@ -378,7 +408,7 @@ public class UserCacheServiceImpl implements UserCacheService {
             return CompletableFuture.completedFuture(roleWiseUserMap);
 
         } catch (Exception e) {
-            log.error("Error during loadAllRoleUsers for orgId={}", orgId, e);
+            log.error("Error during loadAllInactiveUsers for orgId={}", orgId, e);
             throw new RuntimeException("Failed to cache member data", e);
         }
     }

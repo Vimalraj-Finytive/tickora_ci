@@ -4,11 +4,11 @@ import com.uniq.tms.tms_microservice.modules.userManagement.dto.*;
 import com.uniq.tms.tms_microservice.modules.userManagement.model.*;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserGroupEntity;
+import com.uniq.tms.tms_microservice.modules.userManagement.projections.UserProjection;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.WorkScheduleTypeEntity;
-import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
-import org.mapstruct.Mappings;
-import org.mapstruct.ReportingPolicy;
+import org.mapstruct.*;
+
+import java.util.ArrayList;
 import java.util.List;
 
 @Mapper(componentModel = "spring",unmappedTargetPolicy = ReportingPolicy.IGNORE, uses = {UserDtoMapper.CommonMapper.class})
@@ -60,6 +60,9 @@ public interface UserDtoMapper {
 
     BulkUserLocationModel toModel(BulkUserLocationDto dto);
 
+    @Mapping(target = "policies", ignore = true)
+    UserResponseDto toUserDto(UserProjection userProjection);
+
     @Mapper(componentModel = "spring")
     interface CommonMapper {
         default String map(WorkScheduleTypeEntity entity) {
@@ -102,4 +105,19 @@ public interface UserDtoMapper {
 
     RequestApproverModel toModel(RequestApproverDto dto);
 
+    @AfterMapping
+    default void addPolicies(UserProjection user, @MappingTarget UserResponseDto dto) {
+
+        dto.setPolicies(new ArrayList<>());
+
+        if (user.getPolicyName() != null) {
+            dto.getPolicies().add(
+                    new UserPolicyDto(
+                            user.getPolicyName(),
+                            user.getValidFrom(),
+                            user.getValidTo()
+                    )
+            );
+        }
+    }
 }
