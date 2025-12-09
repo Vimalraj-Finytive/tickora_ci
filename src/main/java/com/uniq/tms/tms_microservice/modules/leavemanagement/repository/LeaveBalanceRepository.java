@@ -150,9 +150,20 @@ ORDER BY lb.periodStartDate DESC
     SELECT lb FROM LeaveBalanceEntity lb
     WHERE lb.user.userId = :userId
       AND lb.policy.policyId = :policyId
+      AND lb.active = true
 """)
     LeaveBalanceEntity findByUserIdAndPolicyId(@Param("userId") String userId,
                                                @Param("policyId") String policyId);
 
+    @Query("""
+      SELECT lb FROM LeaveBalanceEntity lb
+      WHERE lb.user.userId = :userId
+      AND lb.policy.policyId = :policyId
+      AND lb.active = true
+     """)
+    LeaveBalanceEntity findActiveBalanceByUserIdAndPolicy(
+            @Param("userId") String userId,
+            @Param("policyId") String policyId
+    );
 
 }

@@ -36,4 +36,9 @@ public interface UserPolicyAdapter {
 
     List<UserPolicyEntity> findUserPoliciesByUserId(String userId);
 
+    List<UserPolicyEntity> findActivePoliciesByUserId(String userId);
+
+    UserPolicyEntity saveUserPolicy(UserPolicyEntity entity);
+
+
 }

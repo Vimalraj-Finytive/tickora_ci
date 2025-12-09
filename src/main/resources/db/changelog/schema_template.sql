@@ -803,6 +803,7 @@ CREATE TABLE IF NOT EXISTS user_policies (
     entitled_units INT,
     valid_from DATE,
     valid_to DATE,
+    is_active BOOLEAN,
     assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_user_policies_policy
         FOREIGN KEY (policy_id) REFERENCES timeoff_policies(policy_id)
@@ -879,6 +880,7 @@ CREATE TABLE IF NOT EXISTS leave_balance (
     next_accrual_date DATE,
     last_accrual_date DATE,
     carry_forward_units DOUBLE PRECISION DEFAULT 0,
+    is_active BOOLEAN,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_leave_balance_policy

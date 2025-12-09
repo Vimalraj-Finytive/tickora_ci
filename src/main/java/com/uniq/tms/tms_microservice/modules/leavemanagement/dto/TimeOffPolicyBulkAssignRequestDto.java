@@ -5,19 +5,19 @@ import java.time.LocalDate;
 import java.util.List;
 
 public class TimeOffPolicyBulkAssignRequestDto {
-    private List<String> policyIds;
+    private String policyId;
     private List<String> userIds;
     private List<Long> groupIds;
     @NotNull
     private LocalDate userValidFrom;
     private LocalDate userValidTo;
 
-    public List<String> getPolicyIds() {
-        return policyIds;
+    public String getPolicyId() {
+        return policyId;
     }
 
-    public void setPolicyIds(List<String> policyIds) {
-        this.policyIds = policyIds;
+    public void setPolicyId(String policyId) {
+        this.policyId = policyId;
     }
 
     public List<String> getUserIds() {

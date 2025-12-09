@@ -117,4 +117,9 @@ public class LeaveBalanceAdapterImpl implements LeaveBalanceAdapter {
     public LeaveBalanceEntity findByUserIdAndPolicyId(String userId, String policyId) {
         return leaveBalanceRepo.findByUserIdAndPolicyId(userId, policyId);
     }
+
+    @Override
+    public LeaveBalanceEntity findActiveBalanceByUserIdAndPolicy(String userId, String policyId) {
+        return leaveBalanceRepo.findActiveBalanceByUserIdAndPolicy(userId, policyId);
+    }
 }

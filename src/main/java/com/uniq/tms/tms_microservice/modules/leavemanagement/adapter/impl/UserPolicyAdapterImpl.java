@@ -89,8 +89,18 @@ public class UserPolicyAdapterImpl implements UserPolicyAdapter {
 
     @Override
     public List<UserPolicyEntity> findUserPoliciesByUserId(String userId) {
-        return userPolicyRepo.findByUser_UserId(userId);
+        return userPolicyRepo.findByUser_UserIdAndActiveTrue(userId);
     }
 
+
+    @Override
+    public List<UserPolicyEntity> findActivePoliciesByUserId(String userId) {
+        return userPolicyRepo.findActivePoliciesByUserId(userId);
+    }
+
+    @Override
+    public UserPolicyEntity saveUserPolicy(UserPolicyEntity entity) {
+        return userPolicyRepo.save(entity);
+    }
 
 }
