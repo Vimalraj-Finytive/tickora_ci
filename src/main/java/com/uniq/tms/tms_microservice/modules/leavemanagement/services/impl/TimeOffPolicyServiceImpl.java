@@ -527,6 +527,27 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
         policy.setUpdatedAt(LocalDateTime.now());
 
         timeOffPolicyAdapter.savePolicy(policy);
+
+        if (!status) {
+            List<UserPolicyEntity> assigedUp = userPolicyAdapter.findUserPoliciesByPolicyId(policyId);
+
+            for (UserPolicyEntity userPolicy : assigedUp) {
+                userPolicy.setActive(status);
+            }
+
+            List<LeaveBalanceEntity> assignedLb = leaveBalanceAdapter.findLeaveBalancesByPolicyId(policyId);
+            for (LeaveBalanceEntity leaveBalance : assignedLb) {
+                leaveBalance.setActive(status);
+                leaveBalance.setUpdatedAt(LocalDateTime.now());
+            }
+            if (!assigedUp.isEmpty()) {
+                userPolicyAdapter.saveUserPolicies(assigedUp);
+            }
+            if (!assignedLb.isEmpty()) {
+                leaveBalanceAdapter.saveLeaveBalances(assignedLb);
+            }
+        }
+
     }
 
     @Override

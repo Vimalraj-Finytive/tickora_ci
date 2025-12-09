@@ -3,6 +3,7 @@ package com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.impl;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.UserPolicyAdapter;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.UserPolicyEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.AccrualType;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.record.UserPolicyProjection;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.repository.UserPolicyRepository;
 import org.springframework.stereotype.Component;
 import java.util.*;
@@ -92,6 +93,10 @@ public class UserPolicyAdapterImpl implements UserPolicyAdapter {
         return userPolicyRepo.findByUser_UserIdAndActiveTrue(userId);
     }
 
+    @Override
+    public List<UserPolicyProjection> findUserPolicyValidTo(AccrualType type) {
+        return userPolicyRepo.findUserPolicyValidTo(type);
+    }
 
     @Override
     public List<UserPolicyEntity> findActivePoliciesByUserId(String userId) {
