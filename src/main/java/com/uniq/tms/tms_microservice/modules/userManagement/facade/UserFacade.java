@@ -50,7 +50,7 @@ public class UserFacade {
             return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
         }
         User user = userService.updateUser(updates, orgId, userId);
-        return new ApiResponse(200, "User Updated successfully", user);
+        return new ApiResponse(200, "User Updated successfully", null);
     }
 
     public ApiResponse getUsers() {

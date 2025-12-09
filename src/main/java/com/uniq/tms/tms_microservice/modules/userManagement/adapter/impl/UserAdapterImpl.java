@@ -643,4 +643,18 @@ public class UserAdapterImpl implements UserAdapter {
     public Set<String> getAllSupervisorIds(List<Long> groupIds, String userId, String type) {
         return userGroupRepository.findAllSupervisorUserIds(groupIds, userId, type);
     }
+
+    @Override
+    public String findApproverIdByUserId(String userId) {
+        return userRepository.findApproverIdByUserId(userId);
+    }
+
+    @Override
+    public String getCalendarIdByUserId(String userId) {
+        return userRepository.getCalendarIdByUserId(userId);
+    }
+
+    public void updateUserApprover(String newApproverId, List<String> userIds) {
+        userRepository.updateUserApprover(newApproverId, userIds);
+    }
 }
