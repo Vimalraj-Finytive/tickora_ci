@@ -76,6 +76,7 @@ public interface LeaveBalanceRepository extends JpaRepository<LeaveBalanceEntity
     WHERE EXTRACT(MONTH FROM lb.periodStartDate) = :month
     AND EXTRACT(YEAR FROM lb.periodStartDate) = :year
     AND lb.policy.accrualType = :accrualType
+    AND lb.active = true
     """)
     List<LeaveBalanceEntity> findBalancesByMonthYearAndAccrualType(
             @Param("month") int month,
@@ -87,21 +88,11 @@ public interface LeaveBalanceRepository extends JpaRepository<LeaveBalanceEntity
     FROM LeaveBalanceEntity lb
     WHERE EXTRACT(YEAR FROM lb.periodStartDate) = :year
     AND lb.policy.accrualType = :accrualType
+    AND lb.active = true
     """)
     List<LeaveBalanceEntity> findBalancesByYearAndAccrualType(
             @Param("year") int year,
             @Param("accrualType") AccrualType accrualType);
-
-    @Query("""
-    SELECT lb
-    FROM LeaveBalanceEntity lb
-    WHERE YEAR(lb.periodStartDate) = :year
-      AND lb.policy.accrualType = :accrualType
-    """)
-    List<LeaveBalanceEntity> findAnnualLeaveBalances(
-            @Param("year") int year,
-            @Param("accrualType") AccrualType accrualType
-    );
 
     @Query("""
     SELECT lb
@@ -111,6 +102,7 @@ public interface LeaveBalanceRepository extends JpaRepository<LeaveBalanceEntity
             AND MONTH(lb.periodEnd) >= :month
             AND YEAR(lb.periodStartDate) <= :year
             AND YEAR(lb.periodEnd) >= :year
+            AND lb.active = true
     """)
     List<LeaveBalanceEntity> findAllFixedAccrual(
             @Param("month") int month,
