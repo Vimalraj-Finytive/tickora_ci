@@ -9,6 +9,7 @@ import com.uniq.tms.tms_microservice.modules.userManagement.model.UserResponse;
 import com.uniq.tms.tms_microservice.modules.userManagement.dto.UserNameSuggestionDto;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.projection.TimesheetProjection;
 import com.uniq.tms.tms_microservice.modules.userManagement.projections.UserCalendarProjection;
+import com.uniq.tms.tms_microservice.modules.userManagement.projections.UserProjection;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.WorkScheduleEntity;
 import jakarta.transaction.Transactional;
 import org.springframework.data.domain.Page;
@@ -18,6 +19,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -27,14 +29,14 @@ import java.util.Set;
 public interface UserRepository extends JpaRepository<UserEntity, String> {
 
     @Query("""
-    SELECT ug
-    FROM UserGroupEntity ug
-    JOIN FETCH ug.user u
-    LEFT JOIN FETCH ug.group g
-    WHERE u.organizationId = :organizationId
-      AND u.userId = :userId
-      AND u.active = true
-""")
+                SELECT ug
+                FROM UserGroupEntity ug
+                JOIN FETCH ug.user u
+                LEFT JOIN FETCH ug.group g
+                WHERE u.organizationId = :organizationId
+                  AND u.userId = :userId
+                  AND u.active = true
+            """)
     List<UserGroupEntity> findUserByOrganizationIdAndUserId(
             @Param("organizationId") String organizationId,
             @Param("userId") String userId
@@ -45,33 +47,17 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
     UserEntity findByMobileNumber(String mobile);
 
 
-    @Query("SELECT new com.uniq.tms.tms_microservice.modules.userManagement.model.UserResponse(" +
-            "  u.userId, u.userName, u.email, u.mobileNumber, " +
-            "  w.scheduleName, " +
-            "  COALESCE(g.groupName, '-'), " +
-            "  r.name, " +
-            "  l.name, " +
-            "  u.dateOfJoining, " +
-            "  sd.userName, sd.mobile, sd.email, sd.relation, " +
-            "  p.policyName, " +
-            "  c.name" +
-            ") " +
-            "FROM UserEntity u " +
-            "LEFT JOIN u.workSchedule w " +
-            "LEFT JOIN u.calendar c " +
-            "LEFT JOIN UserGroupEntity ug ON ug.user = u " +
-            "LEFT JOIN GroupEntity g ON ug.group = g " +
-            "JOIN RoleEntity r ON u.role = r " +
-            "LEFT JOIN UserLocationEntity ul ON ul.user = u " +
-            "LEFT JOIN LocationEntity l ON ul.location = l " +
-            "LEFT JOIN SecondaryDetailsEntity sd ON sd.user = u " +
-            "LEFT JOIN UserPolicyEntity up ON up.user = u " +
-            "JOIN TimeOffPolicyEntity p ON up.policy = p AND p.isActive = true " +
-            "WHERE u.organizationId = :orgId " +
-            "  AND u.active = true " +
-            "  AND r.hierarchyLevel > :hierarchyLevel")
-    List<UserResponse> findAllUsers(@Param("orgId") String orgId,
-                                    @Param("hierarchyLevel") int hierarchyLevel);
+    @Query(value = """
+                SELECT *
+                FROM user_full_details_view
+                WHERE organization_id = :orgId
+                  AND active = true
+                  AND hierarchy_level > :hierarchyLevel
+            """, nativeQuery = true)
+    List<UserProjection> findAllUsers(
+            @Param("orgId") String orgId,
+            @Param("hierarchyLevel") int hierarchyLevel
+    );
 
     @Query("SELECT new com.uniq.tms.tms_microservice.modules.userManagement.dto.UserNameSuggestionDto(u.userId, u.userName) " +
             "FROM UserEntity u WHERE LOWER(u.userName) LIKE LOWER(CONCAT('%', :keyword, '%'))")
@@ -122,14 +108,14 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
     List<UserEntity> findUserByRoles(Set<String> roles, String orgId);
 
     @Query("""
-    SELECT u FROM UserEntity u
-    JOIN UserGroupEntity ug ON u.userId = ug.user.userId
-    WHERE u.role.name IN (:roles)
-      AND ug.group.groupId IN (:groupIds)
-      AND ug.type = 'Member'
-      AND u.organizationId = :orgId
-      AND u.active = true
-    """)
+            SELECT u FROM UserEntity u
+            JOIN UserGroupEntity ug ON u.userId = ug.user.userId
+            WHERE u.role.name IN (:roles)
+              AND ug.group.groupId IN (:groupIds)
+              AND ug.type = 'Member'
+              AND u.organizationId = :orgId
+              AND u.active = true
+            """)
     List<UserEntity> findUsersByRolesAndGroupIds(@Param("roles") Set<String> roles,
                                                  @Param("groupIds") List<Long> groupIds,
                                                  @Param("orgId") String orgId);
@@ -146,84 +132,82 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
 
     boolean existsByUserId(String userId);
 
-    @Query("SELECT new com.uniq.tms.tms_microservice.modules.userManagement.model.UserResponse(" +
-            "u.userId, u.userName, u.email, u.mobileNumber, w.scheduleName, " +
-            "COALESCE(g.groupName, '-'), r.name, l.name, u.dateOfJoining, " +
-            "sd.userName, sd.mobile, sd.email, sd.relation) " +
-            "FROM UserEntity u " +
-            "LEFT JOIN UserGroupEntity ug ON ug.user.userId = u.userId " +
-            "LEFT JOIN GroupEntity g ON ug.group.groupId = g.groupId " +
-            "LEFT JOIN u.workSchedule w " +
-            "JOIN RoleEntity r ON u.role = r " +
-            "LEFT JOIN UserLocationEntity ul ON ul.user.userId= u.userId " +
-            "LEFT JOIN LocationEntity l ON ul.location.locationId = l.locationId " +
-            "LEFT JOIN SecondaryDetailsEntity sd ON sd.user.userId = u.userId " +
-            "WHERE u.organizationId = :orgId AND u.active = false AND r.hierarchyLevel > :hierarchyLevel")
+    @Query(value = """
+                SELECT *
+                FROM user_full_details_view
+                WHERE organization_id = :orgId
+                  AND active = false
+                  AND hierarchy_level > :hierarchyLevel
+            """, nativeQuery = true)
     List<UserResponse> findAllInActiveUsers(@Param("orgId") String orgId, @Param("hierarchyLevel") int hierarchyLevel);
 
     @Query("""
-    SELECT u FROM UserEntity u
-    WHERE LOWER(u.userId) LIKE LOWER(CONCAT('%', :keyword, '%'))
-       OR LOWER(u.userName) LIKE LOWER(CONCAT('%', :keyword, '%'))
-       OR LOWER(u.mobileNumber) LIKE LOWER(CONCAT('%', :keyword, '%'))
-""")
+                SELECT u FROM UserEntity u
+                WHERE LOWER(u.userId) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                   OR LOWER(u.userName) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                   OR LOWER(u.mobileNumber) LIKE LOWER(CONCAT('%', :keyword, '%'))
+            """)
     List<UserEntity> searchUsers(@Param("keyword") String keyword);
 
     @Query("""
-    SELECT u.userId AS userId,
-           u.userName AS userName,
-           u.mobileNumber AS mobileNumber,
-           u.dateOfJoining AS date,
-           r.name AS roleName,
-           ws.scheduleName AS workScheduleName,
-           STRING_AGG(g.groupName, ',') AS groupNames
-    FROM UserEntity u
-    LEFT JOIN u.role r
-    LEFT JOIN u.workSchedule ws
-    LEFT JOIN UserGroupEntity ug ON ug.user.userId = u.userId
-    LEFT JOIN GroupEntity g ON g.id = ug.group.groupId
-    WHERE u.userId IN :userIds
-    GROUP BY u.userId, u.userName, u.mobileNumber, u.dateOfJoining, r.name, ws.scheduleName
-    """)
+            SELECT u.userId AS userId,
+                   u.userName AS userName,
+                   u.mobileNumber AS mobileNumber,
+                   u.dateOfJoining AS date,
+                   r.name AS roleName,
+                   ws.scheduleName AS workScheduleName,
+                   STRING_AGG(g.groupName, ',') AS groupNames
+            FROM UserEntity u
+            LEFT JOIN u.role r
+            LEFT JOIN u.workSchedule ws
+            LEFT JOIN UserGroupEntity ug ON ug.user.userId = u.userId
+            LEFT JOIN GroupEntity g ON g.id = ug.group.groupId
+            WHERE u.userId IN :userIds
+            GROUP BY u.userId, u.userName, u.mobileNumber, u.dateOfJoining, r.name, ws.scheduleName
+            """)
     List<TimesheetProjection> findUsersByIds(@Param("userIds") List<String> userIds);
 
     @Query(value = """
-    SELECT u.user_id AS userId,
-           u.user_name AS userName,
-           u.mobile_number AS mobileNumber,
-           u.date_of_joining AS date,
-           r.name AS roleName,
-           ws.work_schedule_name AS workScheduleName,
-           STRING_AGG(g.group_name, ',') AS groupNames
-    FROM users u
-    LEFT JOIN role r ON u.role_id = r.role_id
-    LEFT JOIN work_schedule ws ON u.work_schedule_id = ws.work_schedule_id
-    LEFT JOIN user_group ug ON ug.user_id = u.user_id
-    LEFT JOIN org_groups g ON g.group_id = ug.group_id
-    WHERE u.user_id = ANY(:userIds)
-      AND u.active = true
-    GROUP BY u.user_id, u.user_name, u.mobile_number, u.date_of_joining, r.name, ws.work_schedule_name
-    """, nativeQuery = true)
+            SELECT u.user_id AS userId,
+                   u.user_name AS userName,
+                   u.mobile_number AS mobileNumber,
+                   u.date_of_joining AS date,
+                   r.name AS roleName,
+                   ws.work_schedule_name AS workScheduleName,
+                   STRING_AGG(g.group_name, ',') AS groupNames
+            FROM users u
+            LEFT JOIN role r ON u.role_id = r.role_id
+            LEFT JOIN work_schedule ws ON u.work_schedule_id = ws.work_schedule_id
+            LEFT JOIN user_group ug ON ug.user_id = u.user_id
+            LEFT JOIN org_groups g ON g.group_id = ug.group_id
+            WHERE u.user_id = ANY(:userIds)
+              AND u.active = true
+            GROUP BY u.user_id, u.user_name, u.mobile_number, u.date_of_joining, r.name, ws.work_schedule_name
+            """, nativeQuery = true)
     Page<TimesheetProjection> findUsersByUserIds(
             @Param("userIds") String[] userIds,
             Pageable pageable
     );
 
     @Query(value = """
-    SELECT u.user_id AS userId,
-           u.user_name AS userName,
-    FROM users u
-    WHERE u.user_id = ANY(:userIds)
-      AND u.active = true
-    GROUP BY u.user_id, u.user_name
-    """, nativeQuery = true)
+            SELECT u.user_id AS userId,
+                   u.user_name AS userName,
+            FROM users u
+            WHERE u.user_id = ANY(:userIds)
+              AND u.active = true
+            GROUP BY u.user_id, u.user_name
+            """, nativeQuery = true)
     List<TimesheetUserProjection> findUsersByUserIds(
             @Param("userIds") String[] userIds);
 
     List<UserEntity> findUserByOrganizationIdAndRole_RoleId(String orgId, int roleId);
+
     long countByOrganizationId(String orgId);
+
     long countByOrganizationIdAndActiveTrue(String orgId);
+
     long countByOrganizationIdAndActiveFalse(String orgId);
+
     List<UserEntity> findByUserIdIn(List<String> userId);
 
     @Modifying
@@ -253,14 +237,14 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
                                             @Param("end") LocalDateTime end);
 
     @Query(value = """
-    SELECT 
-        u.user_id AS userId,
-        u.date_of_joining AS date,
-        u.user_name AS userName
-    FROM users u
-    WHERE u.user_id = ANY(:userIds)
-      AND u.active = true
-    """, nativeQuery = true)
+            SELECT 
+                u.user_id AS userId,
+                u.date_of_joining AS date,
+                u.user_name AS userName
+            FROM users u
+            WHERE u.user_id = ANY(:userIds)
+              AND u.active = true
+            """, nativeQuery = true)
     List<TimesheetUserProjection> findUserByUserIds(@Param("userIds") String[] userIds);
 
     @Query("SELECT u FROM UserEntity u WHERE u.userId IN :userIds AND u.active = true")
@@ -270,29 +254,29 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
     @Query("SELECT u.userName FROM UserEntity u WHERE u.userId = :userId")
     String findUsernameByUserId(@Param("userId") String userId);
 
-        @Query("""
-        SELECT u.userId AS userId, u.calendar.id AS calendarId
-        FROM UserEntity u
-        WHERE u.userId IN :userIds
-    """)
+    @Query("""
+                SELECT u.userId AS userId, u.calendar.id AS calendarId
+                FROM UserEntity u
+                WHERE u.userId IN :userIds
+            """)
     List<UserCalendarProjection> findCalendarIdsByUserIds(@Param("userIds") String[] userIds);
 
     @Query("""
-        SELECT u
-        FROM UserEntity u
-        WHERE u.userId IN :userIds
-    """)
+                SELECT u
+                FROM UserEntity u
+                WHERE u.userId IN :userIds
+            """)
     List<UserEntity> findUsersWithCalendars(@Param("userIds") String[] userIds);
 
     @Query("SELECT u FROM UserEntity u WHERE u.active = true AND u.userId <> :excludeId")
-    List<UserEntity>findByActiveTrue(@Param("excludeId") String excludeId);
+    List<UserEntity> findByActiveTrue(@Param("excludeId") String excludeId);
 
     @Query("SELECT u FROM UserEntity u WHERE u.role.roleId = 1 AND u.organizationId = :orgId")
-    Optional<UserEntity>findSuperAdminByOrgId(@Param("orgId") String orgId);
+    Optional<UserEntity> findSuperAdminByOrgId(@Param("orgId") String orgId);
 
-    List<UserEntity>findByRequestApproverIdAndActiveTrue(String approverId);
+    List<UserEntity> findByRequestApproverIdAndActiveTrue(String approverId);
 
-    List<UserEntity>findAllByUserIdInAndActiveTrue(List<String> userIds);
+    List<UserEntity> findAllByUserIdInAndActiveTrue(List<String> userIds);
 
     @Modifying
     @Transactional
