@@ -301,4 +301,17 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
                                 @Param("requestedUserIds") List<String> requestedUserIds);
 
     Optional<UserEntity> findByUserId(String userId);
+
+    @Query("SELECT u.requestApproverId FROM UserEntity u WHERE u.userId = :userId")
+    String findApproverIdByUserId(@Param("userId") String userId);
+
+    @Query("SELECT u.calendar.id FROM UserEntity u WHERE u.userId = :userId")
+    String getCalendarIdByUserId(@Param("userId") String userId);
+
+    @Modifying
+    @Transactional
+    @Query("UPDATE UserEntity u SET u.requestApproverId = :newApproverId WHERE u.id IN :userIds")
+    void updateUserApprover(@Param("newApproverId") String newApproverId,
+                               @Param("userIds") List<String> userIds);
+
 }

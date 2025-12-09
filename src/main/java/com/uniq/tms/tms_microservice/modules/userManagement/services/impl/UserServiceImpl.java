@@ -1010,6 +1010,16 @@ public class UserServiceImpl implements UserService {
             existingUser.setDateOfJoining(userDto.getDateOfJoining());
         }
 
+        String newRequesterId = updates.getUser().getRequestApproverId();
+        if (newRequesterId != null) {
+            List<String> oneUserList = List.of(userId);
+            validateApprover(newRequesterId, oneUserList);
+            existingUser.setRequestApproverId(newRequesterId);
+            log.info("Updated requester for {} -> {}", userId, newRequesterId);
+        }
+
+        updateUserCalendar(existingUser, updates.getUser().getCalendarId());
+
         String key = organizationCacheService.getPrivilegeKey(PrivilegeConstants.HAVE_SECONDARY_DETAILS);
         boolean hasSecondaryDetailsPrivilege = rolePrivilegeHelper.roleHasPrivilege(existingUser.getRole().getName(), key);
         SecondaryDetailsEntity savedSecondaryUser = null;
@@ -2329,10 +2339,10 @@ public class UserServiceImpl implements UserService {
                 log.warn("No users found for given IDs: {}", updates.getUserIds());
                 return false;
             }
-            CalendarEntity calendar = calendarAdapter.getById(updates.getCalendarId());
-            users.forEach(user ->
-                    user.setCalendar(calendar));
-            userAdapter.saveAllUsers(users);
+            String newCalendarId = updates.getCalendarId();
+            for (UserEntity user : users) {
+                updateUserCalendar(user, newCalendarId);
+            }
             return true;
         } catch (Exception e) {
             log.error("Error updating calendar for users: {}", e.getMessage(), e);
@@ -2378,27 +2388,52 @@ public class UserServiceImpl implements UserService {
         return userEntityMapper.toUserModelList(users);
     }
 
-    @Override
-    public RequestApproverModel assignRequestApprover(RequestApproverDto dto) {
-        String approverId = dto.getRequestId();
-        List<String> requestedUserIds = dto.getUserId();
-        UserEntity approver = userAdapter.findById(approverId)
-                .orElseThrow(() -> new IllegalArgumentException("Approver not found or inactive"));
-        if (requestedUserIds.contains(approverId)) {
+   @Override
+   public RequestApproverModel assignRequestApprover(RequestApproverDto dto) {
+    String approverId = dto.getRequestId();
+    List<String> requestedUserIds = dto.getUserId();
+    validateApprover(approverId, requestedUserIds);
+    List<UserEntity> activeUsers = userAdapter.findAllById(requestedUserIds);
+    Set<String> foundIds = activeUsers.stream()
+            .map(UserEntity::getUserId)
+            .collect(Collectors.toSet());
+    List<String> invalidIds = requestedUserIds.stream()
+            .filter(id -> !foundIds.contains(id))
+            .toList();
+    if (!invalidIds.isEmpty()) {
+        throw new IllegalArgumentException(
+                "These userIds are invalid or inactive: " + String.join(", ", invalidIds)
+        );
+    }
+    userAdapter.updateApproverForUsers(approverId, requestedUserIds);
+    return userEntityMapper.toModel(approverId, requestedUserIds);
+ }
+
+
+    private void validateApprover(String approverId, List<String> userIds) {
+        userAdapter.findById(approverId)
+                .orElseThrow(() ->
+                        new IllegalArgumentException("Approver not found or inactive"));
+        if (userIds.contains(approverId)) {
             throw new IllegalArgumentException("A user cannot assign himself as approver");
         }
-        List<UserEntity> activeUsers = userAdapter.findAllById(requestedUserIds);
-        Set<String> foundIds = activeUsers.stream()
-                .map(UserEntity::getUserId)
-                .collect(Collectors.toSet());
-        List<String> invalidIds = requestedUserIds.stream()
-                .filter(id -> !foundIds.contains(id)).toList();
-        if (!invalidIds.isEmpty()) {
-            throw new IllegalArgumentException(
-                    "These userIds are invalid or inactive: " + String.join(", ", invalidIds)
-            );
-        }
-        userAdapter.updateApproverForUsers(approverId, requestedUserIds);
-        return userEntityMapper.toModel(approverId, requestedUserIds);
     }
+
+    private void updateUserCalendar(UserEntity existingUser, String newCalendarId) {
+        if (newCalendarId == null) {
+            return;
+        }
+        String existingCalendarId =
+                existingUser.getCalendar() != null ? existingUser.getCalendar().getId() : null;
+        if (newCalendarId.equals(existingCalendarId)) {
+            return;
+        }
+        CalendarEntity calendar = calendarAdapter.getById(newCalendarId);
+        if (calendar == null) {
+            throw new RuntimeException("Invalid calendarId: " + newCalendarId);
+        }
+        existingUser.setCalendar(calendar);
+        log.info("Updated calendar for user {} → {}", existingUser.getCalendar().getId(), newCalendarId);
+    }
+
 }
