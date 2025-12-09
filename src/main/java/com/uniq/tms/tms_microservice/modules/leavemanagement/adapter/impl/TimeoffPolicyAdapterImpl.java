@@ -1,6 +1,7 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.impl;
 
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.TimeOffPolicyAdapter;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.AccrualType;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.record.UserPolicyProjection;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.repository.LeaveBalanceRepository;
 import org.springframework.stereotype.Component;
@@ -72,11 +73,6 @@ public class TimeoffPolicyAdapterImpl implements TimeOffPolicyAdapter {
     @Override
     public List<TimeOffPolicyEntity> findByUserId(String userId){
         return timeoffPolicyRepo.findPolicyByUserId(userId);
-    }
-
-    @Override
-    public List<UserPolicyProjection> findUserPolicyValidTo() {
-        return timeoffPolicyRepo.findUserPolicyValidTo();
     }
 
     @Override

@@ -792,9 +792,10 @@ public class UserServiceImpl implements UserService {
                     .toList();
         }
 
-        if (!(userDto.getPolicyId() == null)) {
-            log.info("Adding user to policy: {}", userDto.getPolicyId());
-            assignPolicy(userDto.getPolicyId(), customUserId);
+        if (!(userDto.getPolicyIds() == null || userDto.getPolicyIds().isEmpty())) {
+            log.info("Adding user to policy: {}", userDto.getPolicyIds());
+            userDto.getPolicyIds()
+                    .forEach(id -> assignPolicy(id, customUserId));
         }
 
 
