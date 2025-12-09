@@ -69,14 +69,15 @@ public class LeaveBalanceServiceImpl implements LeaveBalanceService {
             return;
         }
         log.info("leave balance not empty");
-        updateLeaveBalance(currentBalances, AccrualType.MONTHLY);
+        List<UserPolicyProjection> result = userPolicyAdapter.findUserPolicyValidTo(AccrualType.MONTHLY);
+        updateLeaveBalance(currentBalances, AccrualType.MONTHLY, result);
     }
 
-    private void updateLeaveBalance(List<LeaveBalanceEntity> currentBalances, AccrualType type){
+    private void updateLeaveBalance(List<LeaveBalanceEntity> currentBalances, AccrualType type, List<UserPolicyProjection> result){
 
         List<LeaveBalanceEntity> nextLeaveBalance = new ArrayList<>();
-        List<UserPolicyProjection> result = timeOffPolicyAdapter.findUserPolicyValidTo();
         Map<UserPolicyKey, LocalDate> validToMap = result.stream()
+                .filter(p -> p.validTo() != null)
                 .collect(Collectors.toMap(
                         UserPolicyProjection::key,
                         UserPolicyProjection::validTo
@@ -135,7 +136,7 @@ public class LeaveBalanceServiceImpl implements LeaveBalanceService {
                 next.setPeriodStartDate(LocalDate.now(zoneId));
                 LocalDate periodEnd = current.getPeriodEnd().plusMonths(1);
                 LocalDate nextAccrual = LocalDate.now(zoneId).plusMonths(1);
-                if (periodEnd.isAfter(validTo)){
+                if (validTo!= null && periodEnd.isAfter(validTo)){
                     periodEnd = validTo;
                     nextAccrual = null;
                 }
@@ -168,6 +169,7 @@ public class LeaveBalanceServiceImpl implements LeaveBalanceService {
             next.setLeaveTakenUnits(0.0);
             next.setBalanceUnits(totalUnits);
             next.setLastAccrualDate(LocalDate.now());
+            next.setActive(true);
             log.info("before add");
             nextLeaveBalance.add(next);
             log.info("added");
@@ -185,7 +187,8 @@ public class LeaveBalanceServiceImpl implements LeaveBalanceService {
         if (currentBalances.isEmpty()) {
             return;
         }
-        updateLeaveBalance(currentBalances, AccrualType.ANNUALLY);
+        List<UserPolicyProjection> result = userPolicyAdapter.findUserPolicyValidTo(AccrualType.ANNUALLY);
+        updateLeaveBalance(currentBalances, AccrualType.ANNUALLY, result);
     }
 
     @Override
@@ -223,7 +226,7 @@ public class LeaveBalanceServiceImpl implements LeaveBalanceService {
                         .collect(Collectors.groupingBy(r -> r.getUser().getUserId()));
 
         log.info("fetch annual leaveBalance");
-        List<LeaveBalanceEntity> leaveBalanceEntities = leaveBalanceAdapter.findAnnualLeaveBalances(year, AccrualType.ANNUALLY);
+        List<LeaveBalanceEntity> leaveBalanceEntities = leaveBalanceAdapter.findBalancesByYearAndAccrualType(year, AccrualType.ANNUALLY);
         Map<String, List<LeaveBalanceEntity>> leaveBalanceMap =
                 leaveBalanceEntities.stream()
                         .collect(Collectors.groupingBy(lb -> lb.getUser().getUserId()));

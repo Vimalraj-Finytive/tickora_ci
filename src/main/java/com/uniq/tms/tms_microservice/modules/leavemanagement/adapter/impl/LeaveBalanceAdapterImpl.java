@@ -82,11 +82,6 @@ public class LeaveBalanceAdapterImpl implements LeaveBalanceAdapter {
     }
 
     @Override
-    public List<LeaveBalanceEntity> findAnnualLeaveBalances(int year, AccrualType accrualType) {
-        return leaveBalanceRepo.findAnnualLeaveBalances(year, accrualType);
-    }
-
-    @Override
     public void saveAllSummary(List<MonthlySummaryEntity> summaryEntityList) {
         monthlySummaryRepository.saveAll(summaryEntityList);
     }
@@ -116,5 +111,10 @@ public class LeaveBalanceAdapterImpl implements LeaveBalanceAdapter {
     @Override
     public LeaveBalanceEntity findByUserIdAndPolicyId(String userId, String policyId) {
         return leaveBalanceRepo.findByUserIdAndPolicyId(userId, policyId);
+    }
+
+    @Override
+    public LeaveBalanceEntity findActiveBalanceByUserIdAndPolicy(String userId, String policyId) {
+        return leaveBalanceRepo.findActiveBalanceByUserIdAndPolicy(userId, policyId);
     }
 }

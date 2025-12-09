@@ -2,6 +2,7 @@ package com.uniq.tms.tms_microservice.modules.leavemanagement.repository;
 
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.UserPolicyEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.AccrualType;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.record.UserPolicyProjection;
 import io.lettuce.core.dynamic.annotation.Param;
 import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -86,7 +87,29 @@ public interface UserPolicyRepository extends JpaRepository<UserPolicyEntity, Lo
 
 
 
-    List<UserPolicyEntity> findByUser_UserId(String userId);
+    List<UserPolicyEntity> findByUser_UserIdAndActiveTrue(String userId);
+
+
+    @Query("""
+      SELECT up FROM UserPolicyEntity up
+      WHERE up.user.userId = :userId
+      AND up.active = true
+      """)
+    List<UserPolicyEntity> findActivePoliciesByUserId(@Param("userId") String userId);
+
+    @Query("""
+    SELECT new com.uniq.tms.tms_microservice.modules.leavemanagement.record.UserPolicyProjection(
+        new com.uniq.tms.tms_microservice.modules.leavemanagement.record.UserPolicyKey(
+            up.user.userId,
+            up.policy.policyId
+        ),
+        up.validTo
+    )
+    FROM UserPolicyEntity up
+    WHERE up.policy.accrualType = :type
+      AND up.active = true
+    """)
+    List<UserPolicyProjection> findUserPolicyValidTo(@Param("type") AccrualType type);
 
 
 }

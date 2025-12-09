@@ -2,6 +2,7 @@ package com.uniq.tms.tms_microservice.modules.leavemanagement.adapter;
 
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.UserPolicyEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.AccrualType;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.record.UserPolicyProjection;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -35,5 +36,12 @@ public interface UserPolicyAdapter {
     void deleteById(Long id);
 
     List<UserPolicyEntity> findUserPoliciesByUserId(String userId);
+
+    List<UserPolicyEntity> findActivePoliciesByUserId(String userId);
+
+    UserPolicyEntity saveUserPolicy(UserPolicyEntity entity);
+
+
+    List<UserPolicyProjection> findUserPolicyValidTo(AccrualType type);
 
 }
