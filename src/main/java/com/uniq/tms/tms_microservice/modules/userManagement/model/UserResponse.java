@@ -2,6 +2,8 @@ package com.uniq.tms.tms_microservice.modules.userManagement.model;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.uniq.tms.tms_microservice.modules.userManagement.dto.SecondaryDetailsDto;
+import com.uniq.tms.tms_microservice.modules.userManagement.dto.UserPolicyDto;
+
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -19,34 +21,67 @@ public class UserResponse {
     private LocalDate dateOfJoining;
     private SecondaryDetailsDto secondaryDetails;
     private String scheduleName;
-    private  List<String> policyName;
-    private  String calendarName;
+    private List<UserPolicyModel> policies;
+    private String calendarName;
+    private String requestApproverName;
 
-    public UserResponse(String userId, String userName, String email, String mobileNumber, String scheduleName, String groupName, String roleName,
-                        String locationName, LocalDate dateOfJoining,String secName, String secMobile, String secEmail, String relation, String policyName,String calendarName) {
+    public UserResponse(
+            String userId,
+            String userName,
+            String email,
+            String mobileNumber,
+            String scheduleName,
+            String groupName,
+            String roleName,
+            String locationName,
+            LocalDate dateOfJoining,
+            String secName,
+            String secMobile,
+            String secEmail,
+            String relation,
+            String policyName,
+            LocalDate validFrom,
+            LocalDate validTo,
+            String calendarName,
+            String requestApproverName
+    ) {
         this.userId = userId;
         this.userName = userName;
         this.email = email;
         this.mobileNumber = mobileNumber;
         this.scheduleName = scheduleName;
-        this.groupName = new ArrayList<>();
-        this.groupName.add(groupName);
-        this.roleName = roleName;
-        this.locationName = new ArrayList<>();
-        this.locationName.add(locationName);
-        this.dateOfJoining = dateOfJoining;
-        this.policyName=new ArrayList<>();
-        this.policyName.add(policyName);
-        this.calendarName=calendarName;
 
-        if (secName != null && secMobile != null){
+        // GROUP
+        this.groupName = new ArrayList<>();
+        if (groupName != null) this.groupName.add(groupName);
+
+        this.roleName = roleName;
+
+        // LOCATION
+        this.locationName = new ArrayList<>();
+        if (locationName != null) this.locationName.add(locationName);
+
+        this.dateOfJoining = dateOfJoining;
+
+        // SECONDARY DETAILS
+        if (secName != null || secMobile != null || secEmail != null) {
             this.secondaryDetails = new SecondaryDetailsDto();
             this.secondaryDetails.setUserName(secName);
             this.secondaryDetails.setMobile(secMobile);
             this.secondaryDetails.setEmail(secEmail);
             this.secondaryDetails.setRelation(relation);
         }
+
+        // POLICIES
+        this.policies = new ArrayList<>();
+        if (policyName != null) {
+            this.policies.add(new UserPolicyModel(policyName, validFrom, validTo));
+        }
+
+        this.calendarName = calendarName;
+        this.requestApproverName = requestApproverName;
     }
+
 
     public String getUserId() {
         return userId;
@@ -127,21 +162,28 @@ public class UserResponse {
         this.scheduleName = scheduleName;
     }
 
-
-    public List<String> getPolicyName() {
-        return policyName;
-    }
-
-    public void setPolicyName(List<String> policyName) {
-        this.policyName = policyName;
-    }
-
     public String getCalendarName() {
         return calendarName;
     }
 
     public void setCalendarName(String calendarName) {
         this.calendarName = calendarName;
+    }
+
+    public List<UserPolicyModel> getPolicies() {
+        return policies;
+    }
+
+    public void setPolicies(List<UserPolicyModel> policies) {
+        this.policies = policies;
+    }
+
+    public String getRequestApproverName() {
+        return requestApproverName;
+    }
+
+    public void setRequestApproverName(String requestApproverName) {
+        this.requestApproverName = requestApproverName;
     }
 }
 
