@@ -385,7 +385,7 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
         }
 
         LocalDate userFrom = request.getUserValidFrom();
-        LocalDate userTo = request.getUserValidTo();
+        LocalDate userTo = policy.getValidityEndDate();
 
         if (userFrom == null) {
             throw new IllegalArgumentException("User Valid From is required");
@@ -414,7 +414,7 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
 
 
         LocalDate from = request.getUserValidFrom();
-        LocalDate to = request.getUserValidTo();
+        LocalDate to = policy.getValidityEndDate();
         for (String userId : finalUsers) {
 
             UserEntity userEntity = userAdapter.findById(userId)
@@ -638,9 +638,7 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
         lb.setCarryForwardUnits(carryForwardUnits);
 
         lb.setLastAccrualDate(validFrom);
-
-        LocalDate nextAccrualDate = resolveNextAccrualDate(
-                validFrom, validTo, policy.getValidityEndDate(), policy.getAccrualType());
+        LocalDate nextAccrualDate = calculateNextAccrualDate(validFrom, policy.getAccrualType());
         lb.setNextAccrualDate(nextAccrualDate);
         lb.setActive(true);
         lb.setCreatedAt(LocalDateTime.now());
@@ -650,7 +648,6 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
     }
 
     private UserPolicyEntity buildUserPolicy(TimeOffPolicyEntity policy, UserEntity user, LocalDate validFrom, LocalDate validTo) {
-
 
         UserPolicyEntity up = new UserPolicyEntity();
         up.setUser(user);
@@ -728,56 +725,6 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
         return null;
     }
 
-
-    private LocalDate resolveNextAccrualDate(LocalDate validFrom, LocalDate validTo, LocalDate policyValidityEnd, AccrualType accrualType) {
-        LocalDate today = LocalDate.now();
-        LocalDate nextAccrualDate = null;
-
-        if (validTo != null && policyValidityEnd != null) {
-            boolean endsSame = validTo.getYear() == policyValidityEnd.getYear() && validTo.getMonth() == policyValidityEnd.getMonth();
-            if (!endsSame) {
-                nextAccrualDate = calculateNextAccrualDate(validFrom, accrualType);
-            }
-        }
-
-        else if (validTo != null) {
-            boolean endsThisMonth = validTo.getYear() == today.getYear() && validTo.getMonth() == today.getMonth();
-            if (!endsThisMonth) {
-                nextAccrualDate = calculateNextAccrualDate(validFrom, accrualType);
-            }
-        }
-
-        else if (policyValidityEnd != null) {
-            boolean endsThisMonth = policyValidityEnd.getYear() == today.getYear() && policyValidityEnd.getMonth() == today.getMonth();
-            if (!endsThisMonth) {
-                nextAccrualDate = calculateNextAccrualDate(validFrom, accrualType);
-            }
-        }
-
-        else {
-            nextAccrualDate = calculateNextAccrualDate(validFrom, accrualType);
-        }
-        return nextAccrualDate;
-    }
-
-    private void validateUserPolicyRules(List<UserPolicyEntity> existingAssignments,
-                                         AccrualType newAccrual,
-                                         EntitledType newEntitled) {
-
-        for (UserPolicyEntity up : existingAssignments) {
-
-            AccrualType oldAccrual = up.getPolicy().getAccrualType();
-
-            if (oldAccrual == AccrualType.FIXED || newAccrual == AccrualType.FIXED) {
-                throw new IllegalArgumentException(
-                        "User " + up.getUser().getUserName() +
-                                " already has FIXED accrual policy " + up.getPolicy().getPolicyName());
-            }
-        }
-    }
-
-
-
     @Override
     public List<EnumModel> getResetFrequencyStatus() {
         List<EnumModel> list = new ArrayList<>();
@@ -790,10 +737,6 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
 
     private LocalDate computeValidTo(TimeOffPolicyEntity policy, LocalDate validFrom, LocalDate validTo) {
 
-        if (validTo != null) {
-            return validTo;
-        }
-
         if (policy.getAccrualType() == AccrualType.MONTHLY) {
             return validFrom.withDayOfMonth(validFrom.lengthOfMonth());
         }
@@ -801,6 +744,6 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
         if (policy.getAccrualType() == AccrualType.ANNUALLY) {
             return LocalDate.of(validFrom.getYear(), 12, 31);
         }
-        return null;
+        return validTo;
     }
 }

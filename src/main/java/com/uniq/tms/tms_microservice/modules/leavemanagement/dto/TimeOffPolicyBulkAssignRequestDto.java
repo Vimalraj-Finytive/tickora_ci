@@ -10,7 +10,6 @@ public class TimeOffPolicyBulkAssignRequestDto {
     private List<Long> groupIds;
     @NotNull
     private LocalDate userValidFrom;
-    private LocalDate userValidTo;
 
     public String getPolicyId() {
         return policyId;
@@ -42,13 +41,5 @@ public class TimeOffPolicyBulkAssignRequestDto {
 
     public void setUserValidFrom(LocalDate userValidFrom) {
         this.userValidFrom = userValidFrom;
-    }
-
-    public LocalDate getUserValidTo() {
-        return userValidTo;
-    }
-
-    public void setUserValidTo(LocalDate userValidTo) {
-        this.userValidTo = userValidTo;
     }
 }
