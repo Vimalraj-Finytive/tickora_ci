@@ -18,7 +18,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.web.server.ResponseStatusException;
 import java.time.*;
 import java.util.*;
@@ -49,12 +48,10 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
     @Override
     @Transactional
     public TimeOffPolicyResponseModel createPolicy(TimeOffPolicyRequestModel request) {
-
         boolean exists = timeOffPolicyAdapter.existsByPolicyNameIgnoreCase(request.getPolicyName());
         if (exists) {
             throw new IllegalArgumentException("Policy name already exists");
         }
-
         if (request.getCompensation() == Compensation.UNPAID) {
             if (request.getEntitledType() != null ||
                     request.getEntitledUnits() != null ||
@@ -67,39 +64,32 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
                 );
             }
         }
-
         if (request.getAccrualType() == AccrualType.FIXED &&
                 Boolean.TRUE.equals(request.getCarryForward())) {
             throw new IllegalArgumentException("Carry-forward not allowed for FIXED policies.");
         }
-
         if (request.getMaxCarryForwardUnits() != null &&
                 request.getEntitledUnits() != null &&
                 request.getMaxCarryForwardUnits() > request.getEntitledUnits()) {
 
             throw new IllegalArgumentException("Carry forward units cannot exceed entitled units.");
         }
-
         if (Boolean.TRUE.equals(request.getCarryForward()) &&
                 request.getMaxCarryForwardUnits() == null) {
 
             throw new IllegalArgumentException("maxCarryForwardUnits required when carryForward = true.");
         }
-
         if (request.getEntitledType() != EntitledType.DAY) {
 
             if (Boolean.TRUE.equals(request.getCarryForward()) ||
                     request.getMaxCarryForwardUnits() != null) {
                 throw new IllegalArgumentException("Carry forward allowed only for DAY entitlement.");
             }
-
             request.setCarryForward(false);
             request.setMaxCarryForwardUnits(0);
         }
-
         ResetFrequency reset = request.getResetFrequency();
         AccrualType accrual = request.getAccrualType();
-
         if (accrual == AccrualType.FIXED) {
             if (reset != null) {
                 throw new IllegalArgumentException("FIXED policies cannot have resetFrequency.");
@@ -108,150 +98,24 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
                 throw new IllegalArgumentException("FIXED policies require DAY entitlement.");
             }
         }
-
         if ((accrual == AccrualType.MONTHLY || accrual == AccrualType.ANNUALLY) && reset == null) {
             throw new IllegalArgumentException("resetFrequency required for MONTHLY/ANNUALLY policies.");
         }
-
         if (accrual == AccrualType.ANNUALLY && reset != ResetFrequency.ANNUALLY) {
             throw new IllegalArgumentException("Annual accrual must use ANNUALLY resetFrequency.");
         }
-
         String policyId = idGenerationService.generateNextTimeOffPolicyId();
-
         TimeOffPolicyEntity policy = timeOffPolicyEntityMapper.toEntity(request);
         policy.setPolicyId(policyId);
         policy.setActive(true);
         policy.setDefault(false);
+        policy.setReschedule(false);
         policy.setCreatedAt(LocalDateTime.now());
         policy.setUpdatedAt(LocalDateTime.now());
         policy.setAccrualStartDate(LocalDate.now());
-
         policy = timeOffPolicyAdapter.savePolicy(policy);
-
-        Set<String> finalUserSet = getFinalUserSet(request.getUserIds(), request.getGroupIds());
-        if (!finalUserSet.isEmpty()) {
-            if (policy.getAccrualType() == AccrualType.FIXED ) {
-                if (request.getUserValidFrom() == null || request.getUserValidTo() == null) {
-                    throw new IllegalArgumentException("userValidFrom and userValidTo are required for FIXED accrual");
-                }
-            }
-            validateUserValidDates(request.getUserValidFrom(), request.getUserValidTo(),
-                    request.getValidityStartDate(), request.getValidityEndDate());
-        }
-
-        if (finalUserSet.isEmpty())
-            return timeOffPolicyEntityMapper.toResponseModel(policy);
-
-        boolean hasUsers = !finalUserSet.isEmpty();
-
-        if (hasUsers && request.getUserValidFrom() == null) {
-            throw new IllegalArgumentException("userValidFrom is required when assigning users.");
-        }
-
-        if (hasUsers && accrual == AccrualType.FIXED) {
-            if (request.getUserValidTo() == null) {
-                throw new IllegalArgumentException("For FIXED policies,both userFrom and  userValidTo is required");
-            }
-        }
-        List<String> finalUsers = new ArrayList<>(finalUserSet);
-
-        LocalDate from = request.getUserValidFrom();
-        LocalDate to = request.getUserValidTo();
-
-        double totalUnits = (policy.getCompensation() != Compensation.UNPAID)
-                ? calculateTotalUnits(policy, request.getEntitledType())
-                : 0.0;
-
-        List<UserPolicyEntity> assignList = new ArrayList<>();
-        List<LeaveBalanceEntity> balanceList = new ArrayList<>();
-
-        for (String userId : finalUsers) {
-
-            UserEntity userEntity = userAdapter.findById(userId)
-                    .orElseThrow(() -> new UsernameNotFoundException("User not found: " + userId));
-
-            List<UserPolicyEntity> existingActive =
-                    userPolicyAdapter.findActivePoliciesByUserId(userId);
-
-            UserPolicyEntity overrideUP = null;
-
-            for (UserPolicyEntity up : existingActive) {
-
-                AccrualType oldAcc = up.getPolicy().getAccrualType();
-                EntitledType oldEnt = up.getPolicy().getEntitledType();
-
-                if (oldAcc == AccrualType.FIXED && policy.getAccrualType() == AccrualType.FIXED) {
-                    overrideUP = up;
-                    break;
-                }
-
-                if (up.getPolicy().getCompensation() == Compensation.UNPAID &&
-                        policy.getCompensation() == Compensation.UNPAID) {
-                    overrideUP = up;
-                    break;
-                }
-
-                if (oldAcc == policy.getAccrualType() &&
-                        oldEnt == policy.getEntitledType()) {
-
-                    overrideUP = up;
-                    break;
-                }
-
-                if ((oldAcc == AccrualType.MONTHLY && policy.getAccrualType() == AccrualType.ANNUALLY) ||
-                        (oldAcc == AccrualType.ANNUALLY && policy.getAccrualType() == AccrualType.MONTHLY)) {
-
-                    overrideUP = up;
-                    break;
-                }
-            }
-
-            LeaveBalanceEntity oldLB = null;
-
-            if (overrideUP != null) {
-
-                overrideUP.setActive(false);
-                overrideUP.setValidTo(LocalDate.now());
-                userPolicyAdapter.saveUserPolicy(overrideUP);
-
-                oldLB = leaveBalanceAdapter.findActiveBalanceByUserIdAndPolicy(
-                        userId, overrideUP.getPolicy().getPolicyId());
-
-                if (oldLB != null) {
-                    oldLB.setActive(false);
-                    oldLB.setUpdatedAt(LocalDateTime.now());
-                    leaveBalanceAdapter.saveLeaveBalance(oldLB);
-                }
-            }
-
-            LeaveBalanceEntity newLB = null;
-
-            if (policy.getCompensation() != Compensation.UNPAID) {
-
-                double taken = (oldLB != null) ? oldLB.getLeaveTakenUnits() : 0.0;
-                double balance = Math.max(totalUnits - taken, 0);
-
-                newLB = buildLeaveBalance(policy, userId, from, to, totalUnits);
-                newLB.setLeaveTakenUnits(taken);
-                newLB.setBalanceUnits(balance);
-                newLB.setActive(true);
-
-                balanceList.add(newLB);
-            }
-
-            UserPolicyEntity newUP = buildUserPolicy(policy, userEntity, from, to);
-            newUP.setActive(true);
-
-            assignList.add(newUP);
-        }
-
-        if (!assignList.isEmpty()) userPolicyAdapter.saveUserPolicies(assignList);
-        if (!balanceList.isEmpty()) leaveBalanceAdapter.saveLeaveBalances(balanceList);
-
         return timeOffPolicyEntityMapper.toResponseModel(policy);
     }
-
 
     @Override
     public List<EnumModel> getDropDowns() {
@@ -276,9 +140,11 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
                 policy.getPolicyId().equalsIgnoreCase("TOP00001")) {
             throw new IllegalArgumentException("Custom Policy cannot be edited");
         }
-
-        LocalDate today = LocalDate.now();
-        LocalDate endDate = request.getValidityEndDate();
+        if (request.getEntitledUnits() != null) {
+            if (request.getEntitledUnits() > policy.getEntitledUnits()) {
+                throw new IllegalArgumentException("Entitled units are not allowed to reduced");
+            }
+        }
 
         if (policy.getAccrualType() == AccrualType.FIXED) {
             if (Boolean.TRUE.equals(request.getCarryForward())) {
@@ -288,7 +154,7 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
 
         if (request.getMaxCarryForwardUnits() != null && request.getEntitledUnits() != null) {
             if (request.getMaxCarryForwardUnits() > request.getEntitledUnits()) {
-                throw new IllegalArgumentException("Max carry-forward must be <= entitled units");
+                throw new IllegalArgumentException("Max carry-forward must be less than or equal to entitled units");
             }
         }
 
@@ -318,15 +184,12 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
             policy.setMaxCarryForwardUnits(request.getMaxCarryForwardUnits());
         }
 
-        if (request.getValidityEndDate() != null) {
-            policy.setValidityEndDate(request.getValidityEndDate());
-        }
 
+        if (request.getReschedule() != null){
+            policy.setReschedule(request.getReschedule());
+        }
         policy.setUpdatedAt(LocalDateTime.now());
         timeOffPolicyAdapter.savePolicy(policy);
-
-        List<UserPolicyEntity> assignedUsers =
-                userPolicyAdapter.findUserPoliciesByPolicyId(policy.getPolicyId());
 
         List<LeaveBalanceEntity> assignedBalances =
                 leaveBalanceAdapter.findLeaveBalancesByPolicyId(policy.getPolicyId());
@@ -343,6 +206,16 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
 
         if (!entitlementChanged || policy.getCompensation() == Compensation.UNPAID) {
             return;
+        }
+
+        if (policy.getAccrualType() == AccrualType.FIXED){
+            List<UserPolicyEntity> userPolicyEntities = userPolicyAdapter.findUserPoliciesByPolicyId(policy.getPolicyId());
+            List<UserPolicyEntity> toUpdate =new ArrayList<>();
+            for (UserPolicyEntity policyEntity: userPolicyEntities){
+                policyEntity.setEntitledUnits(request.getEntitledUnits());
+                toUpdate.add(policyEntity);
+            }
+            userPolicyAdapter.saveUserPolicies(toUpdate);
         }
 
         List<LeaveBalanceEntity> leaveBalances =
@@ -363,7 +236,6 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
 
             lb.setUpdatedAt(LocalDateTime.now());
         }
-
         leaveBalanceAdapter.saveLeaveBalances(leaveBalances);
     }
 
@@ -397,10 +269,6 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
                 policy.getValidityEndDate()
         );
 
-        if (policy.getAccrualType() == AccrualType.FIXED && userTo == null) {
-            throw new IllegalArgumentException("For FIXED policies userTo is required");
-        }
-
         List<UserEntity> allUsers = userAdapter.findByUserId(new ArrayList<>(finalUsers));
         Map<String, UserEntity> userMap = allUsers.stream()
                 .collect(Collectors.toMap(UserEntity::getUserId, u -> u));
@@ -412,93 +280,40 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
                 ? policy.getEntitledUnits().doubleValue()
                 : null;
 
-
-        LocalDate from = request.getUserValidFrom();
-        LocalDate to = policy.getValidityEndDate();
         for (String userId : finalUsers) {
 
-            UserEntity userEntity = userAdapter.findById(userId)
-                    .orElseThrow(() -> new UsernameNotFoundException("User not found: " + userId));
+            UserEntity userEntity = userMap.get(userId);
 
-            List<UserPolicyEntity> existingActive =
-                    userPolicyAdapter.findActivePoliciesByUserId(userId);
+            List<UserPolicyEntity> existingPolicies =
+                    userPolicyAdapter.findUserPoliciesByUserId(userId);
 
-            boolean alreadyHasSamePolicy = existingActive.stream()
+            boolean alreadyHasPolicy = existingPolicies.stream()
                     .anyMatch(up -> up.getPolicy().getPolicyId().equals(policy.getPolicyId()));
 
-            if (alreadyHasSamePolicy) {
+            if (alreadyHasPolicy) {
                 continue;
             }
-            UserPolicyEntity overrideUP = null;
 
-            for (UserPolicyEntity up : existingActive) {
-
-                AccrualType oldAcc = up.getPolicy().getAccrualType();
-                EntitledType oldEnt = up.getPolicy().getEntitledType();
-
-                if (oldAcc == AccrualType.FIXED && policy.getAccrualType() == AccrualType.FIXED) {
-                    overrideUP = up;
-                    break;
-                }
-
-                if (up.getPolicy().getCompensation() == Compensation.UNPAID &&
-                        policy.getCompensation() == Compensation.UNPAID) {
-                    overrideUP = up;
-                    break;
-                }
-
-                if (oldAcc == policy.getAccrualType() &&
-                        oldEnt == policy.getEntitledType()) {
-
-                    overrideUP = up;
-                    break;
-                }
-
-                if ((oldAcc == AccrualType.MONTHLY && policy.getAccrualType() == AccrualType.ANNUALLY) ||
-                        (oldAcc == AccrualType.ANNUALLY && policy.getAccrualType() == AccrualType.MONTHLY)) {
-
-                    overrideUP = up;
-                    break;
-                }
-            }
-
-            LeaveBalanceEntity oldLB = null;
-
-            if (overrideUP != null) {
-
-                overrideUP.setActive(false);
-                overrideUP.setValidTo(LocalDate.now());
-                userPolicyAdapter.saveUserPolicy(overrideUP);
-
-                oldLB = leaveBalanceAdapter.findActiveBalanceByUserIdAndPolicy(
-                        userId, overrideUP.getPolicy().getPolicyId());
-
-                if (oldLB != null) {
-                    oldLB.setActive(false);
-                    oldLB.setUpdatedAt(LocalDateTime.now());
-                    leaveBalanceAdapter.saveLeaveBalance(oldLB);
-                }
-            }
-
-            LeaveBalanceEntity newLB = null;
+            UserPolicyEntity newUP = buildUserPolicy(policy, userEntity, userFrom, userTo);
+            newUP.setActive(true);
+            assignList.add(newUP);
 
             if (policy.getCompensation() != Compensation.UNPAID) {
 
-                double taken = (oldLB != null) ? oldLB.getLeaveTakenUnits() : 0.0;
-                double balance = Math.max(totalUnits - taken, 0);
+                LeaveBalanceEntity lb = buildLeaveBalance(
+                        policy,
+                        userId,
+                        userFrom,
+                        userTo,
+                        totalUnits
+                );
 
-                newLB = buildLeaveBalance(policy, userId, from, to, totalUnits);
-                newLB.setLeaveTakenUnits(taken);
-                newLB.setBalanceUnits(balance);
-                newLB.setActive(true);
+                lb.setLeaveTakenUnits(0.0);
+                lb.setBalanceUnits(totalUnits);
+                lb.setActive(true);
 
-                balanceList.add(newLB);
+                balanceList.add(lb);
             }
-
-            UserPolicyEntity newUP = buildUserPolicy(policy, userEntity, from, to);
-            newUP.setActive(true);
-
-            assignList.add(newUP);
         }
 
 
@@ -629,7 +444,8 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
         lb.setPeriodStartDate(validFrom);
         lb.setPeriodEnd(computedValidTo);
 
-        lb.setTotalUnits(totalUnits);
+        double calculatedUnits= calculateTotalUnits(policy,policy.getEntitledType());
+        lb.setTotalUnits(calculatedUnits);
         lb.setBalanceUnits(totalUnits);
         lb.setLeaveTakenUnits(0.0);
 
@@ -663,6 +479,7 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
             up.setEntitledUnits(null);
         }
         up.setAssignedAt(LocalDateTime.now());
+        up.setUpdatedAt(LocalDateTime.now());
         return up;
     }
 
@@ -746,4 +563,91 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
         }
         return validTo;
     }
+
+    @Override
+    @Transactional
+    public void editUserPolicy(List<EditUserPolicyModel> reqList) {
+
+        if (reqList == null || reqList.isEmpty()) {
+            throw new IllegalArgumentException("Request is empty");
+        }
+
+        String userId = reqList.getFirst().getUserId();
+
+        Set<String> requestedPolicyIds = reqList.stream()
+                .map(EditUserPolicyModel::getPolicyId)
+                .collect(Collectors.toSet());
+
+        List<UserPolicyEntity> existingPolicies =
+                userPolicyAdapter.findUserPoliciesByUserId(userId);
+
+        Map<String, UserPolicyEntity> existingMap =
+                existingPolicies.stream()
+                        .collect(Collectors.toMap(up -> up.getPolicy().getPolicyId(), up -> up));
+
+        List<UserPolicyEntity> toSaveUP = new ArrayList<>();
+        List<LeaveBalanceEntity> toSaveLB = new ArrayList<>();
+
+        for (EditUserPolicyModel req : reqList) {
+
+            String policyId = req.getPolicyId();
+            LocalDate validFrom = req.getValidityStartDate();
+
+            if (validFrom.isBefore(LocalDate.now())){
+                throw new IllegalArgumentException("Start date should be today or after");
+            }
+            if (existingMap.containsKey(policyId)) {
+
+                UserPolicyEntity up = existingMap.get(policyId);
+                up.setValidFrom(validFrom);
+                up.setActive(true);
+                up.setUpdatedAt(LocalDateTime.now());
+                toSaveUP.add(up);
+
+            } else {
+                TimeOffPolicyBulkAssignModel assignReq = new TimeOffPolicyBulkAssignModel();
+                assignReq.setPolicyId(policyId);
+                assignReq.setUserIds(List.of(userId));
+                assignReq.setUserValidFrom(validFrom);
+
+                this.assignPolicies(assignReq);
+            }
+        }
+
+        for (UserPolicyEntity existing : existingPolicies) {
+
+            String policyId = existing.getPolicy().getPolicyId();
+
+            if (!requestedPolicyIds.contains(policyId)) {
+
+                existing.setActive(false);
+                existing.setUpdatedAt(LocalDateTime.now());
+                toSaveUP.add(existing);
+
+                TimeOffPolicyEntity policy = existing.getPolicy();
+
+                if (policy.getCompensation() != Compensation.UNPAID) {
+
+                    LeaveBalanceEntity lb =
+                            leaveBalanceAdapter.findActiveBalanceByUserIdAndPolicy(userId, policyId);
+
+                    if (lb != null) {
+                        lb.setActive(false);
+                        lb.setUpdatedAt(LocalDateTime.now());
+                        toSaveLB.add(lb);
+                    }
+                }
+            }
+        }
+
+        if (!toSaveUP.isEmpty()) {
+            userPolicyAdapter.saveUserPolicies(toSaveUP);
+        }
+
+        if (!toSaveLB.isEmpty()) {
+            leaveBalanceAdapter.saveLeaveBalances(toSaveLB);
+        }
+    }
+
+
 }

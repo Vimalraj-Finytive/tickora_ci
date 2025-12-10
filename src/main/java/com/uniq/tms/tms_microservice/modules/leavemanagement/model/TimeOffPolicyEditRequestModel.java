@@ -10,7 +10,7 @@ public class TimeOffPolicyEditRequestModel {
     private Integer entitledUnits;
     private Boolean carryForward;
     private Integer maxCarryForwardUnits;
-    private LocalDate validityEndDate;
+    private Boolean reschedule;
 
     public String getPolicyName() {
         return policyName;
@@ -52,13 +52,11 @@ public class TimeOffPolicyEditRequestModel {
         this.maxCarryForwardUnits = maxCarryForwardUnits;
     }
 
-    public LocalDate getValidityEndDate() {
-        return validityEndDate;
+    public Boolean getReschedule() {
+        return reschedule;
     }
 
-    public void setValidityEndDate(LocalDate validityEndDate) {
-        this.validityEndDate = validityEndDate;
+    public void setReschedule(Boolean reschedule) {
+        this.reschedule = reschedule;
     }
-
-
 }

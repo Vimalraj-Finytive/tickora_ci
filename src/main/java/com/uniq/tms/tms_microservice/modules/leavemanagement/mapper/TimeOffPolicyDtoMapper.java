@@ -64,4 +64,6 @@ public interface TimeOffPolicyDtoMapper {
 
     List<TimeOffExportDto> toDtoLists(List<TimeOffExportModel> model);
 
+    List<EditUserPolicyModel> toModel(List<EditUserPolicyDto> editUserPolicyDto);
+
 }

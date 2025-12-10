@@ -251,4 +251,9 @@ public class TimeOffFacade {
         return new ApiResponse<>(200, "Status fetched", dto);
     }
 
+    public ApiResponse<Void> editUserPolicy(List<EditUserPolicyDto> editUserPoicyDto) {
+        List<EditUserPolicyModel> model = timeoffPolicyDtoMapper.toModel(editUserPoicyDto);
+        timeOffPolicyService.editUserPolicy(model);
+        return new ApiResponse<>(200, "Updated user policy succesfully", null);
+    }
 }

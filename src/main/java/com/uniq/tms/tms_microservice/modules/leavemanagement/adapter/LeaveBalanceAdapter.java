@@ -27,7 +27,4 @@ public interface LeaveBalanceAdapter {
     LeaveBalanceEntity findAnnualBalance(String userId, LocalDate date);
     LeaveBalanceEntity findByUserIdAndPolicyId(String userId, String policyId);
     LeaveBalanceEntity findActiveBalanceByUserIdAndPolicy(String userId, String policyId);
-
-
-
 }
