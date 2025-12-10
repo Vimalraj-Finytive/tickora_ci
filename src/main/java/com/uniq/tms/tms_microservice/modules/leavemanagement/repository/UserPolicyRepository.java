@@ -35,7 +35,14 @@ public interface UserPolicyRepository extends JpaRepository<UserPolicyEntity, Lo
     @Query("SELECT up FROM UserPolicyEntity up WHERE up.policy.policyId = :policyId")
     List<UserPolicyEntity> findByPolicyId(String policyId);
 
-    @Query("SELECT up.user.userId FROM UserPolicyEntity up WHERE up.policy.policyId = :policyId")
+    @Query("""
+    SELECT up.user.userId
+    FROM UserPolicyEntity up
+    WHERE up.policy.policyId = :policyId
+      AND up.active = true
+      AND up.policy.isActive = true
+      AND up.user.active = true
+""")
     List<String> findUserIdsByPolicyId(@Param("policyId") String policyId);
 
     @Query("""
