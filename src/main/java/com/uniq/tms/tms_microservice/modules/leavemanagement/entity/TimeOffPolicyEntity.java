@@ -61,6 +61,9 @@ public class TimeOffPolicyEntity {
     @Column(name = "is_default")
     private Boolean isDefault;
 
+    @Column(name = "is_reschedule")
+    private Boolean reschedule;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
@@ -226,5 +229,13 @@ public class TimeOffPolicyEntity {
 
     public void setResetFrequency(ResetFrequency resetFrequency) {
         this.resetFrequency = resetFrequency;
+    }
+
+    public Boolean getReschedule() {
+        return reschedule;
+    }
+
+    public void setReschedule(Boolean reschedule) {
+        this.reschedule = reschedule;
     }
 }

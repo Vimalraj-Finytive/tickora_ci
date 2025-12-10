@@ -39,6 +39,9 @@ public class UserPolicyEntity {
     @Column(name = "assigned_at")
     private LocalDateTime assignedAt;
 
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
     public Long getId() {
         return id;
     }
@@ -102,5 +105,13 @@ public class UserPolicyEntity {
 
     public void setActive(Boolean active) {
         this.active = active;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
     }
 }

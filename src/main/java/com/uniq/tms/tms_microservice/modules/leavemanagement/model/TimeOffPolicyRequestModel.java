@@ -19,10 +19,7 @@ public class TimeOffPolicyRequestModel {
     private Integer entitledUnits;
     private Boolean carryForward;
     private Integer maxCarryForwardUnits;
-    private LocalDate userValidFrom;
-    private LocalDate userValidTo;
-    private List<String> userIds;
-    private List<Long> groupIds;
+    private Boolean reschedule;
 
     public String getPolicyName() {
         return policyName;
@@ -96,37 +93,6 @@ public class TimeOffPolicyRequestModel {
         this.maxCarryForwardUnits = maxCarryForwardUnits;
     }
 
-    public LocalDate getUserValidFrom() {
-        return userValidFrom;
-    }
-
-    public void setUserValidFrom(LocalDate userValidFrom) {
-        this.userValidFrom = userValidFrom;
-    }
-
-    public LocalDate getUserValidTo() {
-        return userValidTo;
-    }
-
-    public void setUserValidTo(LocalDate userValidTo) {
-        this.userValidTo = userValidTo;
-    }
-
-    public List<String> getUserIds() {
-        return userIds;
-    }
-
-    public void setUserIds(List<String> userIds) {
-        this.userIds = userIds;
-    }
-
-    public List<Long> getGroupIds() {
-        return groupIds;
-    }
-
-    public void setGroupIds(List<Long> groupIds) {
-        this.groupIds = groupIds;
-    }
 
     public ResetFrequency getResetFrequency() {
         return resetFrequency;
@@ -134,5 +100,13 @@ public class TimeOffPolicyRequestModel {
 
     public void setResetFrequency(ResetFrequency resetFrequency) {
         this.resetFrequency = resetFrequency;
+    }
+
+    public Boolean getReschedule() {
+        return reschedule;
+    }
+
+    public void setReschedule(Boolean reschedule) {
+        this.reschedule = reschedule;
     }
 }

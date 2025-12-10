@@ -20,5 +20,5 @@ public interface TimeOffPolicyService {
       TimeOffPoliciesModel getPolicyById(String id);
       List<TimeOffPoliciesModel> getPolicyByUserId(String userId);
       List<EnumModel> getResetFrequencyStatus();
-
+      void editUserPolicy(List<EditUserPolicyModel> editUserPolicyModel);
 }

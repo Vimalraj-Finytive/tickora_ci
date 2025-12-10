@@ -727,6 +727,7 @@ CREATE TABLE IF NOT EXISTS timeoff_policies (
     entitled_units INT,
     entitled_type VARCHAR(10) CHECK (entitled_type IN ('DAY','HOURS','HALF_DAY')),
     is_active BOOLEAN,
+    is_reschedule BOOLEAN,
     max_carry_forward_units INT,
     is_carry_forward BOOLEAN,
     is_default BOOLEAN,
@@ -805,6 +806,7 @@ CREATE TABLE IF NOT EXISTS user_policies (
     valid_to DATE,
     is_active BOOLEAN,
     assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_user_policies_policy
         FOREIGN KEY (policy_id) REFERENCES timeoff_policies(policy_id)
         ON DELETE CASCADE,

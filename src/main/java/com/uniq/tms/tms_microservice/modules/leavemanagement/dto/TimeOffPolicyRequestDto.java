@@ -6,7 +6,6 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.EntitledType;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.ResetFrequency;
 import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
-import java.util.List;
 
 public class TimeOffPolicyRequestDto {
 
@@ -17,6 +16,7 @@ public class TimeOffPolicyRequestDto {
     @NotNull
     private LocalDate validityStartDate;
 
+    @NotNull
     private LocalDate validityEndDate;
 
     private ResetFrequency resetFrequency;
@@ -24,13 +24,7 @@ public class TimeOffPolicyRequestDto {
     private Integer entitledUnits;
     private Boolean carryForward;
     private Integer maxCarryForwardUnits;
-
-    private LocalDate userValidFrom;
-
-    private LocalDate userValidTo;
-
-    private List<String> userIds;
-    private List<Long> groupIds;
+    private Boolean reschedule;
 
     public String getPolicyName() {
         return policyName;
@@ -105,30 +99,6 @@ public class TimeOffPolicyRequestDto {
         this.resetFrequency = resetFrequency;
     }
 
-    public LocalDate getUserValidFrom() {
-        return userValidFrom;
-    }
-
-    public void setUserValidFrom(LocalDate userValidFrom) {
-        this.userValidFrom = userValidFrom;
-    }
-
-    public LocalDate getUserValidTo() {
-        return userValidTo;
-    }
-
-    public void setUserValidTo(LocalDate userValidTo) {
-        this.userValidTo = userValidTo;
-    }
-
-    public List<String> getUserIds() {
-        return userIds;
-    }
-
-    public void setUserIds(List<String> userIds) {
-        this.userIds = userIds;
-    }
-
     public AccrualType getAccrualType() {
         return accrualType;
     }
@@ -137,11 +107,11 @@ public class TimeOffPolicyRequestDto {
         this.accrualType = accrualType;
     }
 
-    public List<Long> getGroupIds() {
-        return groupIds;
+    public Boolean getReschedule() {
+        return reschedule;
     }
 
-    public void setGroupIds(List<Long> groupIds) {
-        this.groupIds = groupIds;
+    public void setReschedule(Boolean reschedule) {
+        this.reschedule = reschedule;
     }
 }
