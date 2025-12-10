@@ -17,6 +17,7 @@ public interface UserProjection {
     String getSecMobile();
     String getSecEmail();
     String getSecRelation();
+    String getPolicyId();
     String getPolicyName();
     LocalDate getValidFrom();
     LocalDate getValidTo();

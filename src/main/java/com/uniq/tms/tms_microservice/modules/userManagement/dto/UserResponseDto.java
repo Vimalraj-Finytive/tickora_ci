@@ -39,6 +39,7 @@ public class UserResponseDto {
             String secMobile,
             String secEmail,
             String relation,
+            String policyId,
             String policyName,
             LocalDate validFrom,
             LocalDate validTo,
@@ -75,7 +76,7 @@ public class UserResponseDto {
         // POLICIES
         this.policies = new ArrayList<>();
         if (policyName != null) {
-            this.policies.add(new UserPolicyDto(policyName, validFrom, validTo));
+            this.policies.add(new UserPolicyDto(policyId,policyName, validFrom, validTo));
         }
 
         this.calendarName = calendarName;
