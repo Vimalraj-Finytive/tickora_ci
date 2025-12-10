@@ -23,7 +23,14 @@ public interface TimeOffPolicyRepository extends JpaRepository<TimeOffPolicyEnti
             SELECT p FROM TimeOffPolicyEntity p WHERE p.policyId IN :policyIds""")
     List<TimeOffPolicyEntity> findByPolicyIdIn(@Param("policyIds") List<String> policyIds);
 
-    @Query("SELECT up.policy FROM UserPolicyEntity up WHERE up.user.userId = :userId AND up.policy.isActive = true")
+    @Query("""
+    SELECT up.policy
+    FROM UserPolicyEntity up
+    WHERE up.user.userId = :userId
+      AND up.user.active = true
+      AND up.policy.isActive = true
+      AND up.active = true
+""")
     List<TimeOffPolicyEntity> findPolicyByUserId(@Param("userId") String userId);
 
     @Query(
