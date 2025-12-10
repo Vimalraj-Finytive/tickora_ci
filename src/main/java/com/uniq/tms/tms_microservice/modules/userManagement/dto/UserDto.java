@@ -19,6 +19,7 @@ public class UserDto {
     private String requestApproverId;
     private String calendarId;
     private List<String> policyIds;
+    private LocalDate userValidFrom;
 
     public UserDto() {}
 
@@ -136,5 +137,13 @@ public class UserDto {
 
     public void setPolicyIds(List<String> policyIds) {
         this.policyIds = policyIds;
+    }
+
+    public LocalDate getUserValidFrom() {
+        return userValidFrom;
+    }
+
+    public void setUserValidFrom(LocalDate userValidFrom) {
+        this.userValidFrom = userValidFrom;
     }
 }

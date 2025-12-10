@@ -512,7 +512,6 @@ public class UserServiceImpl implements UserService {
                 assignModel.setUserIds(userIds);
                 assignModel.setPolicyId(defaultPolicyEntity.getPolicyId());
                 assignModel.setUserValidFrom(LocalDate.now());
-                assignModel.setUserValidTo(defaultPolicyEntity.getValidityEndDate());
 
                 try {
                     timeOffPolicyService.assignPolicies(assignModel);
@@ -711,7 +710,7 @@ public class UserServiceImpl implements UserService {
         log.info("Saving user: {}", userMiddleware.getUserName());
         UserEntity savedUserEntity = userAdapter.saveUser(entity);
         TimeOffPolicyEntity timeOffPolicyEntity=timeOffPolicyAdapter.findDefaultPolicy();
-        assignPolicy(timeOffPolicyEntity.getPolicyId(), customUserId);
+        assignPolicy(timeOffPolicyEntity.getPolicyId(), customUserId, LocalDate.now());
 
         List<Long> locationIds = null;
         List<Long> groupIds = null;
@@ -794,8 +793,9 @@ public class UserServiceImpl implements UserService {
 
         if (!(userDto.getPolicyIds() == null || userDto.getPolicyIds().isEmpty())) {
             log.info("Adding user to policy: {}", userDto.getPolicyIds());
+            LocalDate startDate = userDto.getUserValidFrom();
             userDto.getPolicyIds()
-                    .forEach(id -> assignPolicy(id, customUserId));
+                    .forEach(id -> assignPolicy(id, customUserId, startDate));
         }
 
 
@@ -841,12 +841,11 @@ public class UserServiceImpl implements UserService {
         return new ApiResponse<UserDto>(201, "Successfully saved user", userDto);
     }
 
-    private void assignPolicy(String policyId, String customUserId){
+    private void assignPolicy(String policyId, String customUserId, LocalDate startDate){
         TimeOffPolicyBulkAssignModel defaultPolicy = new TimeOffPolicyBulkAssignModel();
         defaultPolicy.setUserIds(List.of(customUserId));
         defaultPolicy.setPolicyId(policyId);
-        defaultPolicy.setUserValidFrom(LocalDate.now());
-        defaultPolicy.setUserValidTo(null);
+        defaultPolicy.setUserValidFrom(startDate);
         timeOffPolicyService.assignPolicies(defaultPolicy);
     }
 
