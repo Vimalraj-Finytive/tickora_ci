@@ -20,6 +20,7 @@ public class User {
     private String requestApproverId;
     private String calendarId;
     private List<String> policyIds;
+    private LocalDate userValidFrom;
 
     public boolean isActive() {
         return active;
@@ -139,5 +140,13 @@ public class User {
 
     public void setPolicyIds(List<String> policyIds) {
         this.policyIds = policyIds;
+    }
+
+    public LocalDate getUserValidFrom() {
+        return userValidFrom;
+    }
+
+    public void setUserValidFrom(LocalDate userValidFrom) {
+        this.userValidFrom = userValidFrom;
     }
 }
