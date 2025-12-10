@@ -5,6 +5,7 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.facade.TimeOffFacad
 import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
 import com.uniq.tms.tms_microservice.shared.dto.EnumDto;
 import com.uniq.tms.tms_microservice.shared.helper.AuthHelper;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.*;
@@ -26,7 +27,7 @@ public class TimeOffPoliciesController {
     }
 
     @PostMapping("/create")
-    public ResponseEntity<ApiResponse<Void>> createPolicy(@RequestBody TimeOffPolicyRequestDto request,
+    public ResponseEntity<ApiResponse<Void>> createPolicy(@Valid  @RequestBody TimeOffPolicyRequestDto request,
                                                           @RequestHeader("Authorization") String token) {
         ApiResponse<Void> response = timeOffFacade.createPolicy(request);
         return ResponseEntity.status(HttpStatus.OK).body(response);
@@ -123,6 +124,13 @@ public class TimeOffPoliciesController {
             @RequestHeader("Authorization") String token) {
 
         ApiResponse<List<EnumDto>> response = timeOffFacade.getResetFrequencyStatus();
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
+
+    @PutMapping("/update/userPolicy")
+    public ResponseEntity<ApiResponse<Void>>updateUserPolicy(@RequestHeader("Authorization") String token,@RequestBody List<EditUserPolicyDto> editUserPolicyDto){
+        ApiResponse<Void> response =
+                timeOffFacade.editUserPolicy(editUserPolicyDto);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 }
