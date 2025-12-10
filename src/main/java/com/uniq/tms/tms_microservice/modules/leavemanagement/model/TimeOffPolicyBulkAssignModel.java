@@ -7,9 +7,7 @@ public class TimeOffPolicyBulkAssignModel {
     private String policyId;
     private List<String> userIds;
     private List<Long> groupIds;
-
     private LocalDate userValidFrom;
-    private LocalDate userValidTo;
 
     public LocalDate getUserValidFrom() {
         return userValidFrom;
@@ -17,14 +15,6 @@ public class TimeOffPolicyBulkAssignModel {
 
     public void setUserValidFrom(LocalDate userValidFrom) {
         this.userValidFrom = userValidFrom;
-    }
-
-    public LocalDate getUserValidTo() {
-        return userValidTo;
-    }
-
-    public void setUserValidTo(LocalDate userValidTo) {
-        this.userValidTo = userValidTo;
     }
 
     public String getPolicyId() {
