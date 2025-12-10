@@ -4,6 +4,7 @@ import java.time.LocalDate;
 
 public class UserPolicyModel {
 
+    private String policyId;
     private String policyName;
     private LocalDate userStartDate;
     private LocalDate userEndDate;
@@ -12,10 +13,19 @@ public class UserPolicyModel {
 
     }
 
-    public UserPolicyModel(String policyName, LocalDate userStartDate, LocalDate userEndDate) {
+    public UserPolicyModel(String policyId, String policyName, LocalDate userStartDate, LocalDate userEndDate) {
+        this.policyId = policyId;
         this.policyName = policyName;
         this.userStartDate = userStartDate;
         this.userEndDate = userEndDate;
+    }
+
+    public String getPolicyId() {
+        return policyId;
+    }
+
+    public void setPolicyId(String policyId) {
+        this.policyId = policyId;
     }
 
     public String getPolicyName() {

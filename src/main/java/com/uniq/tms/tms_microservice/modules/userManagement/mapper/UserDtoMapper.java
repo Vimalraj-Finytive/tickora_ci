@@ -113,6 +113,7 @@ public interface UserDtoMapper {
         if (user.getPolicyName() != null) {
             dto.getPolicies().add(
                     new UserPolicyDto(
+                            user.getPolicyId(),
                             user.getPolicyName(),
                             user.getValidFrom(),
                             user.getValidTo()
