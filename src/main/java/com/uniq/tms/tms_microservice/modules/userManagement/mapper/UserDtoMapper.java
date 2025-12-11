@@ -61,6 +61,7 @@ public interface UserDtoMapper {
     BulkUserLocationModel toModel(BulkUserLocationDto dto);
 
     @Mapping(target = "policies", ignore = true)
+    @Mapping(target = "secondaryDetails", ignore = true)
     UserResponseDto toUserDto(UserProjection userProjection);
 
     @Mapper(componentModel = "spring")
@@ -109,7 +110,14 @@ public interface UserDtoMapper {
     default void addPolicies(UserProjection user, @MappingTarget UserResponseDto dto) {
 
         dto.setPolicies(new ArrayList<>());
-
+        if (user.getSecName() != null) {
+            dto.setSecondaryDetails(new SecondaryDetailsDto(
+                    user.getSecName(),
+                    user.getSecMobile(),
+                    user.getSecEmail(),
+                    user.getSecRelation()
+            ));
+        }
         if (user.getPolicyName() != null) {
             dto.getPolicies().add(
                     new UserPolicyDto(

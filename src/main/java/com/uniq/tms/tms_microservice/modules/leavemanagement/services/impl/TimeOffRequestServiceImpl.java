@@ -557,7 +557,7 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
                 ViewerModel v = new ViewerModel();
                 v.setUserId(row.getViewerId());
                 v.setUserName(row.getViewerName());
-                v.setViewerType("VIEWER");
+                v.setViewerType(ViewerType.VIEWER.getValue());
                 model.getViewers().add(v);
             }
 
@@ -565,7 +565,7 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
                 ViewerModel a = new ViewerModel();
                 a.setUserId(row.getViewerId());
                 a.setUserName(row.getViewerName());
-                a.setViewerType("APPROVER");
+                a.setViewerType(ViewerType.APPROVER.getValue());
                 model.getApprover().add(a);
             }
         }
@@ -757,7 +757,10 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
                 reportStyleUtil.createStyledCell(row, col++, String.valueOf(v.getLeaveEndDate()), dataStyle);
                 reportStyleUtil.createStyledCell(row, col++, v.getLeaveType(), dataStyle);
                 reportStyleUtil.createStyledCell(row, col++, v.getStatus(), dataStyle);
-                reportStyleUtil.createStyledCell(row, col, v.getViewerType(), dataStyle);
+                if(Objects.equals(v.getViewerType(), ViewerType.APPROVER.getValue())){
+                    reportStyleUtil.createStyledCell(row, col++, v.getViewerName(), dataStyle);
+                }
+                reportStyleUtil.createStyledCell(row, col, v.getViewerName(), dataStyle);
             }
             for (int i = 0; i < headers.length; i++) {
                 sheet.autoSizeColumn(i);

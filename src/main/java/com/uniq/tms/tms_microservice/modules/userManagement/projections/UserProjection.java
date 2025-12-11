@@ -22,5 +22,6 @@ public interface UserProjection {
     LocalDate getValidFrom();
     LocalDate getValidTo();
     String getCalendarName();
-    String getRequestApproverId();
+    String getRequestApproverName();
+    String getPayrollName();
 }

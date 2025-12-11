@@ -395,11 +395,11 @@ public class UserFacade {
     public ApiResponse<UserCalendarRequestDto> updateCalendar(UserCalendarRequestDto updates) {
         boolean success = userService.UpdateCalendar(updates);
         if (!success) {
-            return new ApiResponse<>(401, "Unauthorized - Invalid users", null);
+            return new ApiResponse<>(400, "Invalid calendarId or user does not exist", null);
         }
         return new ApiResponse<>(200, "User Updated successfully", null);
-
     }
+
 
     public ApiResponse<List<UserLevelDto>> getUsersBelowHierarchy(String userId, String orgId) {
         List<UserLevelModel> models = userService.getUsersBelowHierarchy(userId, orgId);

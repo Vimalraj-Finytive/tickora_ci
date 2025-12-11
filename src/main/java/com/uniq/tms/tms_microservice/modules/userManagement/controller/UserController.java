@@ -258,7 +258,7 @@ public class UserController {
     @PutMapping("/updateCalendar")
     public ResponseEntity<ApiResponse<UserCalendarRequestDto>> updateUser(
             @RequestHeader("Authorization") String token,
-            @RequestBody UserCalendarRequestDto updates){
+            @Valid @RequestBody UserCalendarRequestDto updates){
         ApiResponse<UserCalendarRequestDto> response = userFacade.updateCalendar(updates);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }

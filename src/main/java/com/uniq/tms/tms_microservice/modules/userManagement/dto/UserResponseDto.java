@@ -21,6 +21,7 @@ public class UserResponseDto {
     private List<UserPolicyDto> policies;
     private String calendarName;
     private String requestApproverName;
+    private String payrollName;
 
     public UserResponseDto() {
     }
@@ -44,7 +45,8 @@ public class UserResponseDto {
             LocalDate validFrom,
             LocalDate validTo,
             String calendarName,
-            String requestApproverName
+            String requestApproverName,
+            String payRollName
     ) {
         this.userId = userId;
         this.userName = userName;
@@ -81,6 +83,7 @@ public class UserResponseDto {
 
         this.calendarName = calendarName;
         this.requestApproverName = requestApproverName;
+        this.payrollName = payRollName;
     }
 
 
@@ -169,5 +172,13 @@ public class UserResponseDto {
 
     public void setRequestApproverName(String requestApproverName) {
         this.requestApproverName = requestApproverName;
+    }
+
+    public String getPayrollName() {
+        return payrollName;
+    }
+
+    public void setPayrollName(String payrollName) {
+        this.payrollName = payrollName;
     }
 }
