@@ -1,6 +1,6 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.schedular;
 
-import com.uniq.tms.tms_microservice.modules.leavemanagement.services.LeaveBalanceService;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.services.TimeOffPolicyService;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.OrganizationEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.OrganizationRepository;
 import com.uniq.tms.tms_microservice.shared.util.TenantUtil;
@@ -8,30 +8,30 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+
 import java.util.List;
 
 @Component
-public class LeaveYearlyResetSchedular {
+public class PolicyMonthlySchedular {
+    private static final Logger log = LoggerFactory.getLogger(PolicyMonthlySchedular.class);
 
-    private static final Logger log = LoggerFactory.getLogger(LeaveYearlyResetSchedular.class);
-
-    private final LeaveBalanceService leaveBalanceService;
+    private final TimeOffPolicyService timeOffPolicyService;
     private final OrganizationRepository organizationRepository;
 
-    public LeaveYearlyResetSchedular(LeaveBalanceService leaveBalanceService, OrganizationRepository organizationRepository) {
-        this.leaveBalanceService = leaveBalanceService;
+    public PolicyMonthlySchedular(TimeOffPolicyService timeOffPolicyService, OrganizationRepository organizationRepository) {
+        this.timeOffPolicyService = timeOffPolicyService;
         this.organizationRepository = organizationRepository;
     }
 
-    @Scheduled(cron = "0 0 0 1 1 ?", zone = "Asia/Kolkata")
-    public void autoUpdateYearlyLeaveBalance(){
+    @Scheduled(cron = "0 0 0 1 * ?", zone = "Asia/Kolkata")
+    public void autoUpdateMonthlyPolicy(){
         try {
             List<OrganizationEntity> orgIds = organizationRepository.findAll();
             for (OrganizationEntity orgId : orgIds) {
                 TenantUtil.setCurrentTenant(orgId.getSchemaName());
                 try {
-                    log.info("Scheduled clock triggered for update LeaveBalance yearly");
-                    leaveBalanceService.updateYearlyLeaveBalance();
+                    log.info("Scheduled clock triggered for update monthly policy");
+                    timeOffPolicyService.updateMonthlyPolicy();
                 } catch (Exception e) {
                     continue;
                 } finally {
@@ -39,7 +39,8 @@ public class LeaveYearlyResetSchedular {
                 }
             }
         } catch (Exception e) {
-            log.error("Error while leaveBalance yearly update", e);
+            log.error("Error while monthlyPolicy update", e);
         }
     }
+
 }
