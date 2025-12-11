@@ -44,4 +44,6 @@ public interface UserPolicyAdapter {
 
     List<UserPolicyProjection> findUserPolicyValidTo(AccrualType type);
 
+    List<String> findUserIdsByPolicyId(String policyId);
+
 }

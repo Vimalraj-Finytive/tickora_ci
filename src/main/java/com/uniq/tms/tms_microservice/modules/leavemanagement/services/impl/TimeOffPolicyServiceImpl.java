@@ -13,6 +13,7 @@ import com.uniq.tms.tms_microservice.modules.userManagement.adapter.UserAdapter;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
 import com.uniq.tms.tms_microservice.shared.dto.EnumModel;
 import jakarta.transaction.Transactional;
+import org.apache.commons.beanutils.BeanUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -20,6 +21,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import java.time.*;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -280,6 +282,8 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
                 ? policy.getEntitledUnits().doubleValue()
                 : null;
 
+        LocalDate from = request.getUserValidFrom();
+        LocalDate to = policy.getValidityEndDate();
         for (String userId : finalUsers) {
 
             UserEntity userEntity = userMap.get(userId);
@@ -352,7 +356,7 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
 
             List<LeaveBalanceEntity> assignedLb = leaveBalanceAdapter.findLeaveBalancesByPolicyId(policyId);
             for (LeaveBalanceEntity leaveBalance : assignedLb) {
-                leaveBalance.setActive(status);
+                leaveBalance.setActive(false);
                 leaveBalance.setUpdatedAt(LocalDateTime.now());
             }
             if (!assigedUp.isEmpty()) {
@@ -550,6 +554,77 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
             list.add(model);
         }
         return list;
+    }
+
+    @Override
+    public void updateMonthlyPolicy() {
+        List<TimeOffPolicyEntity> monthlyPolicies =
+                timeOffPolicyAdapter.findAllPoliciesByType(AccrualType.MONTHLY);
+        log.info("fetched policies");
+        updatePolicy(monthlyPolicies, AccrualType.MONTHLY);
+    }
+
+    @Override
+    public void updateYearlyPolicy() {
+        List<TimeOffPolicyEntity> monthlyPolicies =
+                timeOffPolicyAdapter.findAllPoliciesByType(AccrualType.ANNUALLY);
+        updatePolicy(monthlyPolicies, AccrualType.ANNUALLY);
+    }
+
+    private void updatePolicy(List<TimeOffPolicyEntity> monthlyPolicies, AccrualType type){
+        LocalDate current = LocalDate.now(ZoneId.of("Asia/Kolkata"));
+        for (TimeOffPolicyEntity entity : monthlyPolicies){
+            log.info("loop start");
+            if (entity.getReschedule() && entity.getValidityEndDate().isBefore(current)){
+                LocalDate newStart;
+                LocalDate newEnd;
+                log.info("condition applied");
+                TimeOffPolicyInactivateModel model = new TimeOffPolicyInactivateModel();
+                List<String> userIds = userPolicyAdapter.findUserIdsByPolicyId(entity.getPolicyId());
+                model.setActive(false);
+                inactivatePolicy(entity.getPolicyId(), model);
+                TimeOffPolicyEntity copy = new TimeOffPolicyEntity();
+                String policyId = idGenerationService.generateNextTimeOffPolicyId();
+                if (type == AccrualType.MONTHLY) {
+                    long months = ChronoUnit.MONTHS.between(
+                            entity.getValidityStartDate().withDayOfMonth(1),
+                            entity.getValidityEndDate().withDayOfMonth(1)
+                    ) + 1;
+                    newStart = entity.getValidityStartDate().plusMonths(months);
+                    newEnd = entity.getValidityEndDate().plusMonths(months);
+                }else {
+                    Period diff = Period.between(entity.getValidityStartDate(), entity.getValidityEndDate());
+                    long years = diff.getYears() + 1;
+                    newStart = entity.getValidityStartDate().plusYears(years);
+                    newEnd = entity.getValidityEndDate().plusYears(years);
+                }
+                log.info("startDate and endDate");
+                copy.setPolicyId(policyId);
+                copy.setPolicyName(entity.getPolicyName());
+                copy.setCompensation(entity.getCompensation());
+                copy.setAccrualType(entity.getAccrualType());
+                copy.setValidityStartDate(newStart);
+                copy.setValidityEndDate(newEnd);
+                copy.setAccrualStartDate(current);
+                copy.setResetFrequency(entity.getResetFrequency());
+                copy.setEntitledUnits(entity.getEntitledUnits());
+                copy.setEntitledType(entity.getEntitledType());
+                copy.setActive(entity.isActive());
+                copy.setMaxCarryForwardUnits(entity.getMaxCarryForwardUnits());
+                copy.setCarryForward(entity.getCarryForward());
+                copy.setDefault(entity.getDefault());
+                copy.setReschedule(entity.getReschedule());
+                log.info("before save");
+                TimeOffPolicyEntity saved = timeOffPolicyAdapter.savePolicy(copy);
+                log.info("policy saved");
+
+                TimeOffPolicyBulkAssignModel defaultPolicy = new TimeOffPolicyBulkAssignModel();
+                defaultPolicy.setUserIds(userIds);
+                defaultPolicy.setPolicyId(policyId);
+                defaultPolicy.setUserValidFrom(newStart);
+                assignPolicies(defaultPolicy);
+            }
+        }
     }
 
     private LocalDate computeValidTo(TimeOffPolicyEntity policy, LocalDate validFrom, LocalDate validTo) {

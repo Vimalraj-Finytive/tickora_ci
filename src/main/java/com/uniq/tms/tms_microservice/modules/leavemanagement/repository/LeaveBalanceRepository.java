@@ -51,6 +51,7 @@ public interface LeaveBalanceRepository extends JpaRepository<LeaveBalanceEntity
          AND lb.user.userId = :userId
          AND lb.periodStartDate <= :start
          AND lb.periodEnd >= :end
+         AND lb.active = true
        """)
     LeaveBalanceEntity findForPeriod(String policyId, String userId, LocalDate start, LocalDate end);
 
