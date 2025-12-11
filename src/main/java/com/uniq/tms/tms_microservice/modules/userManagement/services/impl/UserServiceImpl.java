@@ -2329,24 +2329,22 @@ public class UserServiceImpl implements UserService {
         return toModel;
     }
 
-    @Override
     @Transactional
     public boolean UpdateCalendar(UserCalendarRequestDto updates) {
-        try {
-            List<UserEntity> users = userAdapter.getUsersByIds(updates.getUserIds());
-            if (users.isEmpty()) {
-                log.warn("No users found for given IDs: {}", updates.getUserIds());
-                return false;
-            }
-            String newCalendarId = updates.getCalendarId();
-            for (UserEntity user : users) {
-                updateUserCalendar(user, newCalendarId);
-            }
-            return true;
-        } catch (Exception e) {
-            log.error("Error updating calendar for users: {}", e.getMessage(), e);
+        List<UserEntity> users = userAdapter.getUsersByIds(updates.getUserIds());
+        if (users.isEmpty()) {
+            log.warn("No users found for given IDs: {}", updates.getUserIds());
             return false;
         }
+        String newCalendarId = updates.getCalendarId();
+        if (newCalendarId == null || newCalendarId.isBlank()) {
+            log.warn("Invalid empty calendarId");
+            throw new IllegalArgumentException("calendarId cannot be null or empty");
+        }
+        for (UserEntity user : users) {
+            updateUserCalendar(user, newCalendarId);
+        }
+        return true;
     }
 
     @Override

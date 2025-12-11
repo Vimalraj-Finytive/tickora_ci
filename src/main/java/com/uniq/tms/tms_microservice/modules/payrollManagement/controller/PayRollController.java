@@ -169,7 +169,6 @@ public class PayRollController {
             @RequestParam String fileName) {
         try {
 
-            // Security validation
             if (fileName.contains("..") || fileName.contains("/") || fileName.contains("\\")) {
                 return ResponseEntity.badRequest().body(
                         new ApiResponse<>(400, "Invalid file name", null)
@@ -178,14 +177,12 @@ public class PayRollController {
 
             Path filePath = Paths.get(downloadDir).resolve(fileName);
 
-            // File NOT FOUND --> return JSON error
             if (!Files.exists(filePath)) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
                         new ApiResponse<>(404, "File not generated yet. Please try again later.", null)
                 );
             }
 
-            // File FOUND --> return file stream
             long fileSize = Files.size(filePath);
             InputStreamResource resource = new InputStreamResource(Files.newInputStream(filePath));
             MediaType mediaType = determineMediaType(fileName);

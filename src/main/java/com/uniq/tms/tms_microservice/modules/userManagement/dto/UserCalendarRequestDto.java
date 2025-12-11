@@ -1,10 +1,13 @@
 package com.uniq.tms.tms_microservice.modules.userManagement.dto;
 
+import jakarta.validation.constraints.NotNull;
+
 import java.util.List;
 
 public class UserCalendarRequestDto {
-
+    @NotNull
     List<String> userIds;
+    @NotNull
     String calendarId;
 
     public List<String> getUserIds() {

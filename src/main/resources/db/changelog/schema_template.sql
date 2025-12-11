@@ -1509,59 +1509,51 @@ SELECT
     u.email,
     u.mobile_number,
     u.request_approver_id,
-
+    ra.user_name AS request_approver_name,
     ws.work_schedule_name AS schedule_name,
     c.name AS calendar_name,
-
     og.group_name,
     r.name AS role_name,
     l.name AS location_name,
-
     u.date_of_joining,
-
     sd.secondary_user_name AS sec_name,
     sd.mobile AS sec_mobile,
     sd.email AS sec_email,
     sd.relation AS sec_relation,
-
     tp.policy_name,
     up.valid_from,
     up.valid_to,
-
+    py.payroll_name,
     u.organization_id,
     u.active,
     r.hierarchy_level
 
 FROM ${schemaName}.users u
-
+LEFT JOIN ${schemaName}.users ra
+    ON ra.user_id::text = u.request_approver_id::text
 LEFT JOIN ${schemaName}.work_schedule ws
     ON ws.work_schedule_id = u.work_schedule_id
-
 LEFT JOIN ${schemaName}.calendar c
     ON c.id = u.calendar_id
-
 LEFT JOIN ${schemaName}.user_group ug
     ON ug.user_id = u.user_id
-
 LEFT JOIN ${schemaName}.org_groups og
     ON og.group_id = ug.group_id
-
 JOIN ${schemaName}.role r
     ON r.role_id = u.role_id
-
 LEFT JOIN ${schemaName}.user_location ul
     ON ul.user_id = u.user_id
-
 LEFT JOIN ${schemaName}.location l
     ON l.location_id = ul.location_id
-
 LEFT JOIN ${schemaName}.secondary_details sd
     ON sd.user_id = u.user_id
-
 LEFT JOIN ${schemaName}.user_policies up
     ON up.user_id = u.user_id
    AND up.is_active = TRUE
-
 LEFT JOIN ${schemaName}.timeoff_policies tp
     ON tp.policy_id = up.policy_id
-   AND tp.is_active = TRUE;
+   AND tp.is_active = TRUE
+LEFT JOIN ${schemaName}.user_payroll upay
+    ON upay.user_id::text = u.user_id::text
+LEFT JOIN ${schemaName}.payroll py
+    ON py.id::text = upay.payroll_id::text;
