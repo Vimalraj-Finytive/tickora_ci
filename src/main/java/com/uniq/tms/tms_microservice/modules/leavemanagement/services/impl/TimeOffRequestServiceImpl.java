@@ -768,7 +768,10 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
                 reportStyleUtil.createStyledCell(row, col++, String.valueOf(v.getLeaveEndDate()), dataStyle);
                 reportStyleUtil.createStyledCell(row, col++, v.getLeaveType(), dataStyle);
                 reportStyleUtil.createStyledCell(row, col++, v.getStatus(), dataStyle);
-                reportStyleUtil.createStyledCell(row, col, v.getViewerType(), dataStyle);
+                if(Objects.equals(v.getViewerType(), ViewerType.APPROVER.getValue())){
+                    reportStyleUtil.createStyledCell(row, col++, v.getViewerName(), dataStyle);
+                }
+                reportStyleUtil.createStyledCell(row, col, v.getViewerName(), dataStyle);
             }
             for (int i = 0; i < headers.length; i++) {
                 sheet.autoSizeColumn(i);
