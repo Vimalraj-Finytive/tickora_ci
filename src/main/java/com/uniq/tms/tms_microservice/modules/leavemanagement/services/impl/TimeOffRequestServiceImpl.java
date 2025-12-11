@@ -128,7 +128,7 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
         TimeOffPolicyEntity policy = timeOffPolicyAdapter.findPolicyById(request.getPolicyId());
         UserEntity user = userAdapter.getUserById(request.getUserId());
         if (user.getRequestApproverId() == null || user.getUserId().equals(user.getRequestApproverId())){
-            throw new IllegalArgumentException("requestId is missing or invalid.");
+            throw new IllegalArgumentException("Approver not assigned to create request. Please contact your admin");
         }
         WorkScheduleEntity workSchedule = user.getWorkSchedule();
         double days = ChronoUnit.DAYS.between(request.getStartDate(), request.getEndDate()) + 1;
@@ -514,21 +514,33 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
     public List<TimeOffExportModel> filterRequests(TimeOffExportRequest request, String loggedUserId) {
 
         List<TimeOffExportView> rows = fetchExportRows(request, loggedUserId);
-
         Map<String, TimeOffExportModel> grouped = new LinkedHashMap<>();
-
+        Map<String, Long> requestKey  = rows.stream()
+                .filter(r -> r.getViewerId() != null && r.getViewerType() != null)
+                .collect(Collectors.groupingBy(
+                        r -> r.getCreatorId()
+                                + "|" + r.getPolicyId()
+                                + "|" + r.getRequestedDate()
+                                + "|" + r.getLeaveStartDate()
+                                + "|" + r.getLeaveEndDate()
+                                + "|" + r.getStatus()
+                                + "|" + r.getViewerId()
+                                + "|" + r.getViewerType(),
+                        Collectors.counting()
+                ));
+        Map<String, Long> addedCount = new HashMap<>();
         for (TimeOffExportView row : rows) {
-
-            String key = row.getCreatorId()
+            String viewerEntryKey  = row.getCreatorId()
                     + "|" + row.getPolicyId()
                     + "|" + row.getRequestedDate()
                     + "|" + row.getLeaveStartDate()
-                    + "|" + row.getLeaveEndDate();
+                    + "|" + row.getLeaveEndDate()
+                    + "|" + row.getStatus();
 
-            TimeOffExportModel model = grouped.get(key);
-
+            TimeOffExportModel model = grouped.get(viewerEntryKey );
             if (model == null) {
                 model = new TimeOffExportModel();
+
                 model.setUserId(row.getCreatorId());
                 model.setUserName(row.getCreatorName());
                 model.setPolicyName(row.getPolicyName());
@@ -542,34 +554,33 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
                 model.setReason(row.getReason());
                 model.setStatus(row.getStatus());
                 model.setLeaveType(row.getLeaveType());
+
                 model.setViewers(new ArrayList<>());
                 model.setApprover(new ArrayList<>());
 
-                grouped.put(key, model);
+                grouped.put(viewerEntryKey , model);
             }
-
-            ViewerType viewerType = null;
-            if (row.getViewerType() != null) {
-                viewerType = ViewerType.valueOf(row.getViewerType().toUpperCase());
+            if (row.getViewerId() == null || row.getViewerType() == null) {
+                continue;
             }
+            String viewerKey = viewerEntryKey  + "|" + row.getViewerId() + "|" + row.getViewerType();
+            long dbTotal = requestKey .getOrDefault(viewerKey, 1L);
+            long added = addedCount.getOrDefault(viewerKey, 0L);
+            if (added < dbTotal) {
+                ViewerModel vm = new ViewerModel();
+                vm.setUserId(row.getViewerId());
+                vm.setUserName(row.getViewerName());
+                vm.setViewerType(row.getViewerType());
 
-            if (viewerType == ViewerType.VIEWER) {
-                ViewerModel v = new ViewerModel();
-                v.setUserId(row.getViewerId());
-                v.setUserName(row.getViewerName());
-                v.setViewerType(ViewerType.VIEWER.getValue());
-                model.getViewers().add(v);
-            }
-
-            if (viewerType == ViewerType.APPROVER) {
-                ViewerModel a = new ViewerModel();
-                a.setUserId(row.getViewerId());
-                a.setUserName(row.getViewerName());
-                a.setViewerType(ViewerType.APPROVER.getValue());
-                model.getApprover().add(a);
+                String type = row.getViewerType();
+                if (ViewerType.VIEWER.name().equalsIgnoreCase(type)) {
+                    model.getViewers().add(vm);
+                } else if (ViewerType.APPROVER.name().equalsIgnoreCase(type)) {
+                    model.getApprover().add(vm);
+                }
+                addedCount.put(viewerKey, added + 1);
             }
         }
-
         return new ArrayList<>(grouped.values());
     }
 
