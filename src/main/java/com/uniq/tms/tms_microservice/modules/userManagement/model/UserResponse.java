@@ -2,8 +2,6 @@ package com.uniq.tms.tms_microservice.modules.userManagement.model;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.uniq.tms.tms_microservice.modules.userManagement.dto.SecondaryDetailsDto;
-import com.uniq.tms.tms_microservice.modules.userManagement.dto.UserPolicyDto;
-
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -24,6 +22,7 @@ public class UserResponse {
     private List<UserPolicyModel> policies;
     private String calendarName;
     private String requestApproverName;
+    private String payrollName;
 
     public UserResponse(
             String userId,
@@ -44,7 +43,8 @@ public class UserResponse {
             LocalDate validFrom,
             LocalDate validTo,
             String calendarName,
-            String requestApproverName
+            String requestApproverName,
+            String payRollName
     ) {
         this.userId = userId;
         this.userName = userName;
@@ -81,6 +81,7 @@ public class UserResponse {
 
         this.calendarName = calendarName;
         this.requestApproverName = requestApproverName;
+        this.payrollName = payRollName;
     }
 
 
@@ -185,6 +186,14 @@ public class UserResponse {
 
     public void setRequestApproverName(String requestApproverName) {
         this.requestApproverName = requestApproverName;
+    }
+
+    public String getPayrollName() {
+        return payrollName;
+    }
+
+    public void setPayrollName(String payrollName) {
+        this.payrollName = payrollName;
     }
 }
 

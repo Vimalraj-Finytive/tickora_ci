@@ -349,7 +349,7 @@ public class UserCacheServiceImpl implements UserCacheService {
             for (UserRole role : List.of(UserRole.values())) {
                 int hierarchyLevel = UserRole.getLevel(String.valueOf(role));
 
-                List<UserResponse> users = userRepository.findAllInActiveUsers(orgId, hierarchyLevel);
+                List<UserProjection> users = userRepository.findAllInActiveUsers(orgId, hierarchyLevel);
                 if (users.isEmpty()) {
                     log.warn("No Inactive users found for orgId={} and role={}", orgId, role);
                     roleWiseUserMap.put(String.valueOf(role), new ArrayList<>());
@@ -358,7 +358,7 @@ public class UserCacheServiceImpl implements UserCacheService {
 
                 // Convert to DTO
                 List<UserResponseDto> usersDto = users.stream()
-                        .map(userDtoMapper::toDto)
+                        .map(userDtoMapper::toUserDto)
                         .toList();
 
                 // Merge duplicates

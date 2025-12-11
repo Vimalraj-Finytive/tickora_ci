@@ -139,7 +139,7 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
                   AND active = false
                   AND hierarchy_level > :hierarchyLevel
             """, nativeQuery = true)
-    List<UserResponse> findAllInActiveUsers(@Param("orgId") String orgId, @Param("hierarchyLevel") int hierarchyLevel);
+    List<UserProjection> findAllInActiveUsers(@Param("orgId") String orgId, @Param("hierarchyLevel") int hierarchyLevel);
 
     @Query("""
                 SELECT u FROM UserEntity u
