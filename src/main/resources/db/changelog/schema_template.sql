@@ -727,7 +727,7 @@ CREATE TABLE IF NOT EXISTS timeoff_policies (
     entitled_units INT,
     entitled_type VARCHAR(10) CHECK (entitled_type IN ('DAY','HOURS','HALF_DAY')),
     is_active BOOLEAN,
-    is_reschedule BOOLEAN,
+    is_reschedule BOOLEAN DEFAULT TRUE,
     max_carry_forward_units INT,
     is_carry_forward BOOLEAN,
     is_default BOOLEAN,

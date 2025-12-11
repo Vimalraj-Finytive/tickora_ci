@@ -39,7 +39,7 @@ public class TimeoffPolicyAdapterImpl implements TimeOffPolicyAdapter {
 
     @Override
     public TimeOffPolicyEntity findByPolicyId(String policyId) {
-        return timeoffPolicyRepo.findByPolicyId(policyId);
+        return timeoffPolicyRepo.findByPolicyIdAndIsActiveTrue(policyId);
     }
 
     @Override
@@ -93,6 +93,16 @@ public class TimeoffPolicyAdapterImpl implements TimeOffPolicyAdapter {
     @Override
     public TimeOffPolicyEntity findDefaultPolicy(){
         return timeoffPolicyRepo.findByIsDefaultTrue();
+    }
+
+    @Override
+    public List<TimeOffPolicyEntity> findAllPoliciesByType(AccrualType type) {
+        return timeoffPolicyRepo.findByAccrualTypeAndIsActiveTrue(type);
+    }
+
+    @Override
+    public void saveAllPolicy(List<TimeOffPolicyEntity> policyList) {
+        timeoffPolicyRepo.saveAll(policyList);
     }
 }
 

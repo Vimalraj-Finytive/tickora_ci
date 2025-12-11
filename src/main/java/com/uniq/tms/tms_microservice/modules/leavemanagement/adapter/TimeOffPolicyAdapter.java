@@ -20,4 +20,6 @@ public interface TimeOffPolicyAdapter {
     boolean existsValidPolicy(String policyId,  LocalDate startDate, LocalDate endDate);
     boolean existsByPolicyNameIgnoreCase(String policyName);
     TimeOffPolicyEntity findDefaultPolicy();
+    List<TimeOffPolicyEntity> findAllPoliciesByType(AccrualType type);
+    void saveAllPolicy(List<TimeOffPolicyEntity> policyList);
 }

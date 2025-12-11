@@ -17,7 +17,7 @@ public interface TimeOffPolicyRepository extends JpaRepository<TimeOffPolicyEnti
     @Query("SELECT MAX(t.policyId) FROM TimeOffPolicyEntity t WHERE t.policyId LIKE CONCAT(:prefix, '%')")
     String findMaxPolicyId(@Param("prefix") String prefix);
 
-    TimeOffPolicyEntity findByPolicyId(String policyId);
+    TimeOffPolicyEntity findByPolicyIdAndIsActiveTrue(String policyId);
 
     @Query("""
             SELECT p FROM TimeOffPolicyEntity p WHERE p.policyId IN :policyIds""")
@@ -52,5 +52,7 @@ public interface TimeOffPolicyRepository extends JpaRepository<TimeOffPolicyEnti
     boolean existsByPolicyNameIgnoreCase(String policyName);
 
     TimeOffPolicyEntity findByIsDefaultTrue();
+
+    List<TimeOffPolicyEntity> findByAccrualTypeAndIsActiveTrue(AccrualType accrualType);
 
 }
