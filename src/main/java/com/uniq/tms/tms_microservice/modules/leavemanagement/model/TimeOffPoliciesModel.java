@@ -20,6 +20,7 @@ public class TimeOffPoliciesModel {
     private Status status;
     private Integer maxCarryForwardUnits;
     private Boolean isCarryForward;
+    private Boolean reschedule;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private List<String> assignedUsernames;
@@ -150,5 +151,13 @@ public class TimeOffPoliciesModel {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public Boolean getReschedule() {
+        return reschedule;
+    }
+
+    public void setReschedule(Boolean reschedule) {
+        this.reschedule = reschedule;
     }
 }

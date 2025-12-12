@@ -8,6 +8,8 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 
 public class EmployeeStatusUpdateDto {
+    @NotNull(message = "requestId ID cannot be null")
+    private Long requestId;
     @NotNull(message = "User ID cannot be null")
     private String userId;
     @NotNull(message = "Policy ID cannot be null")
@@ -22,6 +24,14 @@ public class EmployeeStatusUpdateDto {
     @NotNull(message = "Request date cannot be null")
     private LocalDate requestDate;
     private HourType hourType;
+
+    public Long getRequestId() {
+        return requestId;
+    }
+
+    public void setRequestId(Long requestId) {
+        this.requestId = requestId;
+    }
 
     public Status getStatus() {
         return status;

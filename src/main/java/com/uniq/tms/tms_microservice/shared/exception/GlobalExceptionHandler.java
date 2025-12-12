@@ -5,7 +5,15 @@ import com.sun.jdi.request.DuplicateRequestException;
 import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.coyote.BadRequestException;
+import org.hibernate.JDBCException;
+import org.hibernate.QueryException;
+import org.hibernate.exception.SQLGrammarException;
+import org.postgresql.util.PSQLException;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
+import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.orm.jpa.JpaSystemException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -25,7 +33,72 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @RestControllerAdvice
+@Order(Ordered.HIGHEST_PRECEDENCE)
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler({
+            QueryException.class,
+            JpaSystemException.class
+    })
+    @Order(Ordered.HIGHEST_PRECEDENCE)
+    public ResponseEntity<ApiResponse<Object>> handleHibernateQueryErrors(Exception ex) {
+
+        log.error("Hibernate Query Exception caught", ex);
+
+        String msg = ex.getMessage().toLowerCase();
+
+        if (msg.contains("does not exist")
+                || msg.contains("column")
+                || msg.contains("sqlstate: 42703")
+                || msg.contains("could not extract resultset")) {
+
+            return ResponseEntity.status(500).body(
+                    new ApiResponse<>(500,
+                            "Missing column or table. Please contact support.",
+                            null)
+            );
+        }
+
+        return ResponseEntity.status(500).body(
+                new ApiResponse<>(500,
+                        "Database query failed. Please contact support.",
+                        null)
+        );
+    }
+
+    @ExceptionHandler({SQLGrammarException.class, PSQLException.class, JDBCException.class})
+    @Order(Ordered.HIGHEST_PRECEDENCE + 1)
+    public ResponseEntity<ApiResponse<Object>> handleSQLStructuralErrors(Exception ex) {
+        log.error("SQL STRUCTURAL ERROR CAUGHT", ex);
+        ApiResponse<Object> response = new ApiResponse<>(
+                500,
+                "Missing column or table. Please contact support.",
+                null
+        );
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+    }
+
+    @ExceptionHandler(DataAccessException.class)
+    @Order(Ordered.HIGHEST_PRECEDENCE + 2)
+    public ResponseEntity<ApiResponse<Object>> handleDataAccess(DataAccessException ex) {
+        String msg = ex.getMessage().toLowerCase();
+        if (msg.contains("does not exist")
+                || msg.contains("sqlstate: 42703")
+                || msg.contains("column")) {
+            log.error("SQL ERROR wrapped in DataAccessException", ex);
+            return ResponseEntity.status(500).body(
+                    new ApiResponse<>(500,
+                            "Missing column or table. Please contact support..",
+                            null)
+            );
+        }
+
+        log.error("Data access error", ex);
+
+        return ResponseEntity.status(500).body(
+                new ApiResponse<>(500, "Database operation failed.", null)
+        );
+    }
 
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<Map<String, String>> handleAccessDeniedException(AccessDeniedException ex) {
@@ -37,20 +110,20 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<Object> handleIllegalArgumentException(IllegalArgumentException ex) {
+    public ResponseEntity<Object> handleIllegalArgument(IllegalArgumentException ex) {
         log.error("Invalid argument: {}", ex.getMessage(), ex);
         Map<String, Object> body = new HashMap<>();
-        body.put("statusCode", HttpStatus.BAD_REQUEST.value());
+        body.put("statusCode", 400);
         body.put("message", sanitizeMessage(ex.getMessage()));
         body.put("data", null);
         return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler(IllegalStateException.class)
-    public ResponseEntity<Object> handleIllegalStateException(IllegalStateException ex) {
-        log.error("Invalid argument: {}", ex.getMessage(), ex);
+    public ResponseEntity<Object> handleIllegalState(IllegalStateException ex) {
+        log.error("Invalid state", ex);
         Map<String, Object> body = new HashMap<>();
-        body.put("statusCode", HttpStatus.BAD_REQUEST.value());
+        body.put("statusCode", 400);
         body.put("message", sanitizeMessage(ex.getMessage()));
         body.put("data", null);
         return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
@@ -58,229 +131,119 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<Object> handleResponseStatusException(ResponseStatusException ex) {
-        log.error("Response status exception: {}", ex.getMessage(), ex);
-        Map<String, Object> body = new HashMap<>();
-        body.put("statusCode", ex.getStatusCode().value());
-        body.put("message", sanitizeMessage(ex.getReason()));
-        body.put("data", null);
-        return new ResponseEntity<>(body, ex.getStatusCode());
+        log.error("ResponseStatusException", ex);
+        return new ResponseEntity<>(Map.of(
+                "statusCode", ex.getStatusCode().value(),
+                "message", sanitizeMessage(ex.getReason()),
+                "data", null
+        ), ex.getStatusCode());
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
-    public ResponseEntity<ApiResponse> handleDuplicateEntryException(DataIntegrityViolationException ex) {
-        log.error("Data integrity violation: {}", ex.getMessage(), ex);
-        String userMessage = parseDataIntegrityError(ex.getMessage());
-        return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(new ApiResponse(409, userMessage, null));
+    public ResponseEntity<ApiResponse> handleDuplicateEntry(DataIntegrityViolationException ex) {
+        log.error("Data integrity violation", ex);
+        return ResponseEntity.status(409)
+                .body(new ApiResponse(409, parseDataIntegrityError(ex.getMessage()), null));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse> handleValidation(MethodArgumentNotValidException ex) {
-        log.error("Validation error: {}", ex.getMessage(), ex);
         Map<String, String> errors = new HashMap<>();
-        ex.getBindingResult().getFieldErrors().forEach(error ->{
-            String fieldName = error.getField();
-            errors.put(fieldName, error.getDefaultMessage());});
+        ex.getBindingResult().getFieldErrors()
+                .forEach(e -> errors.put(e.getField(), e.getDefaultMessage()));
+
         String errorMessage = errors.entrySet()
                 .stream()
                 .map(e -> e.getKey() + " : " + e.getValue())
                 .collect(Collectors.joining(", "));
-        return ResponseEntity.badRequest().body(new ApiResponse(400, errorMessage, false));
+
+        return ResponseEntity.badRequest().body(new ApiResponse(400, errorMessage, null));
     }
 
     @ExceptionHandler(UsernameNotFoundException.class)
-    public ResponseEntity<ApiResponse> handleUserNotFoundException(UsernameNotFoundException ex) {
-        log.error("User not found: {}", ex.getMessage(), ex);
-        return ResponseEntity.badRequest().body(new ApiResponse(400, "User not found", false));
-    }
-
-    @ExceptionHandler(CommonExceptionHandler.BadRequestException.class)
-    public ResponseEntity<ApiResponse> handleCustomBadRequest(CommonExceptionHandler.BadRequestException ex) {
-        log.error("BadRequestException: {}", ex.getMessage(), ex);
-        ApiResponse response = new ApiResponse(400, sanitizeMessage(ex.getMessage()), null);
-        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
-    }
-
-    @ExceptionHandler(CommonExceptionHandler.DuplicateUserException.class)
-    public ResponseEntity<ApiResponse> handleDuplicateUserException(CommonExceptionHandler.DuplicateUserException ex) {
-        log.error("DuplicateUserException: {}", ex.getMessage(), ex);
-        ApiResponse response = new ApiResponse(409, sanitizeMessage(ex.getMessage()), null);
-        return new ResponseEntity<>(response, HttpStatus.CONFLICT);
-    }
-
-    @ExceptionHandler(CommonExceptionHandler.NoUserLocationAssignedException.class)
-    public ResponseEntity<ApiResponse> handleNoUserLocation(CommonExceptionHandler.NoUserLocationAssignedException ex) {
-        log.error("NoUserLocationAssignedException: {}", ex.getMessage(), ex);
-        ApiResponse response = new ApiResponse(404, sanitizeMessage(ex.getMessage()), null);
-        return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
-    }
-
-    @ExceptionHandler(CommonExceptionHandler.SchemaNotFoundException.class)
-    public ResponseEntity<ApiResponse> handleSchemaNotFound(CommonExceptionHandler.SchemaNotFoundException ex) {
-        log.error("SchemaNotFoundException: {}", ex.getMessage(), ex);
-        ApiResponse response = new ApiResponse(404, sanitizeMessage(ex.getMessage()), null);
-        return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
-    }
-
-    @ExceptionHandler(RuntimeException.class)
-    public ResponseEntity<Object> handleRuntimeException(RuntimeException ex) {
-        log.error("Runtime exception: {}", ex.getMessage(), ex);
-        Map<String, Object> body = new HashMap<>();
-        body.put("statusCode", HttpStatus.INTERNAL_SERVER_ERROR.value());
-        body.put("message", "An unexpected error occurred. Please try again later.");
-        body.put("data", null);
-        return new ResponseEntity<>(body, HttpStatus.INTERNAL_SERVER_ERROR);
-    }
-
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiResponse> handleGlobalException(Exception ex) {
-        log.error("Unexpected exception: {}", ex.getMessage(), ex);
-        ApiResponse response = new ApiResponse(500, "An unexpected error occurred. Please contact support if the issue persists.", null);
-        return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+    public ResponseEntity<ApiResponse> handleUserNotFound(UsernameNotFoundException ex) {
+        return ResponseEntity.badRequest().body(new ApiResponse(400, "User not found", null));
     }
 
     @ExceptionHandler(BadRequestException.class)
-    public ResponseEntity<ApiResponse> handleBadRequestException(BadRequestException ex) {
-        log.error("Bad request: {}", ex.getMessage(), ex);
-        ApiResponse response = new ApiResponse(400, sanitizeMessage(ex.getMessage()), null);
-        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+    public ResponseEntity<ApiResponse> handleBadRequest(BadRequestException ex) {
+        return new ResponseEntity<>(new ApiResponse(400, sanitizeMessage(ex.getMessage()), null), HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler(DuplicateRequestException.class)
     public ResponseEntity<ApiResponse> handleDuplicateUserException(DuplicateRequestException ex) {
-        log.error("Duplicate request: {}", ex.getMessage(), ex);
-        ApiResponse response = new ApiResponse(409, "Duplicate request. Resource already exists.", null);
-        return new ResponseEntity<>(response, HttpStatus.CONFLICT);
+        return new ResponseEntity<>(new ApiResponse(409, "Duplicate request. Resource already exists.", null), HttpStatus.CONFLICT);
     }
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)
-    public ResponseEntity<ApiResponse> handleMaxSizeException(MaxUploadSizeExceededException ex) {
-        log.error("File size exceeded: {}", ex.getMessage(), ex);
-        ApiResponse response = new ApiResponse(400, "File size exceeds the maximum allowed limit", null);
-        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+    public ResponseEntity<ApiResponse> handleMaxUpload(MaxUploadSizeExceededException ex) {
+        return new ResponseEntity<>(new ApiResponse(400, "File size exceeds limit", null), HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler(MissingServletRequestPartException.class)
     public ResponseEntity<ApiResponse> handleMissingPart(MissingServletRequestPartException ex) {
-        log.error("Missing request part: {}", ex.getMessage(), ex);
-        ApiResponse response = new ApiResponse(400, "Required field '" + ex.getRequestPartName() + "' is missing", null);
-        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<>(new ApiResponse(400, "Required field '" + ex.getRequestPartName() + "' is missing", null), HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
     public ResponseEntity<ApiResponse> handleMediaType(HttpMediaTypeNotSupportedException ex) {
-        log.error("Media type not supported: {}", ex.getMessage(), ex);
-        ApiResponse response = new ApiResponse(415, "Content type not supported. Please use multipart/form-data for file uploads", null);
-        return new ResponseEntity<>(response, HttpStatus.UNSUPPORTED_MEDIA_TYPE);
-    }
-
-    @ExceptionHandler(CommonExceptionHandler.ConflictException.class)
-    public ResponseEntity<ApiResponse> handleConflictException(CommonExceptionHandler.ConflictException ex) {
-        log.error("Conflict exception: {}", ex.getMessage(), ex);
-        return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(new ApiResponse(409, sanitizeMessage(ex.getMessage()), null));
-    }
-
-    @ExceptionHandler(CommonExceptionHandler.InternalServerException.class)
-    public ResponseEntity<ApiResponse> handleInternalServerException(CommonExceptionHandler.InternalServerException ex) {
-        log.error("Internal server exception: {}", ex.getMessage(), ex);
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(new ApiResponse(500, "Internal server error occurred. Please try again later.", null));
+        return new ResponseEntity<>(new ApiResponse(415, "Unsupported content type", null), HttpStatus.UNSUPPORTED_MEDIA_TYPE);
     }
 
     @ExceptionHandler(InvalidFormatException.class)
-    public ResponseEntity<ApiResponse> handleInvalidFormatException(InvalidFormatException ex) {
-        log.error("Media type not supported: {}", ex.getMessage(), ex);
-        ApiResponse response = new ApiResponse(400, sanitizeMessage(ex.getMessage()), null);
-        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+    public ResponseEntity<ApiResponse> handleInvalidFormat(InvalidFormatException ex) {
+        return new ResponseEntity<>(new ApiResponse(400, sanitizeMessage(ex.getMessage()), null), HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler(DateTimeParseException.class)
-    public ResponseEntity<ApiResponse> handleDateTimeParseException(DateTimeParseException ex) {
-        log.error("Invalid request: {}", ex.getMessage(), ex);
-        ApiResponse response = new ApiResponse(500,"Invalid Time Format", null);
-        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+    public ResponseEntity<ApiResponse> handleDateTimeParse(DateTimeParseException ex) {
+        return new ResponseEntity<>(new ApiResponse(400, "Invalid time format", null), HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
-    public ResponseEntity<ApiResponse> handleHttpMessageNotReadable(HttpMessageNotReadableException ex) {
-        log.error("Invalid JSON input: {}", ex.getMessage());
-        Throwable cause = ex.getCause();
-        String message = "Malformed or invalid JSON request";
-        if (cause instanceof InvalidFormatException invalidFormatEx) {
-            message = "Invalid value '" + invalidFormatEx.getValue() +
-                    "' for field '" + invalidFormatEx.getPath().getFirst().getFieldName() + "'";
-        }
-        ApiResponse response = new ApiResponse(400, message, null);
-        return ResponseEntity.badRequest().body(response);
+    public ResponseEntity<ApiResponse> handleInvalidJson(HttpMessageNotReadableException ex) {
+        return ResponseEntity.badRequest().body(new ApiResponse(400, "Malformed JSON request", null));
     }
 
-    @ExceptionHandler(CommonExceptionHandler.DefaultLocationNotFoundException.class)
-    public ResponseEntity<Object> handleDefaultLocationNotFound(CommonExceptionHandler.DefaultLocationNotFoundException ex) {
-        log.error("Default location missing: {}", ex.getMessage());
-        Map<String, Object> body = new HashMap<>();
-        body.put("statusCode", HttpStatus.NOT_FOUND.value());
-        body.put("message", ex.getMessage());
-        body.put("data", null);
-        return new ResponseEntity<>(body, HttpStatus.NOT_FOUND);
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<Object> handleRuntime(RuntimeException ex) {
+        log.error("Runtime exception", ex);
+        return new ResponseEntity<>(Map.of(
+                "statusCode", 500,
+                "message", "An unexpected error occurred.",
+                "data", null
+        ), HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
-    /**
-     * Sanitize error messages to remove sensitive information
-     */
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ApiResponse> handleGlobal(Exception ex) {
+        log.error("Unexpected exception", ex);
+        return new ResponseEntity<>(new ApiResponse(500, "Unexpected error occurred.", null), HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
     private String sanitizeMessage(String message) {
-        if (message == null) {
-            return "An error occurred";
-        }
+        if (message == null) return "An error occurred";
 
-        String sanitized = message.replaceAll("(?i)sql.*?\\[.*?\\]", "")
-                .replaceAll("(?i)constraint.*?\\[.*?\\]", "")
-                .replaceAll("(?i)relation \".*?\"", "table")
-                .replaceAll("(?i)column \".*?\"", "field")
+        String sanitized = message
+                .replaceAll("(?i)sql.*", "")
+                .replaceAll("(?i)jdbc.*", "")
+                .replaceAll("\\[.*?\\]", "")
                 .trim();
 
-        if (sanitized.length() < 10) {
-            return "An error occurred while processing your request";
-        }
-
-        return sanitized;
+        return sanitized.length() < 10
+                ? "An error occurred while processing your request"
+                : sanitized;
     }
 
     private String parseDataIntegrityError(String errorMessage) {
-        if (errorMessage == null) {
-            return "Data validation failed";
-        }
+        if (errorMessage == null) return "Data validation failed";
 
-        String lowerCaseError = errorMessage.toLowerCase();
+        String lower = errorMessage.toLowerCase();
 
-        if (lowerCaseError.contains("null value") && lowerCaseError.contains("violates not-null constraint")) {
-            if (lowerCaseError.contains("mobile_number")) {
-                return "Mobile number is required";
-            } else if (lowerCaseError.contains("email")) {
-                return "Email is required";
-            }
-            return "Required field is missing";
-        }
+        if (lower.contains("duplicate")) return "Duplicate entry found";
+        if (lower.contains("not-null")) return "Required field is missing";
+        if (lower.contains("foreign key")) return "Referenced data does not exist";
 
-        if (lowerCaseError.contains("duplicate key value") || lowerCaseError.contains("violates unique constraint")) {
-            if (lowerCaseError.contains("email")) {
-                return "Email already exists";
-            } else if (lowerCaseError.contains("mobile_number")) {
-                return "Mobile number already exists";
-            } else if (lowerCaseError.contains("face_id")) {
-                return "Face ID already registered";
-            }
-            return "Record already exists";
-        }
-
-        if (lowerCaseError.contains("foreign key constraint")) {
-            return "Referenced data does not exist";
-        }
-        if (lowerCaseError.contains("check constraint")) {
-            return "Data validation failed - invalid value provided";
-        }
-
-        return "Data validation failed. Please check your input and try again";
+        return "Invalid data provided";
     }
-
 }

@@ -70,4 +70,5 @@ public interface TimeOffRequestAdapter {
             String[] policies
     );
 
+    TimeOffRequestEntity findByRequestId(Long requestId);
 }

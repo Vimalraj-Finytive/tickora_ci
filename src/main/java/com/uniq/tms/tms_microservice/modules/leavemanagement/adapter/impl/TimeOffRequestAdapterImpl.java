@@ -146,4 +146,8 @@ public class TimeOffRequestAdapterImpl implements TimeOffRequestAdapter {
         return timeoffRequestRepo.fetchAllRequests(fromDate, toDate, status, policies);
     }
 
+    @Override
+    public TimeOffRequestEntity findByRequestId(Long requestId) {
+        return timeoffRequestRepo.findByTimeOffRequestId(requestId);
+    }
 }

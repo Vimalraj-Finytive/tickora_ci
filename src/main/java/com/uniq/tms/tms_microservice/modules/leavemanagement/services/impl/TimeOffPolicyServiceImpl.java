@@ -111,7 +111,6 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
         policy.setPolicyId(policyId);
         policy.setActive(true);
         policy.setDefault(false);
-        policy.setReschedule(true);
         policy.setCreatedAt(LocalDateTime.now());
         policy.setUpdatedAt(LocalDateTime.now());
         policy.setAccrualStartDate(LocalDate.now());
@@ -143,7 +142,7 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
             throw new IllegalArgumentException("Custom Policy cannot be edited");
         }
         if (request.getEntitledUnits() != null) {
-            if (request.getEntitledUnits() > policy.getEntitledUnits()) {
+            if (request.getEntitledUnits() < policy.getEntitledUnits()) {
                 throw new IllegalArgumentException("Entitled units are not allowed to reduced");
             }
         }

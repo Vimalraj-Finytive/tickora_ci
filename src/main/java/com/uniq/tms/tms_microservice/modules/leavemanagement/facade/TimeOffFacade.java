@@ -95,50 +95,24 @@ public class TimeOffFacade {
     }
 
     public ApiResponse<Void> editPolicy(TimeOffPolicyEditRequestDto requestDto) {
-        try {
-            TimeOffPolicyEditRequestModel model = timeoffPolicyDtoMapper.toEditRequestModel(requestDto);
-            timeOffPolicyService.editPolicy(model);
-
-            return new ApiResponse<>(200, "Policy Updated Successfully", null);
-
-        } catch (IllegalArgumentException ex) {
-            return new ApiResponse<>(400, ex.getMessage(), null);
-
-        } catch (Exception ex) {
-            return new ApiResponse<>(409, ex.getMessage(), null);
-        }
+        TimeOffPolicyEditRequestModel model = timeoffPolicyDtoMapper.toEditRequestModel(requestDto);
+        timeOffPolicyService.editPolicy(model);
+        return new ApiResponse<>(200, "Policy Updated Successfully", null);
     }
 
     public ApiResponse<Void> assignPoliciesToUsers(TimeOffPolicyBulkAssignRequestDto dto) {
-        try {
             TimeOffPolicyBulkAssignModel model = timeoffPolicyDtoMapper.toBulkAssignModel(dto);
             timeOffPolicyService.assignPolicies(model);
             return new ApiResponse<>(200, "Policies assigned successfully", null);
-
-        } catch (IllegalArgumentException ex) {
-            return new ApiResponse<>(400, ex.getMessage(), null);
-
-        } catch (Exception ex) {
-            return new ApiResponse<>(409, ex.getMessage(), null);
-        }
     }
 
     public ApiResponse<Void> inactivatePolicy(String policyId, TimeOffPolicyInactivateRequestDto dto) {
-
-        try {
-            TimeOffPolicyInactivateModel model = timeoffPolicyDtoMapper.toInactivateModel(dto);
-            timeOffPolicyService.inactivatePolicy(policyId, model);
-            String message = model.getActive()
-                    ? "Policy activated successfully"
-                    : "Policy deactivated successfully";
-            return new ApiResponse<>(200, message, null);
-
-        } catch (IllegalArgumentException ex) {
-            return new ApiResponse<>(400, ex.getMessage(), null);
-
-        } catch (Exception ex) {
-            return new ApiResponse<>(409, ex.getMessage(), null);
-        }
+        TimeOffPolicyInactivateModel model = timeoffPolicyDtoMapper.toInactivateModel(dto);
+        timeOffPolicyService.inactivatePolicy(policyId, model);
+        String message = model.getActive()
+                ? "Policy activated successfully"
+                : "Policy deactivated successfully";
+        return new ApiResponse<>(200, message, null);
     }
 
 
