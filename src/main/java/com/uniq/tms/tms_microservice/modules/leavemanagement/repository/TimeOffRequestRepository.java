@@ -226,5 +226,5 @@ public interface TimeOffRequestRepository extends JpaRepository<TimeOffRequestEn
             @Param("policies") String[] policies
     );
 
-
+    TimeOffRequestEntity findByTimeOffRequestId(Long requestId);
 }

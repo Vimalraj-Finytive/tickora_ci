@@ -22,4 +22,5 @@ public interface TimeOffPolicyAdapter {
     TimeOffPolicyEntity findDefaultPolicy();
     List<TimeOffPolicyEntity> findAllPoliciesByType(AccrualType type);
     void saveAllPolicy(List<TimeOffPolicyEntity> policyList);
+    boolean isPolicyActive(String policyId);
 }

@@ -52,7 +52,6 @@ public interface UserPolicyRepository extends JpaRepository<UserPolicyEntity, Lo
       AND up.user.userId = :userId
       AND up.validFrom <= :startDate
       AND (up.validTo IS NULL OR up.validTo >= :endDate)
-      AND up.active = true
     """)
     boolean isUserPolicyActive(String policyId, String userId,  LocalDate startDate, LocalDate endDate);
 
@@ -125,6 +124,18 @@ public interface UserPolicyRepository extends JpaRepository<UserPolicyEntity, Lo
              AND up.policy.policyId = :policyId
            """)
     List<String> findActiveUserIdsByPolicyId(@Param("policyId") String policyId);
+
+    @Query("""
+            SELECT COUNT(up) > 0
+            FROM UserPolicyEntity up
+            WHERE up.policy.policyId = :policyId
+              AND up.user.userId = :userId
+              AND up.active = true
+            """)
+    boolean findActiveUserPolicyByIds(@Param("policyId") String policyId,
+                                      @Param("userId") String userId);
+
+
 
 
 }
