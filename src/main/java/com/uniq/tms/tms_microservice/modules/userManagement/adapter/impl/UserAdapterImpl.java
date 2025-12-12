@@ -12,6 +12,7 @@ import com.uniq.tms.tms_microservice.modules.userManagement.dto.GroupDto;
 import com.uniq.tms.tms_microservice.modules.userManagement.dto.UserNameEmailDto;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.*;
 import com.uniq.tms.tms_microservice.modules.userManagement.enums.MemberType;
+import com.uniq.tms.tms_microservice.modules.userManagement.projections.UserCalendarProjection;
 import com.uniq.tms.tms_microservice.modules.userManagement.projections.UserProjection;
 import com.uniq.tms.tms_microservice.modules.userManagement.repository.*;
 import com.uniq.tms.tms_microservice.modules.locationManagement.mapper.LocationEntityMapper;
@@ -646,16 +647,13 @@ public class UserAdapterImpl implements UserAdapter {
     }
 
     @Override
-    public String findApproverIdByUserId(String userId) {
-        return userRepository.findApproverIdByUserId(userId);
+    public List<String> getAllActiveUsers() {
+        return userRepository.findAllActiveUsers();
     }
 
     @Override
-    public String getCalendarIdByUserId(String userId) {
-        return userRepository.getCalendarIdByUserId(userId);
+    public List<UserCalendarProjection> findCalendarIdsByUserIds(String[] userIds) {
+        return userRepository.findCalendarIdsByUserIds(userIds);
     }
 
-    public void updateUserApprover(String newApproverId, List<String> userIds) {
-        userRepository.updateUserApprover(newApproverId, userIds);
-    }
 }

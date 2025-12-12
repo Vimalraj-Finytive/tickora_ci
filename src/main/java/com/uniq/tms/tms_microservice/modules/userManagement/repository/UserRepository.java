@@ -298,4 +298,7 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
     void updateUserApprover(@Param("newApproverId") String newApproverId,
                                @Param("userIds") List<String> userIds);
 
+    @Query("SELECT u.userId FROM UserEntity u WHERE u.active = true")
+    List<String> findAllActiveUsers();
+
 }

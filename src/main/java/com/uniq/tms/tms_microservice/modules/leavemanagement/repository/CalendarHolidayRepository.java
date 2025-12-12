@@ -1,6 +1,7 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.repository;
 
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.CalendarHolidayEntity;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.projection.CalendarHolidayProjection;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -27,4 +28,12 @@ public interface CalendarHolidayRepository extends JpaRepository<CalendarHoliday
 
     @Query("SELECT h.calendar.id, h.date FROM CalendarHolidayEntity h WHERE h.calendar.id IN :calendarIds")
     List<Object[]> findHolidayDatesByCalendarIds(@Param("calendarIds") Set<String> calendarIds);
+
+    @Query("""
+    SELECT h.calendar.id AS calendarId,
+           h.date AS date
+    FROM CalendarHolidayEntity h
+    """)
+    List<CalendarHolidayProjection> findAllHolidayDates();
+
 }
