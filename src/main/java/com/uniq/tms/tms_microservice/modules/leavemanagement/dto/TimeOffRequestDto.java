@@ -11,7 +11,6 @@ public class TimeOffRequestDto {
 
     @NotNull(message = "Policy ID cannot be null")
     private String policyId;
-    @NotNull(message = "User ID cannot be null")
     private String userId;
     @NotNull(message = "Start date cannot be null")
     private LocalDate startDate;

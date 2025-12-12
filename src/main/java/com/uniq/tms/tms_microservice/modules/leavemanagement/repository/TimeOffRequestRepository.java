@@ -116,7 +116,8 @@ public interface TimeOffRequestRepository extends JpaRepository<TimeOffRequestEn
     WHERE MONTH(r.startDate) = :month
       AND YEAR(r.startDate) = :year
       AND r.policy.compensation = :compensation
-      AND r.status = status""")
+      AND r.status = status
+      AND r.user.active = true""")
     List<TimeOffRequestEntity> findAllUnpaidRequest(
             @Param("month") int month,
             @Param("year") int year,
@@ -131,6 +132,7 @@ public interface TimeOffRequestRepository extends JpaRepository<TimeOffRequestEn
       AND r.policy.compensation = :compensation
       AND r.status = :status
       AND r.policy.accrualType = :accrualType
+      AND r.user.active = true
     """)
     List<TimeOffRequestEntity> findAllAnnualRequests(
             @Param("month") int month,
@@ -151,6 +153,7 @@ public interface TimeOffRequestRepository extends JpaRepository<TimeOffRequestEn
         )
       AND r.status = :status
       AND r.policy.accrualType = :accrualType
+      AND r.user.active = true
     """)
     List<TimeOffRequestEntity> findFixedRequests(
             @Param("month") int month,

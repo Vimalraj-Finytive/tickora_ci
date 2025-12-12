@@ -4,6 +4,7 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.HolidayDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.CalendarEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.CalendarHolidayEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.CalendarId;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.projection.CalendarHolidayProjection;
 
 
 import java.util.List;
@@ -31,5 +32,6 @@ public interface CalendarAdapter {
     void deleteByCalendarAndHoliday(String calendarId , String holidayId);
     CalendarEntity findByCalendarIdAndDefaultTrue(CalendarId ids);
     CalendarEntity findDefaultCalendar();
+    List<CalendarHolidayProjection> findAllHolidayDates();
 
 }

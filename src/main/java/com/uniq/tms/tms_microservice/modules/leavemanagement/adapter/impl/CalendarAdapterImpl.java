@@ -11,6 +11,7 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.PublicHolida
 import com.uniq.tms.tms_microservice.modules.leavemanagement.mapper.CalendarDtoMapper;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.mapper.HolidayDtoMapper;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.CalendarId;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.projection.CalendarHolidayProjection;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.repository.CalendarHolidayRepository;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.repository.CalendarRepository;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.repository.CountryRepository;
@@ -251,6 +252,11 @@ public class CalendarAdapterImpl implements CalendarAdapter {
     @Override
     public CalendarEntity findDefaultCalendar() {
         return calendarRepository.findDefaultCalendar();
+    }
+
+    @Override
+    public List<CalendarHolidayProjection> findAllHolidayDates() {
+        return calendarHolidayRepository.findAllHolidayDates();
     }
 
 }

@@ -9,6 +9,7 @@ import com.uniq.tms.tms_microservice.modules.userManagement.dto.UserNameEmailDto
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.*;
 import com.uniq.tms.tms_microservice.modules.userManagement.dto.UserNameSuggestionDto;
 import com.uniq.tms.tms_microservice.modules.userManagement.enums.MemberType;
+import com.uniq.tms.tms_microservice.modules.userManagement.projections.UserCalendarProjection;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.WorkScheduleEntity;
 import java.lang.String;
 import java.util.List;
@@ -127,8 +128,7 @@ public interface UserAdapter {
     List<UserEntity>findAllById(List<String>userIds);
     void updateApproverForUsers( String approverId, List<String> requestedUserIds);
     Set<String> getAllSupervisorIds(List<Long> groupIds, String userId, String type);
-    String findApproverIdByUserId(String userId);
-    String getCalendarIdByUserId(String userId);
-     void updateUserApprover(String newApproverId, List<String> userIds);
+    List<String> getAllActiveUsers();
+    List<UserCalendarProjection> findCalendarIdsByUserIds(String[] arrays);
 
 }

@@ -80,23 +80,22 @@ public interface UserPolicyRepository extends JpaRepository<UserPolicyEntity, Lo
     );
 
     @Query("""
-   SELECT DISTINCT up.user.userId
-   FROM UserPolicyEntity up
-   WHERE up.validFrom <= :date
-   """)
+    SELECT DISTINCT up.user.userId
+    FROM UserPolicyEntity up
+    WHERE up.validFrom <= :date
+      AND up.active = true
+      AND up.user.userId IN :userIds
+    """)
     List<String> findAllUserIdsInUserPolicies(
-            @Param("date") LocalDate date);
-
+            @Param("date") LocalDate date,
+            @Param("userIds") List<String> userIds);
 
     List<UserPolicyEntity> findByUser_UserIdAndPolicy_AccrualType(
             String userId,
             AccrualType accrualType
     );
 
-
-
     List<UserPolicyEntity> findByUser_UserIdAndActiveTrue(String userId);
-
 
     @Query("""
       SELECT up FROM UserPolicyEntity up
