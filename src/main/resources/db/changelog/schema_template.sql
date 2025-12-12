@@ -910,6 +910,8 @@ CREATE TABLE IF NOT EXISTS monthly_summary (
     half_day_units INT DEFAULT 0,
     full_day_units INT DEFAULT 0,
     hours_units INT DEFAULT 0,
+    total_present_days INT DEFAULT 0,
+    total_working_days INT DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

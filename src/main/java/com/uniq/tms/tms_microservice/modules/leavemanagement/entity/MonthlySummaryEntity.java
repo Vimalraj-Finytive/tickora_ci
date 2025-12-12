@@ -43,7 +43,13 @@ public class MonthlySummaryEntity {
     private Integer fullDayUnits = 0;
 
     @Column(name = "hours_units", nullable = false)
-    private Integer hoursUnits;
+    private Integer hoursUnits = 0;
+
+    @Column(name = "total_present_days", nullable = false)
+    private Integer totalPresentDays = 0;
+
+    @Column(name = "total_working_days", nullable = false)
+    private Integer totalWorkingDays = 0;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -151,5 +157,21 @@ public class MonthlySummaryEntity {
 
     public void setHoursUnits(Integer hoursUnits) {
         this.hoursUnits = hoursUnits;
+    }
+
+    public Integer getTotalPresentDays() {
+        return totalPresentDays;
+    }
+
+    public void setTotalPresentDays(Integer totalPresentDays) {
+        this.totalPresentDays = totalPresentDays;
+    }
+
+    public Integer getTotalWorkingDays() {
+        return totalWorkingDays;
+    }
+
+    public void setTotalWorkingDays(Integer totalWorkingDays) {
+        this.totalWorkingDays = totalWorkingDays;
     }
 }

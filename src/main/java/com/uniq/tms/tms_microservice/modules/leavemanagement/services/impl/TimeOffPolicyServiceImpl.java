@@ -111,7 +111,7 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
         policy.setPolicyId(policyId);
         policy.setActive(true);
         policy.setDefault(false);
-        policy.setReschedule(false);
+        policy.setReschedule(true);
         policy.setCreatedAt(LocalDateTime.now());
         policy.setUpdatedAt(LocalDateTime.now());
         policy.setAccrualStartDate(LocalDate.now());

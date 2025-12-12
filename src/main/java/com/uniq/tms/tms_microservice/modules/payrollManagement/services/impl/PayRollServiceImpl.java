@@ -2,7 +2,9 @@ package com.uniq.tms.tms_microservice.modules.payrollManagement.services.impl;
 
 import com.opencsv.CSVWriter;
 import com.uniq.tms.tms_microservice.modules.identityManagement.service.IdGenerationService;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.CalendarAdapter;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.LeaveBalanceAdapter;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.CalendarEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.MonthlySummaryEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.ReportType;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.adapter.PayRollAdapter;
@@ -24,6 +26,7 @@ import com.uniq.tms.tms_microservice.modules.timesheetManagement.entity.Timeshee
 import com.uniq.tms.tms_microservice.modules.userManagement.adapter.UserAdapter;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
 import com.uniq.tms.tms_microservice.shared.exception.CommonExceptionHandler;
+import com.uniq.tms.tms_microservice.shared.helper.TimesheetHelper;
 import com.uniq.tms.tms_microservice.shared.util.CacheKeyUtil;
 import com.uniq.tms.tms_microservice.shared.util.ExportStatusTracker;
 import com.uniq.tms.tms_microservice.shared.util.ReportStyleUtil;
@@ -51,6 +54,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -69,11 +73,13 @@ public class PayRollServiceImpl implements PayRollService {
     private final CacheKeyUtil cacheKeyUtil;
     private final ReportStyleUtil reportStyleUtil;
     private final ExportStatusTracker exportStatusTracker;
+    private final TimesheetHelper timesheetHelper;
+    private final CalendarAdapter calendarAdapter;
 
     public PayRollServiceImpl(PayRollAdapter payRollAdapter, PayRollEntityMapper entityMapper, UserAdapter userAdapter,
                               IdGenerationService idGenerationService, TimesheetAdapter timesheetAdapter,
                               PayRollEntityMapper payRollEntityMapper, LeaveBalanceAdapter leaveBalanceAdapter,
-                              @Nullable RedisTemplate<String, Object> redisTemplate, CacheKeyUtil cacheKeyUtil, ReportStyleUtil reportStyleUtil, ExportStatusTracker exportStatusTracker) {
+                              @Nullable RedisTemplate<String, Object> redisTemplate, CacheKeyUtil cacheKeyUtil, ReportStyleUtil reportStyleUtil, ExportStatusTracker exportStatusTracker, TimesheetHelper timesheetHelper, CalendarAdapter calendarAdapter) {
         this.payRollAdapter = payRollAdapter;
         this.entityMapper = entityMapper;
         this.userAdapter = userAdapter;
@@ -85,6 +91,8 @@ public class PayRollServiceImpl implements PayRollService {
         this.cacheKeyUtil = cacheKeyUtil;
         this.reportStyleUtil = reportStyleUtil;
         this.exportStatusTracker = exportStatusTracker;
+        this.timesheetHelper = timesheetHelper;
+        this.calendarAdapter = calendarAdapter;
     }
 
     @Value("${csv.payroll.download.dir}")
@@ -137,15 +145,11 @@ public class PayRollServiceImpl implements PayRollService {
     public void calculatePayrollAmount() {
         log.info("before finding user payroll");
         List<UserPayRollEntity> entities = payRollAdapter.getAllUserPayroll();
-
-        // NOTE: Keeping this for future requirement changes
-//        String[] userIds = entities.stream()
-//                .map(e -> e.getUser().getUserId())
-//                .toArray(String[]::new);
-//        TimesheetHelper.WorkScheduleResult result = timesheetHelper.fetchWorkSchedulesAndDays(userIds);
-//        Map<String, Set< DayOfWeek >> userWorkingDaysMap = result.getUserWorkingDaysMap();
         PayRollSettingEntity settingEntity = payRollAdapter.findFirst()
                 .orElseThrow(() -> new RuntimeException("Payroll Setting not found"));
+
+//        CalendarEntity defaultCalendar = calendarAdapter.findDefaultCalendar();
+
         LocalDate date = LocalDate.now(ZoneId.of("Asia/Kolkata"));
         int year = date.getYear();
         int month = date.getMonthValue() - 1;
@@ -153,30 +157,36 @@ public class PayRollServiceImpl implements PayRollService {
             month = 12;
             year = year - 1;
         }
+        int daysInMonth = YearMonth.of(year, month).lengthOfMonth();
         List<MonthlySummaryEntity> monthlySummaryList = leaveBalanceAdapter.findByMonthAndYear(month, year);
-        Map<String, Integer> unpaidMap =
+        Map<String, MonthlySummaryEntity> unpaidMap =
                 monthlySummaryList.stream()
                         .collect(Collectors.toMap(
                                 MonthlySummaryEntity::getUserId,
-                                MonthlySummaryEntity::getUnpaidLeavesTaken
+                                Function.identity()
                         ));
         List<UserPayRollAmountEntity> userPayrollAmountList = new ArrayList<>();
         for (UserPayRollEntity entity : entities) {
             log.info("loop started");
             UserPayRollAmountEntity userPayrollAmount = new UserPayRollAmountEntity();
-            userPayrollAmount.setUser(entity.getUser());
+            UserEntity user = entity.getUser();
+            userPayrollAmount.setUser(user);
             userPayrollAmount.setPayroll(entity.getPayroll());
             LocalDate localDate = LocalDate.of(year, month, 1);
             String monthDate = localDate.format(DateTimeFormatter.ofPattern("MMMM,yyyy"));
             userPayrollAmount.setMonth(monthDate);
-            int daysInMonth = YearMonth.of(year, month).lengthOfMonth();
             BigDecimal daySalary = entity.getPayroll().getMonthlySalary().divide(BigDecimal.valueOf(30), 2, RoundingMode.HALF_UP);
             List<TimesheetEntity> timesheetEntities = timesheetAdapter.getTimesheetByUserIds(entity.getUser().getUserId(), year, month);
-//            List<Integer> regularDaysList = calculateRegularDays(timesheetEntities, entity.getUser().getUserId(), userWorkingDaysMap, daysInMonth, year, month);
-            BigDecimal unpaidLeave = BigDecimal.valueOf(unpaidMap.get(entity.getUser().getUserId()));
-            Integer regularDays = calculateRegularDays(daysInMonth, unpaidLeave);
+            log.info("before rest day");
+            log.info("rest day");
+            MonthlySummaryEntity monthlySummary = unpaidMap.get(user.getUserId());
+            int paidLeave = monthlySummary.getFullDayUnits() - monthlySummary.getUnpaidLeavesTaken();
+            int restDays = daysInMonth - monthlySummary.getTotalWorkingDays();
+            Integer regularDays = restDays + paidLeave + monthlySummary.getTotalPresentDays();
+            int unpaidLeave = daysInMonth - regularDays;
+//            Integer regularDays = calculateRegularDays(daysInMonth, unpaidLeave);
             BigDecimal regularHrs = calculateRegularHrs(timesheetEntities);
-            userPayrollAmount.setUnpaidLeaveDeduction(unpaidLeave);
+            userPayrollAmount.setUnpaidLeaveDeduction(daySalary.multiply(BigDecimal.valueOf(unpaidLeave)));
             userPayrollAmount.setRegularDays(regularDays);
             userPayrollAmount.setRegularHrs(regularHrs);
             BigDecimal regularPayrollAmount = calculateRegularPayrollAmount(regularDays, daySalary);
@@ -198,32 +208,12 @@ public class PayRollServiceImpl implements PayRollService {
             userPayrollAmountList.add(userPayrollAmount);
         }
         payRollAdapter.saveAllUserPayrollAmount(userPayrollAmountList);
+        log.info("save payroll amount");
     }
 
 
-    public Integer calculateRegularDays(int days, BigDecimal unpaidLeave) {
-        return BigDecimal.valueOf(days).subtract(unpaidLeave).intValue();
-    }
-
-    // NOTE: Keeping this for future requirement changes
-
-//    public List<Integer> calculateRegularDays(List<TimesheetEntity> timesheetEntities, String userId,
-//                                              Map<String, Set< DayOfWeek >> userWorkingDaysMap, int daysInMonth, int year, int month) {
-//        int count = 0, restDaysCount =0;
-//        Set<LocalDate> timesheetDates = timesheetEntities.stream()
-//                .map(TimesheetEntity::getDate)
-//                .collect(Collectors.toSet());
-//
-//        for (int day = 1; day <= daysInMonth; day++) {
-//            LocalDate currentDate = LocalDate.of(year, month, day);
-//            if (timesheetDates.contains(currentDate) ) {
-//                count++;
-//            }
-//            if(!userWorkingDaysMap.get(userId).contains(currentDate.getDayOfWeek())) {
-//                restDaysCount++;
-//            }
-//        }
-//        return List.of(count,restDaysCount+count);
+//    public Integer calculateRegularDays(int days, BigDecimal unpaidLeave) {
+//        return BigDecimal.valueOf(days).subtract(unpaidLeave).intValue();
 //    }
 
     public BigDecimal calculateOvertimeHrs(List<TimesheetEntity> timesheetEntities) {
