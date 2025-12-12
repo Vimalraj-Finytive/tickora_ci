@@ -85,6 +85,7 @@ public class PayRollController {
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
+    //Not In use
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<PayrollResponseDto>> getPayrollById(@RequestHeader("Authorization") String token,
                                                                           @PathVariable String id) {

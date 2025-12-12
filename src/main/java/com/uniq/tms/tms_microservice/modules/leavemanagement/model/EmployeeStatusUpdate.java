@@ -6,6 +6,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 
 public class EmployeeStatusUpdate {
+    private Long requestId;
     private String userId;
     private String policyId;
     private Status status;
@@ -17,6 +18,14 @@ public class EmployeeStatusUpdate {
     private LocalTime endTime;
     private LocalDate requestDate;
     private HourType hourType;
+
+    public Long getRequestId() {
+        return requestId;
+    }
+
+    public void setRequestId(Long requestId) {
+        this.requestId = requestId;
+    }
 
     public Status getStatus() {
         return status;

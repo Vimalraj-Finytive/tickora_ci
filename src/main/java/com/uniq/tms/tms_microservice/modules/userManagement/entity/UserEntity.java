@@ -53,7 +53,7 @@ public class UserEntity {
     private boolean isRegisterUser = false;
 
     @Column(name = "active", nullable = false)
-    private boolean active;
+    private Boolean  active;
 
     @ManyToOne
     @JoinColumn(name = "work_schedule_id")
@@ -170,11 +170,11 @@ public class UserEntity {
         this.organizationId = organizationId;
     }
 
-    public boolean isActive() {
+    public Boolean  isActive() {
         return active;
     }
 
-    public void setActive(boolean active) {
+    public void setActive(Boolean  active) {
         this.active = active;
     }
 

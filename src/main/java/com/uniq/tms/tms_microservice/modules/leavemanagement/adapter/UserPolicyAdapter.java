@@ -26,9 +26,9 @@ public interface UserPolicyAdapter {
 
     List<UserPolicyEntity> findAllByPolicyIdsAndUserIds(List<String> policyIds, Set<String> userIds);
 
-    boolean isUserPolicyActive(String policyId, String userId,  LocalDate startDate, LocalDate endDate);
+    boolean existsValidUserPolicy(String policyId, String userId,  LocalDate startDate, LocalDate endDate);
 
-    List<String> findAllUserIdsInUserPolicies(LocalDate date);
+    List<String> findAllUserIdsInUserPolicies(LocalDate date, List<String> userIds);
 
 
     List<UserPolicyEntity> findByUserIdAndAccrualType(String userId, AccrualType accrualType);
@@ -46,4 +46,5 @@ public interface UserPolicyAdapter {
 
     List<String> findUserIdsByPolicyId(String policyId);
 
+    boolean isUserPolicyActive(String policyId, String userId);
 }

@@ -104,14 +104,32 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
     private String downloadDir;
 
     @Override
+    @Transactional
     public void createRequest(TimeOffRequest request) {
-        boolean validPolicy = timeOffPolicyAdapter.existsValidPolicy(request.getPolicyId(), request.getStartDate(), request.getEndDate());
-        boolean validUserPolicy = userPolicyAdapter.isUserPolicyActive(request.getPolicyId(), request.getUserId(), request.getStartDate(), request.getEndDate());
-        if (!validPolicy) {
-            throw new IllegalStateException("Invalid policy for the given date.");
+        String policyId = request.getPolicyId();
+        String userId = request.getUserId();
+        LocalDate startDate = request.getStartDate();
+        LocalDate endDate = request.getEndDate();
+        boolean policyActive;
+        boolean policyValidForDate;
+        boolean userPolicyActive;
+        boolean userPolicyDateValid;
+
+        policyActive = timeOffPolicyAdapter.isPolicyActive(policyId);
+        if (!policyActive) {
+            throw new IllegalStateException("Selected policy is inactive.");
         }
-        if (!validUserPolicy) {
-            throw new IllegalStateException("Invalid user policy for the given date.");
+        policyValidForDate = timeOffPolicyAdapter.existsValidPolicy(policyId, startDate, endDate);
+        if (!policyValidForDate) {
+            throw new IllegalStateException("The selected policy is not valid for the specified date range.");
+        }
+        userPolicyActive = userPolicyAdapter.isUserPolicyActive(userId, policyId);
+        if (!userPolicyActive) {
+            throw new IllegalStateException("The selected policy is not assigned to this user.");
+        }
+        userPolicyDateValid = userPolicyAdapter.existsValidUserPolicy(policyId, userId, startDate, endDate);
+        if (!userPolicyDateValid) {
+            throw new IllegalStateException("User does not have policy assignment for the selected date range.");
         }
         boolean exists = timeOffRequestAdapter.existsTimeoffRequest(request.getUserId(), request.getPolicyId(), LocalDate.now(zoneId));
         if (exists) {
@@ -121,26 +139,29 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
             throw new IllegalArgumentException("Invalid request format for the selected entitled type");
         }
         boolean overlap = timeOffRequestAdapter.existsOverlappingRequest(request.getUserId(), request.getPolicyId(), request.getStartDate(), request.getEndDate());
-
         if (overlap) {
-            throw new IllegalArgumentException("Request already exists within this date range.");
+            throw new IllegalArgumentException("A leave request for the selected dates already exists. Duplicate requests are not allowed.");
         }
         TimeOffPolicyEntity policy = timeOffPolicyAdapter.findPolicyById(request.getPolicyId());
         UserEntity user = userAdapter.getUserById(request.getUserId());
-        if (user.getRequestApproverId() == null || user.getUserId().equals(user.getRequestApproverId())){
-            throw new IllegalArgumentException("requestId is missing or invalid.");
+        if (user.getRequestApproverId() == null || user.getUserId().equals(user.getRequestApproverId())) {
+            throw new IllegalArgumentException("No request approver is associated with your profile. Please contact your admin to proceed.");
+        }
+        UserEntity approver = userAdapter.findUserByOrgIdAndUserId(authHelper.getOrgId(),user.getRequestApproverId());
+        if (approver.isActive() == null || !approver.isActive()) {
+            throw new IllegalArgumentException("Your request approver is inactive. Please contact your admin.");
         }
         WorkScheduleEntity workSchedule = user.getWorkSchedule();
         double days = ChronoUnit.DAYS.between(request.getStartDate(), request.getEndDate()) + 1;
         if (policy.getEntitledType() == EntitledType.DAY && days != request.getUnitsRequested()) {
-            throw new IllegalArgumentException("Invalid request format for the selected entitled type");
+            throw new IllegalArgumentException("The specified units do not align with the selected date range.");
         }
         TimeOffRequestEntity entity = new TimeOffRequestEntity();
         Integer requested = 0;
         if (policy.getCompensation() == Compensation.PAID) {
             LeaveBalanceEntity leaveBalance = leaveBalanceAdapter.findForPeriod(policy.getPolicyId(), request.getUserId(), request.getStartDate(), request.getEndDate());
             if (leaveBalance.getBalanceUnits() == 0.0) {
-                throw new IllegalArgumentException("Cannot take paid leave");
+                throw new IllegalArgumentException("Insufficient leave balance to apply for paid leave.");
             }
             boolean invalidDayOrHalfDay =
                     (policy.getEntitledType() == EntitledType.DAY || policy.getEntitledType() == EntitledType.HALF_DAY)
@@ -184,22 +205,45 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
         List<Long> groupIds = user.getUserGroups().stream()
                 .map(g -> g.getGroup().getGroupId())
                 .toList();
-        Set<String> viewers = userAdapter.getAllSupervisorIds(groupIds, user.getUserId(), MemberType.SUPERVISOR.getValue());
-        log.info("viewers size{}",viewers.size());
-        String superAdminId =userAdapter.findSuperAdminByOrgId(authHelper.getOrgId())
+        Set<String> viewers =
+                userAdapter.getAllSupervisorIds(groupIds, user.getUserId(), MemberType.SUPERVISOR.getValue())
+                        .stream()
+                        .filter(viewerId -> {
+                            UserEntity v = userAdapter.getUserById(viewerId);
+                            return v.isActive() != null && v.isActive();
+                        })
+                        .collect(Collectors.toSet());
+        log.info("viewers size{}", viewers.size());
+        List<String> superAdminIds = userAdapter.findSuperAdminByOrgId(authHelper.getOrgId())
+                .stream()
                 .map(UserEntity::getUserId)
-                .orElseThrow(() -> new IllegalArgumentException("Super admin not found"));
+                .toList();
+
+        List<String> activeSuperAdmins = superAdminIds.stream()
+                .map(userAdapter::getUserById)
+                .filter(UserEntity::isActive)
+                .map(UserEntity::getUserId)
+                .toList();
+
+        if (activeSuperAdmins.isEmpty()) {
+            throw new IllegalArgumentException("No active super admin found. Please contact system administrator.");
+        }
+
         viewers.remove(user.getRequestApproverId());
-        viewers.remove(superAdminId);
+        activeSuperAdmins.forEach(viewers::remove);
 
         TimeOffRequestEntity saved = timeOffRequestAdapter.saveRequest(entity);
         deductLeaveBalance(saved, requested);
 
         List<UsersRequestMappingEntity> usersMapping =
                 Stream.concat(
-                        Stream.of(buildMapping(ViewerType.APPROVER, superAdminId, request.getUserId(), saved.getTimeOffRequestId()),
-                        (buildMapping(ViewerType.APPROVER, user.getRequestApproverId(), request.getUserId(), saved.getTimeOffRequestId()))),
-                        viewers.stream().map(viewer -> buildMapping(ViewerType.VIEWER, viewer, request.getUserId(), saved.getTimeOffRequestId()))
+                        activeSuperAdmins.stream()
+                                .map(superAdminId -> buildMapping(ViewerType.APPROVER, superAdminId, user.getUserId(), saved.getTimeOffRequestId())),
+                        Stream.concat(
+                                Stream.of(buildMapping(ViewerType.APPROVER, user.getRequestApproverId(), user.getUserId(), saved.getTimeOffRequestId())),
+                                viewers.stream().map(viewer ->
+                                        buildMapping(ViewerType.VIEWER, viewer, user.getUserId(), saved.getTimeOffRequestId()))
+                        )
                 ).toList();
         List<UsersRequestMappingEntity> entities = timeOffRequestAdapter.saveUsersRequestMapping(usersMapping);
     }
@@ -231,7 +275,7 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
                 inRange = (startTime.equals(fixedStartTime) || startTime.isAfter(fixedStartTime)) && (endTime.equals(fixedEndTime) || endTime.isBefore(fixedEndTime));
             }
             if (!inRange) {
-                throw new IllegalArgumentException("Start and End times must be within the allowed time range");
+                throw new IllegalArgumentException("Start and End times must be within the workschedule range");
             }
         }
         else {
@@ -271,15 +315,15 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
     @Override
     @Transactional
     public void employeeUpdateStatus(EmployeeStatusUpdate model) {
-        checkCredentials(model.getPolicyId(), model.getRequestDate());
+
         if (model.getStartDate() != null) {
-            boolean validUserPolicy = userPolicyAdapter.isUserPolicyActive(model.getPolicyId(), model.getUserId(), model.getStartDate(), model.getEndDate());
+            boolean validUserPolicy = userPolicyAdapter.existsValidUserPolicy(model.getPolicyId(), model.getUserId(), model.getStartDate(), model.getEndDate());
             if (!validUserPolicy) {
                 throw new IllegalStateException("Invalid policy for the given date.");
             }
         }
-
-        TimeOffRequestEntity entity = timeOffRequestAdapter.getTimeoffRequest(model.getPolicyId(), model.getUserId(), model.getRequestDate());
+//        TimeOffRequestEntity entity = timeOffRequestAdapter.getTimeoffRequest(model.getPolicyId(), model.getUserId(), model.getRequestDate());
+        TimeOffRequestEntity entity = timeOffRequestAdapter.findByRequestId(model.getRequestId());
         WorkScheduleEntity workSchedule = entity.getUser().getWorkSchedule();
         if (LocalDate.now(zoneId).isAfter(entity.getStartDate()) || (model.getStatus() != null && !handleEmployeeRules(entity.getStatus(), model.getStatus()))) {
             throw new IllegalArgumentException("Update not allowed");
@@ -370,13 +414,14 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
     @Override
     @Transactional
     public void adminUpdateStatus(AdminStatusUpdate model) {
-        checkCredentials(model.getPolicyId(), model.getRequestDate());
-        TimeOffRequestEntity entity = timeOffRequestAdapter.getTimeoffRequest(model.getPolicyId(), model.getUserId(), model.getRequestDate());
+//        checkCredentials(model.getPolicyId(), model.getRequestDate());
+//        TimeOffRequestEntity entity = timeOffRequestAdapter.getTimeoffRequest(model.getPolicyId(), model.getUserId(), model.getRequestDate());
+        TimeOffRequestEntity entity = timeOffRequestAdapter.findByRequestId(model.getRequestId());
         boolean dateInvalid = LocalDate.now(zoneId).isAfter(entity.getStartDate());
         boolean statusInvalid = (model.getStatus() != null && !handleAdminRules(entity.getStatus(), model.getStatus()));
         if (dateInvalid || statusInvalid) {
             log.warn("Update not allowed. Date invalid = {}, Status invalid = {}", dateInvalid, statusInvalid);
-            throw new IllegalArgumentException("Update not allowed. Invalid date or status");
+            throw new IllegalArgumentException("Update not allowed because the leave start date has already passed.");
         }
         if (model.getStatus() != null) {
             log.info("Updating status from {} → {}", entity.getStatus(), model.getStatus());
@@ -513,22 +558,34 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
     @Override
     public List<TimeOffExportModel> filterRequests(TimeOffExportRequest request, String loggedUserId) {
 
+        // fetch rows from view
         List<TimeOffExportView> rows = fetchExportRows(request, loggedUserId);
 
-        Map<String, TimeOffExportModel> grouped = new LinkedHashMap<>();
+        // final result map
+        Map<Long, TimeOffExportModel> result = new LinkedHashMap<>();
+
+        // Track duplicates for viewers
+        Map<String, Long> addedCount = new HashMap<>();
+
+        // group view rows using requestId
+        Map<String, Long> requestKey = rows.stream()
+                .filter(r -> r.getViewerId() != null && r.getViewerType() != null)
+                .collect(Collectors.groupingBy(
+                        r -> r.getTimeoffRequestId()
+                                + "|" + r.getViewerId()
+                                + "|" + r.getViewerType(),
+                        Collectors.counting()
+                ));
 
         for (TimeOffExportView row : rows) {
 
-            String key = row.getCreatorId()
-                    + "|" + row.getPolicyId()
-                    + "|" + row.getRequestedDate()
-                    + "|" + row.getLeaveStartDate()
-                    + "|" + row.getLeaveEndDate();
+            Long requestId = row.getTimeoffRequestId();
 
-            TimeOffExportModel model = grouped.get(key);
-
+            // create new model if not exists
+            TimeOffExportModel model = result.get(requestId);
             if (model == null) {
                 model = new TimeOffExportModel();
+                model.setTimeoffRequestId(row.getTimeoffRequestId());
                 model.setUserId(row.getCreatorId());
                 model.setUserName(row.getCreatorName());
                 model.setPolicyName(row.getPolicyName());
@@ -542,35 +599,41 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
                 model.setReason(row.getReason());
                 model.setStatus(row.getStatus());
                 model.setLeaveType(row.getLeaveType());
+
                 model.setViewers(new ArrayList<>());
                 model.setApprover(new ArrayList<>());
 
-                grouped.put(key, model);
+                result.put(requestId, model);
             }
 
-            ViewerType viewerType = null;
-            if (row.getViewerType() != null) {
-                viewerType = ViewerType.valueOf(row.getViewerType().toUpperCase());
+            // If no viewer → skip
+            if (row.getViewerId() == null || row.getViewerType() == null) {
+                continue;
             }
 
-            if (viewerType == ViewerType.VIEWER) {
-                ViewerModel v = new ViewerModel();
-                v.setUserId(row.getViewerId());
-                v.setUserName(row.getViewerName());
-                v.setViewerType(ViewerType.VIEWER.getValue());
-                model.getViewers().add(v);
-            }
+            // Unique viewer entry key
+            String viewerKey = requestId + "|" + row.getViewerId() + "|" + row.getViewerType();
 
-            if (viewerType == ViewerType.APPROVER) {
-                ViewerModel a = new ViewerModel();
-                a.setUserId(row.getViewerId());
-                a.setUserName(row.getViewerName());
-                a.setViewerType(ViewerType.APPROVER.getValue());
-                model.getApprover().add(a);
+            long dbTotal = requestKey.getOrDefault(viewerKey, 1L);
+            long added = addedCount.getOrDefault(viewerKey, 0L);
+
+            if (added < dbTotal) {
+                ViewerModel vm = new ViewerModel();
+                vm.setUserId(row.getViewerId());
+                vm.setUserName(row.getViewerName());
+                vm.setViewerType(row.getViewerType());
+
+                if (ViewerType.VIEWER.getValue().equalsIgnoreCase(row.getViewerType())) {
+                    model.getViewers().add(vm);
+                } else {
+                    model.getApprover().add(vm);
+                }
+
+                addedCount.put(viewerKey, added + 1);
             }
         }
 
-        return new ArrayList<>(grouped.values());
+        return new ArrayList<>(result.values());
     }
 
     public List<TimeOffExportView> fetchExportRows(TimeOffExportRequest request, String loggedUserId) {
@@ -625,9 +688,6 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
             );
         }
     }
-
-
-
 
     @Override
     @Transactional
@@ -702,72 +762,144 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
     }
 
     private void generateCsv(List<TimeOffExportView> data, File file) throws Exception {
+
+        // STEP 1: Group by requestId to avoid duplicates
+        Map<Long, List<TimeOffExportView>> grouped =
+                data.stream().collect(Collectors.groupingBy(TimeOffExportView::getTimeoffRequestId));
+
         file.getParentFile().mkdirs();
+
         try (FileWriter fw = new FileWriter(file, StandardCharsets.UTF_8);
-             CSVWriter csv = new CSVWriter(fw, CSVWriter.DEFAULT_SEPARATOR, CSVWriter.DEFAULT_QUOTE_CHARACTER, CSVWriter.DEFAULT_ESCAPE_CHARACTER, CSVWriter.DEFAULT_LINE_END)) {
+             CSVWriter csv = new CSVWriter(fw,
+                     CSVWriter.DEFAULT_SEPARATOR,
+                     CSVWriter.DEFAULT_QUOTE_CHARACTER,
+                     CSVWriter.DEFAULT_ESCAPE_CHARACTER,
+                     CSVWriter.DEFAULT_LINE_END)) {
+
+            // Load CSV header
             ClassPathResource resource = new ClassPathResource("templates/text/timeoff_request_csv_header.txt");
-            try (BufferedReader br = new BufferedReader(new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8))) {
+            try (BufferedReader br = new BufferedReader(
+                    new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8))) {
+
                 String headerLine = br.readLine();
                 if (headerLine != null) {
                     csv.writeNext(headerLine.split(","));
                 }
             }
-            for (TimeOffExportView v : data) {
+
+            // STEP 2: Write merged CSV rows (same as XLSX logic)
+            for (Map.Entry<Long, List<TimeOffExportView>> entry : grouped.entrySet()) {
+
+                List<TimeOffExportView> rows = entry.getValue();
+                TimeOffExportView first = rows.getFirst(); // Base row
+
+                // Merge APPROVERS
+                String approvers = rows.stream()
+                        .filter(v -> v.getViewerType().equalsIgnoreCase(ViewerType.APPROVER.getValue()))
+                        .map(TimeOffExportView::getViewerName)
+                        .distinct()
+                        .collect(Collectors.joining(", ")); // separator for CSV
+
+                // Merge VIEWERS
+                String viewers = rows.stream()
+                        .filter(v -> v.getViewerType().equalsIgnoreCase(ViewerType.VIEWER.getValue()))
+                        .map(TimeOffExportView::getViewerName)
+                        .distinct()
+                        .collect(Collectors.joining(", ")); // separator for CSV
+
+                // Write merged CSV row
                 csv.writeNext(new String[]{
-                        v.getCreatorId(),
-                        v.getCreatorName(),
-                        v.getPolicyName(),
-                        String.valueOf(v.getLeaveStartDate()),
-                        String.valueOf(v.getLeaveEndDate()),
-                        v.getLeaveType(),
-                        v.getStatus(),
-                        v.getViewerType()});
+                        first.getCreatorId(),
+                        first.getCreatorName(),
+                        first.getPolicyName(),
+                        String.valueOf(first.getLeaveStartDate()),
+                        String.valueOf(first.getLeaveEndDate()),
+                        first.getLeaveType(),
+                        first.getStatus(),
+                        approvers.isEmpty() ? "-" : approvers,
+                        viewers.isEmpty() ? "-" : viewers
+                });
             }
+
             csv.flush();
         }
     }
 
+
     private void generateXlsx(List<TimeOffExportView> data, File file) throws Exception {
+
+        // STEP 1: Group by requestId (best)
+        Map<Long, List<TimeOffExportView>> grouped =
+                data.stream().collect(Collectors.groupingBy(TimeOffExportView::getTimeoffRequestId));
+
         file.getParentFile().mkdirs();
+
         try (Workbook workbook = new XSSFWorkbook();
              FileOutputStream fos = new FileOutputStream(file)) {
+
             Sheet sheet = workbook.createSheet("TimeOff Report");
-            Resource resource =
-                    new ClassPathResource("templates/text/timeoff_request_excel_header.txt");
+
+            // Load headers
+            Resource resource = new ClassPathResource("templates/text/timeoff_request_excel_header.txt");
             List<String> headerLines;
             try (BufferedReader reader = new BufferedReader(
                     new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8))) {
                 headerLines = reader.lines().toList();
             }
+
             String[] headers = headerLines.getFirst().split("\\|");
             CellStyle headerStyle = reportStyleUtil.createHeaderCellStyle(workbook);
             CellStyle dataStyle = reportStyleUtil.createDataCellStyle(workbook);
+
+            // Create header row
             Row headerRow = sheet.createRow(0);
             for (int i = 0; i < headers.length; i++) {
-                reportStyleUtil.createStyledCell(headerRow, i, " " + headers[i] + " ", headerStyle);
+                reportStyleUtil.createStyledCell(headerRow, i, headers[i], headerStyle);
             }
+
+            // STEP 2: Write merged rows
             int rowIdx = 1;
-            for (TimeOffExportView v : data) {
+
+            for (Map.Entry<Long, List<TimeOffExportView>> entry : grouped.entrySet()) {
+                List<TimeOffExportView> rows = entry.getValue();
+                TimeOffExportView first = rows.getFirst();
+
+                // Collect approvers
+                String approvers = rows.stream()
+                        .filter(v -> v.getViewerType().equalsIgnoreCase(ViewerType.APPROVER.getValue()))
+                        .map(TimeOffExportView::getViewerName)
+                        .distinct()
+                        .collect(Collectors.joining(", "));
+
+                // Collect viewers
+                String viewers = rows.stream()
+                        .filter(v -> v.getViewerType().equalsIgnoreCase(ViewerType.VIEWER.getValue()))
+                        .map(TimeOffExportView::getViewerName)
+                        .distinct()
+                        .collect(Collectors.joining(", "));
+
                 Row row = sheet.createRow(rowIdx++);
                 int col = 0;
-                reportStyleUtil.createStyledCell(row, col++, v.getCreatorId(), dataStyle);
-                reportStyleUtil.createStyledCell(row, col++, v.getCreatorName(), dataStyle);
-                reportStyleUtil.createStyledCell(row, col++, v.getPolicyName(), dataStyle);
-                reportStyleUtil.createStyledCell(row, col++, String.valueOf(v.getLeaveStartDate()), dataStyle);
-                reportStyleUtil.createStyledCell(row, col++, String.valueOf(v.getLeaveEndDate()), dataStyle);
-                reportStyleUtil.createStyledCell(row, col++, v.getLeaveType(), dataStyle);
-                reportStyleUtil.createStyledCell(row, col++, v.getStatus(), dataStyle);
-                if(Objects.equals(v.getViewerType(), ViewerType.APPROVER.getValue())){
-                    reportStyleUtil.createStyledCell(row, col++, v.getViewerName(), dataStyle);
-                }
-                reportStyleUtil.createStyledCell(row, col, v.getViewerName(), dataStyle);
+
+                reportStyleUtil.createStyledCell(row, col++, first.getCreatorId(), dataStyle);
+                reportStyleUtil.createStyledCell(row, col++, first.getCreatorName(), dataStyle);
+                reportStyleUtil.createStyledCell(row, col++, first.getPolicyName(), dataStyle);
+                reportStyleUtil.createStyledCell(row, col++, String.valueOf(first.getLeaveStartDate()), dataStyle);
+                reportStyleUtil.createStyledCell(row, col++, String.valueOf(first.getLeaveEndDate()), dataStyle);
+                reportStyleUtil.createStyledCell(row, col++, first.getLeaveType(), dataStyle);
+                reportStyleUtil.createStyledCell(row, col++, first.getStatus(), dataStyle);
+                reportStyleUtil.createStyledCell(row, col++, approvers.isEmpty() ? "-" : approvers, dataStyle);
+                reportStyleUtil.createStyledCell(row, col, viewers.isEmpty() ? "-" : viewers, dataStyle);
             }
+
             for (int i = 0; i < headers.length; i++) {
                 sheet.autoSizeColumn(i);
             }
+
             workbook.write(fos);
         }
     }
+
 
     @Override
     public String exportStatus(String exportId, String schema, String orgId) {

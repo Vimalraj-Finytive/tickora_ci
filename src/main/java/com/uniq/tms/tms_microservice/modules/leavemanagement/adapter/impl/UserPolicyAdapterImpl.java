@@ -53,13 +53,13 @@ public class UserPolicyAdapterImpl implements UserPolicyAdapter {
     }
 
     @Override
-    public boolean isUserPolicyActive(String policyId, String userId,  LocalDate startDate, LocalDate endDate) {
+    public boolean existsValidUserPolicy(String policyId, String userId,  LocalDate startDate, LocalDate endDate) {
         return userPolicyRepo.isUserPolicyActive(policyId, userId, startDate, endDate);
     }
 
     @Override
-    public List<String> findAllUserIdsInUserPolicies(LocalDate date) {
-        return userPolicyRepo.findAllUserIdsInUserPolicies(date);
+    public List<String> findAllUserIdsInUserPolicies(LocalDate date, List<String> userIds) {
+        return userPolicyRepo.findAllUserIdsInUserPolicies(date, userIds);
     }
 
     @Override
@@ -113,4 +113,8 @@ public class UserPolicyAdapterImpl implements UserPolicyAdapter {
         return userPolicyRepo.save(entity);
     }
 
+    @Override
+    public boolean isUserPolicyActive(String policyId, String userId) {
+        return userPolicyRepo.findActiveUserPolicyByIds(userId,policyId);
+    }
 }

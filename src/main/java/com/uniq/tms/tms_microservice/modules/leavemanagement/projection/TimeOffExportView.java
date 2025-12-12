@@ -1,9 +1,9 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.projection;
 
-import java.sql.Time;
 import java.time.LocalDate;
 
 public interface TimeOffExportView {
+    Long getTimeoffRequestId();
     String getCreatorId();
     String getCreatorName();
     String getPolicyId();
