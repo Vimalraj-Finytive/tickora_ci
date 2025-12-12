@@ -7,6 +7,7 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeOffExport
 import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
 import com.uniq.tms.tms_microservice.shared.dto.EnumDto;
 import com.uniq.tms.tms_microservice.shared.helper.AuthHelper;
+import jakarta.validation.Valid;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
@@ -43,13 +44,15 @@ public class TimeOffRequestController {
     private String downloadDir;
 
     @PostMapping("/create")
-    public ResponseEntity<ApiResponse<TimeOffRequestDto>> createRequest(@RequestHeader("Authorization") String token, @RequestBody TimeOffRequestDto requestDto) {
+    public ResponseEntity<ApiResponse<TimeOffRequestDto>> createRequest(@RequestHeader("Authorization") String token,
+                                                                        @Valid @RequestBody TimeOffRequestDto requestDto) {
         ApiResponse<TimeOffRequestDto> createdRequest = timeOffFacade.createRequest(requestDto);
         return ResponseEntity.ok(createdRequest);
     }
 
     @PutMapping("/update")
-    public ResponseEntity<ApiResponse<EmployeeStatusUpdateDto>> employeeUpdateStatus(@RequestHeader("Authorization") String token, @RequestBody EmployeeStatusUpdateDto dto){
+    public ResponseEntity<ApiResponse<EmployeeStatusUpdateDto>> employeeUpdateStatus(@RequestHeader("Authorization") String token,
+                                                                                     @RequestBody EmployeeStatusUpdateDto dto){
         ApiResponse<EmployeeStatusUpdateDto> updateRequest = timeOffFacade.employeeUpdateStatus(dto);
         return ResponseEntity.ok(updateRequest);
     }

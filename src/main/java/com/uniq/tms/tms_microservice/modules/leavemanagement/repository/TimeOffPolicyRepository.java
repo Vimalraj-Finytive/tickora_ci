@@ -29,7 +29,6 @@ public interface TimeOffPolicyRepository extends JpaRepository<TimeOffPolicyEnti
     WHERE up.user.userId = :userId
       AND up.user.active = true
       AND up.policy.isActive = true
-      AND up.active = true
 """)
     List<TimeOffPolicyEntity> findPolicyByUserId(@Param("userId") String userId);
 
@@ -43,7 +42,6 @@ public interface TimeOffPolicyRepository extends JpaRepository<TimeOffPolicyEnti
             SELECT COUNT(p) > 0
             FROM TimeOffPolicyEntity p
             WHERE p.policyId = :policyId
-              AND p.isActive = true
               AND p.validityStartDate <= :startDate
               AND (p.validityEndDate IS NULL OR p.validityEndDate >= :endDate)
             """)
@@ -54,5 +52,13 @@ public interface TimeOffPolicyRepository extends JpaRepository<TimeOffPolicyEnti
     TimeOffPolicyEntity findByIsDefaultTrue();
 
     List<TimeOffPolicyEntity> findByAccrualTypeAndIsActiveTrue(AccrualType accrualType);
+
+    @Query("""
+    SELECT COUNT(p) > 0
+    FROM TimeOffPolicyEntity p
+    WHERE p.policyId = :policyId
+      AND p.isActive = true
+    """)
+    boolean findActivePolicyById(@Param("policyId") String policyId);
 
 }

@@ -104,5 +104,10 @@ public class TimeoffPolicyAdapterImpl implements TimeOffPolicyAdapter {
     public void saveAllPolicy(List<TimeOffPolicyEntity> policyList) {
         timeoffPolicyRepo.saveAll(policyList);
     }
+
+    @Override
+    public boolean isPolicyActive(String policyId) {
+        return timeoffPolicyRepo.findActivePolicyById(policyId);
+    }
 }
 

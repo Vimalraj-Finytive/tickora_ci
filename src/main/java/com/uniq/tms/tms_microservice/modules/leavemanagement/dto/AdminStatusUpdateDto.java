@@ -5,7 +5,8 @@ import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
 
 public class AdminStatusUpdateDto {
-
+    @NotNull(message = "requestId ID cannot be null")
+    private Long requestId;
     @NotNull(message = "User ID cannot be null")
     private String userId;
     @NotNull(message = "Policy ID cannot be null")
@@ -13,6 +14,14 @@ public class AdminStatusUpdateDto {
     private Status status;
     @NotNull(message = "Request date cannot be null")
     private LocalDate requestDate;
+
+    public Long getRequestId() {
+        return requestId;
+    }
+
+    public void setRequestId(Long requestId) {
+        this.requestId = requestId;
+    }
 
     public String getUserId() {
         return userId;

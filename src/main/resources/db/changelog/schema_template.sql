@@ -1522,6 +1522,7 @@ SELECT
     sd.mobile AS sec_mobile,
     sd.email AS sec_email,
     sd.relation AS sec_relation,
+    tp.policy_id,
     tp.policy_name,
     up.valid_from,
     up.valid_to,

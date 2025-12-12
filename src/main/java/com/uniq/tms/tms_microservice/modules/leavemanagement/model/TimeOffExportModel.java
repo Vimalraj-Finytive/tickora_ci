@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 public class TimeOffExportModel {
+
     private String userId;
     private String userName;
     private String policyName;
@@ -20,14 +21,14 @@ public class TimeOffExportModel {
 
     private List<ViewerModel> viewers;
     private List<ViewerModel> approver;
-    private Long requestId;
+    private Long timeoffRequestId;
 
-    public Long getRequestId() {
-        return requestId;
+    public Long getTimeoffRequestId() {
+        return timeoffRequestId;
     }
 
-    public void setRequestId(Long requestId) {
-        this.requestId = requestId;
+    public void setTimeoffRequestId(Long timeoffRequestId) {
+        this.timeoffRequestId = timeoffRequestId;
     }
 
     public String getUserId() {
