@@ -128,4 +128,22 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
 
     @Transactional
     void deleteByUser_UserIdAndDate(String userId, LocalDate date);
+
+    @Query("""
+    SELECT t
+    FROM TimesheetEntity t
+    WHERE t.date = :date
+      AND t.user.userId IN :userIds
+    """)
+    List<TimesheetEntity> findAllTimesheets(
+            @Param("date") LocalDate date,
+            @Param("userIds") List<String> userIds);
+
+    @Query("""
+        SELECT t
+        FROM TimesheetEntity t
+        WHERE t.date = :date
+        """)
+    List<TimesheetEntity> findAllTimesheetsByDate(@Param("date") LocalDate date);
+
 }

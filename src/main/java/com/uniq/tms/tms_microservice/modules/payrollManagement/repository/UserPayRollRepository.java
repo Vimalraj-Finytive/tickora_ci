@@ -18,8 +18,16 @@ public interface UserPayRollRepository extends JpaRepository<UserPayRollEntity, 
     @Query("SELECT up FROM UserPayRollEntity up WHERE up.user.userId IN :userIds")
     List<UserPayRollEntity> findExistingUserPayrolls(@Param("userIds") List<String> userIds);
 
-    @Query("SELECT up FROM UserPayRollEntity up WHERE up.user.active = true")
-    List<UserPayRollEntity> findAllByActiveUsers();
+    @Query("""
+    SELECT up
+    FROM UserPayRollEntity up
+    WHERE up.user.active = true
+      AND up.user.userId IN :userIds
+    """)
+    List<UserPayRollEntity> findAllByActiveUsers(
+            @Param("userIds") List<String> userIds
+    );
+
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Transactional

@@ -39,4 +39,18 @@ public interface UserPayRollAmountRepository extends JpaRepository<UserPayRollAm
 
     Optional<UserPayRollAmountEntity> findByUser_UserIdAndMonth(String userId, String month);
 
+    @Query("""
+    SELECT upa
+    FROM UserPayRollAmountEntity upa
+    JOIN upa.payroll p
+    WHERE upa.user.userId = :userId
+      AND upa.month = :month
+    """)
+    Optional<UserPayRollAmountEntity> getUserPayrollAmount(
+            @Param("userId") String userId,
+            @Param("month") String month
+    );
+
+
+
 }

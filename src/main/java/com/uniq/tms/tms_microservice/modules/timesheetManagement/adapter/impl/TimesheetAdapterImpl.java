@@ -285,6 +285,7 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
     ) {
         Map<LocalDate, TimesheetDto> existingTimesheet = existingTimesheets.stream()
                 .collect(Collectors.toMap(TimesheetDto::getDate, Function.identity(), (a, b) -> a));
+        log.info("user angular date: {}", user.getDate());
         LocalDate effectiveStart = startDate.isBefore(user.getDate())
                 ? user.getDate()
                 : startDate;
@@ -817,6 +818,8 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
         List<UserTimesheetDto> finalResponse = new ArrayList<>();
         for (TimesheetUserProjection user : pagedUser) {
             String userId = user.getUserId();
+            log.info("startDate:{}",startDate);
+            log.info("user date: {}", user.getDate());
             List<TimesheetDto> userTimesheets = getUsersTimesheetsWithDefaults(
                     user,
                     userTimesheetMap.getOrDefault(userId, new ArrayList<>()),
@@ -871,6 +874,7 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
                 .collect(Collectors.toMap(TimesheetDto::getDate, Function.identity(),(a,b) -> a));
         log.info("User: {}, Start: {}, End: {}, Existing count: {}",
                 user.getUserId(), startDate, endDate, existingTimesheets.size());
+        log.info("User join date: {}",  user.getDate());
         LocalDate effectiveStart = startDate.isBefore(user.getDate())
                 ? user.getDate()
                 : startDate;
@@ -1016,5 +1020,15 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
     @Override
     public void deleteTimesheet(String userId, LocalDate date) {
         timesheetRepository.deleteByUser_UserIdAndDate(userId,date);
+    }
+
+    @Override
+    public List<TimesheetEntity> findAll(LocalDate date, List<String> userIds) {
+        return timesheetRepository.findAllTimesheets(date, userIds);
+    }
+
+    @Override
+    public List<TimesheetEntity> findAllTimesheetsByDate(LocalDate date) {
+        return timesheetRepository.findAllTimesheetsByDate(date);
     }
 }

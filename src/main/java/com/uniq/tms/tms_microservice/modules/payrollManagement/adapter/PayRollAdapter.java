@@ -21,7 +21,7 @@ public interface PayRollAdapter {
     void deleteAll(List<UserPayRollEntity> userpayRolls);
     List<UserPayRollEntity> saveAllUserPayroll(List<UserPayRollEntity> userPayRoll);
     PayRollEntity savePayRoll(PayRollEntity payRollEntity);
-    List<UserPayRollEntity> getAllUserPayroll();
+    List<UserPayRollEntity> getAllUserPayroll(List<String> userIds);
     void saveAllUserPayrollAmount(List<UserPayRollAmountEntity> userPayRollAmountEntityList);
     List<UserPayRollAmountEntity> getPayrollAmount(String id, String month);
     List<UserPayRollAmountEntity> getAllByMonthAndYear(String month);
@@ -34,4 +34,5 @@ public interface PayRollAdapter {
     PayRollEntity save(PayRollEntity entity);
     void deleteUserPayrollById(String payrollId);
     List<UserPayRollAmount> findAllByMonth(String month);
+    Optional<UserPayRollAmountEntity> getUserPayrollAmount(String userId, String month);
 }
