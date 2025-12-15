@@ -257,6 +257,10 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
             Map<Long, List<TimesheetHistoryDto>> historyMap
     ) {
         log.info("Mpa to Dtos");
+        log.info("start={} end={} ot={}",
+                projection.getStartTimeDuration(),
+                projection.getEndTimeDuration(),
+                projection.getTotalOverTime());
         TimesheetDto dto = timesheetDtoMapper.toTimeDto(projection);
         dto.setRole(projection.getRoleName() != null ? projection.getRoleName() : "null");
         dto.setGroupName(userGroups.getOrDefault(projection.getUserId(), "null"));

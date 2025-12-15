@@ -188,7 +188,7 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
 
     @Query(value = """
             SELECT u.user_id AS userId,
-                   u.user_name AS userName,
+                   u.user_name AS userName
             FROM users u
             WHERE u.user_id = ANY(:userIds)
               AND u.active = true
