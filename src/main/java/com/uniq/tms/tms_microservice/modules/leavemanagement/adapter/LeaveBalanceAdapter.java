@@ -6,6 +6,7 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeOffPolic
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.AccrualType;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 public interface LeaveBalanceAdapter {
@@ -27,4 +28,6 @@ public interface LeaveBalanceAdapter {
     LeaveBalanceEntity findAnnualBalance(String userId, LocalDate date);
     LeaveBalanceEntity findByUserIdAndPolicyId(String userId, String policyId);
     LeaveBalanceEntity findActiveBalanceByUserIdAndPolicy(String userId, String policyId);
+    Optional<MonthlySummaryEntity> getMonthlySummary(String userId, int month, int year);
+    List<LeaveBalanceEntity> findActiveBalances(LocalDate date);
 }

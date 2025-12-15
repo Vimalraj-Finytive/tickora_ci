@@ -26,6 +26,7 @@ import java.time.YearMonth;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -103,10 +104,11 @@ public class LeaveBalanceServiceImpl implements LeaveBalanceService {
             next.setPolicy(current.getPolicy());
             next.setUser(current.getUser());
             log.info("type");
-            double carry =  current.getPolicy().getMaxCarryForwardUnits();
+            double carry =  current.getPolicy().getMaxCarryForwardUnits()== null? 0.0:current.getPolicy().getMaxCarryForwardUnits() ;
             double expiredUnits = 0.0;
             double totalUnits = 0.0;
             if (type == AccrualType.MONTHLY) {
+                log.info("monthly");
                 if (current.getPolicy().getResetFrequency() == ResetFrequency.ANNUALLY) {
                     boolean isResetDay = LocalDate.now().getDayOfYear() == 1;
                     if (isResetDay) {
@@ -199,178 +201,299 @@ public class LeaveBalanceServiceImpl implements LeaveBalanceService {
         updateLeaveBalance(currentBalances, AccrualType.ANNUALLY, result);
     }
 
-    @Override
-    public void updateLeaveSummary() {
+//    @Override
+//    public void updateLeaveSummary() {
+//
+//        LocalDate now = LocalDate.now(zoneId);
+//        LocalDate previousMonth = LocalDate.now(zoneId).minusMonths(1);
+//        int month = previousMonth.getMonthValue();
+//        int year = previousMonth.getYear();
+//        int daysInMonth = YearMonth.of(year, month).lengthOfMonth();
+//        List<MonthlySummaryEntity> summaryEntityList = new ArrayList<>();
+//        log.info(" fetch userPolicy list");
+//        List<String> usersId = userAdapter.getAllActiveUsers();
+//        List<String> userIds = userPolicyAdapter.findAllUserIdsInUserPolicies(LocalDate.of(year, month, YearMonth.of(year, month).lengthOfMonth()), usersId);
+//        TimesheetHelper.WorkScheduleResult result = timesheetHelper.fetchWorkSchedulesAndDays(userIds.toArray(new String[0]));
+//        Map<String, Set< DayOfWeek >> userWorkingDaysMap = result.getUserWorkingDaysMap();
+//        List<UserCalendarProjection> userCalendarList = userAdapter.findCalendarIdsByUserIds(userIds.toArray(new String[0]));
+//        List<CalendarHolidayProjection> rows = calendarAdapter.findAllHolidayDates();
+//        Map<String, List<LocalDate>> calendarMap = rows.stream()
+//                .collect(Collectors.groupingBy(
+//                        CalendarHolidayProjection::getCalendarId,
+//                        Collectors.mapping(CalendarHolidayProjection::getDate, Collectors.toList())
+//                ));
+//        Map<String, List<LocalDate>> userHolidayMap = userCalendarList.stream()
+//                .collect(Collectors.toMap(
+//                        UserCalendarProjection::getUserId,
+//                        u -> calendarMap.get(u.getCalendarId())
+//                ));
+//
+//        log.info("fetch monthly leaveBalance");
+//        List<LeaveBalanceEntity> list =
+//                leaveBalanceAdapter.findBalancesByMonthYearAndAccrualType(month, year, AccrualType.MONTHLY);
+//
+//        Map<String, List<LeaveBalanceEntity>> monthlyLeaveBalance =
+//                list.stream()
+//                        .collect(Collectors.groupingBy(lb -> lb.getUser().getUserId()));
+//
+//        log.info("fetch unpaid requests");
+//        List<TimeOffRequestEntity> unpaidRequests = timeOffRequestAdapter.findAllUnpaidRequest( month, year, Compensation.UNPAID, Status.APPROVED);
+//        Map<String, List<TimeOffRequestEntity>> unpaidMap =
+//                unpaidRequests.stream()
+//                        .collect(Collectors.groupingBy(r -> r.getUser().getUserId()));
+//
+//        log.info("fetch annual requests");
+//        List<TimeOffRequestEntity> annualRequests = timeOffRequestAdapter.findAllAnnualRequests(month, year, Compensation.PAID, Status.APPROVED, AccrualType.ANNUALLY);
+//        Map<String, List<TimeOffRequestEntity>> annualRequestsMap =
+//                annualRequests.stream()
+//                        .collect(Collectors.groupingBy(r -> r.getUser().getUserId()));
+//
+//        log.info("fetch annual leaveBalance");
+//        List<LeaveBalanceEntity> leaveBalanceEntities = leaveBalanceAdapter.findBalancesByYearAndAccrualType(year, AccrualType.ANNUALLY);
+//        Map<String, List<LeaveBalanceEntity>> leaveBalanceMap =
+//                leaveBalanceEntities.stream()
+//                        .collect(Collectors.groupingBy(lb -> lb.getUser().getUserId()));
+//
+//        log.info("fetch fixed requests");
+//        List<TimeOffRequestEntity> fixedRequests = timeOffRequestAdapter.findFixedRequests(month, year, Status.APPROVED, AccrualType.FIXED);
+//        Map<String, List<TimeOffRequestEntity>> fixedRequestsMap =
+//                fixedRequests.stream()
+//                        .collect(Collectors.groupingBy(
+//                                r -> r.getUser().getUserId()));
+//
+//        log.info("fetch fixed leaveBalance");
+//        List<LeaveBalanceEntity> fixedLeaveBalance = leaveBalanceAdapter.findAllFixedAccrual(month, year, AccrualType.FIXED);
+//        Map<String, Double> balanceMap = fixedLeaveBalance.stream()
+//                .collect(Collectors.toMap(
+//                        lb -> lb.getUser().getUserId(),
+//                        lb -> lb.getBalanceUnits() != null ? lb.getBalanceUnits() : 0.0,
+//                        (existing, replacement) -> existing
+//                ));
+//
+//        for (String userId : userIds){
+//            log.info("loop starts");
+//            MonthlySummaryEntity summaryEntity = new MonthlySummaryEntity();
+//            int totalLeavesTaken = 0;
+//            int paidLeavesTaken = 0;
+//            int unpaidLeavesTaken = 0;
+//            int totalUnitsAvailable = 0;
+//            int balanceUnits = 0;
+//            int halfDayUnits = 0;
+//            int fullDayUnits = 0;
+//            int hoursUnits = 0;
+//            for (LeaveBalanceEntity entity : monthlyLeaveBalance.getOrDefault(userId, Collections.emptyList())){
+//                if (entity.getPolicy().getEntitledType() == EntitledType.DAY){
+//                    fullDayUnits += entity.getLeaveTakenUnits();
+//                    paidLeavesTaken += entity.getLeaveTakenUnits();
+//                    totalUnitsAvailable += entity.getTotalUnits();
+//                    balanceUnits += entity.getBalanceUnits();
+//                }
+//                else if (entity.getPolicy().getEntitledType() == EntitledType.HALF_DAY){
+//                    halfDayUnits += (int)(entity.getLeaveTakenUnits()*2);
+//                    paidLeavesTaken += (int)(entity.getLeaveTakenUnits()*2);
+//                    totalUnitsAvailable += (int)(entity.getTotalUnits()*2);
+//                    balanceUnits += entity.getBalanceUnits();
+//                }
+//                else {
+//                    hoursUnits += entity.getLeaveTakenUnits();
+//                    paidLeavesTaken += entity.getLeaveTakenUnits();
+//                    totalUnitsAvailable += entity.getTotalUnits();
+//                    balanceUnits += entity.getBalanceUnits();
+//                }
+//            }
+//            for (TimeOffRequestEntity request : unpaidMap.getOrDefault(userId, Collections.emptyList())){
+//                unpaidLeavesTaken += request.getUnitsRequested();
+//                fullDayUnits += request.getUnitsRequested();
+//            }
+//            for (TimeOffRequestEntity entity : annualRequestsMap.getOrDefault(userId, Collections.emptyList())){
+//                if (entity.getPolicy().getEntitledType() == EntitledType.DAY){
+//                    fullDayUnits += entity.getUnitsRequested();
+//                    paidLeavesTaken += entity.getUnitsRequested();
+//                }
+//                else if (entity.getPolicy().getEntitledType() == EntitledType.HALF_DAY){
+//                    halfDayUnits += (2*entity.getUnitsRequested());
+//                    paidLeavesTaken +=(2*entity.getUnitsRequested());
+//                }
+//                else {
+//                    hoursUnits += entity.getUnitsRequested();
+//                    paidLeavesTaken += entity.getUnitsRequested();
+//                }
+//            }
+//            for (LeaveBalanceEntity leaveBalance : leaveBalanceMap.getOrDefault(userId, Collections.emptyList())){
+//                totalUnitsAvailable += leaveBalance.getTotalUnits();
+//                balanceUnits += leaveBalance.getBalanceUnits();
+//            }
+//            for (TimeOffRequestEntity request : fixedRequestsMap.getOrDefault(userId, Collections.emptyList())){
+//                LocalDate monthStart = LocalDate.of(year, month, 1);
+//                LocalDate monthEnd = monthStart.withDayOfMonth(monthStart.lengthOfMonth());
+//                LocalDate effectiveStart = request.getStartDate().isBefore(monthStart) ? monthStart : request.getStartDate();
+//                LocalDate effectiveEnd = request.getEndDate().isAfter(monthEnd) ? monthEnd : request.getEndDate();
+//                int days = (int)ChronoUnit.DAYS.between(effectiveStart, effectiveEnd) + 1;
+//                fullDayUnits += days;
+//                paidLeavesTaken += fullDayUnits;
+//                totalUnitsAvailable += request.getPolicy().getEntitledUnits();
+//                balanceUnits += balanceMap.getOrDefault(userId, 0.0);
+//                if (effectiveStart.equals(request.getStartDate()) && !effectiveEnd.equals(request.getEndDate())){
+//                    balanceUnits = balanceUnits - request.getEndDate().getDayOfMonth();
+//                }
+//            }
+//            int restDays = calculateRestDays(userId, userWorkingDaysMap, userHolidayMap.get(userId), daysInMonth, year, month);
+//            List<TimesheetEntity> timesheetEntities = timesheetAdapter.getTimesheetByUserIds(userId, year, month);
+//            totalLeavesTaken = paidLeavesTaken + unpaidLeavesTaken;
+//            summaryEntity.setUserId(userId);
+//            summaryEntity.setYear(year);
+//            summaryEntity.setMonth(month);
+//            summaryEntity.setTotalLeavesTaken(totalLeavesTaken);
+//            summaryEntity.setPaidLeavesTaken(paidLeavesTaken);
+//            summaryEntity.setUnpaidLeavesTaken(unpaidLeavesTaken);
+//            summaryEntity.setFullDayUnits(fullDayUnits);
+//            summaryEntity.setHalfDayUnits(halfDayUnits);
+//            summaryEntity.setTotalUnitsAvailable(totalUnitsAvailable);
+//            summaryEntity.setBalanceUnits(balanceUnits);
+//            summaryEntity.setHoursUnits(hoursUnits);
+//            summaryEntity.setTotalPresentDays(timesheetEntities.size());
+//            summaryEntity.setTotalWorkingDays(daysInMonth-restDays);
+//            log.info("added summary");
+//            summaryEntityList.add(summaryEntity);
+//        }
+//        leaveBalanceAdapter.saveAllSummary(summaryEntityList);
+//        log.info("saved all summary");
+//    }
 
+//    public int calculateRestDays(String userId, Map<String, Set<DayOfWeek>> userWorkingDaysMap, List<LocalDate> holidayDates,
+//                                 int daysInMonth, int year, int month) {
+//        int restDaysCount =0;
+//        for (int day = 1; day <= daysInMonth; day++) {
+//            LocalDate currentDate = LocalDate.of(year, month, day);
+//            if(!userWorkingDaysMap.get(userId).contains(currentDate.getDayOfWeek()) || holidayDates.contains(currentDate) ) {
+//                restDaysCount++;
+//            }
+//        }
+//        return restDaysCount;
+//    }
+
+    @Override
+    public void updateLeaveSummary(){
         LocalDate now = LocalDate.now(zoneId);
-        int year = now.getYear();
-        int month = now.getMonthValue()-1;
-        if (month ==0){
-            month =12;
-            year -= 1;
-        }
-        int daysInMonth = YearMonth.of(year, month).lengthOfMonth();
+        LocalDate previousDay = now.minusDays(1);
+        int day = previousDay.getDayOfMonth();
+        int month = previousDay.getMonthValue();
+        int year = previousDay.getYear();
         List<MonthlySummaryEntity> summaryEntityList = new ArrayList<>();
-        log.info(" fetch userPolicy list");
+        log.info("getAll users");
         List<String> usersId = userAdapter.getAllActiveUsers();
-        List<String> userIds = userPolicyAdapter.findAllUserIdsInUserPolicies(LocalDate.of(year, month, YearMonth.of(year, month).lengthOfMonth()), usersId);
+        List<String> userIds = userPolicyAdapter.findAllUserIdsInUserPolicies(previousDay, usersId);
+        List<CalendarHolidayProjection> calendarHolidayList = calendarAdapter.findHolidayCalendarsByDate(previousDay);
+        List<UserCalendarProjection> userCalendarList = userAdapter.findCalendarIdsByUserIds(userIds.toArray(new String[0]));
+        Map<String, LocalDate> calendarHolidayMap =
+                calendarHolidayList.stream()
+                        .collect(Collectors.toMap(
+                                CalendarHolidayProjection::getCalendarId,
+                                CalendarHolidayProjection::getDate
+                        ));
+
+        log.info("user holiday map");
+        Map<String, LocalDate> userHolidayMap =
+                userCalendarList.stream()
+                        .filter(uc -> calendarHolidayMap.containsKey(uc.getCalendarId()))
+                        .collect(Collectors.toMap(
+                                UserCalendarProjection::getUserId,
+                                uc -> calendarHolidayMap.get(uc.getCalendarId())
+                        ));
+
+        log.info("working day");
         TimesheetHelper.WorkScheduleResult result = timesheetHelper.fetchWorkSchedulesAndDays(userIds.toArray(new String[0]));
         Map<String, Set< DayOfWeek >> userWorkingDaysMap = result.getUserWorkingDaysMap();
-        List<UserCalendarProjection> userCalendarList = userAdapter.findCalendarIdsByUserIds(userIds.toArray(new String[0]));
-        List<CalendarHolidayProjection> rows = calendarAdapter.findAllHolidayDates();
-        Map<String, List<LocalDate>> calendarMap = rows.stream()
-                .collect(Collectors.groupingBy(
-                        CalendarHolidayProjection::getCalendarId,
-                        Collectors.mapping(CalendarHolidayProjection::getDate, Collectors.toList())
-                ));
-        Map<String, List<LocalDate>> userHolidayMap = userCalendarList.stream()
+
+        Map<String, TimesheetEntity> userTimesheetMap = timesheetAdapter.findAllTimesheetsByDate(previousDay)
+                .stream()
                 .collect(Collectors.toMap(
-                        UserCalendarProjection::getUserId,
-                        u -> calendarMap.get(u.getCalendarId())
+                        t -> t.getUser().getUserId(),
+                        Function.identity()
                 ));
 
-        log.info("fetch monthly leaveBalance");
-        List<LeaveBalanceEntity> list =
-                leaveBalanceAdapter.findBalancesByMonthYearAndAccrualType(month, year, AccrualType.MONTHLY);
-
-        Map<String, List<LeaveBalanceEntity>> monthlyLeaveBalance =
-                list.stream()
-                        .collect(Collectors.groupingBy(lb -> lb.getUser().getUserId()));
-
-        log.info("fetch unpaid requests");
-        List<TimeOffRequestEntity> unpaidRequests = timeOffRequestAdapter.findAllUnpaidRequest( month, year, Compensation.UNPAID, Status.APPROVED);
-        Map<String, List<TimeOffRequestEntity>> unpaidMap =
-                unpaidRequests.stream()
-                        .collect(Collectors.groupingBy(r -> r.getUser().getUserId()));
-
-        log.info("fetch annual requests");
-        List<TimeOffRequestEntity> annualRequests = timeOffRequestAdapter.findAllAnnualRequests(month, year, Compensation.PAID, Status.APPROVED, AccrualType.ANNUALLY);
-        Map<String, List<TimeOffRequestEntity>> annualRequestsMap =
-                annualRequests.stream()
-                        .collect(Collectors.groupingBy(r -> r.getUser().getUserId()));
-
-        log.info("fetch annual leaveBalance");
-        List<LeaveBalanceEntity> leaveBalanceEntities = leaveBalanceAdapter.findBalancesByYearAndAccrualType(year, AccrualType.ANNUALLY);
-        Map<String, List<LeaveBalanceEntity>> leaveBalanceMap =
-                leaveBalanceEntities.stream()
-                        .collect(Collectors.groupingBy(lb -> lb.getUser().getUserId()));
-
-        log.info("fetch fixed requests");
-        List<TimeOffRequestEntity> fixedRequests = timeOffRequestAdapter.findFixedRequests(month, year, Status.APPROVED, AccrualType.FIXED);
-        Map<String, List<TimeOffRequestEntity>> fixedRequestsMap =
-                fixedRequests.stream()
+        List<TimeOffRequestEntity> approvedRequests = timeOffRequestAdapter.findAllRequestByDate(previousDay, Status.APPROVED);
+        Map<EntitledType, Set<String>> usersByEntitledType =
+                approvedRequests.stream()
                         .collect(Collectors.groupingBy(
-                                r -> r.getUser().getUserId()));
+                                r -> r.getPolicy().getEntitledType(),
+                                () -> new EnumMap<>(EntitledType.class),
+                                Collectors.mapping(
+                                        r -> r.getUser().getUserId(),
+                                        Collectors.toSet()
+                                )
+                        ));
 
-        log.info("fetch fixed leaveBalance");
-        List<LeaveBalanceEntity> fixedLeaveBalance = leaveBalanceAdapter.findAllFixedAccrual(month, year, AccrualType.FIXED);
-        Map<String, Double> balanceMap = fixedLeaveBalance.stream()
-                .collect(Collectors.toMap(
-                        lb -> lb.getUser().getUserId(),
-                        lb -> lb.getBalanceUnits() != null ? lb.getBalanceUnits() : 0.0,
-                        (existing, replacement) -> existing
-                ));
+        List<LeaveBalanceEntity> balances =
+                leaveBalanceAdapter.findActiveBalances(previousDay);
+        Map<String, List<LeaveBalanceEntity>> userLeaveBalanceMap =
+                balances.stream()
+                        .collect(Collectors.groupingBy(
+                                lb -> lb.getUser().getUserId()
+                        ));
 
         for (String userId : userIds){
-            log.info("loop starts");
-            MonthlySummaryEntity summaryEntity = new MonthlySummaryEntity();
-            int totalLeavesTaken = 0;
             int paidLeavesTaken = 0;
-            int unpaidLeavesTaken = 0;
+            int unPaidLeavesTaken = 0;
+            int fullDayUnits = 0;
             int totalUnitsAvailable = 0;
             int balanceUnits = 0;
-            int halfDayUnits = 0;
-            int fullDayUnits = 0;
-            int hoursUnits = 0;
-            for (LeaveBalanceEntity entity : monthlyLeaveBalance.getOrDefault(userId, Collections.emptyList())){
-                if (entity.getPolicy().getEntitledType() == EntitledType.DAY){
-                    fullDayUnits += entity.getLeaveTakenUnits();
-                    paidLeavesTaken += entity.getLeaveTakenUnits();
-                    totalUnitsAvailable += entity.getTotalUnits();
-                    balanceUnits += entity.getBalanceUnits();
+            MonthlySummaryEntity monthlySummary =
+                    (day == 1)
+                            ? new MonthlySummaryEntity()
+                            : leaveBalanceAdapter
+                            .getMonthlySummary(userId, month, year)
+                            .orElseGet(MonthlySummaryEntity::new);
+            if (monthlySummary.getId() == null) {
+                monthlySummary.setUserId(userId);
+                monthlySummary.setYear(year);
+                monthlySummary.setMonth(month);
+            }
+            if(!userWorkingDaysMap.get(userId).contains(previousDay.getDayOfWeek()) || userHolidayMap.containsKey(userId) ) {
+                monthlySummary.setTotalHolidays(monthlySummary.getTotalHolidays() + 1);
+            }
+            else{
+                monthlySummary.setTotalWorkingDays(monthlySummary.getTotalWorkingDays()+1);
+                if (userTimesheetMap.containsKey(userId)){
+                    monthlySummary.setTotalPresentDays(monthlySummary.getTotalPresentDays()+1);
+                    if (usersByEntitledType.getOrDefault(EntitledType.HALF_DAY, Set.of()).contains(userId)){
+                       monthlySummary.setHalfDayUnits(monthlySummary.getHalfDayUnits()+1);
+                       paidLeavesTaken++;
+                    }
+                    else if (usersByEntitledType.getOrDefault(EntitledType.HOURS, Set.of()).contains(userId)){
+                       monthlySummary.setHoursUnits(monthlySummary.getHoursUnits()+1);
+                       paidLeavesTaken++;
+                    }
                 }
-                else if (entity.getPolicy().getEntitledType() == EntitledType.HALF_DAY){
-                    halfDayUnits += (int)(entity.getLeaveTakenUnits()*2);
-                    paidLeavesTaken += (int)(entity.getLeaveTakenUnits()*2);
-                    totalUnitsAvailable += (int)(entity.getTotalUnits()*2);
-                    balanceUnits += entity.getBalanceUnits();
+                else if (usersByEntitledType.getOrDefault(EntitledType.DAY, Set.of()).contains(userId)){
+                       fullDayUnits++;
+                       paidLeavesTaken++;
                 }
                 else {
-                    hoursUnits += entity.getLeaveTakenUnits();
-                    paidLeavesTaken += entity.getLeaveTakenUnits();
-                    totalUnitsAvailable += entity.getTotalUnits();
-                    balanceUnits += entity.getBalanceUnits();
+                      monthlySummary.setUnpaidLeavesTaken(monthlySummary.getUnpaidLeavesTaken()+1);
+                      unPaidLeavesTaken++;
+                      fullDayUnits++;
                 }
+                monthlySummary.setFullDayUnits(monthlySummary.getFullDayUnits()+fullDayUnits);
+                monthlySummary.setPaidLeavesTaken(monthlySummary.getPaidLeavesTaken()+paidLeavesTaken);
+                monthlySummary.setTotalLeavesTaken(monthlySummary.getTotalLeavesTaken() + paidLeavesTaken + unPaidLeavesTaken);
             }
-            for (TimeOffRequestEntity request : unpaidMap.getOrDefault(userId, Collections.emptyList())){
-                unpaidLeavesTaken += request.getUnitsRequested();
-                fullDayUnits += request.getUnitsRequested();
+            for (LeaveBalanceEntity entity: userLeaveBalanceMap.getOrDefault(userId, Collections.emptyList())){
+                  if (entity.getPolicy().getEntitledType() == EntitledType.HALF_DAY){
+                      totalUnitsAvailable +=(int) (2*entity.getTotalUnits());
+                      balanceUnits += (int)(2*entity.getBalanceUnits());
+                  }
+                  else {
+                      totalUnitsAvailable += (int) (1*entity.getTotalUnits());
+                      balanceUnits += (int)(1*entity.getBalanceUnits());
+                  }
             }
-            for (TimeOffRequestEntity entity : annualRequestsMap.getOrDefault(userId, Collections.emptyList())){
-                if (entity.getPolicy().getEntitledType() == EntitledType.DAY){
-                    fullDayUnits += entity.getUnitsRequested();
-                    paidLeavesTaken += entity.getUnitsRequested();
-                }
-                else if (entity.getPolicy().getEntitledType() == EntitledType.HALF_DAY){
-                    halfDayUnits += (2*entity.getUnitsRequested());
-                    paidLeavesTaken +=(2*entity.getUnitsRequested());
-                }
-                else {
-                    hoursUnits += entity.getUnitsRequested();
-                    paidLeavesTaken += entity.getUnitsRequested();
-                }
-            }
-            for (LeaveBalanceEntity leaveBalance : leaveBalanceMap.getOrDefault(userId, Collections.emptyList())){
-                totalUnitsAvailable += leaveBalance.getTotalUnits();
-                balanceUnits += leaveBalance.getBalanceUnits();
-            }
-            for (TimeOffRequestEntity request : fixedRequestsMap.getOrDefault(userId, Collections.emptyList())){
-                LocalDate monthStart = LocalDate.of(year, month, 1);
-                LocalDate monthEnd = monthStart.withDayOfMonth(monthStart.lengthOfMonth());
-                LocalDate effectiveStart = request.getStartDate().isBefore(monthStart) ? monthStart : request.getStartDate();
-                LocalDate effectiveEnd = request.getEndDate().isAfter(monthEnd) ? monthEnd : request.getEndDate();
-                int days = (int)ChronoUnit.DAYS.between(effectiveStart, effectiveEnd) + 1;
-                fullDayUnits += days;
-                paidLeavesTaken += fullDayUnits;
-                totalUnitsAvailable += request.getPolicy().getEntitledUnits();
-                balanceUnits += balanceMap.getOrDefault(userId, 0.0);
-                if (effectiveStart.equals(request.getStartDate()) && !effectiveEnd.equals(request.getEndDate())){
-                    balanceUnits = balanceUnits - request.getEndDate().getDayOfMonth();
-                }
-            }
-            int restDays = calculateRestDays(userId, userWorkingDaysMap, userHolidayMap.get(userId), daysInMonth, year, month);
-            List<TimesheetEntity> timesheetEntities = timesheetAdapter.getTimesheetByUserIds(userId, year, month);
-            totalLeavesTaken = paidLeavesTaken + unpaidLeavesTaken;
-            summaryEntity.setUserId(userId);
-            summaryEntity.setYear(year);
-            summaryEntity.setMonth(month);
-            summaryEntity.setTotalLeavesTaken(totalLeavesTaken);
-            summaryEntity.setPaidLeavesTaken(paidLeavesTaken);
-            summaryEntity.setUnpaidLeavesTaken(unpaidLeavesTaken);
-            summaryEntity.setFullDayUnits(fullDayUnits);
-            summaryEntity.setHalfDayUnits(halfDayUnits);
-            summaryEntity.setTotalUnitsAvailable(totalUnitsAvailable);
-            summaryEntity.setBalanceUnits(balanceUnits);
-            summaryEntity.setHoursUnits(hoursUnits);
-            summaryEntity.setTotalPresentDays(timesheetEntities.size());
-            summaryEntity.setTotalWorkingDays(daysInMonth-restDays);
-            log.info("added summary");
-            summaryEntityList.add(summaryEntity);
+            monthlySummary.setTotalUnitsAvailable(totalUnitsAvailable);
+            monthlySummary.setBalanceUnits(balanceUnits);
+            summaryEntityList.add(monthlySummary);
         }
         leaveBalanceAdapter.saveAllSummary(summaryEntityList);
-        log.info("saved all summary");
-    }
-
-    public int calculateRestDays(String userId, Map<String, Set<DayOfWeek>> userWorkingDaysMap, List<LocalDate> holidayDates,
-                                 int daysInMonth, int year, int month) {
-        int restDaysCount =0;
-        for (int day = 1; day <= daysInMonth; day++) {
-            LocalDate currentDate = LocalDate.of(year, month, day);
-            if(!userWorkingDaysMap.get(userId).contains(currentDate.getDayOfWeek()) || holidayDates.contains(currentDate) ) {
-                restDaysCount++;
-            }
-        }
-        return restDaysCount;
+        log.info("saved summary");
     }
 
 }
