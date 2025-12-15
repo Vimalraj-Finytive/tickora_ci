@@ -14,7 +14,6 @@ import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
 import com.uniq.tms.tms_microservice.shared.dto.EnumDto;
 import com.uniq.tms.tms_microservice.shared.dto.EnumModel;
 import com.uniq.tms.tms_microservice.shared.helper.AuthHelper;
-import org.springframework.core.io.Resource;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.*;
@@ -22,7 +21,6 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.mapper.TimeOffPolic
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.*;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeoffPoliciesDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeoffPolicyDto;
-
 import java.time.LocalDate;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeOffPoliciesModel;
 import java.util.List;
@@ -51,7 +49,7 @@ public class TimeOffFacade {
         requestDto.setUserId(userId);
         TimeOffRequest request = timeoffPolicyDtoMapper.toRequestModel(requestDto);
         timeOffRequestService.createRequest(request);
-        return new ApiResponse<>(200,"Requested TimeOff Successfully",null);
+        return new ApiResponse<>(201,"Requested TimeOff Successfully",null);
     }
 
     public ApiResponse<EmployeeStatusUpdateDto> employeeUpdateStatus(EmployeeStatusUpdateDto dto){
@@ -124,8 +122,8 @@ public class TimeOffFacade {
         return new ApiResponse<>(200, "Policies fetched successfully", dtos);
     }
 
-    public ApiResponse<List<TimeoffPolicyDto>> getAllPolicy(){
-        List<TimeOffPoliciesModel> model=timeOffPolicyService.getAllPolicy();
+    public ApiResponse<List<TimeoffPolicyDto>> getAllPolicy(String type){
+        List<TimeOffPoliciesModel> model=timeOffPolicyService.getAllPolicy(type);
         List<TimeoffPolicyDto> dto=model.stream()
                 .map(timeoffPolicyDtoMapper::toPolicyDto)
                 .toList();

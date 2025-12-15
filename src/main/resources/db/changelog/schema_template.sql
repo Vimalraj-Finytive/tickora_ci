@@ -1527,6 +1527,8 @@ SELECT
     up.valid_from,
     up.valid_to,
     py.payroll_name,
+    o.org_name AS organization_name,
+    ot.org_type_name AS org_type,
     u.organization_id,
     u.active,
     r.hierarchy_level
@@ -1560,3 +1562,7 @@ LEFT JOIN ${schemaName}.user_payroll upay
     ON upay.user_id::text = u.user_id::text
 LEFT JOIN ${schemaName}.payroll py
     ON py.id::text = upay.payroll_id::text;
+LEFT JOIN organization o
+    ON o.organization_id::text = u.organization_id::text
+LEFT JOIN org_type ot
+    ON ot.org_type_id::text = o.org_type::text;

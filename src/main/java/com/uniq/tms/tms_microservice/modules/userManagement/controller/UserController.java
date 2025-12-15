@@ -99,7 +99,8 @@ public class UserController {
     }
 
     @GetMapping("/profile")
-    public ResponseEntity<ApiResponse> getUser(@RequestHeader("Authorization") String token, @RequestParam(required = false) String userId) {
+    public ResponseEntity<ApiResponse> getUser(@RequestHeader("Authorization") String token,
+                                               @RequestParam(required = false) String userId) {
         ApiResponse response = userFacade.getUserProfile(userId);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }

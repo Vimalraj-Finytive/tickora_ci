@@ -315,7 +315,7 @@ public class UserFacade {
         BulkRoleUpdateModel model = userDtoMapper.toModel(request);
         BulkRoleUpdateModel updateRole = userService.updateMultipleUserRoles(model, orgId);
         BulkRoleUpdateDto dto = userDtoMapper.toDto(updateRole);
-        String message = String.format("Role Updated successfully. Uploaded Count : %d , SkippedCount : %d", dto.getUpdateCount(), dto.getSkippedCount());
+        String message = String.format("Role Updated successfully. Updated Count : %d , Skipped Count : %d", dto.getUpdateCount(), dto.getSkippedCount());
         return new ApiResponse<>(200, message, null);
     }
 

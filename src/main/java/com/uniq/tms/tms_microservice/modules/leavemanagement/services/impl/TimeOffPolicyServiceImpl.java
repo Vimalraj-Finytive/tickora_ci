@@ -12,10 +12,16 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.services.TimeOffPol
 import com.uniq.tms.tms_microservice.modules.userManagement.adapter.UserAdapter;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
 import com.uniq.tms.tms_microservice.shared.dto.EnumModel;
+import com.uniq.tms.tms_microservice.shared.helper.AuthHelper;
+import com.uniq.tms.tms_microservice.shared.security.cache.CacheKeyConfig;
+import com.uniq.tms.tms_microservice.shared.security.cache.CacheReloadHandlerRegistry;
+import com.uniq.tms.tms_microservice.shared.util.CacheEventPublisherUtil;
+import com.uniq.tms.tms_microservice.shared.util.CacheKeyUtil;
 import jakarta.transaction.Transactional;
-import org.apache.commons.beanutils.BeanUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
@@ -36,16 +42,27 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
     private final UserPolicyAdapter userPolicyAdapter;
     private final LeaveBalanceAdapter leaveBalanceAdapter;
     private final TimeOffPolicyAdapter timeOffPolicyAdapter;
+    private final CacheKeyConfig cacheKeyConfig;
+    private final CacheReloadHandlerRegistry cacheReloadHandlerRegistry;
+    private final ApplicationEventPublisher publisher;
+    private final AuthHelper authHelper;
 
     public TimeOffPolicyServiceImpl(IdGenerationService idGenerationService, UserAdapter userAdapter, TimeOffPolicyEntityMapper timeOffPolicyEntityMapper, UserPolicyAdapter userPolicyAdapter, LeaveBalanceAdapter leaveBalanceAdapter,
-                                    TimeOffPolicyAdapter timeOffPolicyAdapter) {
+                                    TimeOffPolicyAdapter timeOffPolicyAdapter, CacheKeyConfig cacheKeyConfig, CacheReloadHandlerRegistry cacheReloadHandlerRegistry, ApplicationEventPublisher publisher, CacheKeyUtil cacheKeyUtil, AuthHelper authHelper) {
         this.idGenerationService = idGenerationService;
         this.userAdapter = userAdapter;
         this.timeOffPolicyEntityMapper = timeOffPolicyEntityMapper;
         this.userPolicyAdapter = userPolicyAdapter;
         this.leaveBalanceAdapter = leaveBalanceAdapter;
         this.timeOffPolicyAdapter = timeOffPolicyAdapter;
+        this.cacheKeyConfig = cacheKeyConfig;
+        this.cacheReloadHandlerRegistry = cacheReloadHandlerRegistry;
+        this.publisher = publisher;
+        this.authHelper = authHelper;
     }
+
+    @Value("${cache.redis.enabled}")
+    private boolean isRedisEnabled;
 
     @Override
     @Transactional
@@ -244,7 +261,8 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
     @Override
     @Transactional
     public void assignPolicies(TimeOffPolicyBulkAssignModel request) {
-
+        String orgId = authHelper.getOrgId();
+        String schema = authHelper.getSchema();
         Set<String> finalUsers = getFinalUserSet(request.getUserIds(), request.getGroupIds());
         if (finalUsers.isEmpty() ||
                 request.getPolicyId() == null ||
@@ -300,9 +318,7 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
             UserPolicyEntity newUP = buildUserPolicy(policy, userEntity, userFrom, userTo);
             newUP.setActive(true);
             assignList.add(newUP);
-
             if (policy.getCompensation() != Compensation.UNPAID) {
-
                 LeaveBalanceEntity lb = buildLeaveBalance(
                         policy,
                         userId,
@@ -310,21 +326,31 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
                         userTo,
                         totalUnits
                 );
-
                 lb.setLeaveTakenUnits(0.0);
                 lb.setBalanceUnits(totalUnits);
                 lb.setActive(true);
-
                 balanceList.add(lb);
             }
         }
-
-
         if (!assignList.isEmpty()) userPolicyAdapter.saveUserPolicies(assignList);
         if (!balanceList.isEmpty()) leaveBalanceAdapter.saveLeaveBalances(balanceList);
+        if (isRedisEnabled) {
+            try {
+                CacheEventPublisherUtil.syncReloadThenPublish(
+                        publisher,
+                        cacheKeyConfig.getUsers(),
+                        orgId,
+                        schema,
+                        cacheReloadHandlerRegistry
+                );
+                log.info("User cache reload event published after assigned Policies to a user for orgId={}", orgId);
+            } catch (Exception e) {
+                log.error("Failed to publish User cache reload event for orgId={}", orgId, e);
+            }
+        } else {
+            log.info("Redis is not enabled or RedisTemplate is null. Skipping cache reload for orgId={}", orgId);
+        }
     }
-
-
 
     @Override
     @Transactional
@@ -387,10 +413,25 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
     }
 
     @Override
-    public List<TimeOffPoliciesModel> getAllPolicy() {
-        List<TimeOffPolicyEntity> entities= timeOffPolicyAdapter.findByIsActiveTrue();
-        if (entities==null||entities.isEmpty())throw new  ResponseStatusException(HttpStatus.CONFLICT, "No Data Found");
-        return entities.stream().map(timeOffPolicyEntityMapper::toModel).toList();
+    public List<TimeOffPoliciesModel> getAllPolicy(String type) {
+        try {
+            List<TimeOffPolicyEntity> entities;
+            if ("all".equalsIgnoreCase(type)) {
+                entities = timeOffPolicyAdapter.findByIsActiveTrue();
+            } else {
+                entities = timeOffPolicyAdapter.findPoliciesList();
+            }
+            if (entities == null || entities.isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No policies found");
+            }
+            return entities.stream()
+                    .map(timeOffPolicyEntityMapper::toModel)
+                    .collect(Collectors.toList());
+        } catch (ResponseStatusException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to fetch policies");
+        }
     }
 
     @Override
@@ -641,7 +682,8 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
     @Override
     @Transactional
     public void editUserPolicy(List<EditUserPolicyModel> reqList) {
-
+        String orgId = authHelper.getOrgId();
+        String schema = authHelper.getSchema();
         if (reqList == null || reqList.isEmpty()) {
             throw new IllegalArgumentException("Request is empty");
         }
@@ -671,13 +713,11 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
                 throw new IllegalArgumentException("Start date should be today or after");
             }
             if (existingMap.containsKey(policyId)) {
-
                 UserPolicyEntity up = existingMap.get(policyId);
                 up.setValidFrom(validFrom);
                 up.setActive(true);
                 up.setUpdatedAt(LocalDateTime.now());
                 toSaveUP.add(up);
-
             } else {
                 TimeOffPolicyBulkAssignModel assignReq = new TimeOffPolicyBulkAssignModel();
                 assignReq.setPolicyId(policyId);
@@ -691,20 +731,17 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
         for (UserPolicyEntity existing : existingPolicies) {
 
             String policyId = existing.getPolicy().getPolicyId();
-
+            if(existing.getPolicy().getDefault().equals(Boolean.TRUE)){
+                continue;
+            }
             if (!requestedPolicyIds.contains(policyId)) {
-
                 existing.setActive(false);
                 existing.setUpdatedAt(LocalDateTime.now());
                 toSaveUP.add(existing);
-
                 TimeOffPolicyEntity policy = existing.getPolicy();
-
                 if (policy.getCompensation() != Compensation.UNPAID) {
-
                     LeaveBalanceEntity lb =
                             leaveBalanceAdapter.findActiveBalanceByUserIdAndPolicy(userId, policyId);
-
                     if (lb != null) {
                         lb.setActive(false);
                         lb.setUpdatedAt(LocalDateTime.now());
@@ -721,7 +758,21 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
         if (!toSaveLB.isEmpty()) {
             leaveBalanceAdapter.saveLeaveBalances(toSaveLB);
         }
+        if (isRedisEnabled) {
+            try {
+                CacheEventPublisherUtil.syncReloadThenPublish(
+                        publisher,
+                        cacheKeyConfig.getUsers(),
+                        orgId,
+                        schema,
+                        cacheReloadHandlerRegistry
+                );
+                log.info("User cache reload event published after Edited Policies fo a user for orgId={}", orgId);
+            } catch (Exception e) {
+                log.error("Failed to publish User cache reload event for orgId={}", orgId, e);
+            }
+        } else {
+            log.info("Redis is not enabled or RedisTemplate is null. Skipping cache reload for orgId={}", orgId);
+        }
     }
-
-
 }

@@ -5,9 +5,7 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.LeaveBalanc
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.TimeOffPolicyAdapter;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.TimeOffRequestAdapter;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.UserPolicyAdapter;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeOffExportDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeOffExportRequestDto;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.ViewerDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.LeaveBalanceEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeOffPolicyEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeOffRequestEntity;
@@ -24,7 +22,6 @@ import com.uniq.tms.tms_microservice.modules.timesheetManagement.enums.Timesheet
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.services.TimesheetService;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
 import com.uniq.tms.tms_microservice.modules.userManagement.enums.MemberType;
-import com.uniq.tms.tms_microservice.modules.userManagement.enums.RoleName;
 import com.uniq.tms.tms_microservice.modules.userManagement.enums.UserRole;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.FixedWorkScheduleEntity;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.FlexibleWorkScheduleEntity;
@@ -41,7 +38,6 @@ import com.uniq.tms.tms_microservice.shared.util.CacheKeyUtil;
 import jakarta.transaction.Transactional;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.bouncycastle.oer.Switch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -144,7 +140,7 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
         }
         TimeOffPolicyEntity policy = timeOffPolicyAdapter.findPolicyById(request.getPolicyId());
         UserEntity user = userAdapter.getUserById(request.getUserId());
-        if (user.getRequestApproverId() == null || user.getUserId().equals(user.getRequestApproverId())) {
+        if (user.getRequestApproverId() == null || user.getRequestApproverId().isEmpty()) {
             throw new IllegalArgumentException("No request approver is associated with your profile. Please contact your admin to proceed.");
         }
         UserEntity approver = userAdapter.findUserByOrgIdAndUserId(authHelper.getOrgId(),user.getRequestApproverId());
@@ -152,6 +148,11 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
             throw new IllegalArgumentException("Your request approver is inactive. Please contact your admin.");
         }
         WorkScheduleEntity workSchedule = user.getWorkSchedule();
+        if (workSchedule == null) {
+            throw new IllegalArgumentException(
+                    "Work schedule is not assigned. Please contact your admin."
+            );
+        }
         double days = ChronoUnit.DAYS.between(request.getStartDate(), request.getEndDate()) + 1;
         if (policy.getEntitledType() == EntitledType.DAY && days != request.getUnitsRequested()) {
             throw new IllegalArgumentException("The specified units do not align with the selected date range.");
@@ -315,18 +316,11 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
     @Override
     @Transactional
     public void employeeUpdateStatus(EmployeeStatusUpdate model) {
-
-        if (model.getStartDate() != null) {
-            boolean validUserPolicy = userPolicyAdapter.existsValidUserPolicy(model.getPolicyId(), model.getUserId(), model.getStartDate(), model.getEndDate());
-            if (!validUserPolicy) {
-                throw new IllegalStateException("Invalid policy for the given date.");
-            }
-        }
-//        TimeOffRequestEntity entity = timeOffRequestAdapter.getTimeoffRequest(model.getPolicyId(), model.getUserId(), model.getRequestDate());
         TimeOffRequestEntity entity = timeOffRequestAdapter.findByRequestId(model.getRequestId());
         WorkScheduleEntity workSchedule = entity.getUser().getWorkSchedule();
-        if (LocalDate.now(zoneId).isAfter(entity.getStartDate()) || (model.getStatus() != null && !handleEmployeeRules(entity.getStatus(), model.getStatus()))) {
-            throw new IllegalArgumentException("Update not allowed");
+        if (LocalDate.now(zoneId).isAfter(entity.getStartDate()) ||
+                (model.getStatus() != null && !handleEmployeeRules(entity.getStatus(), model.getStatus()))) {
+            throw new IllegalArgumentException("Update not allowed because the leave start date has already passed.");
         }
         if (model.getStatus() != null && model.getStatus() == Status.CANCELLED) {
             if (entity.getPolicy().getCompensation() == Compensation.PAID) {
@@ -338,9 +332,7 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
             timesheetService.deleteTimesheet(model.getUserId(),model.getStartDate());
             return;
         }
-
         double days = ChronoUnit.DAYS.between(entity.getStartDate(), entity.getEndDate()) + 1;
-
         if (model.getReason() != null) {
             entity.setReason(model.getReason());
         }
@@ -357,8 +349,9 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
             return;
         }
         LeaveBalanceEntity leaveBalance = leaveBalanceAdapter.findForPeriod(entity.getPolicy().getPolicyId(), entity.getUser().getUserId(), entity.getStartDate(), entity.getEndDate());
-        if ((entity.getPolicy().getEntitledType() == EntitledType.DAY || entity.getPolicy().getEntitledType() == EntitledType.HALF_DAY) && (model.getUnitsRequested() != null && model.getStartDate() != null && model.getEndDate() != null)) {
-
+        if ((entity.getPolicy().getEntitledType() == EntitledType.DAY ||
+                entity.getPolicy().getEntitledType() == EntitledType.HALF_DAY) &&
+                (model.getUnitsRequested() != null && model.getStartDate() != null && model.getEndDate() != null)) {
             if (model.getUnitsRequested() != days) {
                 throw new IllegalArgumentException("Invalid paid leave request.");
             }
@@ -414,8 +407,6 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
     @Override
     @Transactional
     public void adminUpdateStatus(AdminStatusUpdate model) {
-//        checkCredentials(model.getPolicyId(), model.getRequestDate());
-//        TimeOffRequestEntity entity = timeOffRequestAdapter.getTimeoffRequest(model.getPolicyId(), model.getUserId(), model.getRequestDate());
         TimeOffRequestEntity entity = timeOffRequestAdapter.findByRequestId(model.getRequestId());
         boolean dateInvalid = LocalDate.now(zoneId).isAfter(entity.getStartDate());
         boolean statusInvalid = (model.getStatus() != null && !handleAdminRules(entity.getStatus(), model.getStatus()));
@@ -437,7 +428,7 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
                             log.info("Applying PAID_LEAVE to timesheet");
                             timesheetService.createTimesheet(
                                     TimesheetStatusEnum.PAID_LEAVE,
-                                    model.getUserId(),
+                                    entity.getUser().getUserId(),
                                     entity.getStartDate()
                             );
                         }
@@ -445,7 +436,7 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
                             log.info("Applying HALF_DAY leave to timesheet");
                             timesheetService.createTimesheet(
                                     TimesheetStatusEnum.HALF_DAY,
-                                    model.getUserId(),
+                                    entity.getUser().getUserId(),
                                     entity.getStartDate()
                             );
                         }
@@ -453,7 +444,7 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
                             log.info("Applying PERMISSION leave (Hours type)");
                             timesheetService.createTimesheet(
                                     TimesheetStatusEnum.PERMISSION,
-                                    model.getUserId(),
+                                    entity.getUser().getUserId(),
                                     entity.getStartDate()
                             );
                         }
@@ -462,7 +453,7 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
                     log.info("Policy is UNPAID → Marking ABSENT in timesheet");
                     timesheetService.createTimesheet(
                             TimesheetStatusEnum.UNPAID_LEAVE,
-                            model.getUserId(),
+                            entity.getUser().getUserId(),
                             entity.getStartDate()
                     );
                 }
@@ -472,14 +463,14 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
                 addLeaveBalance(saved, requested);
                 log.info("Leave balance restored for {} units", requested);
                 timesheetService.deleteTimesheet(
-                        model.getUserId(),
+                        entity.getUser().getUserId(),
                         entity.getStartDate()
                 );
                 log.info("Timesheet entry deleted for rejected request");
             }
         }
         log.info("adminUpdateStatus completed successfully for User: {}, Policy: {}",
-                model.getUserId(), model.getPolicyId());
+                entity.getUser().getUserId(), entity.getPolicy().getPolicyId());
     }
 
     private boolean handleAdminRules(Status current, Status next) {
@@ -491,7 +482,6 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
     }
 
     public void deductLeaveBalance(TimeOffRequestEntity entity, Integer requested) {
-
         LeaveBalanceEntity leaveBalance = leaveBalanceAdapter.findForPeriod(entity.getPolicy().getPolicyId(), entity.getUser().getUserId(), entity.getStartDate(), entity.getEndDate());
         if (leaveBalance != null && entity.getPolicy().getEntitledType() == EntitledType.HALF_DAY) {
             log.info("leave balance find");
