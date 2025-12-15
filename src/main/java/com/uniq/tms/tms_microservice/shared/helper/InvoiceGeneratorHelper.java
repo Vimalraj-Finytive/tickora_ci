@@ -8,6 +8,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Base64;
 import java.util.List;
 
@@ -39,7 +41,7 @@ public class InvoiceGeneratorHelper {
 
                 rows.append("<tr>")
                         .append("<td>").append(safe(plan.getPlanName())).append("</td>")
-                        .append("<td>").append(safe(p.getPaidAt())).append("</td>")
+                        .append("<td>").append(formatDateOnly(p.getPaidAt())).append("</td>")
                         .append("<td>").append(safe(plan.getBillingCycle())).append("</td>")
                         .append("<td>₹ ").append(String.format("%.2f", p.getAmount())).append("</td>")
                         .append("</tr>");
@@ -50,13 +52,13 @@ public class InvoiceGeneratorHelper {
 
         html = html.replace("{{paymentRows}}", rows.toString())
                 .replace("{{totalAmount}}", String.format("%.2f", totalAmount))
-                .replace("{{method}}", safe(latest != null ? latest.getMethod() : "N/A"))
-                .replace("{{paymentStatus}}", safe(latest != null ? latest.getPaymentStatus() : "N/A"))
+                .replace("{{method}}", formatMethod(latest != null ? latest.getMethod() : null))
+                .replace("{{paymentStatus}}", formatStatus(latest != null ? latest.getPaymentStatus() : null))
                 .replace("{{invoiceId}}", safe(latest != null ? latest.getInvoiceId() : "-"))
                 .replace("{{orgName}}", safe(OrgName))
                 .replace("{{email}}", safe(latest != null ? latest.getEmail() : "-"))
-                .replace("{{contact}}", safe(latest != null ? latest.getContact() : "-"))
-                .replace("{{invoiceDate}}", LocalDate.now().toString())
+                .replace("{{contact}}", normalizeContact(latest != null ? latest.getContact() : null))
+                .replace("{{invoiceDate}}", formatDateOnly(LocalDate.now().toString()))
                 .replace("{{logo}}", "data:image/png;base64," + base64Logo)
                 .replace("{{footerImage}}", "data:image/png;base64," + base64Footer)
                 .replace("{{subscribedUser}}",safe(plan.getSubscribedUser().toString()));
@@ -69,5 +71,39 @@ public class InvoiceGeneratorHelper {
 
     private static String safe(String val) {
         return val != null ? val : "-";
+    }
+
+    private static String normalizeContact(String contact) {
+        if (contact == null) return "-";
+        return contact.replaceAll("^\\+", "");
+    }
+
+    private static String formatMethod(String method) {
+        return method != null ? method.toUpperCase() : "-";
+    }
+
+    private static String formatStatus(String status) {
+        if (status == null || status.isEmpty()) return "-";
+        return status.substring(0,1).toUpperCase()
+                + status.substring(1).toLowerCase();
+    }
+
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd-MM-yyyy");
+
+    private static String formatDateOnly(String dateTime) {
+        if (dateTime == null || dateTime.isEmpty()) return "-";
+
+        try {
+            if (dateTime.contains("T")) {
+                return LocalDateTime.parse(dateTime).toLocalDate().format(DATE_FORMATTER);
+            }
+            if (dateTime.contains(" ")) {
+                return LocalDate.parse(dateTime.split(" ")[0]).format(DATE_FORMATTER);
+            }
+            return LocalDate.parse(dateTime).format(DATE_FORMATTER);
+
+        } catch (Exception e) {
+            return dateTime;
+        }
     }
 }
