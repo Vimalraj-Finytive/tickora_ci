@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface MonthlySummaryRepository extends JpaRepository<MonthlySummaryEntity,Long> {
@@ -19,6 +20,18 @@ public interface MonthlySummaryRepository extends JpaRepository<MonthlySummaryEn
     List<MonthlySummaryEntity> findByMonthAndYear(
             @Param("month") Integer month,
             @Param("year") Integer year
+    );
+
+    @Query("""
+        SELECT ms FROM MonthlySummaryEntity ms
+        WHERE ms.userId = :userId
+          AND ms.month = :month
+          AND ms.year = :year
+        """)
+    Optional<MonthlySummaryEntity> findMonthlySummary(
+            @Param("userId") String userId,
+            @Param("month") int month,
+            @Param("year") int year
     );
 
 }

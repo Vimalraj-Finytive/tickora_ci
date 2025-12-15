@@ -227,4 +227,14 @@ public interface TimeOffRequestRepository extends JpaRepository<TimeOffRequestEn
     );
 
     TimeOffRequestEntity findByTimeOffRequestId(Long requestId);
+    @Query("""
+    SELECT r
+    FROM TimeOffRequestEntity r
+    WHERE :date BETWEEN r.startDate AND r.endDate
+      AND r.status = :status
+    """)
+    List<TimeOffRequestEntity> findAllRequestByDate(
+            @Param("date") LocalDate date,
+            @Param("status") Status status
+    );
 }

@@ -7,6 +7,7 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.model.CalendarId;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.projection.CalendarHolidayProjection;
 
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -33,5 +34,6 @@ public interface CalendarAdapter {
     CalendarEntity findByCalendarIdAndDefaultTrue(CalendarId ids);
     CalendarEntity findDefaultCalendar();
     List<CalendarHolidayProjection> findAllHolidayDates();
+    List<CalendarHolidayProjection> findHolidayCalendarsByDate(LocalDate date);
 
 }

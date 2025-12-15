@@ -51,6 +51,9 @@ public class MonthlySummaryEntity {
     @Column(name = "total_working_days", nullable = false)
     private Integer totalWorkingDays = 0;
 
+    @Column(name = "total_holidays", nullable = false)
+    private Integer totalHolidays = 0;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
@@ -173,5 +176,13 @@ public class MonthlySummaryEntity {
 
     public void setTotalWorkingDays(Integer totalWorkingDays) {
         this.totalWorkingDays = totalWorkingDays;
+    }
+
+    public Integer getTotalHolidays() {
+        return totalHolidays;
+    }
+
+    public void setTotalHolidays(Integer totalHolidays) {
+        this.totalHolidays = totalHolidays;
     }
 }

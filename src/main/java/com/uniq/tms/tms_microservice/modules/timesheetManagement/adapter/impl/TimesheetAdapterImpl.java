@@ -1021,4 +1021,14 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
     public void deleteTimesheet(String userId, LocalDate date) {
         timesheetRepository.deleteByUser_UserIdAndDate(userId,date);
     }
+
+    @Override
+    public List<TimesheetEntity> findAll(LocalDate date, List<String> userIds) {
+        return timesheetRepository.findAllTimesheets(date, userIds);
+    }
+
+    @Override
+    public List<TimesheetEntity> findAllTimesheetsByDate(LocalDate date) {
+        return timesheetRepository.findAllTimesheetsByDate(date);
+    }
 }

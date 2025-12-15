@@ -267,8 +267,10 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
         if (finalUsers.isEmpty() ||
                 request.getPolicyId() == null ||
                 request.getPolicyId().trim().isEmpty()) {
+            log.info("if  condition");
             return;
         }
+        log.info("after if");
 
         TimeOffPolicyEntity policy = timeOffPolicyAdapter.findByPolicyId(request.getPolicyId());
         if (policy == null) {

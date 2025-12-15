@@ -12,6 +12,7 @@ import com.uniq.tms.tms_microservice.modules.userManagement.repository.UserGroup
 import org.springframework.stereotype.Component;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 @Component
@@ -116,5 +117,16 @@ public class LeaveBalanceAdapterImpl implements LeaveBalanceAdapter {
     @Override
     public LeaveBalanceEntity findActiveBalanceByUserIdAndPolicy(String userId, String policyId) {
         return leaveBalanceRepo.findActiveBalanceByUserIdAndPolicy(userId, policyId);
+    }
+
+
+    @Override
+    public Optional<MonthlySummaryEntity> getMonthlySummary(String userId, int month, int year) {
+        return monthlySummaryRepository.findMonthlySummary(userId, month, year);
+    }
+
+    @Override
+    public List<LeaveBalanceEntity> findActiveBalances(LocalDate date) {
+        return leaveBalanceRepo.findActiveBalances(date);
     }
 }

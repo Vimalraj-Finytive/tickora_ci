@@ -71,4 +71,6 @@ public interface TimeOffRequestAdapter {
     );
 
     TimeOffRequestEntity findByRequestId(Long requestId);
+    List<TimeOffRequestEntity> findAllRequestByDate(LocalDate date, Status status);
+
 }

@@ -75,8 +75,8 @@ public class PayRollAdapterImpl implements PayRollAdapter {
     }
 
     @Override
-    public List<UserPayRollEntity> getAllUserPayroll() {
-        return userPayrollRepo.findAllByActiveUsers();
+    public List<UserPayRollEntity> getAllUserPayroll(List<String> userIds) {
+        return userPayrollRepo.findAllByActiveUsers(userIds);
     }
 
     @Override
@@ -132,5 +132,10 @@ public class PayRollAdapterImpl implements PayRollAdapter {
 
     public List<UserPayRollAmount> findAllByMonth(String month) {
         return userPayrollRepo.findAllByMonth(month);
+    }
+
+    @Override
+    public Optional<UserPayRollAmountEntity> getUserPayrollAmount(String userId, String month) {
+        return userPayrollAmountRepository.getUserPayrollAmount(userId, month);
     }
 }
