@@ -22,6 +22,8 @@ public class UserResponseDto {
     private String calendarName;
     private String requestApproverName;
     private String payrollName;
+    private String organizationName;
+    private String orgType;
 
     public UserResponseDto() {
     }
@@ -46,27 +48,22 @@ public class UserResponseDto {
             LocalDate validTo,
             String calendarName,
             String requestApproverName,
-            String payRollName
+            String payRollName,
+            String organizationName,
+            String orgType
     ) {
         this.userId = userId;
         this.userName = userName;
         this.email = email;
         this.mobileNumber = mobileNumber;
         this.scheduleName = scheduleName;
-
-        // GROUP
         this.groupName = new ArrayList<>();
         if (groupName != null) this.groupName.add(groupName);
-
         this.roleName = roleName;
-
-        // LOCATION
         this.locationName = new ArrayList<>();
         if (locationName != null) this.locationName.add(locationName);
 
         this.dateOfJoining = dateOfJoining;
-
-        // SECONDARY DETAILS
         if (secName != null || secMobile != null || secEmail != null) {
             this.secondaryDetails = new SecondaryDetailsDto();
             this.secondaryDetails.setUserName(secName);
@@ -74,16 +71,15 @@ public class UserResponseDto {
             this.secondaryDetails.setEmail(secEmail);
             this.secondaryDetails.setRelation(relation);
         }
-
-        // POLICIES
         this.policies = new ArrayList<>();
         if (policyName != null) {
             this.policies.add(new UserPolicyDto(policyId,policyName, validFrom, validTo));
         }
-
         this.calendarName = calendarName;
         this.requestApproverName = requestApproverName;
         this.payrollName = payRollName;
+        this.organizationName = organizationName;
+        this.orgType = orgType;
     }
 
 
@@ -180,5 +176,21 @@ public class UserResponseDto {
 
     public void setPayrollName(String payrollName) {
         this.payrollName = payrollName;
+    }
+
+    public String getOrganizationName() {
+        return organizationName;
+    }
+
+    public void setOrganizationName(String organizationName) {
+        this.organizationName = organizationName;
+    }
+
+    public String getOrgType() {
+        return orgType;
+    }
+
+    public void setOrgType(String orgType) {
+        this.orgType = orgType;
     }
 }

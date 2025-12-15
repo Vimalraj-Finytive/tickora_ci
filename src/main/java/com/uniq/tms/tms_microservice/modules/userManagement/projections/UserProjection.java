@@ -24,4 +24,6 @@ public interface UserProjection {
     String getCalendarName();
     String getRequestApproverName();
     String getPayrollName();
+    String getOrganizationName();
+    String getOrgType();
 }

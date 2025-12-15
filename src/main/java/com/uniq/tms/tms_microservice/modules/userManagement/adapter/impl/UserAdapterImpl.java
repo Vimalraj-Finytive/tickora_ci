@@ -11,12 +11,10 @@ import com.uniq.tms.tms_microservice.modules.userManagement.adapter.UserAdapter;
 import com.uniq.tms.tms_microservice.modules.userManagement.dto.GroupDto;
 import com.uniq.tms.tms_microservice.modules.userManagement.dto.UserNameEmailDto;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.*;
-import com.uniq.tms.tms_microservice.modules.userManagement.enums.MemberType;
 import com.uniq.tms.tms_microservice.modules.userManagement.projections.UserCalendarProjection;
 import com.uniq.tms.tms_microservice.modules.userManagement.projections.UserProjection;
 import com.uniq.tms.tms_microservice.modules.userManagement.repository.*;
 import com.uniq.tms.tms_microservice.modules.locationManagement.mapper.LocationEntityMapper;
-import com.uniq.tms.tms_microservice.modules.userManagement.model.UserResponse;
 import com.uniq.tms.tms_microservice.modules.userManagement.dto.UserNameSuggestionDto;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.WorkScheduleEntity;
 import jakarta.transaction.Transactional;
@@ -24,7 +22,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
-
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -656,4 +653,8 @@ public class UserAdapterImpl implements UserAdapter {
         return userRepository.findCalendarIdsByUserIds(userIds);
     }
 
+    @Override
+    public List<UserProjection> findUserByUserId(String userId) {
+        return userRepository.findUserByUserId(userId);
+    }
 }

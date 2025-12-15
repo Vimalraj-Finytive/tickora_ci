@@ -150,7 +150,9 @@ public class ReportServiceImpl implements ReportService {
                             reportStyleUtil.createStyledCell(row, col++, String.valueOf(dto.getDate()), dataCellStyle);
                             reportStyleUtil.createStyledCell(row, col++, String.valueOf(dto.getFirstClockInTime()), dataCellStyle);
                             reportStyleUtil.createStyledCell(row, col++, String.valueOf(dto.getLastClockOutTime()), dataCellStyle);
-                            reportStyleUtil.createStyledCell(row, col, dto.getRegularHoursDuration(), dataCellStyle);
+                            reportStyleUtil.createStyledCell(row, col++, String.valueOf(dto.getTrackedHoursDuration()), dataCellStyle);
+                            reportStyleUtil.createStyledCell(row, col++, String.valueOf(dto.getRegularHoursDuration()), dataCellStyle);
+                            reportStyleUtil.createStyledCell(row, col, dto.getTotalOverTime(), dataCellStyle);
                         }
                     }
                     }

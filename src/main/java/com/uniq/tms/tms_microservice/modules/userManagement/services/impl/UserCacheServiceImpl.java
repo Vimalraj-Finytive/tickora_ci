@@ -2,27 +2,21 @@ package com.uniq.tms.tms_microservice.modules.userManagement.services.impl;
 
 import com.uniq.tms.tms_microservice.modules.locationManagement.dto.LocationDto;
 import com.uniq.tms.tms_microservice.modules.locationManagement.mapper.LocationDtoMapper;
-import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.OrganizationEntity;
-import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.OrganizationTypeEntity;
-import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.OrganizationRepository;
-import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.OrganizationTypeRepository;
 import com.uniq.tms.tms_microservice.modules.userManagement.dto.*;
 import com.uniq.tms.tms_microservice.modules.userManagement.projections.UserProjection;
 import com.uniq.tms.tms_microservice.shared.util.CacheKeyUtil;
 import com.uniq.tms.tms_microservice.shared.util.TextUtil;
-import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserGroupEntity;
 import com.uniq.tms.tms_microservice.modules.locationManagement.entity.UserLocationEntity;
 import com.uniq.tms.tms_microservice.modules.userManagement.enums.PrivilegeConstants;
 import com.uniq.tms.tms_microservice.modules.userManagement.enums.UserRole;
 import com.uniq.tms.tms_microservice.modules.userManagement.mapper.UserDtoMapper;
-import com.uniq.tms.tms_microservice.modules.userManagement.model.UserResponse;
 import com.uniq.tms.tms_microservice.modules.userManagement.projections.GroupsData;
-import com.uniq.tms.tms_microservice.modules.userManagement.repository.SecondaryDetailsRepository;
 import com.uniq.tms.tms_microservice.modules.userManagement.repository.GroupRepository;
 import com.uniq.tms.tms_microservice.modules.locationManagement.repository.UserLocationRepository;
 import com.uniq.tms.tms_microservice.modules.userManagement.repository.UserRepository;
 import com.uniq.tms.tms_microservice.modules.userManagement.services.UserCacheService;
+import com.uniq.tms.tms_microservice.shared.util.UserMergeUtil;
 import jakarta.annotation.Nullable;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -31,7 +25,6 @@ import org.springframework.stereotype.Service;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 @Service
@@ -42,34 +35,28 @@ public class UserCacheServiceImpl implements UserCacheService {
     private static final Logger log = LogManager.getLogger(UserCacheServiceImpl.class);
 
     private final UserRepository userRepository;
-    private final OrganizationRepository organizationRepository;
     private final UserLocationRepository userLocationRepository;
     private final UserDtoMapper userDtoMapper;
     private final GroupRepository groupRepository;
     private final TextUtil textUtil;
-    private final OrganizationTypeRepository organizationTypeRepository;
-    private final SecondaryDetailsRepository secondaryDetailsRepository;
     private final CacheKeyUtil cacheKeyUtil;
     private final RedisTemplate<String, Object> redisTemplate;
     private final LocationDtoMapper locationDtoMapper;
+    private final UserMergeUtil userMergeUtil;
 
-    public UserCacheServiceImpl(UserRepository userRepository, OrganizationRepository organizationRepository,
+    public UserCacheServiceImpl(UserRepository userRepository,
                                 UserLocationRepository userLocationRepository, UserDtoMapper userDtoMapper,
                                 GroupRepository groupRepository, TextUtil textUtil,
-                                OrganizationTypeRepository organizationTypeRepository,
-                                SecondaryDetailsRepository secondaryDetailsRepository,
-                                CacheKeyUtil cacheKeyUtil, @Nullable RedisTemplate<String, Object> redisTemplate, LocationDtoMapper locationDtoMapper) {
+                                CacheKeyUtil cacheKeyUtil, @Nullable RedisTemplate<String, Object> redisTemplate, LocationDtoMapper locationDtoMapper, UserMergeUtil userMergeUtil) {
         this.userRepository = userRepository;
-        this.organizationRepository = organizationRepository;
         this.userLocationRepository = userLocationRepository;
         this.userDtoMapper = userDtoMapper;
         this.groupRepository = groupRepository;
         this.textUtil = textUtil;
-        this.organizationTypeRepository = organizationTypeRepository;
-        this.secondaryDetailsRepository = secondaryDetailsRepository;
         this.cacheKeyUtil = cacheKeyUtil;
         this.redisTemplate = redisTemplate;
         this.locationDtoMapper = locationDtoMapper;
+        this.userMergeUtil = userMergeUtil;
     }
 
 
@@ -83,72 +70,16 @@ public class UserCacheServiceImpl implements UserCacheService {
             log.info("Loading all users into cache | tenant: {}", schema);
             String redisKey = cacheKeyUtil.getMemberKey(orgId, schema);
             Map<String, List<UserResponseDto>> roleWiseUserMap = new HashMap<>();
-
-            // Iterate over all roles
             for (UserRole role : UserRole.values()) {
                 int hierarchyLevel = UserRole.getLevel(role.name());
-
-                // Fetch from DB
                 List<UserProjection> users = userRepository.findAllUsers(orgId, hierarchyLevel);
-
                 if (users.isEmpty()) {
                     log.warn("No users found for orgId={} and role={}", orgId, role);
                     continue;
                 }
-
-                // Convert to DTO
-                List<UserResponseDto> usersDto = users.stream()
-                        .map(userDtoMapper::toUserDto)
-                        .toList();
-
-                // Merge duplicates based on userId
-                Map<String, UserResponseDto> mergedUserMap = new LinkedHashMap<>();
-
-                for (UserResponseDto user : usersDto) {
-
-                    // Ensure lists are always initialized
-                    if (user.getGroupName() == null) user.setGroupName(new ArrayList<>());
-                    if (user.getLocationName() == null) user.setLocationName(new ArrayList<>());
-                    if (user.getPolicies() == null) user.setPolicies(new ArrayList<>());
-
-                    mergedUserMap.compute(user.getUserId(), (id, existing) -> {
-
-                        if (existing == null) return user;
-
-                        // GROUP merge
-                        String incomingGroup = !user.getGroupName().isEmpty() ? user.getGroupName().get(0) : null;
-                        if (incomingGroup != null &&
-                                !existing.getGroupName().contains(incomingGroup)) {
-                            existing.getGroupName().add(incomingGroup);
-                        }
-
-                        // LOCATION merge
-                        String incomingLocation = !user.getLocationName().isEmpty() ? user.getLocationName().get(0) : null;
-                        if (incomingLocation != null &&
-                                !existing.getLocationName().contains(incomingLocation)) {
-                            existing.getLocationName().add(incomingLocation);
-                        }
-
-                        // POLICY merge
-                        if (!user.getPolicies().isEmpty()) {
-                            UserPolicyDto incomingPolicy = user.getPolicies().get(0);
-                            boolean alreadyExists = existing.getPolicies()
-                                    .stream()
-                                    .anyMatch(p -> p.getPolicyName().equals(incomingPolicy.getPolicyName()));
-
-                            if (!alreadyExists) {
-                                existing.getPolicies().add(incomingPolicy);
-                            }
-                        }
-
-                        return existing;
-                    });
-                }
-
-                // Save merged users for current role
+                Map<String, UserResponseDto> mergedUserMap = userMergeUtil.mergeUserRecords(users);
                 roleWiseUserMap.put(role.name(), new ArrayList<>(mergedUserMap.values()));
             }
-
             if (redisTemplate != null) {
                 try {
                     redisTemplate.delete(redisKey);
@@ -180,31 +111,18 @@ public class UserCacheServiceImpl implements UserCacheService {
     @Override
     public CompletableFuture<Map<String, UserProfileResponseDto>> loadUsersProfile(String orgId, String schema) {
 
-        log.info("Current User profile tenant:{}", schema);
-        List<UserEntity> users = userRepository.findAllActiveUsersByOrganizationId(orgId);
+        List<UserProjection> rows = userRepository.findAllUsers();
+        Map<String, UserResponseDto> merged = userMergeUtil.mergeUserRecords(rows);
+
         Map<String, UserProfileResponseDto> userProfileMap = new HashMap<>();
 
-        if (users.isEmpty()) {
-            log.warn("No active users found for orgId: {}", orgId);
-            return CompletableFuture.completedFuture(userProfileMap);
-        }
+        for (UserResponseDto user : merged.values()) {
 
-        // Fetch organization + type
-        OrganizationEntity org = organizationRepository.findByOrganizationId(orgId).orElse(null);
-        Optional<OrganizationTypeEntity> organizationType =
-                (org != null && org.getOrgType() != null)
-                        ? organizationTypeRepository.findById(org.getOrgType())
-                        : Optional.empty();
-
-        for (UserEntity user : users) {
-            String userId = user.getUserId();
-
-            // Fetch locations
-            List<UserLocationEntity> userLocations = userLocationRepository.findByUser_UserId(userId);
+            List<UserLocationEntity> userLocations = userLocationRepository.findByUser_UserId(user.getUserId());
             List<LocationDto> locationDtos;
 
             if (userLocations.isEmpty()) {
-                log.warn("No locations found for userId {}", userId);
+                log.warn("No locations found for userId {}", user.getUserId());
                 locationDtos = Collections.emptyList();
             } else {
                 locationDtos = userLocations.stream()
@@ -213,48 +131,48 @@ public class UserCacheServiceImpl implements UserCacheService {
                         .toList();
             }
 
-            // Fetch groups
-            List<UserGroupEntity> userGroups = userRepository.findUserByOrganizationIdAndUserId(orgId, userId);
+            List<UserGroupEntity> userGroups = userRepository.findUserByOrganizationIdAndUserId(orgId, user.getUserId());
             List<UserGroupProfileDto> groupDtos = userGroups.isEmpty()
                     ? Collections.emptyList()
                     : userGroups.stream().map(userDtoMapper::toGroupsDto).toList();
 
-            // Parent details if student
-            AtomicReference<List<ParentDto>> parentDto = new AtomicReference<>(Collections.emptyList());
+            List<UserPolicyDto> singlePolicy =
+                    (user.getPolicies() != null && !user.getPolicies().isEmpty())
+                            ? user.getPolicies()
+                            : null;
 
-            if (UserRole.STUDENT.name().equalsIgnoreCase(user.getRole().getName())) {
-                userRepository.findByUserId(userId).ifPresent(sp -> {
-                    secondaryDetailsRepository.findByUserId(sp.getUserId()).ifPresent(parentEntity -> {
-                        parentDto.set(List.of(new ParentDto(
-                                parentEntity.getId(),
-                                parentEntity.getUserName(),
-                                parentEntity.getEmail(),
-                                parentEntity.getMobile()
-                        )));
-                    });
-                });
+            List<ParentDto> parentList = new ArrayList<>();
+            if (user.getSecondaryDetails() != null) {
+                var sec = user.getSecondaryDetails();
+                parentList.add(new ParentDto(
+                        null,
+                        sec.getUserName(),
+                        sec.getEmail(),
+                        sec.getMobile()
+                ));
             }
 
-            // Build profile
-            UserProfileResponseDto profile = new UserProfileResponseDto(
-                    userId,
+            UserProfileResponseDto dto = new UserProfileResponseDto(
+                    user.getUserId(),
                     user.getUserName(),
                     user.getEmail(),
                     user.getMobileNumber(),
-                    user.getRole().getName(),
+                    user.getRoleName(),
                     user.getDateOfJoining(),
                     locationDtos,
                     groupDtos,
-                    org != null ? org.getOrgName() : null,
-                    (user.getWorkSchedule() != null ? user.getWorkSchedule().getScheduleName() : "-"),
-                    organizationType.map(OrganizationTypeEntity::getOrgTypeName).orElse("-"),
-                    parentDto.get()
+                    user.getOrganizationName() != null ? user.getOrganizationName() : "-",
+                    user.getScheduleName(),
+                    user.getOrgType() != null ? user.getOrgType() : "-",
+                    user.getCalendarName(),
+                    user.getRequestApproverName(),
+                    user.getPayrollName(),
+                    singlePolicy,
+                    parentList
             );
 
-            userProfileMap.put(userId, profile);
+            userProfileMap.put(user.getUserId(), dto);
         }
-
-        // Cache all profiles
         try {
             if (redisTemplate != null) {
                 String redisKey = cacheKeyUtil.getProfileKey(orgId, schema);
