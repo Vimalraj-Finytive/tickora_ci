@@ -1,1 +1,1 @@
-S.no|Member Name|Member Phone Number|Group|Attendance|Date|Clock In|Clock Out|Tracked Hour
+S.no|Member Name|Member Phone Number|Group|Attendance|Date|Clock In|Clock Out|Tracked Hours|Regular Hours|OverTime Hours

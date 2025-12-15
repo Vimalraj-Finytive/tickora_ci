@@ -2,12 +2,10 @@ package com.uniq.tms.tms_microservice.modules.leavemanagement.repository;
 
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeOffPolicyEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.AccrualType;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.record.UserPolicyProjection;
 import org.springframework.data.jpa.repository.JpaRepository;
 import io.lettuce.core.dynamic.annotation.Param;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
-
 import java.time.LocalDate;
 import java.util.List;
 
@@ -60,5 +58,7 @@ public interface TimeOffPolicyRepository extends JpaRepository<TimeOffPolicyEnti
       AND p.isActive = true
     """)
     boolean findActivePolicyById(@Param("policyId") String policyId);
+
+    List<TimeOffPolicyEntity> findAllByIsDefaultFalseAndIsActiveTrue();
 
 }

@@ -4,8 +4,6 @@ import com.uniq.tms.tms_microservice.modules.timesheetManagement.projection.Time
 import com.uniq.tms.tms_microservice.modules.userManagement.dto.UserNameEmailDto;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserGroupEntity;
-import com.uniq.tms.tms_microservice.modules.userManagement.model.User;
-import com.uniq.tms.tms_microservice.modules.userManagement.model.UserResponse;
 import com.uniq.tms.tms_microservice.modules.userManagement.dto.UserNameSuggestionDto;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.projection.TimesheetProjection;
 import com.uniq.tms.tms_microservice.modules.userManagement.projections.UserCalendarProjection;
@@ -19,7 +17,6 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -301,4 +298,18 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
     @Query("SELECT u.userId FROM UserEntity u WHERE u.active = true")
     List<String> findAllActiveUsers();
 
+    @Query(value = """
+                SELECT *
+                FROM user_full_details_view
+                WHERE active = true
+            """, nativeQuery = true)
+    List<UserProjection> findAllUsers();
+
+    @Query(value = """
+                SELECT *
+                FROM user_full_details_view
+                WHERE user_id = :userId
+                  AND active = true
+            """, nativeQuery = true)
+    List<UserProjection> findUserByUserId(@Param("userId") String userId);
 }

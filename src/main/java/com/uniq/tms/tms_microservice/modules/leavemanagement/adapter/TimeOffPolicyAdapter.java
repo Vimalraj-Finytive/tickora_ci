@@ -4,7 +4,6 @@ import java.time.LocalDate;
 import java.util.List;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeOffPolicyEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.AccrualType;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.record.UserPolicyProjection;
 
 public interface TimeOffPolicyAdapter {
 
@@ -23,4 +22,5 @@ public interface TimeOffPolicyAdapter {
     List<TimeOffPolicyEntity> findAllPoliciesByType(AccrualType type);
     void saveAllPolicy(List<TimeOffPolicyEntity> policyList);
     boolean isPolicyActive(String policyId);
+    List<TimeOffPolicyEntity> findPoliciesList();
 }

@@ -2,9 +2,7 @@ package com.uniq.tms.tms_microservice.modules.payrollManagement.services.impl;
 
 import com.opencsv.CSVWriter;
 import com.uniq.tms.tms_microservice.modules.identityManagement.service.IdGenerationService;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.CalendarAdapter;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.LeaveBalanceAdapter;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.CalendarEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.MonthlySummaryEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.ReportType;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.adapter.PayRollAdapter;
@@ -25,8 +23,10 @@ import com.uniq.tms.tms_microservice.modules.timesheetManagement.adapter.Timeshe
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.entity.TimesheetEntity;
 import com.uniq.tms.tms_microservice.modules.userManagement.adapter.UserAdapter;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
-import com.uniq.tms.tms_microservice.shared.exception.CommonExceptionHandler;
-import com.uniq.tms.tms_microservice.shared.helper.TimesheetHelper;
+import com.uniq.tms.tms_microservice.shared.helper.AuthHelper;
+import com.uniq.tms.tms_microservice.shared.security.cache.CacheKeyConfig;
+import com.uniq.tms.tms_microservice.shared.security.cache.CacheReloadHandlerRegistry;
+import com.uniq.tms.tms_microservice.shared.util.CacheEventPublisherUtil;
 import com.uniq.tms.tms_microservice.shared.util.CacheKeyUtil;
 import com.uniq.tms.tms_microservice.shared.util.ExportStatusTracker;
 import com.uniq.tms.tms_microservice.shared.util.ReportStyleUtil;
@@ -40,13 +40,13 @@ import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
-
 import java.io.*;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -73,13 +73,17 @@ public class PayRollServiceImpl implements PayRollService {
     private final CacheKeyUtil cacheKeyUtil;
     private final ReportStyleUtil reportStyleUtil;
     private final ExportStatusTracker exportStatusTracker;
-    private final TimesheetHelper timesheetHelper;
-    private final CalendarAdapter calendarAdapter;
+    private final ApplicationEventPublisher publisher;
+    private final CacheKeyConfig cacheKeyConfig;
+    private final CacheReloadHandlerRegistry cacheReloadHandlerRegistry;
+    private final AuthHelper authHelper;
 
     public PayRollServiceImpl(PayRollAdapter payRollAdapter, PayRollEntityMapper entityMapper, UserAdapter userAdapter,
                               IdGenerationService idGenerationService, TimesheetAdapter timesheetAdapter,
                               PayRollEntityMapper payRollEntityMapper, LeaveBalanceAdapter leaveBalanceAdapter,
-                              @Nullable RedisTemplate<String, Object> redisTemplate, CacheKeyUtil cacheKeyUtil, ReportStyleUtil reportStyleUtil, ExportStatusTracker exportStatusTracker, TimesheetHelper timesheetHelper, CalendarAdapter calendarAdapter) {
+                              @Nullable RedisTemplate<String, Object> redisTemplate, CacheKeyUtil cacheKeyUtil,
+                              ReportStyleUtil reportStyleUtil, ExportStatusTracker exportStatusTracker,
+                              ApplicationEventPublisher publisher, CacheKeyConfig cacheKeyConfig, CacheReloadHandlerRegistry cacheReloadHandlerRegistry, AuthHelper authHelper) {
         this.payRollAdapter = payRollAdapter;
         this.entityMapper = entityMapper;
         this.userAdapter = userAdapter;
@@ -91,12 +95,17 @@ public class PayRollServiceImpl implements PayRollService {
         this.cacheKeyUtil = cacheKeyUtil;
         this.reportStyleUtil = reportStyleUtil;
         this.exportStatusTracker = exportStatusTracker;
-        this.timesheetHelper = timesheetHelper;
-        this.calendarAdapter = calendarAdapter;
+        this.publisher = publisher;
+        this.cacheKeyConfig = cacheKeyConfig;
+        this.cacheReloadHandlerRegistry = cacheReloadHandlerRegistry;
+        this.authHelper = authHelper;
     }
 
     @Value("${csv.payroll.download.dir}")
     private String downloadDir;
+
+    @Value("${cache.redis.enabled}")
+    private boolean isRedisEnabled;
 
     @Override
     public PayRollSettingModel createOrUpdate(PayRollSettingModel model) {
@@ -385,6 +394,8 @@ public class PayRollServiceImpl implements PayRollService {
     }
 
     public void assignPayroll(PayRollUpdate model) {
+        String orgId = authHelper.getOrgId();
+        String schema = authHelper.getSchema();
         List<UserEntity> users = userAdapter.getUsersByIds(model.getUserId());
         PayRollEntity payroll = payRollAdapter.getPayRoll(model.getPayRollId());
         List<UserPayRollEntity> existingMappings = payRollAdapter.
@@ -410,6 +421,22 @@ public class PayRollServiceImpl implements PayRollService {
         }
         if (!toInsert.isEmpty()) {
             payRollAdapter.saveAllUserPayroll(toInsert);
+        }
+        if (isRedisEnabled) {
+            try {
+                CacheEventPublisherUtil.syncReloadThenPublish(
+                        publisher,
+                        cacheKeyConfig.getUsers(),
+                        orgId,
+                        schema,
+                        cacheReloadHandlerRegistry
+                );
+                log.info("User cache reload event published after assigned PayRoll to a user for orgId={}", orgId);
+            } catch (Exception e) {
+                log.error("Failed to publish User cache reload event for orgId={}", orgId, e);
+            }
+        } else {
+            log.info("Redis is not enabled or RedisTemplate is null. Skipping cache reload for orgId={}", orgId);
         }
     }
 

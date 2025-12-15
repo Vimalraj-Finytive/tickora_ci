@@ -74,10 +74,10 @@ public class TimeOffPoliciesController {
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
-    @GetMapping("/basic")
+    @GetMapping({"/basic", "basic/{type}"})
     public ResponseEntity<ApiResponse<List<TimeoffPolicyDto>>> getAllPolicy(
-            @RequestHeader("Authorization") String token) {
-        ApiResponse<List<TimeoffPolicyDto>> response = timeOffFacade.getAllPolicy();
+            @RequestHeader("Authorization") String token,@PathVariable(required = false) String type) {
+        ApiResponse<List<TimeoffPolicyDto>> response = timeOffFacade.getAllPolicy(type);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
@@ -128,7 +128,8 @@ public class TimeOffPoliciesController {
     }
 
     @PutMapping("/update/userPolicy")
-    public ResponseEntity<ApiResponse<Void>>updateUserPolicy(@RequestHeader("Authorization") String token,@RequestBody List<EditUserPolicyDto> editUserPolicyDto){
+    public ResponseEntity<ApiResponse<Void>>updateUserPolicy(@RequestHeader("Authorization") String token,
+                                                             @RequestBody List<EditUserPolicyDto> editUserPolicyDto){
         ApiResponse<Void> response =
                 timeOffFacade.editUserPolicy(editUserPolicyDto);
         return ResponseEntity.status(response.getStatusCode()).body(response);
