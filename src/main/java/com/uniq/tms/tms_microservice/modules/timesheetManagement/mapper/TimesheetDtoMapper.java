@@ -3,8 +3,6 @@ package com.uniq.tms.tms_microservice.modules.timesheetManagement.mapper;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.dto.*;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.entity.TimesheetEntity;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.entity.TimesheetStatusEntity;
-import com.uniq.tms.tms_microservice.modules.timesheetManagement.entity.TimesheetEntity;
-import com.uniq.tms.tms_microservice.modules.timesheetManagement.entity.TimesheetStatusEntity;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.dto.TimesheetDto;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.dto.TimesheetHistoryDto;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.dto.TimesheetStatusDto;
@@ -21,7 +19,7 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
-@Mapper(componentModel = "spring",unmappedTargetPolicy = ReportingPolicy.IGNORE)
+@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface TimesheetDtoMapper {
 
     @Mapping(source = "trackedHours", target = "trackedHours", qualifiedByName = "localTimeToDuration")
@@ -49,12 +47,24 @@ public interface TimesheetDtoMapper {
 
     TimesheetStatusDto toStatusDto(TimesheetStatus timesheetStatus);
 
+    /* -------------------------
+       PROJECTION → DTO (MAIN)
+       ------------------------- */
     @Named("defaultMapping")
     @Mapping(target = "firstClockInTime", expression = "java(formatTime(projection.getFirstClockIn()))")
     @Mapping(target = "lastClockOutTime", expression = "java(formatTime(projection.getLastClockOut()))")
+    @Mapping(target = "startTime", source = "startTimeDuration", qualifiedByName = "localTimeToDuration")
+    @Mapping(target = "endTime", source = "endTimeDuration", qualifiedByName = "localTimeToDuration")
+    @Mapping(target = "overTime", source = "totalOverTime", qualifiedByName = "localTimeToDuration")
     TimesheetDto toDto(TimesheetProjection projection);
 
+    /* -------------------------
+       PROJECTION → DTO (TIME ONLY)
+       ------------------------- */
     @Named("timeOnlyMapping")
+    @Mapping(target = "startTime", source = "startTimeDuration", qualifiedByName = "localTimeToDuration")
+    @Mapping(target = "endTime", source = "endTimeDuration", qualifiedByName = "localTimeToDuration")
+    @Mapping(target = "overTime", source = "totalOverTime", qualifiedByName = "localTimeToDuration")
     TimesheetDto toTimeDto(TimesheetProjection projection);
 
     @IterableMapping(qualifiedByName = "defaultMapping")
@@ -86,8 +96,12 @@ public interface TimesheetDtoMapper {
                 .plusSeconds(localTime.getSecond());
     }
 
-    @Named("defaultMapping")
+    /* --------------------------------------------------------------------------------
+       FIX: Changed ONLY this @Named value (duplicate name resolved)
+       -------------------------------------------------------------------------------- */
+    @Named("defaultUserMapping") // FIXED (was defaultMapping)
     @Mapping(target = "firstClockInTime", expression = "java(formatTime(projection.getFirstClockIn()))")
     @Mapping(target = "lastClockOutTime", expression = "java(formatTime(projection.getLastClockOut()))")
     TimesheetDto toDto(TimesheetUserProjection projection);
 }
+

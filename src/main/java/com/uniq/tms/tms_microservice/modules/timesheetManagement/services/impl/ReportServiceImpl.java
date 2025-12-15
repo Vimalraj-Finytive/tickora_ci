@@ -94,7 +94,9 @@ public class ReportServiceImpl implements ReportService {
                                 dto.getStatus(),
                                 dto.getFirstClockInTime(),
                                 dto.getLastClockOutTime(),
-                                dto.getRegularHoursDuration()
+                                dto.getTrackedHoursDuration(),
+                                dto.getRegularHoursDuration(),
+                                dto.getTotalOverTime()
                         });
                     }
                 }
@@ -115,7 +117,7 @@ public class ReportServiceImpl implements ReportService {
                 try (BufferedReader reader = new BufferedReader(new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8))) {
                     headerLines = reader.lines().toList();
                 }
-                String[] headers = headerLines.get(0).split("\\|");
+                String[] headers = headerLines.getFirst().split("\\|");
                 CellStyle headerCellStyle = workbook.createCellStyle();
                 headerCellStyle.setFillForegroundColor(IndexedColors.RED.getIndex());
                 headerCellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
@@ -213,7 +215,9 @@ public class ReportServiceImpl implements ReportService {
                 Row statusRow = sheet.createRow(rowIndex++);
                 Row inRow = sheet.createRow(rowIndex++);
                 Row outRow = sheet.createRow(rowIndex++);
-                Row whRow = sheet.createRow(rowIndex++);
+                Row twhRow = sheet.createRow(rowIndex++);
+                Row rhRow = sheet.createRow(rowIndex++);
+                Row othRow = sheet.createRow(rowIndex++);
 
                 int c = 0;
                 reportStyleUtil.createStyledCell(statusRow, c, String.valueOf(serialNumber), dataCellStyle);
@@ -223,7 +227,9 @@ public class ReportServiceImpl implements ReportService {
                 reportStyleUtil.createStyledCell(statusRow, c + 4, "STATUS", dataCellStyle);
                 reportStyleUtil.createStyledCell(inRow, c + 4, "IN", dataCellStyle);
                 reportStyleUtil.createStyledCell(outRow, c + 4, "OUT", dataCellStyle);
-                reportStyleUtil.createStyledCell(whRow, c + 4, "WH", dataCellStyle);
+                reportStyleUtil.createStyledCell(twhRow, c + 4, "TWH", dataCellStyle);
+                reportStyleUtil.createStyledCell(rhRow, c + 4, "RH", dataCellStyle);
+                reportStyleUtil.createStyledCell(othRow, c + 4, "OTH", dataCellStyle);
                 c += staticHeaders.length;
                 for (String date : dateHeaders) {
                     TimesheetDto t = dateToTimesheet.get(date);
@@ -232,12 +238,16 @@ public class ReportServiceImpl implements ReportService {
                         reportStyleUtil.createStyledCell(statusRow, c, t.getStatus(), dataCellStyle);
                         reportStyleUtil.createStyledCell(inRow, c, t.getFirstClockInTime(), dataCellStyle);
                         reportStyleUtil.createStyledCell(outRow, c, t.getLastClockOutTime(), dataCellStyle);
-                        reportStyleUtil.createStyledCell(whRow, c, t.getRegularHoursDuration(), dataCellStyle);
+                        reportStyleUtil.createStyledCell(twhRow, c, t.getTrackedHoursDuration(), dataCellStyle);
+                        reportStyleUtil.createStyledCell(rhRow, c, t.getRegularHoursDuration(), dataCellStyle);
+                        reportStyleUtil.createStyledCell(othRow, c, t.getTotalOverTime(), dataCellStyle);
                     } else {
                         reportStyleUtil.createStyledCell(statusRow, c, "-", dataCellStyle);
                         reportStyleUtil.createStyledCell(inRow, c, "-", dataCellStyle);
                         reportStyleUtil.createStyledCell(outRow, c, "-", dataCellStyle);
-                        reportStyleUtil.createStyledCell(whRow, c, "-", dataCellStyle);
+                        reportStyleUtil.createStyledCell(twhRow, c, "-", dataCellStyle);
+                        reportStyleUtil.createStyledCell(rhRow, c, "-", dataCellStyle);
+                        reportStyleUtil.createStyledCell(othRow, c, "-", dataCellStyle);
                     }
                     c++;
                 }
@@ -250,10 +260,11 @@ public class ReportServiceImpl implements ReportService {
                 for (int i = c - summaryHeaders.size(); i < c; i++) {
                     reportStyleUtil.createStyledCell(inRow, i, "", dataCellStyle);
                     reportStyleUtil.createStyledCell(outRow, i, "", dataCellStyle);
-                    reportStyleUtil.createStyledCell(whRow, i, "", dataCellStyle);
-                }
+                    reportStyleUtil.createStyledCell(twhRow, i, "", dataCellStyle);
+                    reportStyleUtil.createStyledCell(rhRow, i, "", dataCellStyle);
+                    reportStyleUtil.createStyledCell(othRow, i, "", dataCellStyle);                }
 
-                int firstRow = rowIndex - 4;
+                int firstRow = rowIndex - 6;
                 int lastRow = rowIndex - 1;
 
                 for (int colIndex = 0; colIndex <= 3; colIndex++) {
@@ -317,7 +328,7 @@ public class ReportServiceImpl implements ReportService {
             String userName = user.getSummary().getUserName();
             String mobile = user.getSummary().getMobileNumber();
             String group = user.getSummary().getGroupName();
-            String[] labels = {"STATUS", "IN", "OUT", "WH"};
+            String[] labels = {"STATUS", "IN", "OUT", "TWH", "RH", "OTH" };
             for (String label : labels) {
                 List<String> row = new ArrayList<>();
                 row.add(String.valueOf(serialNumber));
@@ -332,7 +343,9 @@ public class ReportServiceImpl implements ReportService {
                         case "STATUS" -> row.add(t != null ? t.getStatus() : "-");
                         case "IN" -> row.add(t != null ? t.getFirstClockInTime() : "-");
                         case "OUT" -> row.add(t != null ? t.getLastClockOutTime() : "-");
-                        case "WH" -> row.add(t != null ? t.getRegularHoursDuration() : "-");
+                        case "TWH" -> row.add(t != null ? t.getTrackedHoursDuration() : "-");
+                        case "RH" -> row.add(t != null ? t.getRegularHoursDuration() : "-");
+                        case "OTH" -> row.add(t != null ? t.getTotalOverTime() : "-");
                     }
                 }
                 if ("STATUS".equals(label)) {

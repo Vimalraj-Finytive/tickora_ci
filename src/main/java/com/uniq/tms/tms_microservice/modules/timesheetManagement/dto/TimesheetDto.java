@@ -24,6 +24,12 @@ public class TimesheetDto {
     private Duration trackedHours;
     @JsonIgnore
     private Duration regularHours;
+    @JsonIgnore
+    private Duration startTime;
+    @JsonIgnore
+    private Duration endTime;
+    @JsonIgnore
+    private Duration overTime;
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private String startTimeDuration;
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
@@ -61,8 +67,7 @@ public class TimesheetDto {
     private String status;
     private String workScheduleName;
 
-    public TimesheetDto(TimesheetEntity timesheetEntity, List<TimesheetHistoryDto> historyDtos, String workScheduleName,
-                        String startTimeDuration, String endTimeDuration, String totalOverTime) {
+    public TimesheetDto(TimesheetEntity timesheetEntity, List<TimesheetHistoryDto> historyDtos, String workScheduleName) {
         this.id = timesheetEntity.getId();
         this.userId = timesheetEntity.getUser().getUserId();
         this.date = timesheetEntity.getDate();
@@ -76,9 +81,12 @@ public class TimesheetDto {
         this.trackedHoursDuration = formatDuration(this.trackedHours);
         this.regularHoursDuration = formatDuration(this.regularHours);
         this.history = historyDtos;
-        setStartTimeDuration(startTimeDuration);
-        setEndTimeDuration(endTimeDuration);
-        setTotalOverTime(totalOverTime);
+        this.startTime = convertToDuration(timesheetEntity.getStartTimeDuration());
+        this.endTime = convertToDuration(timesheetEntity.getEndTimeDuration());
+        this.overTime = convertToDuration(timesheetEntity.getTotalOverTime());
+        this.startTimeDuration = formatDuration(this.startTime);
+        this.endTimeDuration = formatDuration(this.endTime);
+        this.totalOverTime = formatDuration(this.overTime);
     }
 
     public TimesheetDto() {
@@ -324,7 +332,10 @@ public class TimesheetDto {
     }
 
     public String getStartTimeDuration() {
-        return startTimeDuration;
+        if(startTime == null) return "00h 00m";
+        long hours = startTime.toHours();
+        long minutes = startTime.toMinutes() % 60;
+        return String.format("%02dh %02dm", hours, minutes);
     }
 
     public void setStartTimeDuration(String time) {
@@ -332,7 +343,10 @@ public class TimesheetDto {
     }
 
     public String getEndTimeDuration() {
-        return endTimeDuration;
+        if(endTime == null) return "00h 00m";
+        long hours = endTime.toHours();
+        long minutes = endTime.toMinutes() % 60;
+        return String.format("%02dh %02dm", hours, minutes);
     }
 
     public void setEndTimeDuration(String time) {
@@ -340,10 +354,37 @@ public class TimesheetDto {
     }
 
     public String getTotalOverTime() {
-        return totalOverTime;
+        if(overTime == null) return "00h 00m";
+        long hours = overTime.toHours();
+        long minutes = overTime.toMinutes() % 60;
+        return String.format("%02dh %02dm", hours, minutes);
     }
 
     public void setTotalOverTime(String time) {
         this.totalOverTime = time;
+    }
+
+    public Duration getStartTime() {
+        return startTime;
+    }
+
+    public void setStartTime(Duration startTime) {
+        this.startTime = startTime;
+    }
+
+    public Duration getEndTime() {
+        return endTime;
+    }
+
+    public void setEndTime(Duration endTime) {
+        this.endTime = endTime;
+    }
+
+    public Duration getOverTime() {
+        return overTime;
+    }
+
+    public void setOverTime(Duration overTime) {
+        this.overTime = overTime;
     }
 }

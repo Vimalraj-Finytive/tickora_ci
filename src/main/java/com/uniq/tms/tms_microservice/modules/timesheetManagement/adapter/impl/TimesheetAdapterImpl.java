@@ -257,6 +257,10 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
             Map<Long, List<TimesheetHistoryDto>> historyMap
     ) {
         log.info("Mpa to Dtos");
+        log.info("start={} end={} ot={}",
+                projection.getStartTimeDuration(),
+                projection.getEndTimeDuration(),
+                projection.getTotalOverTime());
         TimesheetDto dto = timesheetDtoMapper.toTimeDto(projection);
         dto.setRole(projection.getRoleName() != null ? projection.getRoleName() : "null");
         dto.setGroupName(userGroups.getOrDefault(projection.getUserId(), "null"));
@@ -281,6 +285,7 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
     ) {
         Map<LocalDate, TimesheetDto> existingTimesheet = existingTimesheets.stream()
                 .collect(Collectors.toMap(TimesheetDto::getDate, Function.identity(), (a, b) -> a));
+        log.info("user angular date: {}", user.getDate());
         LocalDate effectiveStart = startDate.isBefore(user.getDate())
                 ? user.getDate()
                 : startDate;
@@ -813,6 +818,8 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
         List<UserTimesheetDto> finalResponse = new ArrayList<>();
         for (TimesheetUserProjection user : pagedUser) {
             String userId = user.getUserId();
+            log.info("startDate:{}",startDate);
+            log.info("user date: {}", user.getDate());
             List<TimesheetDto> userTimesheets = getUsersTimesheetsWithDefaults(
                     user,
                     userTimesheetMap.getOrDefault(userId, new ArrayList<>()),
@@ -867,6 +874,7 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
                 .collect(Collectors.toMap(TimesheetDto::getDate, Function.identity(),(a,b) -> a));
         log.info("User: {}, Start: {}, End: {}, Existing count: {}",
                 user.getUserId(), startDate, endDate, existingTimesheets.size());
+        log.info("User join date: {}",  user.getDate());
         LocalDate effectiveStart = startDate.isBefore(user.getDate())
                 ? user.getDate()
                 : startDate;
