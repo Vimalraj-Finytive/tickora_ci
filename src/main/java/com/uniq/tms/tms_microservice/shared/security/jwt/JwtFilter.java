@@ -81,9 +81,9 @@ public class JwtFilter extends OncePerRequestFilter {
         }
 
         String jwtToken = extractTokenFromRequest(request);
-        String tenant = extractSchemaFromToken(jwtToken);
+        String tenant = extractSchemaFromToken(jwtToken,response);
 
-        if (jwtToken != null) {
+        if (jwtToken != null && tenant != null) {
             log.info("Tenant:{}", tenant);
             TenantContext.setCurrentTenant(tenant);
             log.info("Current tenant:{}", TenantContext.getCurrentTenant());
@@ -161,7 +161,7 @@ public class JwtFilter extends OncePerRequestFilter {
         chain.doFilter(request, response);
     }
 
-    private String extractSchemaFromToken(String jwtToken) {
+    private String extractSchemaFromToken(String jwtToken, HttpServletResponse response) throws IOException {
         try {
             Claims claims = jwtUtil.extractAllClaims(jwtToken);
             String schema = claims.get("userSchema", String.class);
@@ -170,9 +170,18 @@ public class JwtFilter extends OncePerRequestFilter {
                 return "public";
             }
             return schema;
-        } catch (Exception e) {
-            log.error("Failed to extract schema from token, defaulting to 'public'", e);
-            return "public";
+        }catch (io.jsonwebtoken.ExpiredJwtException ex) {
+            log.error("Token expired: {}", ex.getMessage());
+            sendErrorResponse(response,HttpServletResponse.SC_UNAUTHORIZED, "Token expired");
+            return null;
+        }catch (io.jsonwebtoken.JwtException ex) {
+            log.error("Invalid JWT: {}", ex.getMessage());
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid token");
+            return null;
+        } catch (Exception ex) {
+            log.error("Unexpected JWT error: {}", ex.getMessage(), ex);
+            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Internal server error");
+            return null;
         }
     }
 
