@@ -2,9 +2,16 @@ package com.uniq.tms.tms_microservice.modules.payrollManagement.services.impl;
 
 import com.opencsv.CSVWriter;
 import com.uniq.tms.tms_microservice.modules.identityManagement.service.IdGenerationService;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.CalendarAdapter;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.LeaveBalanceAdapter;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.TimeOffRequestAdapter;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.CalendarEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.MonthlySummaryEntity;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeOffRequestEntity;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.EntitledType;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.ReportType;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.Status;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.projection.CalendarHolidayProjection;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.adapter.PayRollAdapter;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.entity.PayRollEntity;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.entity.PayRollSettingEntity;
@@ -27,6 +34,9 @@ import com.uniq.tms.tms_microservice.shared.helper.AuthHelper;
 import com.uniq.tms.tms_microservice.shared.security.cache.CacheKeyConfig;
 import com.uniq.tms.tms_microservice.shared.security.cache.CacheReloadHandlerRegistry;
 import com.uniq.tms.tms_microservice.shared.util.CacheEventPublisherUtil;
+import com.uniq.tms.tms_microservice.modules.userManagement.projections.UserCalendarProjection;
+import com.uniq.tms.tms_microservice.shared.exception.CommonExceptionHandler;
+import com.uniq.tms.tms_microservice.shared.helper.TimesheetHelper;
 import com.uniq.tms.tms_microservice.shared.util.CacheKeyUtil;
 import com.uniq.tms.tms_microservice.shared.util.ExportStatusTracker;
 import com.uniq.tms.tms_microservice.shared.util.ReportStyleUtil;
@@ -60,6 +70,7 @@ import java.util.stream.Collectors;
 @Service
 public class PayRollServiceImpl implements PayRollService {
 
+    private final ZoneId zoneId = ZoneId.of("Asia/Kolkata");
     private static final Logger log = LogManager.getLogger(PayRollServiceImpl.class);
 
     private final PayRollAdapter payRollAdapter;
@@ -150,95 +161,178 @@ public class PayRollServiceImpl implements PayRollService {
         return entityMapper.toModel(payRollEntity);
     }
 
-    @Override
-    public void calculatePayrollAmount() {
-        log.info("before finding user payroll");
-        List<UserPayRollEntity> entities = payRollAdapter.getAllUserPayroll();
-        PayRollSettingEntity settingEntity = payRollAdapter.findFirst()
-                .orElseThrow(() -> new RuntimeException("Payroll Setting not found"));
-
-//        CalendarEntity defaultCalendar = calendarAdapter.findDefaultCalendar();
-
-        LocalDate date = LocalDate.now(ZoneId.of("Asia/Kolkata"));
-        int year = date.getYear();
-        int month = date.getMonthValue() - 1;
-        if (month == 0) {
-            month = 12;
-            year = year - 1;
-        }
-        int daysInMonth = YearMonth.of(year, month).lengthOfMonth();
-        List<MonthlySummaryEntity> monthlySummaryList = leaveBalanceAdapter.findByMonthAndYear(month, year);
-        Map<String, MonthlySummaryEntity> unpaidMap =
-                monthlySummaryList.stream()
-                        .collect(Collectors.toMap(
-                                MonthlySummaryEntity::getUserId,
-                                Function.identity()
-                        ));
-        List<UserPayRollAmountEntity> userPayrollAmountList = new ArrayList<>();
-        for (UserPayRollEntity entity : entities) {
-            log.info("loop started");
-            UserPayRollAmountEntity userPayrollAmount = new UserPayRollAmountEntity();
-            UserEntity user = entity.getUser();
-            userPayrollAmount.setUser(user);
-            userPayrollAmount.setPayroll(entity.getPayroll());
-            LocalDate localDate = LocalDate.of(year, month, 1);
-            String monthDate = localDate.format(DateTimeFormatter.ofPattern("MMMM,yyyy"));
-            userPayrollAmount.setMonth(monthDate);
-            BigDecimal daySalary = entity.getPayroll().getMonthlySalary().divide(BigDecimal.valueOf(30), 2, RoundingMode.HALF_UP);
-            List<TimesheetEntity> timesheetEntities = timesheetAdapter.getTimesheetByUserIds(entity.getUser().getUserId(), year, month);
-            log.info("before rest day");
-            log.info("rest day");
-            MonthlySummaryEntity monthlySummary = unpaidMap.get(user.getUserId());
-            int paidLeave = monthlySummary.getFullDayUnits() - monthlySummary.getUnpaidLeavesTaken();
-            int restDays = daysInMonth - monthlySummary.getTotalWorkingDays();
-            Integer regularDays = restDays + paidLeave + monthlySummary.getTotalPresentDays();
-            int unpaidLeave = daysInMonth - regularDays;
-//            Integer regularDays = calculateRegularDays(daysInMonth, unpaidLeave);
-            BigDecimal regularHrs = calculateRegularHrs(timesheetEntities);
-            userPayrollAmount.setUnpaidLeaveDeduction(daySalary.multiply(BigDecimal.valueOf(unpaidLeave)));
-            userPayrollAmount.setRegularDays(regularDays);
-            userPayrollAmount.setRegularHrs(regularHrs);
-            BigDecimal regularPayrollAmount = calculateRegularPayrollAmount(regularDays, daySalary);
-            userPayrollAmount.setRegularPayrollAmount(regularPayrollAmount);
-            BigDecimal overtimeHrs = BigDecimal.ZERO;
-            BigDecimal overtimePayrollAmount = BigDecimal.ZERO;
-            if (settingEntity.isOvertime()) {
-                overtimeHrs = calculateOvertimeHrs(timesheetEntities);
-                overtimePayrollAmount = overtimeHrs
-                        .multiply(entity.getPayroll().getOvertimeAmount())
-                        .setScale(2, RoundingMode.HALF_UP);
-            }
-            userPayrollAmount.setOvertimeHrs(overtimeHrs);
-            userPayrollAmount.setTotalHrs(regularHrs.add(overtimeHrs));
-            userPayrollAmount.setOvertimePayrollAmount(overtimePayrollAmount);
-            userPayrollAmount.setTotalPayrollAmount(regularPayrollAmount.add(overtimePayrollAmount));
-            userPayrollAmount.setPayrollStatus(PayRollStatusEnum.PROCESSING);
-            userPayrollAmount.setNotes("monthly salary updated");
-            userPayrollAmountList.add(userPayrollAmount);
-        }
-        payRollAdapter.saveAllUserPayrollAmount(userPayrollAmountList);
-        log.info("save payroll amount");
-    }
+//    @Override
+//    public void calculatePayrollAmount() {
+//        log.info("before finding user payroll");
+//        List<String> usersId = userAdapter.getAllActiveUsers();
+//        List<UserPayRollEntity> entities = payRollAdapter.getAllUserPayroll(usersId);
+//        PayRollSettingEntity settingEntity = payRollAdapter.findFirst()
+//                .orElseThrow(() -> new RuntimeException("Payroll Setting not found"));
+//
+////        CalendarEntity defaultCalendar = calendarAdapter.findDefaultCalendar();
+//
+//        LocalDate date = LocalDate.now(zoneId);
+//        int year = date.getYear();
+//        int month = date.getMonthValue() - 1;
+//        if (month == 0) {
+//            month = 12;
+//            year = year - 1;
+//        }
+//        int daysInMonth = YearMonth.of(year, month).lengthOfMonth();
+//        List<MonthlySummaryEntity> monthlySummaryList = leaveBalanceAdapter.findByMonthAndYear(month, year);
+//        Map<String, MonthlySummaryEntity> unpaidMap =
+//                monthlySummaryList.stream()
+//                        .collect(Collectors.toMap(
+//                                MonthlySummaryEntity::getUserId,
+//                                Function.identity()
+//                        ));
+//        List<UserPayRollAmountEntity> userPayrollAmountList = new ArrayList<>();
+//        for (UserPayRollEntity entity : entities) {
+//            log.info("loop started");
+//            UserPayRollAmountEntity userPayrollAmount = new UserPayRollAmountEntity();
+//            UserEntity user = entity.getUser();
+//            userPayrollAmount.setUser(user);
+//            userPayrollAmount.setPayroll(entity.getPayroll());
+//            LocalDate localDate = LocalDate.of(year, month, 1);
+//            String monthDate = localDate.format(DateTimeFormatter.ofPattern("MMMM,yyyy"));
+//            userPayrollAmount.setMonth(monthDate);
+//            BigDecimal daySalary = entity.getPayroll().getMonthlySalary().divide(BigDecimal.valueOf(30), 2, RoundingMode.HALF_UP);
+//            List<TimesheetEntity> timesheetEntities = timesheetAdapter.getTimesheetByUserIds(entity.getUser().getUserId(), year, month);
+//            log.info("before rest day");
+//            log.info("rest day");
+//            MonthlySummaryEntity monthlySummary = unpaidMap.get(user.getUserId());
+//            int paidLeave = monthlySummary.getFullDayUnits() - monthlySummary.getUnpaidLeavesTaken();
+//            int restDays = daysInMonth - monthlySummary.getTotalWorkingDays();
+//            Integer regularDays = restDays + paidLeave + monthlySummary.getTotalPresentDays();
+//            int unpaidLeave = daysInMonth - regularDays;
+////            Integer regularDays = calculateRegularDays(daysInMonth, unpaidLeave);
+//            BigDecimal regularHrs = calculateRegularHrs(timesheetEntities);
+//            userPayrollAmount.setUnpaidLeaveDeduction(daySalary.multiply(BigDecimal.valueOf(unpaidLeave)));
+//            userPayrollAmount.setRegularDays(regularDays);
+//            userPayrollAmount.setRegularHrs(regularHrs);
+//            BigDecimal regularPayrollAmount = calculateRegularPayrollAmount(regularDays, daySalary);
+//            userPayrollAmount.setRegularPayrollAmount(regularPayrollAmount);
+//            BigDecimal overtimeHrs = BigDecimal.ZERO;
+//            BigDecimal overtimePayrollAmount = BigDecimal.ZERO;
+//            if (settingEntity.isOvertime()) {
+//                overtimeHrs = calculateOvertimeHrs(timesheetEntities);
+//                overtimePayrollAmount = overtimeHrs
+//                        .multiply(entity.getPayroll().getOvertimeAmount())
+//                        .setScale(2, RoundingMode.HALF_UP);
+//            }
+//            userPayrollAmount.setOvertimeHrs(overtimeHrs);
+//            userPayrollAmount.setTotalHrs(regularHrs.add(overtimeHrs));
+//            userPayrollAmount.setOvertimePayrollAmount(overtimePayrollAmount);
+//            userPayrollAmount.setTotalPayrollAmount(regularPayrollAmount.add(overtimePayrollAmount));
+//            userPayrollAmount.setPayrollStatus(PayRollStatusEnum.PROCESSING);
+//            userPayrollAmount.setNotes("monthly salary updated");
+//            userPayrollAmountList.add(userPayrollAmount);
+//        }
+//        payRollAdapter.saveAllUserPayrollAmount(userPayrollAmountList);
+//        log.info("save payroll amount");
+//    }
 
 
 //    public Integer calculateRegularDays(int days, BigDecimal unpaidLeave) {
 //        return BigDecimal.valueOf(days).subtract(unpaidLeave).intValue();
 //    }
 
-    public BigDecimal calculateOvertimeHrs(List<TimesheetEntity> timesheetEntities) {
-        return timesheetEntities.stream()
-                .filter(t -> t.getTotalOverTime() != null)
-                .map(t -> BigDecimal.valueOf(t.getTotalOverTime().getHour())
-                        .add(BigDecimal.valueOf(t.getTotalOverTime().getMinute()).divide(BigDecimal.valueOf(60), 2, BigDecimal.ROUND_HALF_UP)))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+//    public BigDecimal calculateOvertimeHrs(List<TimesheetEntity> timesheetEntities) {
+//        return timesheetEntities.stream()
+//                .filter(t -> t.getTotalOverTime() != null)
+//                .map(t -> BigDecimal.valueOf(t.getTotalOverTime().getHour())
+//                        .add(BigDecimal.valueOf(t.getTotalOverTime().getMinute()).divide(BigDecimal.valueOf(60), 2, BigDecimal.ROUND_HALF_UP)))
+//                .reduce(BigDecimal.ZERO, BigDecimal::add);
+//    }
+//
+//    public BigDecimal calculateRegularHrs(List<TimesheetEntity> timesheetEntities) {
+//        return timesheetEntities.stream()
+//                .filter(t -> t.getRegularHours() != null)
+//                .map(t -> BigDecimal.valueOf(t.getRegularHours().getHour())
+//                        .add(BigDecimal.valueOf(t.getRegularHours().getMinute()).divide(BigDecimal.valueOf(60), 2, BigDecimal.ROUND_HALF_UP)))
+//                .reduce(BigDecimal.ZERO, BigDecimal::add);
+//    }
+
+    @Override
+    public void calculatePayrollAmount(){
+        LocalDate now = LocalDate.now(zoneId);
+        LocalDate previousDay = now.minusDays(1);
+        int day = previousDay.getDayOfMonth();
+        int month = previousDay.getMonthValue();
+        int year = previousDay.getYear();
+        List<UserPayRollAmountEntity> userPayrollAmountList = new ArrayList<>();
+        PayRollSettingEntity settingEntity = payRollAdapter.findFirst()
+                .orElseThrow(() -> new RuntimeException("Payroll Setting not found"));
+        List<String> usersId = userAdapter.getAllActiveUsers();
+        List<UserPayRollEntity> entities = payRollAdapter.getAllUserPayroll(usersId);
+        List<MonthlySummaryEntity> monthlySummaryList = leaveBalanceAdapter.findByMonthAndYear(month, year);
+        Map<String, MonthlySummaryEntity> userMonthlySummaryMap =
+                monthlySummaryList.stream()
+                        .collect(Collectors.toMap(
+                                MonthlySummaryEntity::getUserId,
+                                Function.identity()
+                        ));
+        Map<String, TimesheetEntity> userTimesheetMap = timesheetAdapter.findAllTimesheetsByDate(previousDay)
+                .stream()
+                .collect(Collectors.toMap(
+                        t -> t.getUser().getUserId(),
+                        Function.identity()
+                ));
+
+        for (UserPayRollEntity entity : entities) {
+            UserEntity user = entity.getUser();
+            MonthlySummaryEntity monthlySummary = userMonthlySummaryMap.get(user.getUserId());
+            String monthDate = previousDay.format(DateTimeFormatter.ofPattern("MMMM,yyyy"));
+            UserPayRollAmountEntity userPayrollAmount =
+                    (day == 1)
+                            ? new UserPayRollAmountEntity()
+                            : payRollAdapter.getUserPayrollAmount(user.getUserId(), monthDate)
+                            .orElseGet(UserPayRollAmountEntity::new);
+            if (userPayrollAmount.getId() == null){
+                userPayrollAmount.setUser(user);
+                userPayrollAmount.setPayroll(entity.getPayroll());
+                userPayrollAmount.setMonth(monthDate);
+                userPayrollAmount.setPayrollStatus(PayRollStatusEnum.PROCESSING);
+                userPayrollAmount.setNotes("monthly salary updated");
+            }
+            BigDecimal daySalary = entity.getPayroll().getMonthlySalary().divide(BigDecimal.valueOf(30), 2, RoundingMode.HALF_UP);
+            TimesheetEntity timesheet = userTimesheetMap.get(user.getUserId());
+
+            BigDecimal regularHours = (timesheet == null) ? BigDecimal.ZERO
+                    : toHours(timesheet.getRegularHours());
+            BigDecimal overtimeHours = BigDecimal.ZERO;
+            BigDecimal overtimePayrollAmount = BigDecimal.ZERO;
+            if (settingEntity.isOvertime()) {
+                overtimeHours = (timesheet == null) ? overtimeHours
+                        : toHours(timesheet.getTotalOverTime());
+                overtimePayrollAmount = overtimeHours
+                        .multiply(entity.getPayroll().getOvertimeAmount())
+                        .setScale(2, RoundingMode.HALF_UP);
+            }
+            int regularDays = monthlySummary.getTotalPresentDays() + monthlySummary.getTotalHolidays() + (monthlySummary.getFullDayUnits() - monthlySummary.getUnpaidLeavesTaken());
+            int unpaidLeave = day - regularDays;
+            BigDecimal regularPayrollAmount = calculateRegularPayrollAmount(regularDays, daySalary);
+            userPayrollAmount.setUnpaidLeaveDeduction(daySalary.multiply(BigDecimal.valueOf(unpaidLeave)));
+            regularHours = Optional.ofNullable(userPayrollAmount.getRegularHrs()).orElse(BigDecimal.ZERO).add(regularHours);
+            overtimeHours = Optional.ofNullable(userPayrollAmount.getOvertimeHrs()).orElse(BigDecimal.ZERO).add(overtimeHours);
+            userPayrollAmount.setRegularHrs(regularHours);
+            userPayrollAmount.setRegularDays(regularDays);
+            userPayrollAmount.setOvertimeHrs(overtimeHours);
+            userPayrollAmount.setTotalHrs(regularHours.add(overtimeHours));
+            userPayrollAmount.setRegularPayrollAmount(regularPayrollAmount);
+            userPayrollAmount.setOvertimePayrollAmount(overtimePayrollAmount);
+            userPayrollAmount.setTotalPayrollAmount(regularPayrollAmount.add(overtimePayrollAmount));
+            userPayrollAmountList.add(userPayrollAmount);
+        }
+        payRollAdapter.saveAllUserPayrollAmount(userPayrollAmountList);
     }
 
-    public BigDecimal calculateRegularHrs(List<TimesheetEntity> timesheetEntities) {
-        return timesheetEntities.stream()
-                .filter(t -> t.getRegularHours() != null)
-                .map(t -> BigDecimal.valueOf(t.getRegularHours().getHour())
-                        .add(BigDecimal.valueOf(t.getRegularHours().getMinute()).divide(BigDecimal.valueOf(60), 2, BigDecimal.ROUND_HALF_UP)))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    private BigDecimal toHours(LocalTime time) {
+        if (time == null) return BigDecimal.ZERO;
+
+        return BigDecimal.valueOf(time.getHour())
+                .add(BigDecimal.valueOf(time.getMinute())
+                        .divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP));
     }
 
     public BigDecimal calculateRegularPayrollAmount(Integer regularDays, BigDecimal daySalary) {

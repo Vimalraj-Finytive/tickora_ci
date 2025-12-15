@@ -159,4 +159,13 @@ ORDER BY lb.periodStartDate DESC
             @Param("policyId") String policyId
     );
 
+    @Query("""
+    SELECT lb
+    FROM LeaveBalanceEntity lb
+    WHERE lb.active = true
+      AND lb.periodStartDate <= :date
+      AND lb.periodEnd >= :date
+    """)
+    List<LeaveBalanceEntity> findActiveBalances(@Param("date") LocalDate date);
+
 }

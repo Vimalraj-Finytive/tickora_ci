@@ -259,4 +259,9 @@ public class CalendarAdapterImpl implements CalendarAdapter {
         return calendarHolidayRepository.findAllHolidayDates();
     }
 
+    @Override
+    public List<CalendarHolidayProjection> findHolidayCalendarsByDate(LocalDate date) {
+        return calendarHolidayRepository.findHolidayCalendarsByDate(date);
+    }
+
 }

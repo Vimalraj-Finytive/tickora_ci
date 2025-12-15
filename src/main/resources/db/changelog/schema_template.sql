@@ -912,6 +912,7 @@ CREATE TABLE IF NOT EXISTS monthly_summary (
     hours_units INT DEFAULT 0,
     total_present_days INT DEFAULT 0,
     total_working_days INT DEFAULT 0,
+    total_holidays INT DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

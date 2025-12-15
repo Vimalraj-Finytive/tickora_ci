@@ -150,4 +150,9 @@ public class TimeOffRequestAdapterImpl implements TimeOffRequestAdapter {
     public TimeOffRequestEntity findByRequestId(Long requestId) {
         return timeoffRequestRepo.findByTimeOffRequestId(requestId);
     }
+    @Override
+    public List<TimeOffRequestEntity> findAllRequestByDate(LocalDate date, Status status) {
+        return timeoffRequestRepo.findAllRequestByDate(date, status);
+    }
+
 }
