@@ -2,7 +2,6 @@ package com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.impl;
 
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.TimeOffPolicyAdapter;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.AccrualType;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.record.UserPolicyProjection;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.repository.LeaveBalanceRepository;
 import org.springframework.stereotype.Component;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeOffPolicyEntity;
@@ -11,7 +10,6 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.repository.UserPoli
 import com.uniq.tms.tms_microservice.modules.userManagement.repository.UserRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
-
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Collections;
@@ -109,5 +107,9 @@ public class TimeoffPolicyAdapterImpl implements TimeOffPolicyAdapter {
     public boolean isPolicyActive(String policyId) {
         return timeoffPolicyRepo.findActivePolicyById(policyId);
     }
-}
 
+    @Override
+    public List<TimeOffPolicyEntity> findPoliciesList() {
+        return timeoffPolicyRepo.findAllByIsDefaultFalseAndIsActiveTrue();
+    }
+}

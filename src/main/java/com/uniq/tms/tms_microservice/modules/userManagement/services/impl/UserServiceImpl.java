@@ -15,10 +15,10 @@ import com.uniq.tms.tms_microservice.modules.locationManagement.mapper.LocationD
 import com.uniq.tms.tms_microservice.modules.locationManagement.repository.LocationRepository;
 import com.uniq.tms.tms_microservice.modules.locationManagement.services.LocationService;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.mapper.OrganizationEntityMapper;
+import com.uniq.tms.tms_microservice.modules.userManagement.projections.UserProjection;
 import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.OrganizationAdapter;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.OrganizationEntity;
-import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.OrganizationTypeEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.RoleEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.SubscriptionEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.enums.OrganizationStatusEnum;
@@ -135,6 +135,7 @@ public class UserServiceImpl implements UserService {
     private final TimeOffPolicyAdapter timeOffPolicyAdapter;
     private final TimeOffPolicyService timeOffPolicyService;
     private final UserPolicyAdapter userPolicyAdapter;
+    private final UserMergeUtil userMergeUtil;
 
     public UserServiceImpl(Validator validator, UserAdapter userAdapter, TimesheetAdapter timesheetAdapter,
                            UserEntityMapper userEntityMapper, CalendarAdapter calendarAdapter, OrganizationRepository organizationRepository,
@@ -144,7 +145,7 @@ public class UserServiceImpl implements UserService {
                            ApplicationEventPublisher publisher, WorkScheduleAdapter workScheduleAdapter, UserCacheService userCacheService,
                            CacheKeyUtil cacheKeyUtil, GroupRepository groupRepository, CacheKeyConfig cacheKeyConfig, CacheReloadHandlerRegistry cacheReloadHandlerRegistry,
                            OrganizationTypeRepository organizationTypeRepository, IdGenerationService idGenerationService, SecondaryDetailsRepository secondaryDetailsRepository,
-                           RolePrivilegeHelper rolePrivilegeHelper, ExceptionHelper exceptionHelper, OrganizationCacheService organizationCacheService, LocationDtoMapper locationDtoMapper, LocationService locationService, OrganizationAdapter organizationAdapter, LocationAdapter locationAdapter, OrganizationEntityMapper organizationEntityMapper, AuthHelper authHelper, TimeOffPolicyAdapter timeOffPolicyAdapter, TimeOffPolicyService timeOffPolicyService, UserPolicyAdapter userPolicyAdapter) {
+                           RolePrivilegeHelper rolePrivilegeHelper, ExceptionHelper exceptionHelper, OrganizationCacheService organizationCacheService, LocationDtoMapper locationDtoMapper, LocationService locationService, OrganizationAdapter organizationAdapter, LocationAdapter locationAdapter, OrganizationEntityMapper organizationEntityMapper, AuthHelper authHelper, TimeOffPolicyAdapter timeOffPolicyAdapter, TimeOffPolicyService timeOffPolicyService, UserPolicyAdapter userPolicyAdapter, UserMergeUtil userMergeUtil) {
 
         this.validator = validator;
         this.userAdapter = userAdapter;
@@ -180,6 +181,7 @@ public class UserServiceImpl implements UserService {
         this.timeOffPolicyAdapter = timeOffPolicyAdapter;
         this.timeOffPolicyService = timeOffPolicyService;
         this.userPolicyAdapter = userPolicyAdapter;
+        this.userMergeUtil = userMergeUtil;
     }
 
     private static final Logger log = LoggerFactory.getLogger(UserServiceImpl.class);
@@ -1444,58 +1446,73 @@ public class UserServiceImpl implements UserService {
     }
 
     public UserProfileResponseDto loadSingleUserProfile(String orgId, String userId) {
-        UserEntity user = userAdapter.findUserByOrgIdAndUserId(orgId, userId);
-        if (user == null) {
+
+        // Step 1 — Load single user projection the same way as list
+        List<UserProjection> rows = userAdapter.findUserByUserId(userId);
+
+        if (rows == null || rows.isEmpty()) {
             log.warn("User not found for userId {} in orgId {}", userId, orgId);
             return null;
         }
 
-        List<UserLocationEntity> userLocations = locationAdapter.findByUser_UserId(userId);
+        // Step 2 — Merge like global merge logic
+        Map<String, UserResponseDto> merged = userMergeUtil.mergeUserRecords(rows);
+
+        UserResponseDto user = merged.values().iterator().next();
+
+        List<UserLocationEntity> userLocations = locationAdapter.findByUser_UserId(user.getUserId());
+        List<LocationDto> locationDtos;
+
         if (userLocations.isEmpty()) {
-            log.warn("Skipping userId {} due to no locations", userId);
-            return null;
+            log.warn("No locations found for userId {}", user.getUserId());
+            locationDtos = Collections.emptyList();
+        } else {
+            locationDtos = userLocations.stream()
+                    .filter(ul -> ul.getLocation() != null)
+                    .map(ul -> locationDtoMapper.toDto(ul.getLocation()))
+                    .toList();
         }
 
-        List<LocationDto> locationDtos = userLocations.stream()
-                .filter(ul -> ul.getLocation() != null)
-                .map(ul -> locationDtoMapper.toDto(ul.getLocation()))
-                .toList();
-
-        List<UserGroupEntity> userGroups = userAdapter.findUserByOrganizationIdAndUserId(orgId, userId);
+        List<UserGroupEntity> userGroups = userAdapter.findUserByOrganizationIdAndUserId(orgId, user.getUserId());
         List<UserGroupProfileDto> groupDtos = userGroups.isEmpty()
                 ? Collections.emptyList()
                 : userGroups.stream().map(userDtoMapper::toGroupsDto).toList();
 
-        OrganizationEntity org = organizationRepository.findByOrganizationId(orgId).orElse(null);
-        Optional<OrganizationTypeEntity> organizationType =
-                (org != null && org.getOrgType() != null)
-                        ? organizationTypeRepository.findById(org.getOrgType())
-                        : Optional.empty();
-
-        List<ParentDto> parentDtos = Collections.emptyList();
-        if (UserRole.STUDENT.name().equalsIgnoreCase(user.getRole().getName())) {
-            parentDtos = secondaryDetailsRepository.findByUserId(userId).stream()
-                    .map(parentEntity -> new ParentDto(
-                            parentEntity.getId(),
-                            parentEntity.getUserName(),
-                            parentEntity.getEmail(),
-                            parentEntity.getMobile()
-                    ))
-                    .toList();
+        // Step 5 — Parent (Student only)
+        List<ParentDto> parentDtos = new ArrayList<>();
+        if (user.getSecondaryDetails() != null) {
+            SecondaryDetailsDto sec = user.getSecondaryDetails();
+            parentDtos.add(new ParentDto(
+                    null,
+                    sec.getUserName(),
+                    sec.getEmail(),
+                    sec.getMobile()
+            ));
         }
 
+        // Step 6 — Single policy for profile (first one)
+        UserPolicyDto singlePolicy =
+                user.getPolicies() != null && !user.getPolicies().isEmpty()
+                        ? user.getPolicies().getFirst()
+                        : null;
+
+        // Step 7 — Build Profile Response
         return new UserProfileResponseDto(
-                userId,
+                user.getUserId(),
                 user.getUserName(),
                 user.getEmail(),
                 user.getMobileNumber(),
-                user.getRole().getName(),
+                user.getRoleName(),
                 user.getDateOfJoining(),
                 locationDtos,
                 groupDtos,
-                org != null ? org.getOrgName() : null,
-                user.getWorkSchedule() != null ? user.getWorkSchedule().getScheduleName() : "-",
-                organizationType.map(OrganizationTypeEntity::getOrgTypeName).orElse("-"),
+                user.getOrganizationName() != null ? user.getOrganizationName() : "-",
+                user.getScheduleName(),
+                user.getOrgType() != null ? user.getOrgType() : "-",
+                user.getCalendarName(),
+                user.getRequestApproverName(),
+                user.getPayrollName(),
+                (List<UserPolicyDto>) singlePolicy,
                 parentDtos
         );
     }
@@ -2331,6 +2348,8 @@ public class UserServiceImpl implements UserService {
 
     @Transactional
     public boolean UpdateCalendar(UserCalendarRequestDto updates) {
+        String orgId = authHelper.getOrgId();
+        String schema = authHelper.getSchema();
         List<UserEntity> users = userAdapter.getUsersByIds(updates.getUserIds());
         if (users.isEmpty()) {
             log.warn("No users found for given IDs: {}", updates.getUserIds());
@@ -2344,6 +2363,23 @@ public class UserServiceImpl implements UserService {
         for (UserEntity user : users) {
             updateUserCalendar(user, newCalendarId);
         }
+        if (isRedisEnabled) {
+            try {
+                CacheEventPublisherUtil.syncReloadThenPublish(
+                        publisher,
+                        cacheKeyConfig.getUsers(),
+                        orgId,
+                        schema,
+                        cacheReloadHandlerRegistry
+                );
+                log.info("User cache reload event published after assigned calendar to a user for orgId={}", orgId);
+            } catch (Exception e) {
+                log.error("Failed to publish User cache reload event for orgId={}", orgId, e);
+            }
+        } else {
+            log.info("Redis is not enabled or RedisTemplate is null. Skipping cache reload for orgId={}", orgId);
+        }
+
         return true;
     }
 

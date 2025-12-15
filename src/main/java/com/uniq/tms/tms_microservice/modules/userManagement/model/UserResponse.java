@@ -2,6 +2,7 @@ package com.uniq.tms.tms_microservice.modules.userManagement.model;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.uniq.tms.tms_microservice.modules.userManagement.dto.SecondaryDetailsDto;
+import com.uniq.tms.tms_microservice.modules.userManagement.dto.UserPolicyDto;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -19,10 +20,15 @@ public class UserResponse {
     private LocalDate dateOfJoining;
     private SecondaryDetailsDto secondaryDetails;
     private String scheduleName;
-    private List<UserPolicyModel> policies;
+    private List<UserPolicyDto> policies;
     private String calendarName;
     private String requestApproverName;
     private String payrollName;
+    private String organizationName;
+    private String orgType;
+
+    public UserResponse() {
+    }
 
     public UserResponse(
             String userId,
@@ -44,7 +50,9 @@ public class UserResponse {
             LocalDate validTo,
             String calendarName,
             String requestApproverName,
-            String payRollName
+            String payRollName,
+            String organizationName,
+            String orgType
     ) {
         this.userId = userId;
         this.userName = userName;
@@ -76,12 +84,14 @@ public class UserResponse {
         // POLICIES
         this.policies = new ArrayList<>();
         if (policyName != null) {
-            this.policies.add(new UserPolicyModel(policyId ,policyName, validFrom, validTo));
+            this.policies.add(new UserPolicyDto(policyId,policyName, validFrom, validTo));
         }
 
         this.calendarName = calendarName;
         this.requestApproverName = requestApproverName;
         this.payrollName = payRollName;
+        this.organizationName = organizationName;
+        this.orgType = orgType;
     }
 
 
@@ -172,14 +182,6 @@ public class UserResponse {
         this.calendarName = calendarName;
     }
 
-    public List<UserPolicyModel> getPolicies() {
-        return policies;
-    }
-
-    public void setPolicies(List<UserPolicyModel> policies) {
-        this.policies = policies;
-    }
-
     public String getRequestApproverName() {
         return requestApproverName;
     }
@@ -195,5 +197,24 @@ public class UserResponse {
     public void setPayrollName(String payrollName) {
         this.payrollName = payrollName;
     }
-}
 
+    public void setPolicies(List<UserPolicyDto> policies) {
+        this.policies = policies;
+    }
+
+    public String getOrganizationName() {
+        return organizationName;
+    }
+
+    public void setOrganizationName(String organizationName) {
+        this.organizationName = organizationName;
+    }
+
+    public String getOrgType() {
+        return orgType;
+    }
+
+    public void setOrgType(String orgType) {
+        this.orgType = orgType;
+    }
+}
