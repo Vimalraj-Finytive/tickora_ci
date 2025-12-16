@@ -234,7 +234,7 @@ public class JwtFilter extends OncePerRequestFilter {
             "/tms/organization/orgType", "/tms/organization/validate",
             "/tms/organization/create", "/tms/sendOTP",
             "/tms/debug/otpsCount", "/tms/debug/otps",
-            "/tms/organization/getDropDowns", "/tms/leaveManagement/countries"
+            "/tms/organization/getDropDowns", "/tms/leaveManagement/countries", "/tms/test/daily_service"
     );
 
     private static final List<String> SUBSCRIPTION_ALLOWED_PATHS = List.of(

@@ -190,15 +190,32 @@ public class CalendarAdapterImpl implements CalendarAdapter {
     @Override
     @Transactional
     public CalendarEntity updateCalendar(CalendarEntity entity) {
+
         CalendarEntity existing = calendarRepository.findById(entity.getId())
                 .orElseThrow(() -> new EntityNotFoundException("Calendar not found"));
+
+        if (Boolean.FALSE.equals(entity.getIsDefault())
+                && Boolean.TRUE.equals(existing.getIsDefault())) {
+
+            long otherDefaults =
+                    calendarRepository.countOtherDefaultCalendars(existing.getId());
+
+            if (otherDefaults == 0) {
+                throw new IllegalStateException(
+                        "At least one calendar must be set as default"
+                );
+            }
+        }
+
         if (Boolean.TRUE.equals(entity.getIsDefault())) {
             calendarRepository.updateAllDefaultsToFalseExcept(entity.getId());
+            existing.setIsDefault(true);
         }
-        if (entity.getName() != null)
+
+        if (entity.getName() != null) {
             existing.setName(entity.getName());
-        if (entity.getIsDefault() != null)
-            existing.setIsDefault(entity.getIsDefault());
+        }
+
         return calendarRepository.save(existing);
     }
 

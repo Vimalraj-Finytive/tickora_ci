@@ -689,16 +689,25 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
         if (reqList == null || reqList.isEmpty()) {
             throw new IllegalArgumentException("Request is empty");
         }
-
+        LocalDate validFrom = reqList.getFirst().getValidityStartDate();
+        if (validFrom == null) {
+            throw new IllegalArgumentException("Validity start date is required");
+        }
         String userId = reqList.getFirst().getUserId();
-
-        Set<String> requestedPolicyIds = reqList.stream()
+        List<String> requestedPolicyIds = reqList.stream()
                 .map(EditUserPolicyModel::getPolicyId)
-                .collect(Collectors.toSet());
-
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
         List<UserPolicyEntity> existingPolicies =
                 userPolicyAdapter.findUserPoliciesByUserId(userId);
-
+        Map<String, LocalDate> policyValidityStartMap =
+                timeOffPolicyAdapter.findPoliciesByIds(requestedPolicyIds)
+                        .stream()
+                        .collect(Collectors.toMap(
+                                TimeOffPolicyEntity::getPolicyId,
+                                TimeOffPolicyEntity::getValidityStartDate
+                        ));
         Map<String, UserPolicyEntity> existingMap =
                 existingPolicies.stream()
                         .collect(Collectors.toMap(up -> up.getPolicy().getPolicyId(), up -> up));
@@ -709,10 +718,11 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
         for (EditUserPolicyModel req : reqList) {
 
             String policyId = req.getPolicyId();
-            LocalDate validFrom = req.getValidityStartDate();
-
-            if (validFrom.isBefore(LocalDate.now())){
-                throw new IllegalArgumentException("Start date should be today or after");
+            LocalDate existingDate = policyValidityStartMap.get(policyId);
+            if (existingDate != null && validFrom.isBefore(existingDate)) {
+                throw new IllegalArgumentException(
+                        "Start date cannot be before the existing policy start date"
+                );
             }
             if (existingMap.containsKey(policyId)) {
                 UserPolicyEntity up = existingMap.get(policyId);

@@ -42,4 +42,7 @@ public interface CalendarRepository extends JpaRepository<CalendarEntity, String
     @Query("SELECT c FROM CalendarEntity c WHERE c.isDefault = true AND c.isActive = true")
     CalendarEntity findDefaultCalendar();
 
+    @Query("SELECT COUNT(c) FROM CalendarEntity c WHERE c.isDefault = true AND c.id <> :calendarId")
+    long countOtherDefaultCalendars(@Param("calendarId") String calendarId);
+
 }

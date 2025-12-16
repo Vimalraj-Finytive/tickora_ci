@@ -1012,7 +1012,7 @@ public class UserServiceImpl implements UserService {
         }
 
         String newRequesterId = updates.getUser().getRequestApproverId();
-        if (newRequesterId != null) {
+        if (!newRequesterId.isBlank()) {
             List<String> oneUserList = List.of(userId);
             validateApprover(newRequesterId, oneUserList);
             existingUser.setRequestApproverId(newRequesterId);
