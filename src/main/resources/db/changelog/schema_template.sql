@@ -1562,7 +1562,7 @@ LEFT JOIN ${schemaName}.timeoff_policies tp
 LEFT JOIN ${schemaName}.user_payroll upay
     ON upay.user_id::text = u.user_id::text
 LEFT JOIN ${schemaName}.payroll py
-    ON py.id::text = upay.payroll_id::text;
+    ON py.id::text = upay.payroll_id::text
 LEFT JOIN organization o
     ON o.organization_id::text = u.organization_id::text
 LEFT JOIN org_type ot
