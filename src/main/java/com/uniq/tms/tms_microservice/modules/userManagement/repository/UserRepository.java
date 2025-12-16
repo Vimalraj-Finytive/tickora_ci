@@ -7,6 +7,7 @@ import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserGroupEnti
 import com.uniq.tms.tms_microservice.modules.userManagement.dto.UserNameSuggestionDto;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.projection.TimesheetProjection;
 import com.uniq.tms.tms_microservice.modules.userManagement.projections.UserCalendarProjection;
+import com.uniq.tms.tms_microservice.modules.userManagement.projections.UserHolidayProjection;
 import com.uniq.tms.tms_microservice.modules.userManagement.projections.UserProjection;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.WorkScheduleEntity;
 import jakarta.transaction.Transactional;
@@ -17,6 +18,8 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -312,4 +315,17 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
                   AND active = true
             """, nativeQuery = true)
     List<UserProjection> findUserByUserId(@Param("userId") String userId);
+
+    @Query("""
+    SELECT
+        u.userId AS userId,
+        h.date   AS date
+    FROM UserEntity u
+    JOIN u.calendar c
+    JOIN c.calendarHolidays h
+    WHERE h.date = :date
+      AND u.userId IN :userIds
+    """)
+    List<UserHolidayProjection> findUsersWithHolidayOnDate(
+            @Param("date") LocalDate date, @Param("userIds") List<String> userIds);
 }

@@ -37,16 +37,4 @@ public interface CalendarHolidayRepository extends JpaRepository<CalendarHoliday
     FROM CalendarHolidayEntity h
     """)
     List<CalendarHolidayProjection> findAllHolidayDates();
-
-    @Query("""
-    SELECT h.calendar.id AS calendarId,
-           h.date AS date
-    FROM CalendarHolidayEntity h
-    WHERE h.date = :date
-    """)
-    List<CalendarHolidayProjection> findHolidayCalendarsByDate(
-            @Param("date") LocalDate date
-    );
-
-
 }
