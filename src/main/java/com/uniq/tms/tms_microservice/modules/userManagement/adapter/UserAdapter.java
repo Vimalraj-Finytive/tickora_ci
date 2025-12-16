@@ -9,9 +9,11 @@ import com.uniq.tms.tms_microservice.modules.userManagement.dto.UserNameEmailDto
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.*;
 import com.uniq.tms.tms_microservice.modules.userManagement.dto.UserNameSuggestionDto;
 import com.uniq.tms.tms_microservice.modules.userManagement.projections.UserCalendarProjection;
+import com.uniq.tms.tms_microservice.modules.userManagement.projections.UserHolidayProjection;
 import com.uniq.tms.tms_microservice.modules.userManagement.projections.UserProjection;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.WorkScheduleEntity;
 import java.lang.String;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -131,4 +133,5 @@ public interface UserAdapter {
     List<String> getAllActiveUsers();
     List<UserCalendarProjection> findCalendarIdsByUserIds(String[] arrays);
     List<UserProjection> findUserByUserId(String userId);
+    List<UserHolidayProjection> findUsersWithHolidayOnDate(LocalDate date, List<String> userIds);
 }

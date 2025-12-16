@@ -16,6 +16,7 @@ import com.uniq.tms.tms_microservice.modules.timesheetManagement.entity.Timeshee
 import com.uniq.tms.tms_microservice.modules.userManagement.adapter.UserAdapter;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
 import com.uniq.tms.tms_microservice.modules.userManagement.projections.UserCalendarProjection;
+import com.uniq.tms.tms_microservice.modules.userManagement.projections.UserHolidayProjection;
 import com.uniq.tms.tms_microservice.shared.helper.TimesheetHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -383,23 +384,13 @@ public class LeaveBalanceServiceImpl implements LeaveBalanceService {
         log.info("getAll users");
         List<String> usersId = userAdapter.getAllActiveUsers();
         List<String> userIds = userPolicyAdapter.findAllUserIdsInUserPolicies(previousDay, usersId);
-        List<CalendarHolidayProjection> calendarHolidayList = calendarAdapter.findHolidayCalendarsByDate(previousDay);
-        List<UserCalendarProjection> userCalendarList = userAdapter.findCalendarIdsByUserIds(userIds.toArray(new String[0]));
-        Map<String, LocalDate> calendarHolidayMap =
-                calendarHolidayList.stream()
+        Map<String, LocalDate> userHolidayMap = userAdapter.findUsersWithHolidayOnDate(previousDay, userIds)
+                        .stream()
                         .collect(Collectors.toMap(
-                                CalendarHolidayProjection::getCalendarId,
-                                CalendarHolidayProjection::getDate
+                                UserHolidayProjection::getUserId,
+                                UserHolidayProjection::getDate
                         ));
 
-        log.info("user holiday map");
-        Map<String, LocalDate> userHolidayMap =
-                userCalendarList.stream()
-                        .filter(uc -> calendarHolidayMap.containsKey(uc.getCalendarId()))
-                        .collect(Collectors.toMap(
-                                UserCalendarProjection::getUserId,
-                                uc -> calendarHolidayMap.get(uc.getCalendarId())
-                        ));
 
         log.info("working day");
         TimesheetHelper.WorkScheduleResult result = timesheetHelper.fetchWorkSchedulesAndDays(userIds.toArray(new String[0]));

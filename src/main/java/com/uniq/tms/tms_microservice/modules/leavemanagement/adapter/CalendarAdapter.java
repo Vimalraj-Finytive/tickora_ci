@@ -34,6 +34,5 @@ public interface CalendarAdapter {
     CalendarEntity findByCalendarIdAndDefaultTrue(CalendarId ids);
     CalendarEntity findDefaultCalendar();
     List<CalendarHolidayProjection> findAllHolidayDates();
-    List<CalendarHolidayProjection> findHolidayCalendarsByDate(LocalDate date);
 
 }
