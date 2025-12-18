@@ -74,7 +74,7 @@ public class UserFacade {
 
         userService.deleteUsers(orgId, requestDto.getUserIds(), userNameFromToken, requestDto.getComments());
 
-        return new ApiResponse(200, "Users Inactived Successfully", null);
+        return new ApiResponse(200, "User(s) Inactived Successfully", null);
     }
 
     public ApiResponse createGroup(AddGroupDto addGroupDto) {

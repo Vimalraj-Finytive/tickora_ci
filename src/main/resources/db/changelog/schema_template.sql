@@ -830,6 +830,7 @@ CREATE TABLE IF NOT EXISTS timeoff_request (
     end_date DATE NOT NULL,
     start_time TIME,
     end_time TIME,
+    hour_type VARCHAR,
     units_requested INT,
     status VARCHAR(20) CHECK (status IN ('APPROVED','PENDING','REJECTED','CANCELLED')),
     reason VARCHAR(255),

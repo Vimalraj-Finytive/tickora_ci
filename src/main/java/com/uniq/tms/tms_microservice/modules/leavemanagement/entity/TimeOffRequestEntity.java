@@ -1,5 +1,6 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.entity;
 
+import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.HourType;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.Status;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
 import jakarta.persistence.*;
@@ -48,6 +49,9 @@ public class TimeOffRequestEntity {
     @Column(name = "units_requested")
     private Integer unitsRequested;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "hour_type")
+    private HourType hourType;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 20)
@@ -174,6 +178,14 @@ public class TimeOffRequestEntity {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public HourType getHourType() {
+        return hourType;
+    }
+
+    public void setHourType(HourType hourType) {
+        this.hourType = hourType;
     }
 
     @Override

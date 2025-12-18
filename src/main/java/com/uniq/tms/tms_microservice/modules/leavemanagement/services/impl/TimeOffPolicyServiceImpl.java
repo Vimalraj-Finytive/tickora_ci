@@ -280,10 +280,16 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
         LocalDate userFrom = request.getUserValidFrom();
         LocalDate userTo = policy.getValidityEndDate();
 
+        if (request.getUserValidFrom().isAfter(policy.getValidityEndDate())){
+            throw new IllegalArgumentException("User Valid From should be before policy's end date");
+        }
+
         if (userFrom == null) {
             throw new IllegalArgumentException("User Valid From is required");
         }
-
+        if (userFrom.isBefore(LocalDate.now())){
+            throw new IllegalArgumentException("Valid from should be same or after today");
+        }
         validateUserValidDates(
                 userFrom, userTo,
                 policy.getValidityStartDate(),
@@ -301,8 +307,6 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
                 ? policy.getEntitledUnits().doubleValue()
                 : null;
 
-        LocalDate from = request.getUserValidFrom();
-        LocalDate to = policy.getValidityEndDate();
         for (String userId : finalUsers) {
 
             UserEntity userEntity = userMap.get(userId);
