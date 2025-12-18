@@ -519,11 +519,15 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
         LocalDate computedValidTo = computeValidTo(policy, validFrom, validTo);
 
         lb.setPeriodStartDate(validFrom);
-        lb.setPeriodEnd(computedValidTo);
+        if (validTo.isBefore(computedValidTo)){
+            lb.setPeriodEnd(validTo);
+        }else {
+            lb.setPeriodEnd(computedValidTo);
+        }
 
         double calculatedUnits= calculateTotalUnits(policy,policy.getEntitledType());
         lb.setTotalUnits(calculatedUnits);
-        lb.setBalanceUnits(totalUnits);
+        lb.setBalanceUnits(calculatedUnits);
         lb.setLeaveTakenUnits(0.0);
 
         double carryForwardUnits=policy.getMaxCarryForwardUnits() == null ?

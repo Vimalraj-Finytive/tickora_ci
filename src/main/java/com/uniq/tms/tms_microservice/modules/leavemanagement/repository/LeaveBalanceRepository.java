@@ -2,6 +2,7 @@ package com.uniq.tms.tms_microservice.modules.leavemanagement.repository;
 
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.LeaveBalanceEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.AccrualType;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.ResetFrequency;
 import io.lettuce.core.dynamic.annotation.Param;
 import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -167,5 +168,23 @@ ORDER BY lb.periodStartDate DESC
       AND lb.periodEnd >= :date
     """)
     List<LeaveBalanceEntity> findActiveBalances(@Param("date") LocalDate date);
+
+    @Query("""
+    SELECT lb
+    FROM LeaveBalanceEntity lb
+    WHERE lb.active = true
+      AND lb.periodStartDate >= :monthStart
+      AND lb.periodEnd = :monthEnd
+      AND lb.policy.resetFrequency = :frequency
+      AND lb.policy.accrualType = :accrualType
+      AND lb.user.userId IN :userIds
+    """)
+    List<LeaveBalanceEntity> findActiveMonthlyBalances(
+            @Param("monthStart") LocalDate monthStart,
+            @Param("monthEnd") LocalDate MonthEnd,
+            @Param("frequency") ResetFrequency frequency,
+            @Param("accrualType")AccrualType accrualType,
+            @Param("userIds") List<String> userIds
+    );
 
 }
