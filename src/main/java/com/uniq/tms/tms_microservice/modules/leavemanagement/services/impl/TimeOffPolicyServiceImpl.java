@@ -263,83 +263,91 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
     public void assignPolicies(TimeOffPolicyBulkAssignModel request) {
         String orgId = authHelper.getOrgId();
         String schema = authHelper.getSchema();
-        Set<String> finalUsers = getFinalUserSet(request.getUserIds(), request.getGroupIds());
-        if (finalUsers.isEmpty() ||
-                request.getPolicyId() == null ||
-                request.getPolicyId().trim().isEmpty()) {
-            log.info("if  condition");
+        Set<String> finalUsers =
+                getFinalUserSet(request.getUserIds(), request.getGroupIds());
+
+        if (finalUsers.isEmpty()) {
             return;
         }
-        log.info("after if");
-
-        TimeOffPolicyEntity policy = timeOffPolicyAdapter.findByPolicyId(request.getPolicyId());
+        if (request.getPolicyId() == null || request.getPolicyId().trim().isEmpty()) {
+            throw new IllegalArgumentException("Please select a policy to assign.");
+        }
+        TimeOffPolicyEntity policy =
+                timeOffPolicyAdapter.findByPolicyId(request.getPolicyId());
         if (policy == null) {
-            throw new IllegalArgumentException("Invalid policyId: " + request.getPolicyId());
+            throw new IllegalArgumentException("The selected policy does not exist.");
         }
-
         LocalDate userFrom = request.getUserValidFrom();
-        LocalDate userTo = policy.getValidityEndDate();
-
-        if (request.getUserValidFrom().isAfter(policy.getValidityEndDate())){
-            throw new IllegalArgumentException("User Valid From should be before policy's end date");
-        }
-
+        LocalDate policyEndDate = policy.getValidityEndDate();
         if (userFrom == null) {
-            throw new IllegalArgumentException("User Valid From is required");
+            throw new IllegalArgumentException("Please select a valid-from date.");
         }
-        if (userFrom.isBefore(LocalDate.now())){
-            throw new IllegalArgumentException("Valid from should be same or after today");
+        if (userFrom.isBefore(LocalDate.now())) {
+            throw new IllegalArgumentException(
+                    "Valid-from date must be today or a future date."
+            );
+        }
+        if (policyEndDate != null && userFrom.isAfter(policyEndDate)) {
+            throw new IllegalArgumentException(
+                    "Valid-from date cannot be later than the policy end date."
+            );
         }
         validateUserValidDates(
-                userFrom, userTo,
+                userFrom,
+                policyEndDate,
                 policy.getValidityStartDate(),
                 policy.getValidityEndDate()
         );
-
-        List<UserEntity> allUsers = userAdapter.findByUserId(new ArrayList<>(finalUsers));
-        Map<String, UserEntity> userMap = allUsers.stream()
-                .collect(Collectors.toMap(UserEntity::getUserId, u -> u));
-
+        List<UserEntity> allUsers =
+                userAdapter.findByUserId(new ArrayList<>(finalUsers));
+        Map<String, UserEntity> userMap =
+                allUsers.stream()
+                        .collect(Collectors.toMap(UserEntity::getUserId, u -> u));
         List<UserPolicyEntity> assignList = new ArrayList<>();
         List<LeaveBalanceEntity> balanceList = new ArrayList<>();
-
-        Double totalUnits = (policy.getCompensation() != Compensation.UNPAID)
-                ? policy.getEntitledUnits().doubleValue()
-                : null;
-
+        Double totalUnits =
+                (policy.getCompensation() != Compensation.UNPAID)
+                        ? policy.getEntitledUnits().doubleValue()
+                        : null;
         for (String userId : finalUsers) {
-
             UserEntity userEntity = userMap.get(userId);
-
             List<UserPolicyEntity> existingPolicies =
                     userPolicyAdapter.findUserPoliciesByUserId(userId);
-
-            boolean alreadyHasPolicy = existingPolicies.stream()
-                    .anyMatch(up -> up.getPolicy().getPolicyId().equals(policy.getPolicyId()));
-
+            boolean alreadyHasPolicy =
+                    existingPolicies.stream()
+                            .anyMatch(up ->
+                                    up.getPolicy().getPolicyId()
+                                            .equals(policy.getPolicyId())
+                            );
             if (alreadyHasPolicy) {
                 continue;
             }
-
-            UserPolicyEntity newUP = buildUserPolicy(policy, userEntity, userFrom, userTo);
+            UserPolicyEntity newUP =
+                    buildUserPolicy(policy, userEntity, userFrom, policyEndDate);
             newUP.setActive(true);
             assignList.add(newUP);
+
             if (policy.getCompensation() != Compensation.UNPAID) {
-                LeaveBalanceEntity lb = buildLeaveBalance(
-                        policy,
-                        userId,
-                        userFrom,
-                        userTo,
-                        totalUnits
-                );
+                LeaveBalanceEntity lb =
+                        buildLeaveBalance(
+                                policy,
+                                userId,
+                                userFrom,
+                                policyEndDate,
+                                totalUnits
+                        );
                 lb.setLeaveTakenUnits(0.0);
                 lb.setBalanceUnits(totalUnits);
                 lb.setActive(true);
                 balanceList.add(lb);
             }
         }
-        if (!assignList.isEmpty()) userPolicyAdapter.saveUserPolicies(assignList);
-        if (!balanceList.isEmpty()) leaveBalanceAdapter.saveLeaveBalances(balanceList);
+        if (!assignList.isEmpty()) {
+            userPolicyAdapter.saveUserPolicies(assignList);
+        }
+        if (!balanceList.isEmpty()) {
+            leaveBalanceAdapter.saveLeaveBalances(balanceList);
+        }
         if (isRedisEnabled) {
             try {
                 CacheEventPublisherUtil.syncReloadThenPublish(
@@ -349,12 +357,22 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
                         schema,
                         cacheReloadHandlerRegistry
                 );
-                log.info("User cache reload event published after assigned Policies to a user for orgId={}", orgId);
+                log.info(
+                        "User cache reloaded after policy assignment | orgId={}",
+                        orgId
+                );
             } catch (Exception e) {
-                log.error("Failed to publish User cache reload event for orgId={}", orgId, e);
+                log.error(
+                        "Failed to reload user cache after policy assignment | orgId={}",
+                        orgId,
+                        e
+                );
             }
         } else {
-            log.info("Redis is not enabled or RedisTemplate is null. Skipping cache reload for orgId={}", orgId);
+            log.info(
+                    "Redis not enabled. Skipping cache reload | orgId={}",
+                    orgId
+            );
         }
     }
 

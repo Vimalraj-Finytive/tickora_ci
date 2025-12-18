@@ -18,7 +18,7 @@ public class TimeOffExportDto {
     private String reason;
     private String status;
     private String leaveType;
-
+    private String hourType;
     private List<ViewerDto> viewers;
     private List<ViewerDto> approver;
 
@@ -148,5 +148,13 @@ public class TimeOffExportDto {
 
     public void setApprover(List<ViewerDto> approver) {
         this.approver = approver;
+    }
+
+    public String getHourType() {
+        return hourType;
+    }
+
+    public void setHourType(String hourType) {
+        this.hourType = hourType;
     }
 }
