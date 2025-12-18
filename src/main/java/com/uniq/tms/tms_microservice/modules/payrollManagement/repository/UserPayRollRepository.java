@@ -28,7 +28,6 @@ public interface UserPayRollRepository extends JpaRepository<UserPayRollEntity, 
             @Param("userIds") List<String> userIds
     );
 
-
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Transactional
     @Query("DELETE FROM UserPayRollEntity up WHERE up.payroll.id = :payrollId")

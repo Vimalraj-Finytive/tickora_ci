@@ -1,0 +1,60 @@
+package com.uniq.tms.tms_microservice.shared.helper;
+
+import com.uniq.tms.tms_microservice.shared.security.cache.CacheKeyConfig;
+import com.uniq.tms.tms_microservice.shared.security.cache.CacheReloadHandlerRegistry;
+import com.uniq.tms.tms_microservice.shared.security.schema.TenantContext;
+import com.uniq.tms.tms_microservice.shared.util.CacheEventPublisherUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.stereotype.Component;
+
+@Component
+public class CacheReloadHelper {
+
+    private static final Logger log = LoggerFactory.getLogger(CacheReloadHelper.class);
+
+    private final ApplicationEventPublisher publisher;
+    private final CacheKeyConfig cacheKeyConfig;
+    private final CacheReloadHandlerRegistry cacheReloadHandlerRegistry;
+    private final AuthHelper authHelper;
+
+    public CacheReloadHelper(ApplicationEventPublisher publisher, CacheKeyConfig cacheKeyConfig, CacheReloadHandlerRegistry cacheReloadHandlerRegistry, AuthHelper authHelper) {
+        this.publisher = publisher;
+        this.cacheKeyConfig = cacheKeyConfig;
+        this.cacheReloadHandlerRegistry = cacheReloadHandlerRegistry;
+        this.authHelper = authHelper;
+    }
+
+    @Value("${cache.redis.enabled}")
+    private boolean isRedisEnabled;
+
+    public void refreshUserCache(String orgId, String schema) {
+        if (!isRedisEnabled) {
+            log.info("Redis disabled. Skipping user cache refresh for orgId={}", orgId);
+            return;
+        }
+        try {
+            TenantContext.setCurrentTenant(schema);
+            log.info("reload helper");
+            CacheEventPublisherUtil.syncReloadThenPublish(
+                    publisher,
+                    cacheKeyConfig.getUsers(),
+                    orgId,
+                    schema,
+                    cacheReloadHandlerRegistry
+            );
+            log.info("User cache refreshed for orgId={}", orgId);
+        } catch (Exception e) {
+            log.error(
+                    "Failed to refresh user cache for orgId={}",
+                    orgId,
+                    e
+            );
+        }finally {
+            TenantContext.clear();
+        }
+    }
+
+}
