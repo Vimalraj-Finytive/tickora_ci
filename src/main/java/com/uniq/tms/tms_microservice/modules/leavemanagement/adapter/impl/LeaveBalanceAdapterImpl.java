@@ -5,6 +5,7 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.LeaveBalance
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.MonthlySummaryEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeOffPolicyEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.AccrualType;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.ResetFrequency;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.repository.LeaveBalanceRepository;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.repository.MonthlySummaryRepository;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.repository.TimeOffPolicyRepository;
@@ -128,5 +129,10 @@ public class LeaveBalanceAdapterImpl implements LeaveBalanceAdapter {
     @Override
     public List<LeaveBalanceEntity> findActiveBalances(LocalDate date) {
         return leaveBalanceRepo.findActiveBalances(date);
+    }
+
+    @Override
+    public List<LeaveBalanceEntity> findActiveMonthlyBalances(LocalDate monthStart, LocalDate monthEnd, ResetFrequency frequency, AccrualType accrualType, List<String> userIds) {
+        return leaveBalanceRepo.findActiveMonthlyBalances(monthStart, monthEnd, frequency, accrualType, userIds);
     }
 }

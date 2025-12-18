@@ -1,7 +1,9 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.repository;
 
+import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.LeaveBalanceEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.UserPolicyEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.AccrualType;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.ResetFrequency;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.record.UserPolicyProjection;
 import io.lettuce.core.dynamic.annotation.Param;
 import jakarta.transaction.Transactional;
@@ -81,7 +83,7 @@ public interface UserPolicyRepository extends JpaRepository<UserPolicyEntity, Lo
     @Query("""
     SELECT DISTINCT up.user.userId
     FROM UserPolicyEntity up
-    WHERE up.validFrom <= :date
+    WHERE up.validTo >= :date
       AND up.active = true
       AND up.user.userId IN :userIds
     """)
