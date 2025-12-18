@@ -665,4 +665,9 @@ public class UserAdapterImpl implements UserAdapter {
     public List<UserHolidayProjection> findUsersWithHolidayOnDate(LocalDate date, List<String> userIds) {
         return userRepository.findUsersWithHolidayOnDate(date, userIds);
     }
+
+    @Override
+    public List<UserHolidayProjection> findUserHolidays(List<String> userIds) {
+        return userRepository.findUserHolidays(userIds);
+    }
 }
