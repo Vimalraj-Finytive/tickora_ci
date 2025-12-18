@@ -83,6 +83,18 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
                 );
             }
         }
+        if (request.getCompensation() == Compensation.PAID){
+            if (request.getAccrualType()==null){
+                throw new IllegalArgumentException("Accrual Type is Required");
+            }
+            if (request.getEntitledType()==null){
+                throw new IllegalArgumentException("Entitled Type is Required");
+            }
+            if (request.getResetFrequency()==null){
+                throw new IllegalArgumentException("ResetFrequency is Required");
+            }
+        }
+
         if (request.getAccrualType() == AccrualType.FIXED &&
                 Boolean.TRUE.equals(request.getCarryForward())) {
             throw new IllegalArgumentException("Carry-forward not allowed for FIXED policies.");
