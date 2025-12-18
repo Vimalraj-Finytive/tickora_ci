@@ -181,6 +181,9 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
                 requested = request.getUnitsRequested();
                 validateDays(days, leaveBalance.getBalanceUnits());
             } else if (policy.getEntitledType() == EntitledType.HALF_DAY) {
+                if (request.getHourType() == null){
+                    throw new IllegalArgumentException("Hour type is required for half day permission");
+                }
                 requested = request.getUnitsRequested();
                 days = request.getUnitsRequested() * 0.5;
                 validateDays(days, leaveBalance.getBalanceUnits());
@@ -200,6 +203,7 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
         entity.setStartDate(request.getStartDate());
         entity.setEndDate(request.getEndDate());
         entity.setUnitsRequested(request.getUnitsRequested());
+        entity.setHourType(request.getHourType());
         entity.setStatus(Status.PENDING);
         entity.setReason(request.getReason());
         entity.setRequestDate(LocalDate.now(zoneId));
@@ -364,6 +368,9 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
             if (entity.getPolicy().getEntitledType() == EntitledType.HALF_DAY ) {
                 if (days != 1) {
                     throw new IllegalArgumentException("Invalid paid leave request.");
+                }
+                if (model.getHourType() != null){
+                    entity.setHourType(model.getHourType());
                 }
                 setTimeForHalf(workSchedule, model.getStartDate(), model.getHourType(), entity);
             }
