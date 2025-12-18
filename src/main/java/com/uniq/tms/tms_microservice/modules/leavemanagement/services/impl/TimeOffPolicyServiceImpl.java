@@ -90,9 +90,6 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
             if (request.getEntitledType()==null){
                 throw new IllegalArgumentException("Entitled Type is Required");
             }
-            if (request.getResetFrequency()==null){
-                throw new IllegalArgumentException("ResetFrequency is Required");
-            }
         }
 
         if (request.getAccrualType() == AccrualType.FIXED &&
