@@ -160,6 +160,9 @@ public class CalendarServiceImpl implements CalendarService {
 
     @Override
     public Holiday createHoliday(Holiday holidayMiddleware, String calendarId) {
+        if (calendarAdapter.existsByCalendarIdAndDate(calendarId, holidayMiddleware.getDate())) {
+            throw new IllegalArgumentException("Holiday already exists for the selected date in this calendar");
+        }
         CalendarHolidayEntity entity = holidayEntityMapper.toEntity(holidayMiddleware);
         entity.setId(idGenerationService.generateNextId(IdGenerationTypeEnum.CALENDAR_DETAILS));
         Optional<CalendarEntity> optionalCalendar = calendarAdapter.findByCalendarId(calendarId);
@@ -175,6 +178,10 @@ public class CalendarServiceImpl implements CalendarService {
 
     @Override
     public Holiday updateHoliday(HolidayDto holidayDto, String calendarId, String holidayId) {
+        boolean duplicateExists = calendarAdapter.existsByDate(calendarId, holidayDto.getDate(), holidayId);
+        if (duplicateExists) {
+            throw new IllegalArgumentException("Holiday already exists for the selected date in this calendar");
+        }
         CalendarHolidayEntity existingEntity = Optional.ofNullable(calendarAdapter.findById(holidayId))
                 .orElseThrow(() -> new EntityNotFoundException("Holiday not found: " + holidayId));
         Optional.of(existingEntity)
