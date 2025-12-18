@@ -2,22 +2,16 @@ package com.uniq.tms.tms_microservice.modules.payrollManagement.services.impl;
 
 import com.opencsv.CSVWriter;
 import com.uniq.tms.tms_microservice.modules.identityManagement.service.IdGenerationService;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.CalendarAdapter;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.LeaveBalanceAdapter;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.TimeOffRequestAdapter;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.CalendarEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.MonthlySummaryEntity;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeOffRequestEntity;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.EntitledType;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.ReportType;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.Status;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.projection.CalendarHolidayProjection;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.adapter.PayRollAdapter;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.entity.PayRollEntity;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.entity.PayRollSettingEntity;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.entity.UserPayRollAmountEntity;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.entity.UserPayRollEntity;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.enums.PayRollSettingEnum;
+import com.uniq.tms.tms_microservice.modules.payrollManagement.event.PayrollCreatedEvent;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.mapper.PayRollEntityMapper;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.model.*;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.enums.PayRollStatusEnum;
@@ -31,12 +25,10 @@ import com.uniq.tms.tms_microservice.modules.timesheetManagement.entity.Timeshee
 import com.uniq.tms.tms_microservice.modules.userManagement.adapter.UserAdapter;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
 import com.uniq.tms.tms_microservice.shared.helper.AuthHelper;
+import com.uniq.tms.tms_microservice.shared.helper.CacheReloadHelper;
 import com.uniq.tms.tms_microservice.shared.security.cache.CacheKeyConfig;
 import com.uniq.tms.tms_microservice.shared.security.cache.CacheReloadHandlerRegistry;
 import com.uniq.tms.tms_microservice.shared.util.CacheEventPublisherUtil;
-import com.uniq.tms.tms_microservice.modules.userManagement.projections.UserCalendarProjection;
-import com.uniq.tms.tms_microservice.shared.exception.CommonExceptionHandler;
-import com.uniq.tms.tms_microservice.shared.helper.TimesheetHelper;
 import com.uniq.tms.tms_microservice.shared.util.CacheKeyUtil;
 import com.uniq.tms.tms_microservice.shared.util.ExportStatusTracker;
 import com.uniq.tms.tms_microservice.shared.util.ReportStyleUtil;
@@ -88,13 +80,14 @@ public class PayRollServiceImpl implements PayRollService {
     private final CacheKeyConfig cacheKeyConfig;
     private final CacheReloadHandlerRegistry cacheReloadHandlerRegistry;
     private final AuthHelper authHelper;
+    private final CacheReloadHelper cacheReloadHelper;
 
     public PayRollServiceImpl(PayRollAdapter payRollAdapter, PayRollEntityMapper entityMapper, UserAdapter userAdapter,
                               IdGenerationService idGenerationService, TimesheetAdapter timesheetAdapter,
                               PayRollEntityMapper payRollEntityMapper, LeaveBalanceAdapter leaveBalanceAdapter,
                               @Nullable RedisTemplate<String, Object> redisTemplate, CacheKeyUtil cacheKeyUtil,
                               ReportStyleUtil reportStyleUtil, ExportStatusTracker exportStatusTracker,
-                              ApplicationEventPublisher publisher, CacheKeyConfig cacheKeyConfig, CacheReloadHandlerRegistry cacheReloadHandlerRegistry, AuthHelper authHelper) {
+                              ApplicationEventPublisher publisher, CacheKeyConfig cacheKeyConfig, CacheReloadHandlerRegistry cacheReloadHandlerRegistry, AuthHelper authHelper, CacheReloadHelper cacheReloadHelper) {
         this.payRollAdapter = payRollAdapter;
         this.entityMapper = entityMapper;
         this.userAdapter = userAdapter;
@@ -110,6 +103,7 @@ public class PayRollServiceImpl implements PayRollService {
         this.cacheKeyConfig = cacheKeyConfig;
         this.cacheReloadHandlerRegistry = cacheReloadHandlerRegistry;
         this.authHelper = authHelper;
+        this.cacheReloadHelper = cacheReloadHelper;
     }
 
     @Value("${csv.payroll.download.dir}")
@@ -133,6 +127,7 @@ public class PayRollServiceImpl implements PayRollService {
     }
 
     @Override
+    @Transactional
     public PayRollModel createRecord(PayRollModel model, String orgId) {
 
         PayRollEntity payRollEntity = entityMapper.toEntity(model);
@@ -158,6 +153,9 @@ public class PayRollServiceImpl implements PayRollService {
             userPayRollList.add(mapping);
         }
         payRollAdapter.saveAllUserPayroll(userPayRollList);
+        log.info("reached service");
+        publisher.publishEvent(new PayrollCreatedEvent(orgId, authHelper.getSchema()));
+        log.info("return response");
         return entityMapper.toModel(payRollEntity);
     }
 
