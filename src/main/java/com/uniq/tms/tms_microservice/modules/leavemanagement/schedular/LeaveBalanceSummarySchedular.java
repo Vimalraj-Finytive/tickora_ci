@@ -31,7 +31,8 @@ public class LeaveBalanceSummarySchedular {
                 TenantUtil.setCurrentTenant(orgId.getSchemaName());
                 try {
                     log.info("Scheduled clock triggered for calculate Leave Summary");
-                    leaveBalanceService.updateLeaveSummary();
+                    leaveBalanceService.updateMonthlyLeaveSummary();
+//                    leaveBalanceService.updateDailyLeaveSummary();
                 } catch (Exception e) {
                     continue;
                 } finally {
