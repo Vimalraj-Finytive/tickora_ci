@@ -26,6 +26,7 @@ public interface TimeOffPolicyRepository extends JpaRepository<TimeOffPolicyEnti
     FROM UserPolicyEntity up
     WHERE up.user.userId = :userId
       AND up.user.active = true
+      AND up.active = true
       AND up.policy.isActive = true
 """)
     List<TimeOffPolicyEntity> findPolicyByUserId(@Param("userId") String userId);

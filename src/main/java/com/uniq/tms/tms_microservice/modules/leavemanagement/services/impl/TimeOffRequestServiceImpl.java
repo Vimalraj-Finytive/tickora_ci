@@ -349,6 +349,7 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
             if (model.getUnitsRequested() != null && days != model.getUnitsRequested()) {
                 throw new IllegalArgumentException("Invalid paid leave request.");
             }
+            entity.setUnitsRequested(model.getUnitsRequested());
             timeOffRequestAdapter.saveRequest(entity);
             return;
         }
