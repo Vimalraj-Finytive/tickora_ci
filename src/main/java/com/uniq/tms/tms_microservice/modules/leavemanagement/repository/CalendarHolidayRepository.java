@@ -37,4 +37,7 @@ public interface CalendarHolidayRepository extends JpaRepository<CalendarHoliday
     FROM CalendarHolidayEntity h
     """)
     List<CalendarHolidayProjection> findAllHolidayDates();
+
+    boolean existsByCalendar_IdAndDate(String calendarId, LocalDate date);
+    boolean existsByCalendar_IdAndDateAndIdNot(String calendarId, LocalDate date,String holidayId);
 }
