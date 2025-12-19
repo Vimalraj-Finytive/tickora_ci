@@ -83,6 +83,15 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
                 );
             }
         }
+        if (request.getCompensation() == Compensation.PAID){
+            if (request.getAccrualType()==null){
+                throw new IllegalArgumentException("Accrual Type is Required");
+            }
+            if (request.getEntitledType()==null){
+                throw new IllegalArgumentException("Entitled Type is Required");
+            }
+        }
+
         if (request.getAccrualType() == AccrualType.FIXED &&
                 Boolean.TRUE.equals(request.getCarryForward())) {
             throw new IllegalArgumentException("Carry-forward not allowed for FIXED policies.");
@@ -510,11 +519,15 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
         LocalDate computedValidTo = computeValidTo(policy, validFrom, validTo);
 
         lb.setPeriodStartDate(validFrom);
-        lb.setPeriodEnd(computedValidTo);
+        if (validTo.isBefore(computedValidTo)){
+            lb.setPeriodEnd(validTo);
+        }else {
+            lb.setPeriodEnd(computedValidTo);
+        }
 
         double calculatedUnits= calculateTotalUnits(policy,policy.getEntitledType());
         lb.setTotalUnits(calculatedUnits);
-        lb.setBalanceUnits(totalUnits);
+        lb.setBalanceUnits(calculatedUnits);
         lb.setLeaveTakenUnits(0.0);
 
         double carryForwardUnits=policy.getMaxCarryForwardUnits() == null ?
