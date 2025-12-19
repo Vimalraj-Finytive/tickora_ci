@@ -181,7 +181,7 @@ ORDER BY lb.periodStartDate DESC
     """)
     List<LeaveBalanceEntity> findActiveMonthlyBalances(
             @Param("monthStart") LocalDate monthStart,
-            @Param("monthEnd") LocalDate MonthEnd,
+            @Param("monthEnd") LocalDate monthEnd,
             @Param("frequency") ResetFrequency frequency,
             @Param("accrualType")AccrualType accrualType,
             @Param("userIds") List<String> userIds

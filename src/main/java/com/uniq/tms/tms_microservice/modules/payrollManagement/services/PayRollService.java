@@ -14,7 +14,7 @@ public interface PayRollService {
 
     PayRollModel createRecord(PayRollModel model, String orgId);
 
-    void calculatePayrollAmount();
+    void calculateMonthlyPayrollAmount();
 
     UserPayRollAmountModel updatePayrollAmount(String userId,UserPayRollAmountModel model, String month);
 
@@ -43,5 +43,7 @@ public interface PayRollService {
     String startExportPayroll(String month, String format, String schema, String orgId);
 
     String getExportStatus(String exportId, String schema, String orgId);
+
+    void calculateDailyPayrollAmount();
 
 }

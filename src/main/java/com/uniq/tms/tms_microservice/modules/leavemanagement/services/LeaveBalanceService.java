@@ -9,5 +9,6 @@ public interface LeaveBalanceService {
     List<LeaveBalanceModel> getLeaveBalance(String userId);
     void updateMonthlyLeaveBalance();
     void updateYearlyLeaveBalance();
-    void  updateLeaveSummary();
+    void  updateMonthlyLeaveSummary();
+    void updateDailyLeaveSummary();
 }
