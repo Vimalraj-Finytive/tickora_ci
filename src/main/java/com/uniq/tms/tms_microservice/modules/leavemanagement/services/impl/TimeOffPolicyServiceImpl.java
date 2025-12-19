@@ -321,6 +321,11 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
                         : null;
         for (String userId : finalUsers) {
             UserEntity userEntity = userMap.get(userId);
+
+            if (userEntity == null || !Boolean.TRUE.equals(userEntity.isActive())) {
+                continue;
+            }
+
             List<UserPolicyEntity> existingPolicies =
                     userPolicyAdapter.findUserPoliciesByUserId(userId);
             boolean alreadyHasPolicy =
