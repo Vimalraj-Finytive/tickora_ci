@@ -72,14 +72,13 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
             throw new IllegalArgumentException("Policy name already exists");
         }
         if (request.getCompensation() == Compensation.UNPAID) {
-            if (request.getEntitledType() != null ||
-                    request.getEntitledUnits() != null ||
+            if (request.getEntitledUnits() != null ||
                     Boolean.TRUE.equals(request.getCarryForward()) ||
                     request.getMaxCarryForwardUnits() != null ||
                     request.getAccrualType() != null) {
 
                 throw new IllegalArgumentException(
-                        "Accrual, Entitlement & Carry-Forward fields must be NULL for UNPAID policy."
+                        "Accrual and Carry-Forward fields must be NULL for UNPAID policy."
                 );
             }
         }
@@ -91,7 +90,6 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
                 throw new IllegalArgumentException("Entitled Type is Required");
             }
         }
-
         if (request.getAccrualType() == AccrualType.FIXED &&
                 Boolean.TRUE.equals(request.getCarryForward())) {
             throw new IllegalArgumentException("Carry-forward not allowed for FIXED policies.");
@@ -134,6 +132,9 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
         }
         String policyId = idGenerationService.generateNextTimeOffPolicyId();
         TimeOffPolicyEntity policy = timeOffPolicyEntityMapper.toEntity(request);
+        if (request.getCompensation()==Compensation.UNPAID){
+            request.setEntitledType(policy.getEntitledType());
+        }
         policy.setPolicyId(policyId);
         policy.setActive(true);
         policy.setDefault(false);
