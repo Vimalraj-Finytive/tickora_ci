@@ -279,6 +279,8 @@ public class CalendarAdapterImpl implements CalendarAdapter {
 
     public List<Object[]> findHolidayDatesByCalendarIds(Set<String> calendarIds) {
         return calendarHolidayRepository.findHolidayDatesByCalendarIds(calendarIds);
+    }
+
     @Override
     public boolean existsByCalendarIdAndDate(String calendarId, LocalDate date) {
         return calendarHolidayRepository.existsByCalendar_IdAndDate(calendarId, date);
