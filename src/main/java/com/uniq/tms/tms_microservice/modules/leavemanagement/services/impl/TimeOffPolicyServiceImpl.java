@@ -355,7 +355,6 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
                                 policyEndDate,
                                 totalUnits
                         );
-                lb.setLeaveTakenUnits(0.0);
                 lb.setActive(true);
                 balanceList.add(lb);
             }
