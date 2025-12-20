@@ -824,21 +824,29 @@ CREATE TABLE IF NOT EXISTS user_policies (
 CREATE TABLE IF NOT EXISTS timeoff_request (
     timeoff_request_id BIGSERIAL PRIMARY KEY,
     policy_id VARCHAR(20) NOT NULL,
-    user_id VARCHAR(20) NOT NULL,
+    user_id   VARCHAR(20) NOT NULL,
     request_date DATE NOT NULL,
-    start_date DATE NOT NULL,
-    end_date DATE NOT NULL,
+    start_date   DATE NOT NULL,
+    end_date     DATE NOT NULL,
     start_time TIME,
-    end_time TIME,
-    hour_type VARCHAR(20) CHECK (status IN ('FIRST_HALF','SECOND_HALF')),
-    units_requested INT,
-    status VARCHAR(20) CHECK (status IN ('APPROVED','PENDING')),
+    end_time   TIME,
+    hour_type VARCHAR(20),
+    units_requested INT NOT NULL,
+    status VARCHAR(20) NOT NULL,
     reason VARCHAR(255),
     created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_timeoff_request_policy
-        FOREIGN KEY (policy_id) REFERENCES timeoff_policies(policy_id)
-        ON DELETE CASCADE
+        FOREIGN KEY (policy_id)
+        REFERENCES timeoff_policies(policy_id)
+        ON DELETE CASCADE,
+    CONSTRAINT chk_timeoff_request_status
+        CHECK (status IN ('PENDING', 'APPROVED', 'CANCELLED', 'REJECTED')),
+    CONSTRAINT chk_timeoff_request_hour_type
+        CHECK (
+            hour_type IN ('FIRST_HALF', 'SECOND_HALF', 'HOUR')
+            OR hour_type IS NULL
+        )
 );
 
 -- ===========================================================

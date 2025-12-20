@@ -203,7 +203,7 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
         entity.setStartDate(request.getStartDate());
         entity.setEndDate(request.getEndDate());
         entity.setUnitsRequested(request.getUnitsRequested());
-        entity.setHourType(request.getHourType());
+        entity.setHourType(request.getHourType() != null? request.getHourType() : null);
         entity.setStatus(Status.PENDING);
         entity.setReason(request.getReason());
         entity.setRequestDate(LocalDate.now(zoneId));
