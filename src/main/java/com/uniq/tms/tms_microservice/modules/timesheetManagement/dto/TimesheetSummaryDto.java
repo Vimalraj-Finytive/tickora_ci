@@ -13,6 +13,9 @@ public class TimesheetSummaryDto {
     private int holidayCount;
     private int halfDayCount;
     private int permissionCount;
+    private int unPaidLeaveCount;
+    private int restDayCount;
+    private int extraWorkedDayCount;
     private Integer totalCount;
 
     public String getUserId() {
@@ -117,5 +120,29 @@ public class TimesheetSummaryDto {
 
     public void setPermissionCount(int permissionCount) {
         this.permissionCount = permissionCount;
+    }
+
+    public int getUnPaidLeaveCount() {
+        return unPaidLeaveCount;
+    }
+
+    public void setUnPaidLeaveCount(int unPaidLeaveCount) {
+        this.unPaidLeaveCount = unPaidLeaveCount;
+    }
+
+    public int getRestDayCount() {
+        return restDayCount;
+    }
+
+    public void setRestDayCount(int restDayCount) {
+        this.restDayCount = restDayCount;
+    }
+
+    public int getExtraWorkedDayCount() {
+        return extraWorkedDayCount;
+    }
+
+    public void setExtraWorkedDayCount(int extraWorkedDayCount) {
+        this.extraWorkedDayCount = extraWorkedDayCount;
     }
 }

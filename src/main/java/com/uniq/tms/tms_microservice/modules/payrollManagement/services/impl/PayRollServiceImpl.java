@@ -645,20 +645,20 @@ public class PayRollServiceImpl implements PayRollService {
                 csv.writeNext(new String[]{
                         p.getUserId(),
                         p.getUserName(),
-                        String.valueOf(p.getUnpaidLeaveDeduction()),
+                        p.getPayrollName(),
+                        p.getMonth(),
+                        String.valueOf(p.getPayrollStatus()),
                         String.valueOf(p.getRegularDays()),
                         String.valueOf(p.getRegularHrs()),
                         String.valueOf(p.getOvertimeHrs()),
                         String.valueOf(p.getTotalHrs()),
+                        String.valueOf(p.getMonthlyNetSalary()),
+                        String.valueOf(p.getUnpaidLeaveDeduction()),
                         String.valueOf(p.getRegularPayrollAmount()),
                         String.valueOf(p.getOvertimePayrollAmount()),
                         String.valueOf(p.getTotalPayrollAmount()),
-                        String.valueOf(p.getMonthlyNetSalary()),
-                        p.getPayrollName(),
-                        String.valueOf(p.getPayrollStatus()),
-                        p.getNotes(),
                         String.valueOf(p.getTotalAmount()),
-                        p.getMonth()
+                        p.getNotes()
                 });
             }
         } catch (Exception e) {
@@ -691,20 +691,20 @@ public class PayRollServiceImpl implements PayRollService {
                 int col = 0;
                 reportStyleUtil.createStyledCell(row, col++, p.getUserId(), dataStyle);
                 reportStyleUtil.createStyledCell(row, col++, p.getUserName(), dataStyle);
-                reportStyleUtil.createStyledCell(row, col++, String.valueOf(p.getUnpaidLeaveDeduction()), dataStyle);
+                reportStyleUtil.createStyledCell(row, col++, p.getPayrollName(), dataStyle);
+                reportStyleUtil.createStyledCell(row, col++, p.getMonth(), dataStyle);
+                reportStyleUtil.createStyledCell(row, col++, p.getPayrollStatus(), dataStyle);
                 reportStyleUtil.createStyledCell(row, col++, p.getRegularDays(), dataStyle);
                 reportStyleUtil.createStyledCell(row, col++, p.getRegularHrs(), dataStyle);
                 reportStyleUtil.createStyledCell(row, col++, p.getOvertimeHrs(), dataStyle);
                 reportStyleUtil.createStyledCell(row, col++, p.getTotalHrs(), dataStyle);
+                reportStyleUtil.createStyledCell(row, col++, String.valueOf(p.getMonthlyNetSalary()), dataStyle);
+                reportStyleUtil.createStyledCell(row, col++, String.valueOf(p.getUnpaidLeaveDeduction()), dataStyle);
                 reportStyleUtil.createStyledCell(row, col++, String.valueOf(p.getRegularPayrollAmount()), dataStyle);
                 reportStyleUtil.createStyledCell(row, col++, String.valueOf(p.getOvertimePayrollAmount()), dataStyle);
                 reportStyleUtil.createStyledCell(row, col++, String.valueOf(p.getTotalPayrollAmount()), dataStyle);
-                reportStyleUtil.createStyledCell(row, col++, String.valueOf(p.getMonthlyNetSalary()), dataStyle);
-                reportStyleUtil.createStyledCell(row, col++, p.getPayrollName(), dataStyle);
-                reportStyleUtil.createStyledCell(row, col++, p.getPayrollStatus(), dataStyle);
-                reportStyleUtil.createStyledCell(row, col++, p.getNotes(), dataStyle);
                 reportStyleUtil.createStyledCell(row, col++, String.valueOf(p.getTotalAmount()), dataStyle);
-                reportStyleUtil.createStyledCell(row, col, p.getMonth(), dataStyle);
+                reportStyleUtil.createStyledCell(row, col, p.getNotes(), dataStyle);
             }
             for (int i = 0; i < headers.length; i++) {
                 sheet.autoSizeColumn(i);

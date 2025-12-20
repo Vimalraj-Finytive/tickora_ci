@@ -436,7 +436,9 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
                             timesheetService.createTimesheet(
                                     TimesheetStatusEnum.PAID_LEAVE,
                                     entity.getUser().getUserId(),
-                                    entity.getStartDate()
+                                    entity.getStartDate(),
+                                    entity.getStartTime(),
+                                    entity.getEndTime()
                             );
                         }
                         case HALF_DAY -> {
@@ -444,7 +446,9 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
                             timesheetService.createTimesheet(
                                     TimesheetStatusEnum.HALF_DAY,
                                     entity.getUser().getUserId(),
-                                    entity.getStartDate()
+                                    entity.getStartDate(),
+                                    entity.getStartTime(),
+                                    entity.getEndTime()
                             );
                         }
                         case HOURS -> {
@@ -452,7 +456,9 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
                             timesheetService.createTimesheet(
                                     TimesheetStatusEnum.PERMISSION,
                                     entity.getUser().getUserId(),
-                                    entity.getStartDate()
+                                    entity.getStartDate(),
+                                    entity.getStartTime(),
+                                    entity.getEndTime()
                             );
                         }
                     }
@@ -461,7 +467,9 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
                     timesheetService.createTimesheet(
                             TimesheetStatusEnum.UNPAID_LEAVE,
                             entity.getUser().getUserId(),
-                            entity.getStartDate()
+                            entity.getStartDate(),
+                            entity.getStartTime(),
+                            entity.getEndTime()
                     );
                 }
             } else if (saved.getStatus() == Status.REJECTED) {
@@ -596,7 +604,7 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
                 model.setReason(row.getReason());
                 model.setStatus(row.getStatus());
                 model.setLeaveType(row.getLeaveType());
-
+                model.setHourType(row.getHourType());
                 model.setViewers(new ArrayList<>());
                 model.setApprover(new ArrayList<>());
 
