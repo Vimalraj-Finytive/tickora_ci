@@ -114,6 +114,10 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
             request.setCarryForward(false);
             request.setMaxCarryForwardUnits(0);
         }
+        if (request.getEntitledType() == EntitledType.DAY && request.getCarryForward() == null) {
+            request.setCarryForward(false);
+            request.setMaxCarryForwardUnits(0);
+        }
         ResetFrequency reset = request.getResetFrequency();
         AccrualType accrual = request.getAccrualType();
         if (accrual == AccrualType.FIXED) {
@@ -321,6 +325,11 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
                         : null;
         for (String userId : finalUsers) {
             UserEntity userEntity = userMap.get(userId);
+
+            if (userEntity == null || !Boolean.TRUE.equals(userEntity.isActive())) {
+                continue;
+            }
+
             List<UserPolicyEntity> existingPolicies =
                     userPolicyAdapter.findUserPoliciesByUserId(userId);
             boolean alreadyHasPolicy =
@@ -347,7 +356,6 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
                                 totalUnits
                         );
                 lb.setLeaveTakenUnits(0.0);
-                lb.setBalanceUnits(totalUnits);
                 lb.setActive(true);
                 balanceList.add(lb);
             }

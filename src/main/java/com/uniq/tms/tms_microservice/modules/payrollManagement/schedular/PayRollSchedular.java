@@ -31,7 +31,8 @@ public class PayRollSchedular {
                 TenantUtil.setCurrentTenant(orgId.getSchemaName());
                 try {
                     log.info("Running payroll scheduler for tenant: {}", orgId.getSchemaName());
-                    payRollService.calculatePayrollAmount();
+                    payRollService.calculateMonthlyPayrollAmount();
+//                    payRollService.calculateDailyPayrollAmount();
                 } catch (Exception e) {
                     continue;
                 } finally {
