@@ -645,9 +645,9 @@ private void calculateHours(TimesheetEntity timesheet, WorkScheduleEntity workSc
 
                 if (fixedEntity == null) {
                     log.warn("No fixed schedule found for workScheduleId={} day={}", workSchedule.getScheduleId(), day);
-                    return;
+                    regularWorkDuration = workedDuration;
                 }
-
+                else {
                 LocalTime scheduleStart = fixedEntity.getStartTime().toLocalTime();
                 LocalTime scheduleEnd = fixedEntity.getEndTime().toLocalTime();
 
@@ -671,6 +671,7 @@ private void calculateHours(TimesheetEntity timesheet, WorkScheduleEntity workSc
                 }
                 log.info("Before regular hours");
                 regularWorkDuration = calculateWorkDurationWithinSchedule(clockIn, clockOut, scheduleStart, scheduleEnd, startTimeDuration, endTimeDuration, isPreviousDay);
+               }
             }
             else if (workSchedule.getType().getType() == FLEXIBLE) {
 
@@ -679,14 +680,15 @@ private void calculateHours(TimesheetEntity timesheet, WorkScheduleEntity workSc
 
                 if (flexibleEntity == null) {
                     log.warn("No flexible schedule found for workScheduleId={} day={}", workSchedule.getScheduleId(), day);
-                    return;
+                    regularWorkDuration = workedDuration;
                 }
-
-                Duration expectedDuration = Duration.ofHours(flexibleEntity.getDuration().longValue());
-                regularWorkDuration = workedDuration;
-                if (workedDuration.compareTo(expectedDuration) > 0) {
-                    totalOverTime = workedDuration.minus(expectedDuration);
-                    regularWorkDuration = expectedDuration;
+                else {
+                    Duration expectedDuration = Duration.ofHours(flexibleEntity.getDuration().longValue());
+                    regularWorkDuration = workedDuration;
+                    if (workedDuration.compareTo(expectedDuration) > 0) {
+                        totalOverTime = workedDuration.minus(expectedDuration);
+                        regularWorkDuration = expectedDuration;
+                    }
                 }
 
             }

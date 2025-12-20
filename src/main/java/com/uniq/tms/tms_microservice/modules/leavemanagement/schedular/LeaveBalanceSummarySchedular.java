@@ -23,7 +23,7 @@ public class LeaveBalanceSummarySchedular {
         this.organizationRepository = organizationRepository;
     }
 
-    @Scheduled(cron = "0 0 0 * * ?", zone = "Asia/Kolkata")
+    @Scheduled(cron = "0 0 0 1 * ?", zone = "Asia/Kolkata")
     public void autoUpdateLeaveSummary(){
         try {
             List<OrganizationEntity> orgIds = organizationRepository.findAll();
@@ -31,7 +31,8 @@ public class LeaveBalanceSummarySchedular {
                 TenantUtil.setCurrentTenant(orgId.getSchemaName());
                 try {
                     log.info("Scheduled clock triggered for calculate Leave Summary");
-                    leaveBalanceService.updateLeaveSummary();
+                    leaveBalanceService.updateMonthlyLeaveSummary();
+//                    leaveBalanceService.updateDailyLeaveSummary();
                 } catch (Exception e) {
                     continue;
                 } finally {

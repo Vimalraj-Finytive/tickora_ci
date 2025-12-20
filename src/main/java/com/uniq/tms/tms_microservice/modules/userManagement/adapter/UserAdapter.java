@@ -12,6 +12,8 @@ import com.uniq.tms.tms_microservice.modules.userManagement.projections.UserCale
 import com.uniq.tms.tms_microservice.modules.userManagement.projections.UserHolidayProjection;
 import com.uniq.tms.tms_microservice.modules.userManagement.projections.UserProjection;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.WorkScheduleEntity;
+import org.springframework.data.repository.query.Param;
+
 import java.lang.String;
 import java.time.LocalDate;
 import java.util.List;
@@ -134,4 +136,5 @@ public interface UserAdapter {
     List<UserCalendarProjection> findCalendarIdsByUserIds(String[] arrays);
     List<UserProjection> findUserByUserId(String userId);
     List<UserHolidayProjection> findUsersWithHolidayOnDate(LocalDate date, List<String> userIds);
+    List<UserHolidayProjection> findUserHolidays(List<String> userIds);
 }

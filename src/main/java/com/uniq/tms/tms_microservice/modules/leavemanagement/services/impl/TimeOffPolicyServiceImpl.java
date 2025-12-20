@@ -72,15 +72,22 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
             throw new IllegalArgumentException("Policy name already exists");
         }
         if (request.getCompensation() == Compensation.UNPAID) {
-            if (request.getEntitledType() != null ||
-                    request.getEntitledUnits() != null ||
+            if (request.getEntitledUnits() != null ||
                     Boolean.TRUE.equals(request.getCarryForward()) ||
                     request.getMaxCarryForwardUnits() != null ||
                     request.getAccrualType() != null) {
 
                 throw new IllegalArgumentException(
-                        "Accrual, Entitlement & Carry-Forward fields must be NULL for UNPAID policy."
+                        "Accrual and Carry-Forward fields must be NULL for UNPAID policy."
                 );
+            }
+        }
+        if (request.getCompensation() == Compensation.PAID){
+            if (request.getAccrualType()==null){
+                throw new IllegalArgumentException("Accrual Type is Required");
+            }
+            if (request.getEntitledType()==null){
+                throw new IllegalArgumentException("Entitled Type is Required");
             }
         }
         if (request.getAccrualType() == AccrualType.FIXED &&
@@ -107,6 +114,10 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
             request.setCarryForward(false);
             request.setMaxCarryForwardUnits(0);
         }
+        if (request.getEntitledType() == EntitledType.DAY && request.getCarryForward() == null) {
+            request.setCarryForward(false);
+            request.setMaxCarryForwardUnits(0);
+        }
         ResetFrequency reset = request.getResetFrequency();
         AccrualType accrual = request.getAccrualType();
         if (accrual == AccrualType.FIXED) {
@@ -125,6 +136,9 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
         }
         String policyId = idGenerationService.generateNextTimeOffPolicyId();
         TimeOffPolicyEntity policy = timeOffPolicyEntityMapper.toEntity(request);
+        if (request.getCompensation()==Compensation.UNPAID){
+            request.setEntitledType(policy.getEntitledType());
+        }
         policy.setPolicyId(policyId);
         policy.setActive(true);
         policy.setDefault(false);
@@ -311,6 +325,11 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
                         : null;
         for (String userId : finalUsers) {
             UserEntity userEntity = userMap.get(userId);
+
+            if (userEntity == null || !Boolean.TRUE.equals(userEntity.isActive())) {
+                continue;
+            }
+
             List<UserPolicyEntity> existingPolicies =
                     userPolicyAdapter.findUserPoliciesByUserId(userId);
             boolean alreadyHasPolicy =
@@ -337,7 +356,6 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
                                 totalUnits
                         );
                 lb.setLeaveTakenUnits(0.0);
-                lb.setBalanceUnits(totalUnits);
                 lb.setActive(true);
                 balanceList.add(lb);
             }
@@ -510,11 +528,15 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
         LocalDate computedValidTo = computeValidTo(policy, validFrom, validTo);
 
         lb.setPeriodStartDate(validFrom);
-        lb.setPeriodEnd(computedValidTo);
+        if (validTo.isBefore(computedValidTo)){
+            lb.setPeriodEnd(validTo);
+        }else {
+            lb.setPeriodEnd(computedValidTo);
+        }
 
         double calculatedUnits= calculateTotalUnits(policy,policy.getEntitledType());
         lb.setTotalUnits(calculatedUnits);
-        lb.setBalanceUnits(totalUnits);
+        lb.setBalanceUnits(calculatedUnits);
         lb.setLeaveTakenUnits(0.0);
 
         double carryForwardUnits=policy.getMaxCarryForwardUnits() == null ?
