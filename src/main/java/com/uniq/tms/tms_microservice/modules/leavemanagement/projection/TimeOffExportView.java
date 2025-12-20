@@ -20,4 +20,5 @@ public interface TimeOffExportView {
     String getViewerType();
     String getViewerName();
     Integer getUnitsRequested();
+    String getHourType();
 }
