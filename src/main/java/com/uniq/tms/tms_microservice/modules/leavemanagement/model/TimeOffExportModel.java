@@ -18,7 +18,7 @@ public class TimeOffExportModel {
     private String reason;
     private String status;
     private String leaveType;
-
+    private String hourType;
     private List<ViewerModel> viewers;
     private List<ViewerModel> approver;
     private Long timeoffRequestId;
@@ -149,5 +149,13 @@ public class TimeOffExportModel {
 
     public void setApprover(List<ViewerModel> approver) {
         this.approver = approver;
+    }
+
+    public String getHourType() {
+        return hourType;
+    }
+
+    public void setHourType(String hourType) {
+        this.hourType = hourType;
     }
 }

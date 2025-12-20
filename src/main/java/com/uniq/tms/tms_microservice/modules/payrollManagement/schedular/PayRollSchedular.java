@@ -23,7 +23,7 @@ public class PayRollSchedular {
         this.organizationRepository = organizationRepository;
     }
 
-    @Scheduled(cron = "0 0 1 * * ?", zone = "Asia/Kolkata")
+    @Scheduled(cron = "0 0 2 1 * ?", zone = "Asia/Kolkata")
     public void autoCalculatePayrollAmountForAllEmployees(){
         try {
             List<OrganizationEntity> orgIds = organizationRepository.findAll();
@@ -31,7 +31,8 @@ public class PayRollSchedular {
                 TenantUtil.setCurrentTenant(orgId.getSchemaName());
                 try {
                     log.info("Running payroll scheduler for tenant: {}", orgId.getSchemaName());
-                    payRollService.calculatePayrollAmount();
+                    payRollService.calculateMonthlyPayrollAmount();
+//                    payRollService.calculateDailyPayrollAmount();
                 } catch (Exception e) {
                     continue;
                 } finally {

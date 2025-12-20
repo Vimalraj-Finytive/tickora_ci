@@ -5,6 +5,7 @@ import com.uniq.tms.tms_microservice.modules.timesheetManagement.enums.Timesheet
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.model.TimesheetHistory;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.model.TimesheetStatus;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 
 public interface TimesheetService {
@@ -17,6 +18,6 @@ public interface TimesheetService {
     List<UserTimesheetDto> getUserTimesheets(String userIdFromToken, String orgId, String role, TimesheetReportDto request);
     List<TimesheetStatus> getStatus();
     List<DashboardSummaryDto> getDashboardSummary(String orgId, LocalDate fromDate, LocalDate toDate);
-    void createTimesheet (TimesheetStatusEnum status, String userId, LocalDate date);
+    void createTimesheet (TimesheetStatusEnum status, String userId, LocalDate date, LocalTime startTime,LocalTime endTime);
     void deleteTimesheet(String userId, LocalDate date);
 }

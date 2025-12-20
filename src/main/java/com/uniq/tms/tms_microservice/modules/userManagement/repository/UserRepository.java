@@ -329,4 +329,16 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
     """)
     List<UserHolidayProjection> findUsersWithHolidayOnDate(
             @Param("date") LocalDate date, @Param("userIds") List<String> userIds);
+
+    @Query("""
+    SELECT
+        u.userId AS userId,
+        h.date   AS date
+    FROM UserEntity u
+    JOIN u.calendar c
+    JOIN c.calendarHolidays h
+    WHERE u.userId IN :userIds
+    """)
+    List<UserHolidayProjection> findUserHolidays(
+            @Param("userIds") List<String> userIds);
 }

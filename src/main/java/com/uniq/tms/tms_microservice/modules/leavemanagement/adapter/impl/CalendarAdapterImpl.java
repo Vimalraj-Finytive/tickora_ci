@@ -25,6 +25,7 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Component
@@ -274,5 +275,17 @@ public class CalendarAdapterImpl implements CalendarAdapter {
     @Override
     public List<CalendarHolidayProjection> findAllHolidayDates() {
         return calendarHolidayRepository.findAllHolidayDates();
+    }
+
+    public List<Object[]> findHolidayDatesByCalendarIds(Set<String> calendarIds) {
+        return calendarHolidayRepository.findHolidayDatesByCalendarIds(calendarIds);
+    @Override
+    public boolean existsByCalendarIdAndDate(String calendarId, LocalDate date) {
+        return calendarHolidayRepository.existsByCalendar_IdAndDate(calendarId, date);
+    }
+
+    @Override
+    public boolean existsByDate(String calendarId, LocalDate date, String holidayId) {
+        return calendarHolidayRepository.existsByCalendar_IdAndDateAndIdNot(calendarId, date, holidayId);
     }
 }

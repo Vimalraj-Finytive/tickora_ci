@@ -830,8 +830,9 @@ CREATE TABLE IF NOT EXISTS timeoff_request (
     end_date DATE NOT NULL,
     start_time TIME,
     end_time TIME,
+    hour_type VARCHAR(20) CHECK (status IN ('FIRST_HALF','SECOND_HALF')),
     units_requested INT,
-    status VARCHAR(20) CHECK (status IN ('APPROVED','PENDING','REJECTED','CANCELLED')),
+    status VARCHAR(20) CHECK (status IN ('APPROVED','PENDING')),
     reason VARCHAR(255),
     created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -1567,3 +1568,27 @@ LEFT JOIN organization o
     ON o.organization_id::text = u.organization_id::text
 LEFT JOIN org_type ot
     ON ot.org_type_id::text = o.org_type::text;
+
+--changeset system:create-payroll_amount_view endDelimiter://
+ CREATE OR REPLACE VIEW ${schemaName}.payroll_amount_view AS
+ SELECT upa.user_id,
+    u.user_name,
+    upa.unpaid_leave_deduction,
+    upa.regular_days,
+    upa.regular_hrs,
+    upa.overtime_hrs,
+    upa.total_hrs,
+    upa.regular_payroll_amount,
+    upa.overtime_payroll_amount,
+    upa.total_payroll_amount,
+    p.monthly_salary AS monthly_net_salary,
+    p.payroll_name,
+    upa.payroll_status,
+    upa.notes,
+    upa.total_amount,
+    upa.month
+   FROM ${schemaName}.user_payroll_amount upa
+     JOIN ${schemaName}.user_payroll up ON up.payroll_id::text = upa.payroll_id::text
+     AND up.user_id::text = upa.user_id::text
+     JOIN ${schemaName}.payroll p ON p.id::text = up.payroll_id::text
+     LEFT JOIN ${schemaName}.users u ON u.user_id::text = upa.user_id::text;

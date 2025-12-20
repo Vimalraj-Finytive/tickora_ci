@@ -78,13 +78,10 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(DataAccessException.class)
     public ResponseEntity<ApiResponse<Object>> handleDataAccess(DataAccessException ex) {
-
         String msg = safe(ex.getMessage()).toLowerCase();
-
         if (msg.contains("does not exist")
                 || msg.contains("sqlstate: 42703")
                 || msg.contains("column")) {
-
             log.error("SQL ERROR wrapped in DataAccessException", ex);
 
             return ResponseEntity.status(500).body(
@@ -93,9 +90,7 @@ public class GlobalExceptionHandler {
                             null)
             );
         }
-
         log.error("Data access error", ex);
-
         return ResponseEntity.status(500).body(
                 new ApiResponse<>(500, "Database operation failed.", null)
         );

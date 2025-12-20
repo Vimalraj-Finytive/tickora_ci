@@ -72,15 +72,22 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
             throw new IllegalArgumentException("Policy name already exists");
         }
         if (request.getCompensation() == Compensation.UNPAID) {
-            if (request.getEntitledType() != null ||
-                    request.getEntitledUnits() != null ||
+            if (request.getEntitledUnits() != null ||
                     Boolean.TRUE.equals(request.getCarryForward()) ||
                     request.getMaxCarryForwardUnits() != null ||
                     request.getAccrualType() != null) {
 
                 throw new IllegalArgumentException(
-                        "Accrual, Entitlement & Carry-Forward fields must be NULL for UNPAID policy."
+                        "Accrual and Carry-Forward fields must be NULL for UNPAID policy."
                 );
+            }
+        }
+        if (request.getCompensation() == Compensation.PAID){
+            if (request.getAccrualType()==null){
+                throw new IllegalArgumentException("Accrual Type is Required");
+            }
+            if (request.getEntitledType()==null){
+                throw new IllegalArgumentException("Entitled Type is Required");
             }
         }
         if (request.getAccrualType() == AccrualType.FIXED &&
@@ -107,6 +114,10 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
             request.setCarryForward(false);
             request.setMaxCarryForwardUnits(0);
         }
+        if (request.getEntitledType() == EntitledType.DAY && request.getCarryForward() == null) {
+            request.setCarryForward(false);
+            request.setMaxCarryForwardUnits(0);
+        }
         ResetFrequency reset = request.getResetFrequency();
         AccrualType accrual = request.getAccrualType();
         if (accrual == AccrualType.FIXED) {
@@ -125,6 +136,9 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
         }
         String policyId = idGenerationService.generateNextTimeOffPolicyId();
         TimeOffPolicyEntity policy = timeOffPolicyEntityMapper.toEntity(request);
+        if (request.getCompensation()==Compensation.UNPAID){
+            request.setEntitledType(policy.getEntitledType());
+        }
         policy.setPolicyId(policyId);
         policy.setActive(true);
         policy.setDefault(false);
@@ -263,79 +277,95 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
     public void assignPolicies(TimeOffPolicyBulkAssignModel request) {
         String orgId = authHelper.getOrgId();
         String schema = authHelper.getSchema();
-        Set<String> finalUsers = getFinalUserSet(request.getUserIds(), request.getGroupIds());
-        if (finalUsers.isEmpty() ||
-                request.getPolicyId() == null ||
-                request.getPolicyId().trim().isEmpty()) {
-            log.info("if  condition");
+        Set<String> finalUsers =
+                getFinalUserSet(request.getUserIds(), request.getGroupIds());
+
+        if (finalUsers.isEmpty()) {
             return;
         }
-        log.info("after if");
-
-        TimeOffPolicyEntity policy = timeOffPolicyAdapter.findByPolicyId(request.getPolicyId());
+        if (request.getPolicyId() == null || request.getPolicyId().trim().isEmpty()) {
+            throw new IllegalArgumentException("Please select a policy to assign.");
+        }
+        TimeOffPolicyEntity policy =
+                timeOffPolicyAdapter.findByPolicyId(request.getPolicyId());
         if (policy == null) {
-            throw new IllegalArgumentException("Invalid policyId: " + request.getPolicyId());
+            throw new IllegalArgumentException("The selected policy does not exist.");
         }
-
         LocalDate userFrom = request.getUserValidFrom();
-        LocalDate userTo = policy.getValidityEndDate();
-
+        LocalDate policyEndDate = policy.getValidityEndDate();
         if (userFrom == null) {
-            throw new IllegalArgumentException("User Valid From is required");
+            throw new IllegalArgumentException("Please select a valid-from date.");
         }
-
+        if (userFrom.isBefore(LocalDate.now())) {
+            throw new IllegalArgumentException(
+                    "Valid-from date must be today or a future date."
+            );
+        }
+        if (policyEndDate != null && userFrom.isAfter(policyEndDate)) {
+            throw new IllegalArgumentException(
+                    "Valid-from date cannot be later than the policy end date."
+            );
+        }
         validateUserValidDates(
-                userFrom, userTo,
+                userFrom,
+                policyEndDate,
                 policy.getValidityStartDate(),
                 policy.getValidityEndDate()
         );
-
-        List<UserEntity> allUsers = userAdapter.findByUserId(new ArrayList<>(finalUsers));
-        Map<String, UserEntity> userMap = allUsers.stream()
-                .collect(Collectors.toMap(UserEntity::getUserId, u -> u));
-
+        List<UserEntity> allUsers =
+                userAdapter.findByUserId(new ArrayList<>(finalUsers));
+        Map<String, UserEntity> userMap =
+                allUsers.stream()
+                        .collect(Collectors.toMap(UserEntity::getUserId, u -> u));
         List<UserPolicyEntity> assignList = new ArrayList<>();
         List<LeaveBalanceEntity> balanceList = new ArrayList<>();
-
-        Double totalUnits = (policy.getCompensation() != Compensation.UNPAID)
-                ? policy.getEntitledUnits().doubleValue()
-                : null;
-
-        LocalDate from = request.getUserValidFrom();
-        LocalDate to = policy.getValidityEndDate();
+        Double totalUnits =
+                (policy.getCompensation() != Compensation.UNPAID)
+                        ? policy.getEntitledUnits().doubleValue()
+                        : null;
         for (String userId : finalUsers) {
-
             UserEntity userEntity = userMap.get(userId);
 
-            List<UserPolicyEntity> existingPolicies =
-                    userPolicyAdapter.findUserPoliciesByUserId(userId);
-
-            boolean alreadyHasPolicy = existingPolicies.stream()
-                    .anyMatch(up -> up.getPolicy().getPolicyId().equals(policy.getPolicyId()));
-
-            if (alreadyHasPolicy) {
+            if (userEntity == null || !Boolean.TRUE.equals(userEntity.isActive())) {
                 continue;
             }
 
-            UserPolicyEntity newUP = buildUserPolicy(policy, userEntity, userFrom, userTo);
+            List<UserPolicyEntity> existingPolicies =
+                    userPolicyAdapter.findUserPoliciesByUserId(userId);
+            boolean alreadyHasPolicy =
+                    existingPolicies.stream()
+                            .anyMatch(up ->
+                                    up.getPolicy().getPolicyId()
+                                            .equals(policy.getPolicyId())
+                            );
+            if (alreadyHasPolicy) {
+                continue;
+            }
+            UserPolicyEntity newUP =
+                    buildUserPolicy(policy, userEntity, userFrom, policyEndDate);
             newUP.setActive(true);
             assignList.add(newUP);
+
             if (policy.getCompensation() != Compensation.UNPAID) {
-                LeaveBalanceEntity lb = buildLeaveBalance(
-                        policy,
-                        userId,
-                        userFrom,
-                        userTo,
-                        totalUnits
-                );
+                LeaveBalanceEntity lb =
+                        buildLeaveBalance(
+                                policy,
+                                userId,
+                                userFrom,
+                                policyEndDate,
+                                totalUnits
+                        );
                 lb.setLeaveTakenUnits(0.0);
-                lb.setBalanceUnits(totalUnits);
                 lb.setActive(true);
                 balanceList.add(lb);
             }
         }
-        if (!assignList.isEmpty()) userPolicyAdapter.saveUserPolicies(assignList);
-        if (!balanceList.isEmpty()) leaveBalanceAdapter.saveLeaveBalances(balanceList);
+        if (!assignList.isEmpty()) {
+            userPolicyAdapter.saveUserPolicies(assignList);
+        }
+        if (!balanceList.isEmpty()) {
+            leaveBalanceAdapter.saveLeaveBalances(balanceList);
+        }
         if (isRedisEnabled) {
             try {
                 CacheEventPublisherUtil.syncReloadThenPublish(
@@ -345,12 +375,22 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
                         schema,
                         cacheReloadHandlerRegistry
                 );
-                log.info("User cache reload event published after assigned Policies to a user for orgId={}", orgId);
+                log.info(
+                        "User cache reloaded after policy assignment | orgId={}",
+                        orgId
+                );
             } catch (Exception e) {
-                log.error("Failed to publish User cache reload event for orgId={}", orgId, e);
+                log.error(
+                        "Failed to reload user cache after policy assignment | orgId={}",
+                        orgId,
+                        e
+                );
             }
         } else {
-            log.info("Redis is not enabled or RedisTemplate is null. Skipping cache reload for orgId={}", orgId);
+            log.info(
+                    "Redis not enabled. Skipping cache reload | orgId={}",
+                    orgId
+            );
         }
     }
 
@@ -488,11 +528,15 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
         LocalDate computedValidTo = computeValidTo(policy, validFrom, validTo);
 
         lb.setPeriodStartDate(validFrom);
-        lb.setPeriodEnd(computedValidTo);
+        if (validTo.isBefore(computedValidTo)){
+            lb.setPeriodEnd(validTo);
+        }else {
+            lb.setPeriodEnd(computedValidTo);
+        }
 
         double calculatedUnits= calculateTotalUnits(policy,policy.getEntitledType());
         lb.setTotalUnits(calculatedUnits);
-        lb.setBalanceUnits(totalUnits);
+        lb.setBalanceUnits(calculatedUnits);
         lb.setLeaveTakenUnits(0.0);
 
         double carryForwardUnits=policy.getMaxCarryForwardUnits() == null ?
