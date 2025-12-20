@@ -462,9 +462,6 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
             } else {
                 entities = timeOffPolicyAdapter.findPoliciesList();
             }
-            if (entities == null || entities.isEmpty()) {
-                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No policies found");
-            }
             return entities.stream()
                     .map(timeOffPolicyEntityMapper::toModel)
                     .collect(Collectors.toList());
