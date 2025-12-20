@@ -10,6 +10,7 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.projection.Calendar
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public interface CalendarAdapter {
     void unsetExistingDefault();
@@ -34,6 +35,7 @@ public interface CalendarAdapter {
     CalendarEntity findByCalendarIdAndDefaultTrue(CalendarId ids);
     CalendarEntity findDefaultCalendar();
     List<CalendarHolidayProjection> findAllHolidayDates();
+    List<Object[]> findHolidayDatesByCalendarIds(Set<String> calendarIds);
     boolean existsByCalendarIdAndDate(String calendarId, LocalDate date );
     boolean existsByDate(String calendarId,LocalDate date,String holidayId);
 

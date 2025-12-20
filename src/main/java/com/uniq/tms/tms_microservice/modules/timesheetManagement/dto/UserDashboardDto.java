@@ -9,6 +9,9 @@ public class UserDashboardDto {
     private Integer holidayCount;
     private Integer halfDayCount;
     private Integer permissionCount;
+    private Integer unPaidLeaveCount;
+    private Integer resetDayCount;
+    private Integer extraWorkedDayCount;
     private Integer totalCount;
     private Double presentPercentage;
     private Double absentPercentage;
@@ -17,6 +20,9 @@ public class UserDashboardDto {
     private Double holidayPercentage;
     private Double halfDayPercentage;
     private Double permissionPercentage;
+    private Double unPaidLeavePercentage;
+    private Double extraWorkedDayPercentage;
+    private Double resetDayPercentage;
 
     public static UserDashboardDto empty() {
         UserDashboardDto dto = new UserDashboardDto();
@@ -26,7 +32,10 @@ public class UserDashboardDto {
         dto.setNotMarkedCount(0);
         dto.setHalfDayCount(0);
         dto.setPermissionCount(0);
+        dto.setUnPaidLeaveCount(0);
+        dto.setResetDayCount(0);
         dto.setHolidayCount(0);
+        dto.setExtraWorkedDayCount(0);
         dto.setTotalCount(0);
 
         dto.setPresentPercentage(0.0);
@@ -36,6 +45,9 @@ public class UserDashboardDto {
         dto.setHolidayPercentage(0.0);
         dto.setHalfDayPercentage(0.0);
         dto.setPermissionPercentage(0.0);
+        dto.setUnPaidLeavePercentage(0.0);
+        dto.setResetDayPercentage(0.0);
+        dto.setExtraWorkedDayPercentage(0.0);
         return dto;
     }
 
@@ -157,5 +169,53 @@ public class UserDashboardDto {
 
     public void setPermissionPercentage(Double permissionPercentage) {
         this.permissionPercentage = permissionPercentage;
+    }
+
+    public Integer getUnPaidLeaveCount() {
+        return unPaidLeaveCount;
+    }
+
+    public void setUnPaidLeaveCount(Integer unPaidLeaveCount) {
+        this.unPaidLeaveCount = unPaidLeaveCount;
+    }
+
+    public Double getUnPaidLeavePercentage() {
+        return unPaidLeavePercentage;
+    }
+
+    public void setUnPaidLeavePercentage(Double unPaidLeavePercentage) {
+        this.unPaidLeavePercentage = unPaidLeavePercentage;
+    }
+
+    public Integer getResetDayCount() {
+        return resetDayCount;
+    }
+
+    public void setResetDayCount(Integer resetDayCount) {
+        this.resetDayCount = resetDayCount;
+    }
+
+    public Double getResetDayPercentage() {
+        return resetDayPercentage;
+    }
+
+    public void setResetDayPercentage(Double resetDayPercentage) {
+        this.resetDayPercentage = resetDayPercentage;
+    }
+
+    public Integer getExtraWorkedDayCount() {
+        return extraWorkedDayCount;
+    }
+
+    public void setExtraWorkedDayCount(Integer extraWorkedDayCount) {
+        this.extraWorkedDayCount = extraWorkedDayCount;
+    }
+
+    public Double getExtraWorkedDayPercentage() {
+        return extraWorkedDayPercentage;
+    }
+
+    public void setExtraWorkedDayPercentage(Double extraWorkedDayPercentage) {
+        this.extraWorkedDayPercentage = extraWorkedDayPercentage;
     }
 }
