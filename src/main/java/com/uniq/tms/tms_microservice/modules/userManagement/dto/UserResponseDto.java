@@ -28,60 +28,34 @@ public class UserResponseDto {
     public UserResponseDto() {
     }
 
-    public UserResponseDto(
-            String userId,
-            String userName,
-            String email,
-            String mobileNumber,
-            String scheduleName,
-            String groupName,
-            String roleName,
-            String locationName,
-            LocalDate dateOfJoining,
-            String secName,
-            String secMobile,
-            String secEmail,
-            String relation,
-            String policyId,
-            String policyName,
-            LocalDate validFrom,
-            LocalDate validTo,
-            String calendarName,
-            String requestApproverName,
-            String payRollName,
-            String organizationName,
-            String orgType
-    ) {
-        this.userId = userId;
-        this.userName = userName;
-        this.email = email;
-        this.mobileNumber = mobileNumber;
-        this.scheduleName = scheduleName;
-        this.groupName = new ArrayList<>();
-        if (groupName != null) this.groupName.add(groupName);
-        this.roleName = roleName;
-        this.locationName = new ArrayList<>();
-        if (locationName != null) this.locationName.add(locationName);
+    public UserResponseDto(UserResponseDto source) {
+        if (source == null) {
+            return;
+        }
+        this.userId = source.getUserId();
+        this.userName = source.getUserName();
+        this.email = source.getEmail();
+        this.mobileNumber = source.getMobileNumber();
+        this.roleName = source.getRoleName();
+        this.dateOfJoining = source.getDateOfJoining();
+        this.scheduleName = source.getScheduleName();
+        this.calendarName = source.getCalendarName();
+        this.requestApproverName = source.getRequestApproverName();
+        this.payrollName = source.getPayrollName();
+        this.organizationName = source.getOrganizationName();
+        this.orgType = source.getOrgType();
+        this.groupName = source.getGroupName() != null
+                ? new ArrayList<>(source.getGroupName())
+                : new ArrayList<>();
+        this.locationName = source.getLocationName() != null
+                ? new ArrayList<>(source.getLocationName())
+                : new ArrayList<>();
 
-        this.dateOfJoining = dateOfJoining;
-        if (secName != null || secMobile != null || secEmail != null) {
-            this.secondaryDetails = new SecondaryDetailsDto();
-            this.secondaryDetails.setUserName(secName);
-            this.secondaryDetails.setMobile(secMobile);
-            this.secondaryDetails.setEmail(secEmail);
-            this.secondaryDetails.setRelation(relation);
-        }
-        this.policies = new ArrayList<>();
-        if (policyName != null) {
-            this.policies.add(new UserPolicyDto(policyId,policyName, validFrom, validTo));
-        }
-        this.calendarName = calendarName;
-        this.requestApproverName = requestApproverName;
-        this.payrollName = payRollName;
-        this.organizationName = organizationName;
-        this.orgType = orgType;
+        this.policies = source.getPolicies() != null
+                ? new ArrayList<>(source.getPolicies())
+                : new ArrayList<>();
+        this.secondaryDetails = source.getSecondaryDetails();
     }
-
 
     public LocalDate getDateOfJoining() {
         return dateOfJoining;

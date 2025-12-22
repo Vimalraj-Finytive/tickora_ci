@@ -146,4 +146,5 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
         """)
     List<TimesheetEntity> findAllTimesheetsByDate(@Param("date") LocalDate date);
 
+    boolean existsByUser_UserIdAndDate(String userId, LocalDate startDate);
 }

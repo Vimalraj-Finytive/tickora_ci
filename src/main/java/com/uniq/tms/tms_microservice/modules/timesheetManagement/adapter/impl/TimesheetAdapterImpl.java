@@ -151,9 +151,10 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
                     userToCalendarMap,
                     calendarHolidayMap
             );
-
-            TimesheetSummaryDto summary = calculateSummaryWithHistory(userTimesheets);
-
+            String userId = user.getUserId();
+            Set<DayOfWeek> workingDays = userWorkingDaysMap.getOrDefault(userId,Collections.emptySet());
+            Set<LocalDate> holidays = new HashSet<>(calendarHolidayMap.getOrDefault(userToCalendarMap.get(userId),Collections.emptyList()));
+            TimesheetSummaryDto summary = calculateSummaryWithHistory(userTimesheets,workingDays,holidays);
             finalResponse.add(new UserTimesheetResponseDto(summary, userTimesheets));
         }
 
@@ -525,21 +526,17 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
     }
 
     private void handleFixedSchedule(TimesheetDto timesheet, ScheduleTypeInfo scheduleInfo) {
-
         LocalTime fixedStartTime = scheduleInfo.getStartTime();
         LocalTime fixedEndTime = scheduleInfo.getEndTime();
         Duration scheduledHours = scheduleInfo.getDuration();
         log.info("Processing Fixed schedule - Start: {}, End: {}", fixedStartTime, fixedEndTime);
         LocalTime actualStart = timesheet.getFirstClockIn();
         LocalTime actualEnd = timesheet.getLastClockOut();
-
         if (actualStart != null && actualEnd != null && fixedStartTime != null && fixedEndTime != null) {
             boolean isLateClockIn = actualStart.isAfter(fixedStartTime);
             boolean isEarlyClockOut = actualEnd.isBefore(fixedEndTime);
             Duration worked = timesheet.getTrackedHours() != null ? timesheet.getTrackedHours() : Duration.ZERO;
             boolean hasOvertimeHours = worked.compareTo(scheduledHours) > 0;
-//            boolean isOvertime = actualEnd.isAfter(fixedEndTime.plusMinutes(30));
-
             if (!isLateClockIn  && hasOvertimeHours) {
                 timesheet.setWorkStatus(TimesheetWorkStatusEnum.OVERTIME.getLabel());
             } else if (isLateClockIn && isEarlyClockOut) {
@@ -587,26 +584,56 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
      * Calculates summary for a user's timesheets including history and day type.
      */
     private TimesheetSummaryDto calculateSummaryWithHistory(
-            List<TimesheetDto> timesheets
+            List<TimesheetDto> timesheets,
+            Set<DayOfWeek> workingDays,
+            Set<LocalDate> calendarHolidays
     ) {
+
         if (timesheets == null || timesheets.isEmpty()) return null;
-
-        int present = 0, absent = 0, holiday = 0, notMarked = 0, paidLeave = 0, halfDay = 0, permission = 0;
-
+        int present = 0, absent = 0, paidLeave = 0, unpaidLeave = 0;
+        int holiday = 0, restDay = 0, notMarked = 0;
+        int halfDay = 0, permission = 0, extraWorkedDays = 0;
+        int totalWorkingDays = 0;
+        LocalDate today = LocalDate.now();
         for (TimesheetDto t : timesheets) {
-
+            LocalDate date = t.getDate();
+            DayOfWeek day = date.getDayOfWeek();
+            if (!workingDays.contains(day)) {
+                restDay++;
+                if (TimesheetStatusEnum.PRESENT.getLabel().equalsIgnoreCase(t.getStatus())
+                        || TimesheetStatusEnum.HALF_DAY.getLabel().equalsIgnoreCase(t.getStatus())
+                        || TimesheetStatusEnum.PERMISSION.getLabel().equalsIgnoreCase(t.getStatus())) {
+                    extraWorkedDays++;
+                }
+                continue;
+            }
+            if (calendarHolidays.contains(date)) {
+                holiday++;
+                continue;
+            }
+            totalWorkingDays++;
             switch (t.getStatus()) {
                 case "Present" -> present++;
+                case "Half Day" -> {
+                    present++;
+                    halfDay++;
+                }
+                case "Permission" -> {
+                    present++;
+                    permission++;
+                }
                 case "Paid Leave" -> paidLeave++;
-                case "Half Day" -> halfDay++;
-                case "Permission" -> permission++;
+                case "Unpaid Leave" -> unpaidLeave++;
                 case "Absent" -> absent++;
-                case "Not Marked" -> notMarked++;
-                case "Holiday" -> holiday++;
+                case "Not Marked" -> {
+                    if (date.isBefore(today)) {
+                        absent++;
+                    } else {
+                        notMarked++;
+                    }
+                }
                 default -> present++;
             }
-
-            // Format times and durations
             t.setFirstClockInTime(formatTime(t.getFirstClockIn()));
             t.setLastClockOutTime(formatTime(t.getLastClockOut()));
             t.setTrackedHoursDuration(formatDuration(t.getTrackedHours()));
@@ -621,15 +648,17 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
         summary.setMobileNumber(first.getMobileNumber());
         summary.setRole(first.getRole());
         summary.setGroupName(first.getGroupName());
+        summary.setTotalCount(totalWorkingDays);
         summary.setPresentCount(present);
         summary.setAbsentCount(absent);
-        summary.setHolidayCount(holiday);
-        summary.setNotMarkedCount(notMarked);
         summary.setPaidLeaveCount(paidLeave);
+        summary.setUnPaidLeaveCount(unpaidLeave);
+        summary.setHolidayCount(holiday);
+        summary.setRestDayCount(restDay);
+        summary.setNotMarkedCount(notMarked);
         summary.setHalfDayCount(halfDay);
         summary.setPermissionCount(permission);
-        summary.setTotalCount(timesheets.size());
-
+        summary.setExtraWorkedDayCount(extraWorkedDays);
         return summary;
     }
 
@@ -1030,5 +1059,10 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
     @Override
     public List<TimesheetEntity> findAllTimesheetsByDate(LocalDate date) {
         return timesheetRepository.findAllTimesheetsByDate(date);
+    }
+
+    @Override
+    public boolean existsByUserIdAndDate(String userId, LocalDate startDate) {
+        return timesheetRepository.existsByUser_UserIdAndDate(userId, startDate);
     }
 }

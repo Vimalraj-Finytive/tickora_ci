@@ -3,7 +3,6 @@ package com.uniq.tms.tms_microservice.modules.userManagement.services.impl;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.CalendarAdapter;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.TimeOffPolicyAdapter;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.UserPolicyAdapter;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.CalendarEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeOffPolicyEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeOffPolicyBulkAssignModel;
@@ -13,7 +12,6 @@ import com.uniq.tms.tms_microservice.modules.locationManagement.dto.LocationDto;
 import com.uniq.tms.tms_microservice.modules.locationManagement.entity.UserLocationEntity;
 import com.uniq.tms.tms_microservice.modules.locationManagement.mapper.LocationDtoMapper;
 import com.uniq.tms.tms_microservice.modules.locationManagement.repository.LocationRepository;
-import com.uniq.tms.tms_microservice.modules.locationManagement.services.LocationService;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.mapper.OrganizationEntityMapper;
 import com.uniq.tms.tms_microservice.modules.userManagement.projections.UserProjection;
 import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
@@ -32,7 +30,6 @@ import com.uniq.tms.tms_microservice.modules.timesheetManagement.adapter.Timeshe
 import com.uniq.tms.tms_microservice.modules.authenticationManagement.model.EmailData;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.model.Organization;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.OrganizationRepository;
-import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.OrganizationTypeRepository;
 import com.uniq.tms.tms_microservice.modules.userManagement.adapter.UserAdapter;
 import com.uniq.tms.tms_microservice.modules.userManagement.enums.MemberType;
 import com.uniq.tms.tms_microservice.modules.userManagement.enums.PrivilegeConstants;
@@ -53,7 +50,6 @@ import com.uniq.tms.tms_microservice.modules.userManagement.mapper.UserEntityMap
 import com.uniq.tms.tms_microservice.modules.userManagement.mapper.SecondaryDetailsMapper;
 import com.uniq.tms.tms_microservice.modules.identityManagement.service.IdGenerationService;
 import com.uniq.tms.tms_microservice.modules.userManagement.enums.UserRole;
-import com.uniq.tms.tms_microservice.modules.userManagement.repository.SecondaryDetailsRepository;
 import com.uniq.tms.tms_microservice.modules.userManagement.services.UserService;
 import io.micrometer.common.util.StringUtils;
 import jakarta.annotation.Nullable;
@@ -101,7 +97,6 @@ import static com.uniq.tms.tms_microservice.shared.util.TextUtil.isBlank;
 @Service
 public class UserServiceImpl implements UserService {
 
-    private final Validator validator;
     private final UserAdapter userAdapter;
     private final TimesheetAdapter timesheetAdapter;
     private final UserEntityMapper userEntityMapper;
@@ -120,34 +115,30 @@ public class UserServiceImpl implements UserService {
     private final GroupRepository groupRepository;
     private final CacheKeyConfig cacheKeyConfig;
     private final CacheReloadHandlerRegistry cacheReloadHandlerRegistry;
-    private final OrganizationTypeRepository organizationTypeRepository;
     private final IdGenerationService idGenerationService;
-    private final SecondaryDetailsRepository secondaryDetailsRepository;
     private final RolePrivilegeHelper rolePrivilegeHelper;
     private final ExceptionHelper exceptionHelper;
     private final OrganizationCacheService organizationCacheService;
     private final LocationDtoMapper locationDtoMapper;
-    private final LocationService locationService;
     private final OrganizationAdapter organizationAdapter;
     private final LocationAdapter locationAdapter;
     private final OrganizationEntityMapper organizationEntityMapper;
     private final AuthHelper authHelper;
     private final TimeOffPolicyAdapter timeOffPolicyAdapter;
     private final TimeOffPolicyService timeOffPolicyService;
-    private final UserPolicyAdapter userPolicyAdapter;
     private final UserMergeUtil userMergeUtil;
-
     public UserServiceImpl(Validator validator, UserAdapter userAdapter, TimesheetAdapter timesheetAdapter,
                            UserEntityMapper userEntityMapper, CalendarAdapter calendarAdapter, OrganizationRepository organizationRepository,
                            RoleRepository roleRepository, LocationRepository locationRepository, EmailHelper emailHelper,
                            UserDtoMapper userDtoMapper, SecondaryDetailsMapper secondaryDetailsMapper,
                            @Nullable RedisTemplate<String, Object> redisTemplate,
                            ApplicationEventPublisher publisher, WorkScheduleAdapter workScheduleAdapter, UserCacheService userCacheService,
-                           CacheKeyUtil cacheKeyUtil, GroupRepository groupRepository, CacheKeyConfig cacheKeyConfig, CacheReloadHandlerRegistry cacheReloadHandlerRegistry,
-                           OrganizationTypeRepository organizationTypeRepository, IdGenerationService idGenerationService, SecondaryDetailsRepository secondaryDetailsRepository,
-                           RolePrivilegeHelper rolePrivilegeHelper, ExceptionHelper exceptionHelper, OrganizationCacheService organizationCacheService, LocationDtoMapper locationDtoMapper, LocationService locationService, OrganizationAdapter organizationAdapter, LocationAdapter locationAdapter, OrganizationEntityMapper organizationEntityMapper, AuthHelper authHelper, TimeOffPolicyAdapter timeOffPolicyAdapter, TimeOffPolicyService timeOffPolicyService, UserPolicyAdapter userPolicyAdapter, UserMergeUtil userMergeUtil) {
-
-        this.validator = validator;
+                           CacheKeyUtil cacheKeyUtil, GroupRepository groupRepository, CacheKeyConfig cacheKeyConfig,
+                           CacheReloadHandlerRegistry cacheReloadHandlerRegistry, IdGenerationService idGenerationService, RolePrivilegeHelper rolePrivilegeHelper,
+                           ExceptionHelper exceptionHelper, OrganizationCacheService organizationCacheService, LocationDtoMapper locationDtoMapper,
+                           OrganizationAdapter organizationAdapter, LocationAdapter locationAdapter, OrganizationEntityMapper organizationEntityMapper,
+                           AuthHelper authHelper, TimeOffPolicyAdapter timeOffPolicyAdapter, TimeOffPolicyService timeOffPolicyService,
+                           UserMergeUtil userMergeUtil) {
         this.userAdapter = userAdapter;
         this.timesheetAdapter = timesheetAdapter;
         this.userEntityMapper = userEntityMapper;
@@ -166,21 +157,17 @@ public class UserServiceImpl implements UserService {
         this.groupRepository = groupRepository;
         this.cacheKeyConfig = cacheKeyConfig;
         this.cacheReloadHandlerRegistry = cacheReloadHandlerRegistry;
-        this.organizationTypeRepository = organizationTypeRepository;
         this.idGenerationService = idGenerationService;
-        this.secondaryDetailsRepository = secondaryDetailsRepository;
         this.rolePrivilegeHelper = rolePrivilegeHelper;
         this.exceptionHelper = exceptionHelper;
         this.organizationCacheService = organizationCacheService;
         this.locationDtoMapper = locationDtoMapper;
-        this.locationService = locationService;
         this.organizationAdapter = organizationAdapter;
         this.locationAdapter = locationAdapter;
         this.organizationEntityMapper = organizationEntityMapper;
         this.authHelper = authHelper;
         this.timeOffPolicyAdapter = timeOffPolicyAdapter;
         this.timeOffPolicyService = timeOffPolicyService;
-        this.userPolicyAdapter = userPolicyAdapter;
         this.userMergeUtil = userMergeUtil;
     }
 
@@ -197,10 +184,9 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public List<Group> getAllGroup(String orgId) {
-        List<Group> groups = userAdapter.getAllGroup(orgId).stream().map(userEntityMapper::toMiddleware).toList();
-        return groups;
+        return userAdapter.getAllGroup(orgId).stream().map(userEntityMapper::toMiddleware).toList();
     }
-    
+
     @Override
     public ApiResponse bulkCreateUsers(MultipartFile file, String orgId, String userId) {
         log.info("Checking work flow for create user");
@@ -575,14 +561,8 @@ public class UserServiceImpl implements UserService {
         entity.setPassword(PasswordUtil.encryptPassword(generatedPass));
         entity.setDefaultPassword(true);
         entity.setActive(true);
-
-        CalendarEntity calendarEntity=calendarAdapter.findDefaultCalendar();
-        if(calendarEntity!=null)
-            entity.setCalendar(calendarEntity);
-
-        else
-            entity.setCalendar(null);
-
+        CalendarEntity calendarEntity = calendarAdapter.findDefaultCalendar();
+        entity.setCalendar(calendarEntity);
         entity.setCreatedAt(LocalDateTime.now());
         return entity;
     }
@@ -629,7 +609,7 @@ public class UserServiceImpl implements UserService {
 
         for (EmailData emailData : emailRequests) {
             try {
-                emailHelper.sendAccountCreationEmail(emailData.getEmail(), emailData.getUserName(), emailData.getGeneratedPass(), emailData.isNewUser(),emailData.getRoleId());
+                emailHelper.sendAccountCreationEmail(emailData.getEmail(), emailData.getUserName(), emailData.getGeneratedPass(), emailData.isNewUser(), emailData.getRoleId());
                 successCount++;
             } catch (Exception e) {
                 log.error("Failed to send email to {}", emailData.getEmail(), e);
@@ -664,7 +644,6 @@ public class UserServiceImpl implements UserService {
             validateSecondaryUser(secondaryDetailsDto);
         }
         validatePrimaryUser(userDto);
-
         log.info("Creating user: {}", userDto.getUserName());
         User userMiddleware = userDtoMapper.toMiddleware(userDto);
         UserEntity entity = userEntityMapper.toEntity(userMiddleware);
@@ -674,7 +653,6 @@ public class UserServiceImpl implements UserService {
         if (isBlank(userMiddleware.getRoleId())) {
             throw new CommonExceptionHandler.BadRequestException("roleId must not be null");
         }
-
         RoleEntity role = roleRepository.findById(userMiddleware.getRoleId())
                 .orElseThrow(() -> new RuntimeException("Role not found with ID: " + userMiddleware.getRoleId()));
 
@@ -696,24 +674,22 @@ public class UserServiceImpl implements UserService {
         entity.setActive(true);
 
         CalendarEntity calendarEntity;
-        if(userDto.getCalendarId() != null) {
+        if (userDto.getCalendarId() != null) {
             calendarEntity = calendarAdapter.findByCalendarId(userDto.getCalendarId())
-            .orElseThrow(() ->
-                    new NoSuchElementException("Calendar not found with ID: " + userDto.getCalendarId()));
-        }
-        else {
+                    .orElseThrow(() ->
+                            new NoSuchElementException("Calendar not found with ID: " + userDto.getCalendarId()));
+        } else {
             calendarEntity = calendarAdapter.findDefaultCalendar();
         }
         entity.setCalendar(calendarEntity);
-        if (userDto.getRequestApproverId() != null){
+        if (userDto.getRequestApproverId() != null) {
             entity.setRequestApproverId(userDto.getRequestApproverId());
         }
         entity.setCreatedAt(LocalDateTime.now());
         log.info("Saving user: {}", userMiddleware.getUserName());
         UserEntity savedUserEntity = userAdapter.saveUser(entity);
-        TimeOffPolicyEntity timeOffPolicyEntity=timeOffPolicyAdapter.findDefaultPolicy();
+        TimeOffPolicyEntity timeOffPolicyEntity = timeOffPolicyAdapter.findDefaultPolicy();
         assignPolicy(timeOffPolicyEntity.getPolicyId(), customUserId, LocalDate.now());
-
         List<Long> locationIds = null;
         List<Long> groupIds = null;
         SecondaryDetailsEntity saveSecondaryUser = null;
@@ -729,17 +705,14 @@ public class UserServiceImpl implements UserService {
             saveSecondaryUser = userAdapter.saveSecondaryDetails(secondaryDetailsEntity);
             log.info("Saved secondary details: {}", secondaryDetails);
         }
-
         if (savedUserEntity != null) {
             log.info("Creating user mapping for all saved users");
-
             UserSchemaMappingEntity mappings = organizationEntityMapper.toSchema(
                     savedUserEntity.getEmail(),
                     savedUserEntity.getMobileNumber(),
                     organizationId,
                     TenantContext.getCurrentTenant()
             );
-
             try {
                 userAdapter.create(mappings);
             } catch (ConstraintViolationException e) {
@@ -826,7 +799,7 @@ public class UserServiceImpl implements UserService {
         finalUser.setGroupId(groupIds);
         boolean isNewUser = savedUserEntity.isDefaultPassword();
         emailHelper.sendAccountCreationEmail(
-                userMiddleware.getEmail(), userMiddleware.getUserName(), defaultPassword, isNewUser,userMiddleware.getRoleId()
+                userMiddleware.getEmail(), userMiddleware.getUserName(), defaultPassword, isNewUser, userMiddleware.getRoleId()
         );
         if (isRedisEnabled) {
             CacheEventPublisherUtil.syncReloadThenPublish(
@@ -843,7 +816,7 @@ public class UserServiceImpl implements UserService {
         return new ApiResponse<UserDto>(201, "Successfully saved user", userDto);
     }
 
-    private void assignPolicy(String policyId, String customUserId, LocalDate startDate){
+    private void assignPolicy(String policyId, String customUserId, LocalDate startDate) {
         TimeOffPolicyBulkAssignModel defaultPolicy = new TimeOffPolicyBulkAssignModel();
         defaultPolicy.setUserIds(List.of(customUserId));
         defaultPolicy.setPolicyId(policyId);
@@ -1010,13 +983,16 @@ public class UserServiceImpl implements UserService {
         if (userDto.getDateOfJoining() != null) {
             existingUser.setDateOfJoining(userDto.getDateOfJoining());
         }
-
         String newRequesterId = updates.getUser().getRequestApproverId();
-        if (!newRequesterId.isBlank()) {
+
+        if (newRequesterId == null || newRequesterId.isBlank()) {
+            if (existingUser.getRequestApproverId() != null) {
+                existingUser.setRequestApproverId(null);
+            }
+        } else {
             List<String> oneUserList = List.of(userId);
             validateApprover(newRequesterId, oneUserList);
             existingUser.setRequestApproverId(newRequesterId);
-            log.info("Updated requester for {} -> {}", userId, newRequesterId);
         }
 
         updateUserCalendar(existingUser, updates.getUser().getCalendarId());
@@ -1062,7 +1038,7 @@ public class UserServiceImpl implements UserService {
                 log.info("User mobile number : {}", secondaryDetails.getMobile());
                 Optional<UserSchemaMappingEntity> existingMappingOpt =
                         userAdapter.findUserByMobileAndOrgId(secondaryDetails.getMobile(), orgId);
-                if(existingMappingOpt.isEmpty()) {
+                if (existingMappingOpt.isEmpty()) {
                     UserSchemaMappingEntity mapping = organizationEntityMapper.toSchema(
                             null,
                             secondaryDetails.getMobile(),
@@ -1073,8 +1049,8 @@ public class UserServiceImpl implements UserService {
                 }
             }
         }
-            userAdapter.updateUser(existingUser);
-            userAdapter.flush();
+        userAdapter.updateUser(existingUser);
+        userAdapter.flush();
         if (isRedisEnabled) {
             CacheEventPublisherUtil.syncReloadThenPublish(
                     publisher,
@@ -1133,7 +1109,6 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public void deleteUsers(String orgId, List<String> userIds, String userNameFromToken, String comments) {
         if (userIds == null || userIds.isEmpty()) return;
-
         String schema = TenantUtil.getCurrentTenant();
         userAdapter.deactivateUsersByIds(userIds, orgId);
         log.info("Deactivated users in bulk");
@@ -1148,7 +1123,6 @@ public class UserServiceImpl implements UserService {
             userAdapter.saveAllUserHistories(historyEntities);
             log.info("Saved {} user history records in batch", historyEntities.size());
         }
-
         CompletableFuture.runAsync(() ->
                 userIds.parallelStream().forEach(userId -> {
                     try {
@@ -1158,7 +1132,6 @@ public class UserServiceImpl implements UserService {
                     }
                 })
         );
-
         if (isRedisEnabled) {
             CacheEventPublisherUtil.syncReloadThenPublish(
                     publisher,
@@ -1173,7 +1146,6 @@ public class UserServiceImpl implements UserService {
         }
         log.info("Deleted users successfully: {}", userIds.size());
     }
-
 
     @Override
     @Transactional
@@ -1609,8 +1581,8 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public void deleteMember(DeleteMemberModel model, String orgId) {
-        Long groupId=model.getGroupId();
-        List<String> memberId=model.getMemberId();
+        Long groupId = model.getGroupId();
+        List<String> memberId = model.getMemberId();
         String schema = TenantUtil.getCurrentTenant();
         userAdapter.deleteMember(groupId, memberId);
         if (isRedisEnabled) {
@@ -1835,7 +1807,7 @@ public class UserServiceImpl implements UserService {
             userEntityList.add(userEntities);
 
             String Comments = "Activated By " + userNameFromToken + "- " + editUser.getComments();
-            UserHistoryEntity userHistoryEntity = userEntityMapper.toActiveUserEntity(id,Comments);
+            UserHistoryEntity userHistoryEntity = userEntityMapper.toActiveUserEntity(id, Comments);
             log.info("Save User History Log");
             userAdapter.saveUserHistory(userHistoryEntity);
             log.info("Saved User log History");
@@ -1915,7 +1887,7 @@ public class UserServiceImpl implements UserService {
             SubscriptionEntity saveSubscription = userAdapter.saveSubscription(subscriptionEntity);
 
             emailHelper.sendAccountCreationEmail(
-                    savedUser.getEmail(), savedUser.getUserName(), defaultPassword, true,savedUser.getRole().getRoleId()
+                    savedUser.getEmail(), savedUser.getUserName(), defaultPassword, true, savedUser.getRole().getRoleId()
             );
 
             log.info("SuperAdmin created successfully in schema.users for org {}", organizationId);
@@ -1936,7 +1908,7 @@ public class UserServiceImpl implements UserService {
             return new ApiResponse<>(404, "No history found for this user", null);
         }
         List<UserHistoryResponseDto> responseDtoList = userEntityMapper.toHistoryDto(responseDtos);
-        return  new ApiResponse<>(200,"User History Log return successfully",responseDtoList);
+        return new ApiResponse<>(200, "User History Log return successfully", responseDtoList);
     }
 
     @Override
@@ -2262,7 +2234,7 @@ public class UserServiceImpl implements UserService {
                 log.error("Failed to publish GroupCacheReloadEvent for orgId={}", orgId, e);
             }
         } else {
-            log.info("Redis is not enabled or RedisTemplate is null. Skipping cache reload for orgId={}", orgId);
+            log.info("Redis is not enabled or RedisTemplate is null. Skipping cache reload of group members for orgId={}", orgId);
         }
 
         return new ApiResponse(200, "Users added/updated successfully", null);
@@ -2278,20 +2250,18 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public Long getSubscribedUserLimit(String orgId) {
-        Long subscribedLimit = userAdapter.getSubscribedUserLimit(orgId);
-        return subscribedLimit;
+        return userAdapter.getSubscribedUserLimit(orgId);
     }
 
     @Override
     public Long getCurrentUserCount(String orgId) {
-        Long currentCount = userAdapter.getCurrentUserCount(orgId);
-        return currentCount;
+        return userAdapter.getCurrentUserCount(orgId);
 
     }
 
     @Override
     @Transactional
-    public BulkUserLocationModel assignLocations(BulkUserLocationModel model,String orgId) {
+    public BulkUserLocationModel assignLocations(BulkUserLocationModel model, String orgId) {
         String schema = TenantUtil.getCurrentTenant();
 
         if (model.getMemberIds() == null || model.getMemberIds().isEmpty()
@@ -2299,8 +2269,8 @@ public class UserServiceImpl implements UserService {
             throw new IllegalArgumentException("Member IDs or Location IDs cannot be empty");
         }
         List<String> errors = new ArrayList<>();
-        UserLocationEntity saveLocation=new UserLocationEntity();
-        BulkUserLocationModel toModel=userEntityMapper.toModel(saveLocation);
+        UserLocationEntity saveLocation = new UserLocationEntity();
+        BulkUserLocationModel toModel = userEntityMapper.toModel(saveLocation);
         for (String userId : model.getMemberIds()) {
             Optional<UserEntity> userOpt = userAdapter.findById(userId);
             if (userOpt.isEmpty()) {
@@ -2395,15 +2365,15 @@ public class UserServiceImpl implements UserService {
     @Override
     public List<GroupModel> getSupervisorGroups(String userId) {
         List<GroupEntity> entities = userAdapter.getSupervisorGroups(userId);
-        if(entities.isEmpty())throw new IllegalArgumentException("No group found");
+        if (entities.isEmpty()) throw new IllegalArgumentException("No group found");
         return userEntityMapper.toModelList(entities);
     }
 
     @Override
-    public List<UserLevelModel>getGroupMembers(Long groupId){
-       List<UserEntity> entities= userAdapter.getGroupMembers(groupId);
-       if(entities.isEmpty())throw new IllegalArgumentException("No group found");
-       return userEntityMapper.toUserModelList(entities);
+    public List<UserLevelModel> getGroupMembers(Long groupId) {
+        List<UserEntity> entities = userAdapter.getGroupMembers(groupId);
+        if (entities.isEmpty()) throw new IllegalArgumentException("No group found");
+        return userEntityMapper.toUserModelList(entities);
     }
 
     @Override
@@ -2413,35 +2383,35 @@ public class UserServiceImpl implements UserService {
         List<UserEntity> users;
         if (RoleName.SUPERADMIN.getRoleName().equalsIgnoreCase(role)) {
             users = userAdapter.getallUsers(approverId);
-        }else{
-            users = userAdapter.findByApproverId(approverId);}
+        } else {
+            users = userAdapter.findByApproverId(approverId);
+        }
         if (users.isEmpty()) {
             throw new IllegalArgumentException("No users found");
         }
         return userEntityMapper.toUserModelList(users);
     }
 
-   @Override
-   public RequestApproverModel assignRequestApprover(RequestApproverDto dto) {
-    String approverId = dto.getRequestId();
-    List<String> requestedUserIds = dto.getUserId();
-    validateApprover(approverId, requestedUserIds);
-    List<UserEntity> activeUsers = userAdapter.findAllById(requestedUserIds);
-    Set<String> foundIds = activeUsers.stream()
-            .map(UserEntity::getUserId)
-            .collect(Collectors.toSet());
-    List<String> invalidIds = requestedUserIds.stream()
-            .filter(id -> !foundIds.contains(id))
-            .toList();
-    if (!invalidIds.isEmpty()) {
-        throw new IllegalArgumentException(
-                "These userIds are invalid or inactive: " + String.join(", ", invalidIds)
-        );
+    @Override
+    public RequestApproverModel assignRequestApprover(RequestApproverDto dto) {
+        String approverId = dto.getRequestId();
+        List<String> requestedUserIds = dto.getUserId();
+        validateApprover(approverId, requestedUserIds);
+        List<UserEntity> activeUsers = userAdapter.findAllById(requestedUserIds);
+        Set<String> foundIds = activeUsers.stream()
+                .map(UserEntity::getUserId)
+                .collect(Collectors.toSet());
+        List<String> invalidIds = requestedUserIds.stream()
+                .filter(id -> !foundIds.contains(id))
+                .toList();
+        if (!invalidIds.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "These userIds are invalid or inactive: " + String.join(", ", invalidIds)
+            );
+        }
+        userAdapter.updateApproverForUsers(approverId, requestedUserIds);
+        return userEntityMapper.toModel(approverId, requestedUserIds);
     }
-    userAdapter.updateApproverForUsers(approverId, requestedUserIds);
-    return userEntityMapper.toModel(approverId, requestedUserIds);
- }
-
 
     private void validateApprover(String approverId, List<String> userIds) {
         userAdapter.findById(approverId)
@@ -2453,20 +2423,22 @@ public class UserServiceImpl implements UserService {
     }
 
     private void updateUserCalendar(UserEntity existingUser, String newCalendarId) {
-        if (newCalendarId == null) {
-            return;
-        }
         String existingCalendarId =
                 existingUser.getCalendar() != null ? existingUser.getCalendar().getId() : null;
-        if (newCalendarId.equals(existingCalendarId)) {
+        if (Objects.equals(newCalendarId,existingCalendarId)) {
             return;
         }
-        CalendarEntity calendar = calendarAdapter.getById(newCalendarId);
-        if (calendar == null) {
-            throw new RuntimeException("Invalid calendarId: " + newCalendarId);
+        if (newCalendarId == null) {
+            CalendarEntity calendar = calendarAdapter.findDefaultCalendar();
+            existingUser.setCalendar(calendar);
+        } else {
+            CalendarEntity calendar = calendarAdapter.getById(newCalendarId);
+            if (calendar == null) {
+                throw new RuntimeException("Invalid calendarId: " + newCalendarId);
+            }
+            existingUser.setCalendar(calendar);
+            log.info("Updated calendar for user {} : {} → {}", existingUser.getUserId(),existingUser.getCalendar().getId(), newCalendarId);
         }
-        existingUser.setCalendar(calendar);
-        log.info("Updated calendar for user {} → {}", existingUser.getCalendar().getId(), newCalendarId);
     }
 
 }

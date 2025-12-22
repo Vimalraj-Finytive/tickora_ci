@@ -355,7 +355,6 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
                                 policyEndDate,
                                 totalUnits
                         );
-                lb.setLeaveTakenUnits(0.0);
                 lb.setActive(true);
                 balanceList.add(lb);
             }
@@ -462,9 +461,6 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
                 entities = timeOffPolicyAdapter.findByIsActiveTrue();
             } else {
                 entities = timeOffPolicyAdapter.findPoliciesList();
-            }
-            if (entities == null || entities.isEmpty()) {
-                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No policies found");
             }
             return entities.stream()
                     .map(timeOffPolicyEntityMapper::toModel)

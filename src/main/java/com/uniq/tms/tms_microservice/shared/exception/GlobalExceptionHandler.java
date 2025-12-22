@@ -3,8 +3,9 @@ package com.uniq.tms.tms_microservice.shared.exception;
 import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import com.sun.jdi.request.DuplicateRequestException;
 import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.coyote.BadRequestException;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.hibernate.JDBCException;
 import org.hibernate.QueryException;
 import org.hibernate.exception.SQLGrammarException;
@@ -31,10 +32,11 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-@Slf4j
 @RestControllerAdvice
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class GlobalExceptionHandler {
+
+    private static final Logger log = LogManager.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler({
             QueryException.class,
@@ -78,13 +80,10 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(DataAccessException.class)
     public ResponseEntity<ApiResponse<Object>> handleDataAccess(DataAccessException ex) {
-
         String msg = safe(ex.getMessage()).toLowerCase();
-
         if (msg.contains("does not exist")
                 || msg.contains("sqlstate: 42703")
                 || msg.contains("column")) {
-
             log.error("SQL ERROR wrapped in DataAccessException", ex);
 
             return ResponseEntity.status(500).body(
@@ -93,9 +92,7 @@ public class GlobalExceptionHandler {
                             null)
             );
         }
-
         log.error("Data access error", ex);
-
         return ResponseEntity.status(500).body(
                 new ApiResponse<>(500, "Database operation failed.", null)
         );
@@ -200,6 +197,12 @@ public class GlobalExceptionHandler {
                 .body(new ApiResponse<>(409, "Duplicate request. Resource already exists.", null));
     }
 
+    @ExceptionHandler(CommonExceptionHandler.DuplicateUserException.class)
+    public ResponseEntity<ApiResponse<Object>> handleDuplicateUserException(CommonExceptionHandler.DuplicateUserException ex) {
+        return ResponseEntity.status(409)
+                .body(new ApiResponse<>(409, ex.getMessage(), null));
+    }
+
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ResponseEntity<ApiResponse<Object>> handleMaxUpload(MaxUploadSizeExceededException ex) {
         return ResponseEntity.badRequest()
@@ -251,7 +254,6 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Object>> handleGlobal(Exception ex) {
         log.error("Unexpected exception", ex);
-
         return ResponseEntity.status(500)
                 .body(new ApiResponse<>(500, "Unexpected error occurred.", null));
     }
@@ -272,11 +274,9 @@ public class GlobalExceptionHandler {
 
     private String parseDataIntegrityError(String msg) {
         msg = safe(msg).toLowerCase();
-
         if (msg.contains("duplicate")) return "Duplicate entry found";
         if (msg.contains("not-null")) return "Required field is missing";
         if (msg.contains("foreign key")) return "Referenced data does not exist";
-
         return "Invalid data";
     }
 }

@@ -683,7 +683,7 @@ public class PayRollServiceImpl implements PayRollService {
                 reportStyleUtil.createStyledCell(row, col++, p.getUserId(), dataStyle);
                 reportStyleUtil.createStyledCell(row, col++, p.getUserName(), dataStyle);
                 reportStyleUtil.createStyledCell(row, col++, p.getPayrollName(), dataStyle);
-                reportStyleUtil.createStyledCell(row, col, p.getMonth(), dataStyle);
+                reportStyleUtil.createStyledCell(row, col++, p.getMonth(), dataStyle);
                 reportStyleUtil.createStyledCell(row, col++, p.getPayrollStatus(), dataStyle);
                 reportStyleUtil.createStyledCell(row, col++, p.getRegularDays(), dataStyle);
                 reportStyleUtil.createStyledCell(row, col++, p.getRegularHrs(), dataStyle);
@@ -695,7 +695,7 @@ public class PayRollServiceImpl implements PayRollService {
                 reportStyleUtil.createStyledCell(row, col++, String.valueOf(p.getOvertimePayrollAmount()), dataStyle);
                 reportStyleUtil.createStyledCell(row, col++, String.valueOf(p.getTotalPayrollAmount()), dataStyle);
                 reportStyleUtil.createStyledCell(row, col++, String.valueOf(p.getTotalAmount()), dataStyle);
-                reportStyleUtil.createStyledCell(row, col++, p.getNotes(), dataStyle);
+                reportStyleUtil.createStyledCell(row, col, p.getNotes(), dataStyle);
             }
             for (int i = 0; i < headers.length; i++) {
                 sheet.autoSizeColumn(i);
