@@ -14,6 +14,7 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.record.UserPolicyPr
 import com.uniq.tms.tms_microservice.modules.leavemanagement.services.LeaveBalanceService;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.adapter.TimesheetAdapter;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.entity.TimesheetEntity;
+import com.uniq.tms.tms_microservice.modules.timesheetManagement.enums.TimesheetStatusEnum;
 import com.uniq.tms.tms_microservice.modules.userManagement.adapter.UserAdapter;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
 import com.uniq.tms.tms_microservice.modules.userManagement.model.User;
@@ -325,8 +326,8 @@ public class LeaveBalanceServiceImpl implements LeaveBalanceService {
     @Override
     public void updateMonthlyLeaveSummary() {
 
-        LocalDate now = LocalDate.now(zoneId);
-        LocalDate previousMonth = LocalDate.now(zoneId).minusMonths(1);
+        LocalDate now = LocalDate.now(zoneId).withDayOfMonth(1);
+        LocalDate previousMonth = now.minusMonths(1);
         int month = previousMonth.getMonthValue();
         int year = previousMonth.getYear();
         int daysInMonth = YearMonth.of(year, month).lengthOfMonth();
@@ -347,7 +348,6 @@ public class LeaveBalanceServiceImpl implements LeaveBalanceService {
                                 Collectors.toList()
                         )
                 ));
-
 
         log.info("fetch monthly leaveBalance");
         List<LeaveBalanceEntity> list =
@@ -396,6 +396,7 @@ public class LeaveBalanceServiceImpl implements LeaveBalanceService {
             int halfDayUnits = 0;
             int fullDayUnits = 0;
             int hoursUnits = 0;
+            int presentUnits = 0;
             for (LeaveBalanceEntity entity : monthlyLeaveBalance.getOrDefault(userId, Collections.emptyList())){
                 if (entity.getPolicy().getEntitledType() == EntitledType.DAY){
                     fullDayUnits += entity.getLeaveTakenUnits();
@@ -453,9 +454,14 @@ public class LeaveBalanceServiceImpl implements LeaveBalanceService {
                     balanceUnits = balanceUnits - request.getEndDate().getDayOfMonth();
                 }
             }
-            int restDays = calculateRestDays(userId, userWorkingDaysMap, userHolidayMap.get(userId), daysInMonth, year, month);
             List<TimesheetEntity> timesheetEntities = timesheetAdapter.getTimesheetByUserIds(userId, year, month);
-            unpaidLeavesTaken = (daysInMonth-restDays) - (timesheetEntities.size()+paidLeavesTaken-(halfDayUnits+hoursUnits));
+            for (TimesheetEntity timesheet : timesheetEntities){
+                if (Objects.equals(timesheet.getStatus().getStatusId(), TimesheetStatusEnum.PRESENT.getId())){
+                    presentUnits++;
+                }
+            }
+            int restDays = calculateRestDays(userId, userWorkingDaysMap, userHolidayMap.get(userId), daysInMonth, year, month);
+            unpaidLeavesTaken = (daysInMonth-restDays) - (presentUnits+paidLeavesTaken-(halfDayUnits+hoursUnits));
             totalLeavesTaken = paidLeavesTaken + unpaidLeavesTaken;
             fullDayUnits += unpaidLeavesTaken;
             summaryEntity.setUserId(userId);
@@ -469,7 +475,7 @@ public class LeaveBalanceServiceImpl implements LeaveBalanceService {
             summaryEntity.setTotalUnitsAvailable(totalUnitsAvailable);
             summaryEntity.setBalanceUnits(balanceUnits);
             summaryEntity.setHoursUnits(hoursUnits);
-            summaryEntity.setTotalPresentDays(timesheetEntities.size());
+            summaryEntity.setTotalPresentDays(presentUnits);
             summaryEntity.setTotalWorkingDays(daysInMonth-restDays);
             summaryEntity.setTotalHolidays(restDays);
             log.info("added summary");
