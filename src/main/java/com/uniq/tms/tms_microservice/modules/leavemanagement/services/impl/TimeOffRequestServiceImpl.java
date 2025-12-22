@@ -23,6 +23,7 @@ import com.uniq.tms.tms_microservice.modules.timesheetManagement.services.Timesh
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
 import com.uniq.tms.tms_microservice.modules.userManagement.enums.MemberType;
 import com.uniq.tms.tms_microservice.modules.userManagement.enums.UserRole;
+import com.uniq.tms.tms_microservice.modules.userManagement.projections.UserHolidayProjection;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.FixedWorkScheduleEntity;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.FlexibleWorkScheduleEntity;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.WorkScheduleEntity;
@@ -30,6 +31,7 @@ import com.uniq.tms.tms_microservice.modules.workScheduleManagement.enums.DayOfW
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.enums.WorkScheduleTypeEnum;
 import com.uniq.tms.tms_microservice.shared.dto.EnumModel;
 import com.uniq.tms.tms_microservice.shared.helper.AuthHelper;
+import com.uniq.tms.tms_microservice.shared.helper.TimesheetHelper;
 import com.uniq.tms.tms_microservice.shared.util.DateTimeUtil;
 import com.uniq.tms.tms_microservice.shared.util.ExportStatusTracker;
 import com.uniq.tms.tms_microservice.shared.util.ReportStyleUtil;
@@ -76,10 +78,11 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
     private final TimesheetAdapter timesheetAdapter;
     private final TimesheetService timesheetService;
     private final ExportStatusTracker exportStatusTracker;
+    private final TimesheetHelper timesheetHelper;
 
     public TimeOffRequestServiceImpl(TimeOffRequestAdapter timeOffRequestAdapter, TimeOffPolicyEntityMapper TimeOffPolicyEntityMapper, TimeOffPolicyDtoMapper timeOffPolicyDtoMapper,
                                      LeaveBalanceAdapter leaveBalanceAdapter, TimeOffPolicyAdapter timeOffPolicyAdapter, UserPolicyAdapter userPolicyAdapter,
-                                     AuthHelper authHelper, CacheKeyUtil cacheKeyUtil, @Nullable RedisTemplate<String, Object> redisTemplate, ReportStyleUtil reportStyleUtil, UserAdapter userAdapter, TimesheetAdapter timesheetAdapter, TimesheetService timesheetService, ExportStatusTracker exportStatusTracker) {
+                                     AuthHelper authHelper, CacheKeyUtil cacheKeyUtil, @Nullable RedisTemplate<String, Object> redisTemplate, ReportStyleUtil reportStyleUtil, UserAdapter userAdapter, TimesheetAdapter timesheetAdapter, TimesheetService timesheetService, ExportStatusTracker exportStatusTracker, TimesheetHelper timesheetHelper) {
         this.timeOffRequestAdapter = timeOffRequestAdapter;
         this.TimeOffPolicyEntityMapper = TimeOffPolicyEntityMapper;
         this.timeOffPolicyDtoMapper = timeOffPolicyDtoMapper;
@@ -94,6 +97,7 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
         this.timesheetAdapter = timesheetAdapter;
         this.timesheetService = timesheetService;
         this.exportStatusTracker = exportStatusTracker;
+        this.timesheetHelper = timesheetHelper;
     }
 
     @Value("${csv.request.download.dir}")
@@ -157,10 +161,17 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
         if (policy.getEntitledType() == EntitledType.DAY && days != request.getUnitsRequested()) {
             throw new IllegalArgumentException("The specified units do not align with the selected date range.");
         }
+        boolean isHoliday = checkIsHoliday(request.getUserId(), request.getStartDate(), request.getEndDate());
+        if (isHoliday){
+            throw new IllegalArgumentException("Cannot create leave request on a holiday");
+        }
         TimeOffRequestEntity entity = new TimeOffRequestEntity();
         Integer requested = 0;
         if (policy.getCompensation() == Compensation.PAID) {
             LeaveBalanceEntity leaveBalance = leaveBalanceAdapter.findForPeriod(policy.getPolicyId(), request.getUserId(), request.getStartDate(), request.getEndDate());
+            if (leaveBalance == null){
+                throw new IllegalArgumentException("Cannot create leave request. Leave balance is not available for the selected period.");
+            }
             if (leaveBalance.getBalanceUnits() == 0.0) {
                 throw new IllegalArgumentException("Insufficient leave balance to apply for paid leave.");
             }
@@ -262,6 +273,32 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
         return m;
     }
 
+    private boolean checkIsHoliday(String userId, LocalDate startDate, LocalDate endDate){
+        if (startDate == null || endDate == null){
+            return false;
+        }
+        TimesheetHelper.WorkScheduleResult result = timesheetHelper.fetchWorkSchedulesAndDays(new String[]{ userId });
+        Map<String, Set< DayOfWeek >> userWorkingDaysMap = result.getUserWorkingDaysMap();
+        List<UserHolidayProjection> results =
+                userAdapter.findUserHolidays(List.of(userId));
+
+        Map<String, List<LocalDate>> userHolidayMap = results.stream()
+                .collect(Collectors.groupingBy(
+                        UserHolidayProjection::getUserId,
+                        Collectors.mapping(
+                                UserHolidayProjection::getDate,
+                                Collectors.toList()
+                        )
+                ));
+        for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
+            DayOfWeek dayOfWeek = date.getDayOfWeek();
+            if (!userWorkingDaysMap.get(userId).contains(dayOfWeek) || userHolidayMap.get(userId).contains(date)){
+                return true;
+            }
+        }
+        return false;
+    }
+
     private double validateHours(WorkScheduleEntity workSchedule, LocalTime startTime, LocalTime endTime, Integer hoursRequested, LeaveBalanceEntity leaveBalance, LocalDate date) {
         long minutes = Duration.between(startTime, endTime).toMinutes();
         DayOfWeekEnum day = DayOfWeekEnum.valueOf(date.getDayOfWeek().name());
@@ -333,6 +370,10 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
             timeOffRequestAdapter.saveRequest(entity);
             timesheetService.deleteTimesheet(model.getUserId(), model.getStartDate(),model.getEndDate());
             return;
+        }
+        boolean isHoliday = checkIsHoliday(model.getUserId(), model.getStartDate(), model.getEndDate());
+        if (isHoliday){
+            throw new IllegalArgumentException("Cannot create leave request on a holiday");
         }
         double days = ChronoUnit.DAYS.between(entity.getStartDate(), entity.getEndDate()) + 1;
         if (model.getReason() != null) {
