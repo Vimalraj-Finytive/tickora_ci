@@ -1208,80 +1208,53 @@ private void calculateHours(TimesheetEntity timesheet, WorkScheduleEntity workSc
     public void createTimesheet(
             TimesheetStatusEnum status,
             String userId,
-            LocalDate date,
+            LocalDate startDate,
+            LocalDate endDate,
             LocalTime startTime,
             LocalTime endTime
     ) {
-
         UserEntity user = userAdapter.findById(userId)
                 .orElseThrow(() ->
                         new IllegalArgumentException("User not found: " + userId));
-
         TimesheetStatusEntity timesheetStatus =
                 timesheetAdapter.findByStatusName(status.getLabel())
                         .orElseThrow(() ->
                                 new IllegalArgumentException("Invalid Timesheet Status: " + status));
-
-        LocationEntity location =
-                locationAdapter.findDefaultLocation();
-
+        LocationEntity location = locationAdapter.findDefaultLocation();
         if (location == null) {
             throw new CommonExceptionHandler.DefaultLocationNotFoundException(
                     "Default location not found"
             );
         }
-
-        TimesheetEntity timesheet = new TimesheetEntity();
-        timesheet.setUser(user);
-        timesheet.setDate(date);
-        timesheet.setStatus(timesheetStatus);
-        timesheet.setCreatedAt(LocalDateTime.now(zoneId));
-        timesheet.setUpdatedAt(LocalDateTime.now(zoneId));
-
-        TimesheetEntity savedTimesheet =
-                timesheetAdapter.save(timesheet);
-
-        switch (status) {
-
-            case PAID_LEAVE, UNPAID_LEAVE -> {
-                createHistory(
-                        savedTimesheet,
-                        location,
-                        LogType.TIME_OFF,
-                        null
-                );
+        LocalDate currentDate = startDate;
+        while (!currentDate.isAfter(endDate)) {
+            TimesheetEntity timesheet = new TimesheetEntity();
+            timesheet.setUser(user);
+            timesheet.setDate(currentDate);
+            timesheet.setStatus(timesheetStatus);
+            timesheet.setCreatedAt(LocalDateTime.now(zoneId));
+            timesheet.setUpdatedAt(LocalDateTime.now(zoneId));
+            TimesheetEntity savedTimesheet =
+                    timesheetAdapter.save(timesheet);
+            switch (status) {
+                case PAID_LEAVE, UNPAID_LEAVE -> {
+                    createHistory(
+                            savedTimesheet,
+                            location,
+                            LogType.TIME_OFF,
+                            null
+                    );
+                }
+                case HALF_DAY -> {
+                    createHistory(savedTimesheet, location, LogType.HALF_IN, startTime);
+                    createHistory(savedTimesheet, location, LogType.HALF_OUT, endTime);
+                }
+                case PERMISSION -> {
+                    createHistory(savedTimesheet, location, LogType.HOUR_IN, startTime);
+                    createHistory(savedTimesheet, location, LogType.HOUR_OUT, endTime);
+                }
             }
-
-            case HALF_DAY -> {
-                createHistory(
-                        savedTimesheet,
-                        location,
-                        LogType.HALF_IN,
-                        startTime
-                );
-                createHistory(
-                        savedTimesheet,
-                        location,
-                        LogType.HALF_OUT,
-                        endTime
-                );
-            }
-
-            case PERMISSION -> {
-                createHistory(
-                        savedTimesheet,
-                        location,
-                        LogType.HOUR_IN,
-                        startTime
-                );
-                createHistory(
-                        savedTimesheet,
-                        location,
-                        LogType.HOUR_OUT,
-                        endTime
-                );
-            }
-
+            currentDate = currentDate.plusDays(1);
         }
     }
 
@@ -1303,7 +1276,7 @@ private void calculateHours(TimesheetEntity timesheet, WorkScheduleEntity workSc
     }
 
     @Override
-    public void deleteTimesheet(String userId, LocalDate date){
-        timesheetAdapter.deleteTimesheet(userId,date);
+    public void deleteTimesheet(String userId, LocalDate startDate, LocalDate endDate){
+        timesheetAdapter.deleteTimesheet(userId,startDate, endDate);
     }
 }
