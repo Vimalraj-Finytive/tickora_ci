@@ -166,7 +166,7 @@ public class PayRollServiceImpl implements PayRollService {
         List<UserPayRollEntity> entities = payRollAdapter.getAllUserPayroll(usersId);
         PayRollSettingEntity settingEntity = payRollAdapter.findFirst()
                 .orElseThrow(() -> new RuntimeException("Payroll Setting not found"));
-        LocalDate date = LocalDate.now(zoneId);
+        LocalDate date = LocalDate.now(zoneId).withDayOfMonth(1);
         int year = date.getYear();
         int month = date.getMonthValue() - 1;
         if (month == 0) {
