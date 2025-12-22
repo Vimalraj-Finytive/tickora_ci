@@ -766,7 +766,7 @@ SELECT * FROM (
         NOW()::DATE,
         NULL::VARCHAR,
         NULL::INT,
-        NULL::VARCHAR,
+        'DAY',
         TRUE,
         FALSE,
         NULL::INT,

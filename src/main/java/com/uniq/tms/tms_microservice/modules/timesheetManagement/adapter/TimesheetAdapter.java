@@ -58,4 +58,5 @@ public interface TimesheetAdapter {
     void deleteTimesheet(String userId, LocalDate date);
     List<TimesheetEntity> findAll(LocalDate date, List<String> userIds);
     List<TimesheetEntity> findAllTimesheetsByDate(LocalDate date);
+    boolean existsByUserIdAndDate(String userId, LocalDate startDate);
 }

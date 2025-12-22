@@ -1060,4 +1060,9 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
     public List<TimesheetEntity> findAllTimesheetsByDate(LocalDate date) {
         return timesheetRepository.findAllTimesheetsByDate(date);
     }
+
+    @Override
+    public boolean existsByUserIdAndDate(String userId, LocalDate startDate) {
+        return timesheetRepository.existsByUser_UserIdAndDate(userId, startDate);
+    }
 }

@@ -1,9 +1,6 @@
 package com.uniq.tms.tms_microservice.modules.timesheetManagement.services.impl;
 
-import com.itextpdf.styledxmlparser.jsoup.select.Evaluator;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.CalendarAdapter;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.impl.CalendarAdapterImpl;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.Status;
 import com.uniq.tms.tms_microservice.modules.locationManagement.adapter.LocationAdapter;
 import com.uniq.tms.tms_microservice.modules.locationManagement.entity.LocationEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.OrganizationAdapter;
@@ -21,7 +18,6 @@ import com.uniq.tms.tms_microservice.modules.userManagement.enums.PrivilegeConst
 import com.uniq.tms.tms_microservice.modules.userManagement.enums.RoleName;
 import com.uniq.tms.tms_microservice.modules.userManagement.projections.UserCalendarProjection;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.adapter.WorkScheduleAdapter;
-import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.WorkScheduleTypeEntity;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.enums.DayOfWeekEnum;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.enums.WorkScheduleTypeEnum;
 import com.uniq.tms.tms_microservice.shared.exception.CommonExceptionHandler;
@@ -33,6 +29,7 @@ import com.uniq.tms.tms_microservice.modules.timesheetManagement.model.Timesheet
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.services.TimesheetService;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
 import com.uniq.tms.tms_microservice.modules.userManagement.enums.UserRole;
+import com.uniq.tms.tms_microservice.shared.helper.TimesheetHelper;
 import com.uniq.tms.tms_microservice.shared.util.TimesheetLogParserUtil;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.FixedWorkScheduleEntity;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.FlexibleWorkScheduleEntity;
@@ -46,17 +43,11 @@ import java.math.RoundingMode;
 import java.sql.Time;
 import java.text.DecimalFormat;
 import java.time.*;
-import java.time.format.TextStyle;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.logging.log4j.Logger;
-
-import javax.swing.text.html.Option;
-
 import static com.uniq.tms.tms_microservice.modules.timesheetManagement.enums.TimesheetStatusEnum.*;
-import static com.uniq.tms.tms_microservice.modules.workScheduleManagement.enums.WorkScheduleTypeEnum.FIXED;
 import static com.uniq.tms.tms_microservice.modules.workScheduleManagement.enums.WorkScheduleTypeEnum.FLEXIBLE;
 
 @Service
@@ -74,11 +65,12 @@ public class TimesheetServiceImpl implements TimesheetService {
     private final LocationAdapter locationAdapter;
     private final OrganizationAdapter organizationAdapter;
     private final CalendarAdapter calendarAdapter;
+    private final TimesheetHelper timesheetHelper;
 
     public TimesheetServiceImpl(TimesheetAdapter timesheetAdapter, TimesheetEntityMapper timesheetEntityMapper, TimesheetDtoMapper timesheetDtoMapper,
                                 UserAdapter userAdapter, WorkScheduleAdapter workScheduleAdapter,
                                 OrganizationCacheService organizationCacheService, RolePrivilegeHelper rolePrivilegeHelper,
-                                LocationAdapter locationAdapter, OrganizationAdapter organizationAdapter, CalendarAdapter calendarAdapter) {
+                                LocationAdapter locationAdapter, OrganizationAdapter organizationAdapter, CalendarAdapter calendarAdapter, TimesheetHelper timesheetHelper) {
         this.timesheetAdapter = timesheetAdapter;
         this.timesheetEntityMapper = timesheetEntityMapper;
         this.timesheetDtoMapper = timesheetDtoMapper;
@@ -89,6 +81,7 @@ public class TimesheetServiceImpl implements TimesheetService {
         this.locationAdapter = locationAdapter;
         this.organizationAdapter = organizationAdapter;
         this.calendarAdapter = calendarAdapter;
+        this.timesheetHelper = timesheetHelper;
     }
 
     private final ZoneId zoneId = ZoneId.of("Asia/Kolkata");
@@ -283,6 +276,40 @@ public class TimesheetServiceImpl implements TimesheetService {
             String userIdFromToken
     ) {
 
+        String[] userIds = baseUsers.stream()
+                .map(UserEntity::getUserId)
+                .toArray(String[]::new);
+
+        TimesheetHelper.WorkScheduleResult wsResult =
+                timesheetHelper.fetchWorkSchedulesAndDays(userIds);
+
+        Map<String, Set<DayOfWeek>> userWorkingDaysMap =
+                wsResult.getUserWorkingDaysMap();
+
+        List<UserCalendarProjection> userCalendarList =
+                userAdapter.findCalendarIdsByUserIds(userIds);
+
+        Map<String, String> userToCalendarMap =
+                userCalendarList.stream()
+                        .filter(Objects::nonNull)
+                        .filter(u -> u.getUserId() != null)
+                        .filter(u -> u.getCalendarId() != null)
+                        .collect(Collectors.toMap(
+                                UserCalendarProjection::getUserId,
+                                UserCalendarProjection::getCalendarId,
+                                (existing, replacement) -> replacement
+                        ));
+
+        Set<String> calendarIds = new HashSet<>(userToCalendarMap.values());
+
+        Map<String, Set<LocalDate>> calendarHolidayMap =
+                calendarAdapter.findHolidayDatesByCalendarIds(calendarIds)
+                        .stream()
+                        .collect(Collectors.groupingBy(
+                                r -> (String) r[0],
+                                Collectors.mapping(r -> (LocalDate) r[1], Collectors.toSet())
+                        ));
+
         Stream<UserEntity> stream = baseUsers.stream();
 
         if (!userIdSet.isEmpty()) {
@@ -346,11 +373,17 @@ public class TimesheetServiceImpl implements TimesheetService {
 
         if (statusId != null && !statusId.isEmpty()) {
 
-            Set<String> specialStatusId = Set.of(ABSENT.getId(), NOT_MARKED.getId());
+            Set<String> specialStatusId = Set.of(ABSENT.getId(), NOT_MARKED.getId(), REST_DAY.getId(), PUBLIC_HOLIDAY.getId());
 
             List<String> trimmedStatusIds = statusId.stream()
                     .map(String::trim)
                     .collect(Collectors.toList());
+
+            if (trimmedStatusIds.contains(PRESENT.getId())) {
+                trimmedStatusIds.addAll(
+                        Set.of(HALF_DAY.getId(), PERMISSION.getId())
+                );
+            }
 
             LocalDate today = LocalDate.now(ZoneId.of("Asia/Kolkata"));
             if (trimmedStatusIds.contains(NOT_MARKED.getId()) && !endDate.isEqual(today)) {
@@ -382,12 +415,57 @@ public class TimesheetServiceImpl implements TimesheetService {
 
                 normalTimesheets.forEach(te -> usersToInclude.add(te.getUser().getUserId()));
             }
-
             if (!specialStatus.isEmpty()) {
-                List<String> usersWithoutTimesheet = timesheetAdapter.findUserByStatusIdNotIn(startDate, endDate);
-                usersToInclude.addAll(usersWithoutTimesheet);
-            }
 
+                for (UserEntity user : baseUsers) {
+
+                    String userId = user.getUserId();
+
+                    Set<DayOfWeek> workingDays =
+                            userWorkingDaysMap.getOrDefault(userId, Collections.emptySet());
+
+                    String calendarId = userToCalendarMap.get(userId);
+                    Set<LocalDate> holidays =
+                            calendarHolidayMap.getOrDefault(calendarId, Collections.emptySet());
+
+                    boolean hasTimesheet =
+                            timesheetAdapter.existsByUserIdAndDate(userId, startDate);
+
+                    DayOfWeek day = startDate.getDayOfWeek();
+                    boolean isWorkingDay = workingDays.contains(day);
+                    boolean isHoliday = holidays.contains(startDate);
+
+                    if (specialStatus.contains(NOT_MARKED.getId())
+                            && startDate.equals(today)
+                            && !hasTimesheet
+                            && isWorkingDay
+                            && !isHoliday) {
+
+                        usersToInclude.add(userId);
+                    }
+
+                    if (specialStatus.contains(ABSENT.getId())
+                            && startDate.isBefore(today)
+                            && !hasTimesheet
+                            && isWorkingDay
+                            && !isHoliday) {
+
+                        usersToInclude.add(userId);
+                    }
+
+                    if (specialStatus.contains(REST_DAY.getId())
+                            && !isWorkingDay
+                            && !hasTimesheet) {
+                        usersToInclude.add(userId);
+                    }
+
+                    if (specialStatus.contains(PUBLIC_HOLIDAY.getId())
+                            && isHoliday
+                            && !hasTimesheet) {
+                        usersToInclude.add(userId);
+                    }
+                }
+            }
             stream = stream.filter(user -> usersToInclude.contains(user.getUserId()));
         }
 
@@ -860,8 +938,7 @@ private void calculateHours(TimesheetEntity timesheet, WorkScheduleEntity workSc
                 // Get all users for the given role
                 filterUsers = userAdapter.getUsersByRoles(Set.of(type), orgId);
             } else if ((type == null || type.isBlank()) && groupIds != null && !groupIds.isEmpty()) {
-                List<UserEntity> groupFilteredUsers = userAdapter.findUsersByGroupIds(groupIds);
-                filterUsers = groupFilteredUsers;
+                filterUsers = userAdapter.findUsersByGroupIds(groupIds);
             } else {
                 log.info("userIdFrom Token: {}, orgId:{}", userIdFromToken, orgId);
                 int heriarchyLevel = UserRole.SUPERADMIN.getHierarchyLevel();
@@ -1045,7 +1122,7 @@ private void calculateHours(TimesheetEntity timesheet, WorkScheduleEntity workSc
         }
         double divisor;
         if (isOverallDashboard) {
-            divisor = userIds.size() > 0 ? userIds.size() : 1.0;
+            divisor = !userIds.isEmpty() ? userIds.size() : 1.0;
         } else {
             divisor = workingDayTotal > 0 ? workingDayTotal : 1.0;
         }
@@ -1086,16 +1163,14 @@ private void calculateHours(TimesheetEntity timesheet, WorkScheduleEntity workSc
             startDate = fromDate;
             endDate = fromDate;
         }
-        List<UserTimesheetDto> rawResults = timesheetAdapter.fetchUserTimesheetsWithHistory(startDate, endDate, userIds, orgId);
-        return rawResults;
+        return timesheetAdapter.fetchUserTimesheetsWithHistory(startDate, endDate, userIds, orgId);
     }
 
     @Override
     public List<TimesheetStatus> getStatus(){
-        List<TimesheetStatus> status = timesheetAdapter.getStatus().stream()
+        return timesheetAdapter.getStatus().stream()
                 .map(timesheetDtoMapper::toStatusModel)
                 .toList();
-        return status;
     }
 
     @Override
@@ -1226,7 +1301,6 @@ private void calculateHours(TimesheetEntity timesheet, WorkScheduleEntity workSc
 
         timesheetAdapter.saveTimesheetHistory(history);
     }
-
 
     @Override
     public void deleteTimesheet(String userId, LocalDate date){

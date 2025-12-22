@@ -257,70 +257,83 @@ public class UserCacheServiceImpl implements UserCacheService {
         return CompletableFuture.completedFuture(new ArrayList<>(groupMap.values()));
     }
 
-    public CompletableFuture<Map<String, List<UserResponseDto>>> loadAllInactiveUsers(String orgId, String schema) {
+    @Override
+    public CompletableFuture<Map<String, List<UserResponseDto>>> loadAllInactiveUsers(
+            String orgId,
+            String schema
+    ) {
 
-        log.info("Current Inactive User tenant:{}", schema);
+        log.info("Current Inactive User tenant: {}", schema);
+
         try {
-            String redisKey = cacheKeyUtil.getInactiveMemberKey(orgId,schema);
+            String redisKey = cacheKeyUtil.getInactiveMemberKey(orgId, schema);
             Map<String, List<UserResponseDto>> roleWiseUserMap = new HashMap<>();
 
-            for (UserRole role : List.of(UserRole.values())) {
-                int hierarchyLevel = UserRole.getLevel(String.valueOf(role));
+            for (UserRole role : UserRole.values()) {
 
-                List<UserProjection> users = userRepository.findAllInActiveUsers(orgId, hierarchyLevel);
-                if (users.isEmpty()) {
-                    log.warn("No Inactive users found for orgId={} and role={}", orgId, role);
-                    roleWiseUserMap.put(String.valueOf(role), new ArrayList<>());
+                int hierarchyLevel = UserRole.getLevel(role.name());
+
+                List<UserProjection> users =
+                        userRepository.findAllInActiveUsers(orgId, hierarchyLevel);
+
+                if (users == null || users.isEmpty()) {
+                    log.warn("No inactive users found for orgId={} and role={}", orgId, role);
+                    roleWiseUserMap.put(role.name(), new ArrayList<>());
                     continue;
                 }
 
-                // Convert to DTO
-                List<UserResponseDto> usersDto = users.stream()
-                        .map(userDtoMapper::toUserDto)
-                        .toList();
+                List<UserResponseDto> usersDto =
+                        users.stream()
+                                .map(userDtoMapper::toUserDto)
+                                .filter(dto -> dto.getUserId() != null)
+                                .toList();
 
-                // Merge duplicates
-                Map<String, UserResponseDto> userMap = new LinkedHashMap<>();
-                for (UserResponseDto user : usersDto) {
-                    userMap.compute(user.getUserId(), (id, existing) -> {
-                        if (existing == null) return user;
+                Map<String, List<UserResponseDto>> groupedByUser =
+                        usersDto.stream()
+                                .collect(Collectors.groupingBy(UserResponseDto::getUserId));
 
-                        if (!existing.getGroupName().contains(user.getGroupName().getFirst())) {
-                            existing.getGroupName().add(user.getGroupName().getFirst());
-                        }
-                        if (!existing.getLocationName().contains(user.getLocationName().getFirst())) {
-                            existing.getLocationName().add(user.getLocationName().getFirst());
-                        }
-                        if (existing.getPolicies()
-                                .stream()
-                                .noneMatch(p -> p.getPolicyName()
-                                        .equals(user.getPolicies().getFirst().getPolicyName()))) {
+                Map<String, UserResponseDto> mergedUsers = new LinkedHashMap<>();
 
-                            existing.getPolicies().add(user.getPolicies().getFirst());
-                        }
-                        return existing;
-                    });
+                for (Map.Entry<String, List<UserResponseDto>> entry : groupedByUser.entrySet()) {
+
+                    String userId = entry.getKey();
+                    List<UserResponseDto> rows = entry.getValue();
+
+                    UserResponseDto merged = createBaseInactiveUser(rows.getFirst());
+
+                    for (UserResponseDto row : rows) {
+                        mergeGroupNames(merged, row);
+                        mergeLocationNames(merged, row);
+                        mergePolicies(merged, row);
+                    }
+
+                    mergedUsers.put(userId, merged);
                 }
 
-                // Add merged list for current role
-                roleWiseUserMap.put(String.valueOf(role), new ArrayList<>(userMap.values()));
+                roleWiseUserMap.put(role.name(), new ArrayList<>(mergedUsers.values()));
             }
 
-            // Final Step: Store everything in a single Redis Hash
             try {
                 if (redisTemplate != null) {
                     redisTemplate.delete(redisKey);
+
                     Map<String, Object> redisHashData = new HashMap<>();
                     for (Map.Entry<String, List<UserResponseDto>> entry : roleWiseUserMap.entrySet()) {
                         redisHashData.put(entry.getKey().toLowerCase(), entry.getValue());
                     }
+
                     redisTemplate.opsForHash().putAll(redisKey, redisHashData);
-                    log.info("Loaded {} role views into cache for Inactive user for orgId {}", redisHashData.size(), orgId);
+
+                    log.info(
+                            "Loaded {} role views into inactive user cache for orgId {}",
+                            redisHashData.size(),
+                            orgId
+                    );
                 } else {
-                    log.warn("RedisTemplate is null, skipping cache operations for Inactive User key: {}", redisKey);
+                    log.warn("RedisTemplate is null. Skipping inactive user cache write.");
                 }
             } catch (Exception redisEx) {
-                log.error("Redis cache update failed for members: {}", redisEx.getMessage(), redisEx);
+                log.error("Redis cache update failed for inactive users", redisEx);
             }
 
             return CompletableFuture.completedFuture(roleWiseUserMap);
@@ -330,4 +343,68 @@ public class UserCacheServiceImpl implements UserCacheService {
             throw new RuntimeException("Failed to cache member data", e);
         }
     }
+
+    private UserResponseDto createBaseInactiveUser(UserResponseDto source) {
+
+        UserResponseDto dto = new UserResponseDto(source);
+
+        dto.setGroupName(
+                source.getGroupName() != null
+                        ? new ArrayList<>(source.getGroupName())
+                        : new ArrayList<>()
+        );
+
+        dto.setLocationName(
+                source.getLocationName() != null
+                        ? new ArrayList<>(source.getLocationName())
+                        : new ArrayList<>()
+        );
+
+        dto.setPolicies(
+                source.getPolicies() != null
+                        ? new ArrayList<>(source.getPolicies())
+                        : new ArrayList<>()
+        );
+
+        return dto;
+    }
+
+    private void mergeGroupNames(UserResponseDto target, UserResponseDto source) {
+
+        if (source.getGroupName() == null || source.getGroupName().isEmpty()) return;
+
+        String group = source.getGroupName().getFirst();
+
+        if (!target.getGroupName().contains(group)) {
+            target.getGroupName().add(group);
+        }
+    }
+
+    private void mergeLocationNames(UserResponseDto target, UserResponseDto source) {
+
+        if (source.getLocationName() == null || source.getLocationName().isEmpty()) return;
+
+        String location = source.getLocationName().getFirst();
+
+        if (!target.getLocationName().contains(location)) {
+            target.getLocationName().add(location);
+        }
+    }
+
+    private void mergePolicies(UserResponseDto target, UserResponseDto source) {
+
+        if (source.getPolicies() == null || source.getPolicies().isEmpty()) return;
+
+        var policy = source.getPolicies().getFirst();
+
+        boolean exists =
+                target.getPolicies()
+                        .stream()
+                        .anyMatch(p -> p.getPolicyName().equals(policy.getPolicyName()));
+
+        if (!exists) {
+            target.getPolicies().add(policy);
+        }
+    }
+
 }
