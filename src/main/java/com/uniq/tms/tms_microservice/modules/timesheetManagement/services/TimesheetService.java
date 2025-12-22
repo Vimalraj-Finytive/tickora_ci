@@ -18,6 +18,6 @@ public interface TimesheetService {
     List<UserTimesheetDto> getUserTimesheets(String userIdFromToken, String orgId, String role, TimesheetReportDto request);
     List<TimesheetStatus> getStatus();
     List<DashboardSummaryDto> getDashboardSummary(String orgId, LocalDate fromDate, LocalDate toDate);
-    void createTimesheet (TimesheetStatusEnum status, String userId, LocalDate date, LocalTime startTime,LocalTime endTime);
-    void deleteTimesheet(String userId, LocalDate date);
+    void createTimesheet (TimesheetStatusEnum status, String userId, LocalDate startDate, LocalDate endDate, LocalTime startTime,LocalTime endTime);
+    void deleteTimesheet(String userId, LocalDate startDate, LocalDate endDate);
 }

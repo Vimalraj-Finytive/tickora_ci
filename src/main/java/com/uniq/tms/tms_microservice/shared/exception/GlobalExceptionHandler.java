@@ -43,23 +43,18 @@ public class GlobalExceptionHandler {
             JpaSystemException.class
     })
     public ResponseEntity<ApiResponse<Object>> handleHibernateQueryErrors(Exception ex) {
-
         log.error("Hibernate Query Exception caught", ex);
-
         String msg = safe(ex.getMessage()).toLowerCase();
-
         if (msg.contains("does not exist")
                 || msg.contains("column")
                 || msg.contains("sqlstate: 42703")
                 || msg.contains("could not extract resultset")) {
-
             return ResponseEntity.status(500).body(
                     new ApiResponse<>(500,
                             "Missing column or table. Please contact support.",
                             null)
             );
         }
-
         return ResponseEntity.status(500).body(
                 new ApiResponse<>(500,
                         "Database query failed. Please contact support.",
@@ -69,9 +64,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler({SQLGrammarException.class, PSQLException.class, JDBCException.class})
     public ResponseEntity<ApiResponse<Object>> handleSQLStructuralErrors(Exception ex) {
-
         log.error("SQL STRUCTURAL ERROR CAUGHT", ex);
-
         return ResponseEntity.status(500)
                 .body(new ApiResponse<>(500,
                         "Missing column or table. Please contact support.",
@@ -80,16 +73,21 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(DataAccessException.class)
     public ResponseEntity<ApiResponse<Object>> handleDataAccess(DataAccessException ex) {
-        String msg = safe(ex.getMessage()).toLowerCase();
+        Throwable root = ex;
+        while (root.getCause() != null) {
+            root = root.getCause();
+        }
+        String msg = safe(root.getMessage()).toLowerCase();
         if (msg.contains("does not exist")
-                || msg.contains("sqlstate: 42703")
-                || msg.contains("column")) {
-            log.error("SQL ERROR wrapped in DataAccessException", ex);
-
+                || msg.contains("column")
+                || msg.contains("relation")
+                || msg.contains("42703")) {
             return ResponseEntity.status(500).body(
-                    new ApiResponse<>(500,
+                    new ApiResponse<>(
+                            500,
                             "Missing column or table. Please contact support.",
-                            null)
+                            null
+                    )
             );
         }
         log.error("Data access error", ex);
