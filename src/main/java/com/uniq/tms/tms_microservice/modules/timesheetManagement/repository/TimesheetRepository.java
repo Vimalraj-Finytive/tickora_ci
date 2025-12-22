@@ -127,7 +127,7 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
     );
 
     @Transactional
-    void deleteByUser_UserIdAndDate(String userId, LocalDate date);
+    void deleteByUser_UserIdAndDateBetween(String userId, LocalDate startDate, LocalDate endDate);
 
     @Query("""
     SELECT t
