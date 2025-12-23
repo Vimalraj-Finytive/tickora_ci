@@ -833,11 +833,11 @@ public class UserServiceImpl implements UserService {
         if (mobileExists.isPresent()) {
             boolean isPrimaryActive = mobileExists.get().getUser().isActive();
             if (!isPrimaryActive) {
-                throw new CommonExceptionHandler.DuplicateUserException(
+                throw new CommonExceptionHandler.BadRequestException(
                         "Inactive User."
                 );
             }
-            throw new CommonExceptionHandler.DuplicateUserException(
+            throw new CommonExceptionHandler.BadRequestException(
                     "Secondary User Mobile number already exists."
             );
         }
@@ -845,11 +845,11 @@ public class UserServiceImpl implements UserService {
         if (emailExists.isPresent()) {
             boolean isPrimaryActive = emailExists.get().getUser().isActive();
             if (!isPrimaryActive) {
-                throw new CommonExceptionHandler.DuplicateUserException(
+                throw new CommonExceptionHandler.BadRequestException(
                         "Inactive User."
                 );
             }
-            throw new CommonExceptionHandler.DuplicateUserException(
+            throw new CommonExceptionHandler.BadRequestException(
                     "Secondary User Email already exists."
             );
         }
@@ -864,22 +864,22 @@ public class UserServiceImpl implements UserService {
         Optional<UserEntity> mobilExists = userAdapter.findByMobileNumber(userDto.getMobileNumber());
         if (mobilExists.isPresent()) {
             if (!mobilExists.get().isActive()) {
-                throw new CommonExceptionHandler.DuplicateUserException(
+                throw new CommonExceptionHandler.BadRequestException(
                         "Inactive Users."
                 );
             }
-            throw new CommonExceptionHandler.DuplicateUserException(
+            throw new CommonExceptionHandler.BadRequestException(
                     "User with this mobile number already exists."
             );
         }
         Optional<UserEntity> emailExists = userAdapter.findByEmail(userDto.getEmail());
         if (emailExists.isPresent()) {
             if (!emailExists.get().isActive()) {
-                throw new CommonExceptionHandler.DuplicateUserException(
+                throw new CommonExceptionHandler.BadRequestException(
                         "Inactive User."
                 );
             }
-            throw new CommonExceptionHandler.DuplicateUserException(
+            throw new CommonExceptionHandler.BadRequestException(
                     "User with this email already exists."
             );
         }
@@ -1842,11 +1842,11 @@ public class UserServiceImpl implements UserService {
             }
             log.info("find user by mobile number");
             userAdapter.findByMobileNumber(organization.getMobile()).ifPresent(user -> {
-                throw new CommonExceptionHandler.DuplicateUserException("Mobile number already in use.");
+                throw new CommonExceptionHandler.BadRequestException("Mobile number already in use.");
             });
             log.info("find user by email");
             userAdapter.findByEmail(organization.getEmail()).ifPresent(user -> {
-                throw new CommonExceptionHandler.DuplicateUserException("Email already in use.");
+                throw new CommonExceptionHandler.BadRequestException("Email already in use.");
             });
             log.info("find user by role");
             RoleEntity role = roleRepository.findById((long) UserRole.SUPERADMIN.getHierarchyLevel())
