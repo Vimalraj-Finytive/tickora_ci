@@ -483,87 +483,274 @@ public class TimesheetServiceImpl implements TimesheetService {
     public static record LocalDateRange(LocalDate startDate, LocalDate endDate) {
     }
 
+//    @Override
+//    @Transactional
+//    public List<TimesheetHistory> processTimesheetLogs(List<TimesheetHistory> timesheetMiddlewareLogs) {
+//        List<TimesheetHistoryEntity> entities = timesheetMiddlewareLogs.stream()
+//                .map(timesheetEntityMapper::toDto)
+//                .map(timesheetEntityMapper::toEntity)
+//                .toList();
+//        Map<String, Map<LocalDate, List<TimesheetHistoryEntity>>> groupedLogs =
+//                entities.stream().collect(Collectors.groupingBy(
+//                        e -> e.getTimesheet().getUser().getUserId(),
+//                        Collectors.groupingBy(e -> Optional.ofNullable(e.getTimesheet().getDate())
+//                                .orElse(LocalDate.now(ZoneId.of("Asia/Kolkata"))))
+//                ));
+//        List<TimesheetHistoryEntity> allSaved = new ArrayList<>();
+//        for (Map.Entry<String, Map<LocalDate, List<TimesheetHistoryEntity>>> userEntry : groupedLogs.entrySet()) {
+//            String userId = userEntry.getKey();
+//            UserEntity user = userAdapter.findById(userId)
+//                    .orElseThrow(() -> new IllegalStateException("User not found: " + userId));
+//            for (Map.Entry<LocalDate, List<TimesheetHistoryEntity>> dateEntry : userEntry.getValue().entrySet()) {
+//                LocalDate date = dateEntry.getKey();
+//                List<TimesheetHistoryEntity> logs = dateEntry.getValue();
+//                TimesheetEntity timesheet = timesheetAdapter.findByUserIdAndDate(userId, date)
+//                        .orElseGet(() -> {
+//                            TimesheetEntity t = new TimesheetEntity();
+//                            t.setUser(user);
+//                            t.setDate(date);
+//                            t.setTrackedHours(LocalTime.MIN);
+//                            t.setRegularHours(LocalTime.MIN);
+//                            t.setTotalBreakHours(LocalTime.MIN);
+//                            t.setCreatedAt(LocalDateTime.now(ZoneId.of("Asia/Kolkata")));
+//                            TimesheetStatusEntity status = timesheetAdapter.findByStatusName(
+//                                            TimesheetStatusEnum.PRESENT.getLabel())
+//                                    .orElseThrow(() -> new IllegalStateException("Status not found"));
+//                            t.setStatus(status);
+//                            return timesheetAdapter.saveTimesheet(t);
+//                        });
+//                if(timesheet.getStatus() != null){
+//                    String statusName = timesheet.getStatus().getStatusName();
+//                    if(PAID_LEAVE.getLabel().equalsIgnoreCase(statusName) || UNPAID_LEAVE.getLabel().equalsIgnoreCase(statusName)){
+//                        throw new IllegalStateException("Clock-in / Clock-out not allowed. User is on leave for " + date);
+//                    }
+//                }
+//                logs.sort(Comparator.comparing(TimesheetHistoryEntity::getLoggedTimestamp));
+//                LocalTime lastClockIn = timesheet.getFirstClockIn();
+//                LocalTime lastClockOut = timesheet.getLastClockOut();
+//                long trackedSeconds = Optional.ofNullable(timesheet.getTrackedHours())
+//                        .orElse(LocalTime.MIN)
+//                        .toSecondOfDay();
+//                long breakSeconds = Optional.ofNullable(timesheet.getTotalBreakHours())
+//                        .orElse(LocalTime.MIN).toSecondOfDay();
+//                for (TimesheetHistoryEntity log : logs) {
+//                    log.setTimesheet(timesheet);
+//                    log.setLoggedTimestamp(LocalDateTime.now(ZoneId.of("Asia/Kolkata")));
+//                    log.setLogTime(LocalTime.now(ZoneId.of("Asia/Kolkata")));
+//                    if (log.getLogType() == LogType.CLOCK_IN) {
+//                        if (timesheet.getFirstClockIn() != null && lastClockOut == null) {
+//                            throw new IllegalStateException("User has already clocked in for today and not clocked out yet.");
+//                        }
+//                        if (lastClockOut != null) {
+//                            long breakTime = Duration.between(lastClockOut, log.getLogTime()).getSeconds();
+//                            if (breakTime > 0) breakSeconds += breakTime;
+//                        }
+//                        if (timesheet.getFirstClockIn() == null)
+//                            timesheet.setFirstClockIn(log.getLogTime());
+//                        lastClockIn = log.getLogTime();
+//                    }
+//                    else if (log.getLogType() == LogType.CLOCK_OUT) {
+//                        if (timesheet.getFirstClockIn() == null) {
+//                            throw new IllegalStateException("User has not clocked in yet. Cannot clock out.");
+//                        }
+//                        if (timesheet.getLastClockOut() != null) {
+//                            throw new IllegalStateException("User has already clocked out for the day.");
+//                        }
+//                        if (lastClockIn != null) {
+//                            long workTime = Duration.between(lastClockIn, log.getLogTime()).getSeconds();
+//                            if (workTime > 0) trackedSeconds += workTime;
+//                            lastClockOut = log.getLogTime();
+//                        }
+//                    }
+//                    allSaved.add(log);
+//                }
+//                timesheet.setTrackedHours(LocalTime.ofSecondOfDay(trackedSeconds));
+//                timesheet.setRegularHours(LocalTime.ofSecondOfDay(trackedSeconds));
+//                timesheet.setTotalBreakHours(LocalTime.ofSecondOfDay(breakSeconds));
+//                timesheet.setLastClockOut(lastClockOut);
+//                timesheetAdapter.saveTimesheet(timesheet);
+//            }
+//        }
+//        timesheetAdapter.saveAllTimesheetHistories(allSaved);
+//        return allSaved.stream().map(timesheetEntityMapper::toMiddleware).toList();
+//    }
+
     @Override
     @Transactional
-    public List<TimesheetHistory> processTimesheetLogs(List<TimesheetHistory> timesheetMiddlewareLogs) {
-        List<TimesheetHistoryEntity> entities = timesheetMiddlewareLogs.stream()
+    public List<TimesheetHistory> processTimesheetLogs(
+            List<TimesheetHistory> timesheetMiddlewareLogs
+    ) {
+
+        List<TimesheetHistoryEntity> entities = convertToEntities(timesheetMiddlewareLogs);
+
+        Map<String, Map<LocalDate, List<TimesheetHistoryEntity>>> groupedLogs =
+                groupByUserAndDate(entities);
+
+        List<TimesheetHistoryEntity> allSaved = new ArrayList<>();
+
+        for (var userEntry : groupedLogs.entrySet()) {
+            UserEntity user = getUser(userEntry.getKey());
+
+            for (var dateEntry : userEntry.getValue().entrySet()) {
+                processUserDateLogs(
+                        user,
+                        dateEntry.getKey(),
+                        dateEntry.getValue(),
+                        allSaved
+                );
+            }
+        }
+
+        timesheetAdapter.saveAllTimesheetHistories(allSaved);
+
+        return allSaved.stream()
+                .map(timesheetEntityMapper::toMiddleware)
+                .toList();
+    }
+
+    private List<TimesheetHistoryEntity> convertToEntities(
+            List<TimesheetHistory> middlewareLogs
+    ) {
+        return middlewareLogs.stream()
                 .map(timesheetEntityMapper::toDto)
                 .map(timesheetEntityMapper::toEntity)
                 .toList();
-        Map<String, Map<LocalDate, List<TimesheetHistoryEntity>>> groupedLogs =
-                entities.stream().collect(Collectors.groupingBy(
-                        e -> e.getTimesheet().getUser().getUserId(),
-                        Collectors.groupingBy(e -> Optional.ofNullable(e.getTimesheet().getDate())
-                                .orElse(LocalDate.now(ZoneId.of("Asia/Kolkata"))))
-                ));
-        List<TimesheetHistoryEntity> allSaved = new ArrayList<>();
-        for (Map.Entry<String, Map<LocalDate, List<TimesheetHistoryEntity>>> userEntry : groupedLogs.entrySet()) {
-            String userId = userEntry.getKey();
-            UserEntity user = userAdapter.findById(userId)
-                    .orElseThrow(() -> new IllegalStateException("User not found: " + userId));
-            for (Map.Entry<LocalDate, List<TimesheetHistoryEntity>> dateEntry : userEntry.getValue().entrySet()) {
-                LocalDate date = dateEntry.getKey();
-                List<TimesheetHistoryEntity> logs = dateEntry.getValue();
-                TimesheetEntity timesheet = timesheetAdapter.findByUserIdAndDate(userId, date)
-                        .orElseGet(() -> {
-                            TimesheetEntity t = new TimesheetEntity();
-                            t.setUser(user);
-                            t.setDate(date);
-                            t.setTrackedHours(LocalTime.MIN);
-                            t.setRegularHours(LocalTime.MIN);
-                            t.setTotalBreakHours(LocalTime.MIN);
-                            t.setCreatedAt(LocalDateTime.now(ZoneId.of("Asia/Kolkata")));
-                            TimesheetStatusEntity status = timesheetAdapter.findByStatusName(
-                                            TimesheetStatusEnum.PRESENT.getLabel())
-                                    .orElseThrow(() -> new IllegalStateException("Status not found"));
-                            t.setStatus(status);
-                            return timesheetAdapter.saveTimesheet(t);
-                        });
-                logs.sort(Comparator.comparing(TimesheetHistoryEntity::getLoggedTimestamp));
-                LocalTime lastClockIn = timesheet.getFirstClockIn();
-                LocalTime lastClockOut = timesheet.getLastClockOut();
-                long trackedSeconds = timesheet.getTrackedHours().toSecondOfDay();
-                long breakSeconds = timesheet.getTotalBreakHours().toSecondOfDay();
-                for (TimesheetHistoryEntity log : logs) {
-                    log.setTimesheet(timesheet);
-                    log.setLoggedTimestamp(LocalDateTime.now(ZoneId.of("Asia/Kolkata")));
-                    log.setLogTime(LocalTime.now(ZoneId.of("Asia/Kolkata")));
-                    if (log.getLogType() == LogType.CLOCK_IN) {
-                        if (timesheet.getFirstClockIn() != null && lastClockOut == null) {
-                            throw new IllegalStateException("User has already clocked in for today and not clocked out yet.");
-                        }
-                        if (lastClockOut != null) {
-                            long breakTime = Duration.between(lastClockOut, log.getLogTime()).getSeconds();
-                            if (breakTime > 0) breakSeconds += breakTime;
-                        }
-                        if (timesheet.getFirstClockIn() == null)
-                            timesheet.setFirstClockIn(log.getLogTime());
-                        lastClockIn = log.getLogTime();
-                    }
-                    else if (log.getLogType() == LogType.CLOCK_OUT) {
-                        if (timesheet.getFirstClockIn() == null) {
-                            throw new IllegalStateException("User has not clocked in yet. Cannot clock out.");
-                        }
-                        if (timesheet.getLastClockOut() != null) {
-                            throw new IllegalStateException("User has already clocked out for the day.");
-                        }
-                        if (lastClockIn != null) {
-                            long workTime = Duration.between(lastClockIn, log.getLogTime()).getSeconds();
-                            if (workTime > 0) trackedSeconds += workTime;
-                            lastClockOut = log.getLogTime();
-                        }
-                    }
-                    allSaved.add(log);
-                }
-                timesheet.setTrackedHours(LocalTime.ofSecondOfDay(trackedSeconds));
-                timesheet.setRegularHours(LocalTime.ofSecondOfDay(trackedSeconds));
-                timesheet.setTotalBreakHours(LocalTime.ofSecondOfDay(breakSeconds));
-                timesheet.setLastClockOut(lastClockOut);
-                timesheetAdapter.saveTimesheet(timesheet);
-            }
+    }
+
+    private Map<String, Map<LocalDate, List<TimesheetHistoryEntity>>> groupByUserAndDate(
+            List<TimesheetHistoryEntity> entities
+    ) {
+        return entities.stream().collect(Collectors.groupingBy(
+                e -> e.getTimesheet().getUser().getUserId(),
+                Collectors.groupingBy(
+                        e -> Optional.ofNullable(e.getTimesheet().getDate())
+                                .orElse(LocalDate.now(ZoneId.of("Asia/Kolkata")))
+                )
+        ));
+    }
+
+    private UserEntity getUser(String userId) {
+        return userAdapter.findById(userId)
+                .orElseThrow(() -> new IllegalStateException("User not found: " + userId));
+    }
+
+    private void processUserDateLogs(
+            UserEntity user,
+            LocalDate date,
+            List<TimesheetHistoryEntity> logs,
+            List<TimesheetHistoryEntity> allSaved
+    ) {
+        Optional<TimesheetEntity> existingOpt =
+                timesheetAdapter.findByUserIdAndDate(user.getUserId(), date);
+        existingOpt.ifPresent(timesheetEntity -> validateNotOnLeave(timesheetEntity, date));
+        TimesheetEntity timesheet =
+                existingOpt.orElseGet(() -> createPresentTimesheet(user, date));
+        processLogsForTimesheet(timesheet, logs, allSaved);
+    }
+
+    private void validateNotOnLeave(TimesheetEntity timesheet, LocalDate date) {
+        if (timesheet.getStatus() == null) return;
+        String statusName = timesheet.getStatus().getStatusName();
+        if (PAID_LEAVE.getLabel().equalsIgnoreCase(statusName)
+                || UNPAID_LEAVE.getLabel().equalsIgnoreCase(statusName)) {
+            throw new IllegalStateException(
+                    "Clock-in / Clock-out not allowed. User is on leave for " + date
+            );
         }
-        timesheetAdapter.saveAllTimesheetHistories(allSaved);
-        return allSaved.stream().map(timesheetEntityMapper::toMiddleware).toList();
+    }
+
+    private TimesheetEntity createPresentTimesheet(UserEntity user, LocalDate date) {
+
+        TimesheetEntity t = new TimesheetEntity();
+        t.setUser(user);
+        t.setDate(date);
+        t.setTrackedHours(LocalTime.MIN);
+        t.setRegularHours(LocalTime.MIN);
+        t.setTotalBreakHours(LocalTime.MIN);
+        t.setCreatedAt(LocalDateTime.now(ZoneId.of("Asia/Kolkata")));
+        TimesheetStatusEntity status =
+                timesheetAdapter.findByStatusName(
+                        TimesheetStatusEnum.PRESENT.getLabel()
+                ).orElseThrow(() -> new IllegalStateException("Status not found"));
+        t.setStatus(status);
+        return timesheetAdapter.saveTimesheet(t);
+    }
+
+    private void processLogsForTimesheet(
+            TimesheetEntity timesheet,
+            List<TimesheetHistoryEntity> logs,
+            List<TimesheetHistoryEntity> allSaved
+    ) {
+
+        logs.sort(Comparator.comparing(TimesheetHistoryEntity::getLoggedTimestamp));
+        LocalTime lastClockIn = timesheet.getFirstClockIn();
+        LocalTime lastClockOut = timesheet.getLastClockOut();
+        long trackedSeconds = Optional.ofNullable(timesheet.getTrackedHours())
+                .orElse(LocalTime.MIN).toSecondOfDay();
+        long breakSeconds = Optional.ofNullable(timesheet.getTotalBreakHours())
+                .orElse(LocalTime.MIN).toSecondOfDay();
+        for (TimesheetHistoryEntity log : logs) {
+            log.setTimesheet(timesheet);
+            log.setLoggedTimestamp(LocalDateTime.now(ZoneId.of("Asia/Kolkata")));
+            log.setLogTime(LocalTime.now(ZoneId.of("Asia/Kolkata")));
+            if (log.getLogType() == LogType.CLOCK_IN) {
+                handleClockIn(timesheet, log, lastClockOut);
+                lastClockIn = log.getLogTime();
+            }
+            else if (log.getLogType() == LogType.CLOCK_OUT) {
+                trackedSeconds += handleClockOut(timesheet, log, lastClockIn);
+                lastClockOut = log.getLogTime();
+            }
+            allSaved.add(log);
+        }
+        updateTimesheetTotals(timesheet, trackedSeconds, breakSeconds, lastClockOut);
+    }
+
+    private void handleClockIn(
+            TimesheetEntity timesheet,
+            TimesheetHistoryEntity log,
+            LocalTime lastClockOut
+    ) {
+        if (timesheet.getFirstClockIn() != null && lastClockOut == null) {
+            throw new IllegalStateException("User has already clocked in for today and not clocked out yet.");
+        }
+        if (timesheet.getFirstClockIn() == null) {
+            timesheet.setFirstClockIn(log.getLogTime());
+        }
+    }
+
+    private long handleClockOut(
+            TimesheetEntity timesheet,
+            TimesheetHistoryEntity log,
+            LocalTime lastClockIn
+    ) {
+        if (timesheet.getFirstClockIn() == null) {
+            throw new IllegalStateException("User has not clocked in yet. Cannot clock out.");
+        }
+
+        if (timesheet.getLastClockOut() != null) {
+            throw new IllegalStateException("User has already clocked out for the day.");
+        }
+
+        if (lastClockIn != null) {
+            return Duration.between(lastClockIn, log.getLogTime()).getSeconds();
+        }
+
+        return 0;
+    }
+
+    private void updateTimesheetTotals(
+            TimesheetEntity timesheet,
+            long trackedSeconds,
+            long breakSeconds,
+            LocalTime lastClockOut
+    ) {
+        timesheet.setTrackedHours(LocalTime.ofSecondOfDay(trackedSeconds));
+        timesheet.setRegularHours(LocalTime.ofSecondOfDay(trackedSeconds));
+        timesheet.setTotalBreakHours(LocalTime.ofSecondOfDay(breakSeconds));
+        timesheet.setLastClockOut(lastClockOut);
+
+        timesheetAdapter.saveTimesheet(timesheet);
     }
 
     @Override
@@ -582,6 +769,17 @@ public class TimesheetServiceImpl implements TimesheetService {
         }
         try {
             TimesheetEntity timesheet = timesheetAdapter.findUserIdAndDate(userId, date);
+            if (timesheet != null && timesheet.getStatus() != null) {
+                String statusName = timesheet.getStatus().getStatusName();
+                if (PAID_LEAVE.getLabel().equalsIgnoreCase(statusName)
+                        || UNPAID_LEAVE.getLabel().equalsIgnoreCase(statusName)) {
+
+                    throw new ResponseStatusException(
+                            HttpStatus.BAD_REQUEST,
+                            "Timesheet cannot be edited because the user is on leave for this day."
+                    );
+                }
+            }
             boolean isNew = false;
             if (timesheet == null) {
                 isNew = true;

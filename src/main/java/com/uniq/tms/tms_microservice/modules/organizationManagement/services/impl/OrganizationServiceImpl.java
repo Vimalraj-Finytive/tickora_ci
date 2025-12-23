@@ -1,5 +1,9 @@
 package com.uniq.tms.tms_microservice.modules.organizationManagement.services.impl;
 
+import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.CalendarAdapter;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.TimeOffPolicyAdapter;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.CalendarEntity;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeOffPolicyEntity;
 import com.uniq.tms.tms_microservice.modules.locationManagement.adapter.LocationAdapter;
 import com.uniq.tms.tms_microservice.modules.locationManagement.entity.LocationEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.OrganizationAdapter;
@@ -82,13 +86,15 @@ public class OrganizationServiceImpl implements OrganizationService {
     private final OrganizationDetailsMapper mapper;
     private final SubscriptionAdapter subscriptionAdapter;
     private final TimesheetAdapter timesheetAdapter;
+    private final CalendarAdapter calendarAdapter;
 
     public OrganizationServiceImpl(OrganizationEntityMapper organizationEntityMapper, UserAdapter userAdapter, WorkScheduleAdapter workScheduleAdapter,
                                    IdGenerationService idGenerationService, DataSource dataSource, ExceptionHelper exceptionHelper,
                                    OrganizationRepository organizationRepository, OrganizationTypeRepository organizationTypeRepository,
                                    UserService userService, OrganizationAdapter organizationAdapter, CacheKeyConfig cacheKeyConfig,
                                    CacheReloadHandlerRegistry cacheReloadHandlerRegistry, ApplicationEventPublisher publisher,
-                                   LocationAdapter locationAdapter, SubscriptionService subscriptionService, OrganizationDetailsMapper mapper, SubscriptionAdapter subscriptionAdapter, TimesheetAdapter timesheetAdapter) {
+                                   LocationAdapter locationAdapter, SubscriptionService subscriptionService, OrganizationDetailsMapper mapper, SubscriptionAdapter subscriptionAdapter,
+                                   TimesheetAdapter timesheetAdapter, CalendarAdapter calendarAdapter) {
 
         this.organizationEntityMapper = organizationEntityMapper;
         this.userAdapter = userAdapter;
@@ -108,6 +114,7 @@ public class OrganizationServiceImpl implements OrganizationService {
         this.mapper = mapper;
         this.subscriptionAdapter = subscriptionAdapter;
         this.timesheetAdapter = timesheetAdapter;
+        this.calendarAdapter = calendarAdapter;
     }
 
     @Value("${cache.redis.enabled}")
@@ -275,9 +282,11 @@ public class OrganizationServiceImpl implements OrganizationService {
     public OrgSetupValidationResponse getValidation(String orgId) {
         List<LocationEntity> locationEntities = locationAdapter.findLocation(orgId);
         List<WorkScheduleEntity> workScheduleEntities = workScheduleAdapter.findAllScheduleById(orgId);
+        List<CalendarEntity> calendarEntities = calendarAdapter.findAllCalendar();
         boolean hasLocations = locationEntities != null && !locationEntities.isEmpty();
         boolean hasSchedules = workScheduleEntities != null && !workScheduleEntities.isEmpty();
-        return new OrgSetupValidationResponse(hasLocations, hasSchedules);
+        boolean hasCalendar = calendarEntities != null && !calendarEntities.isEmpty();
+        return new OrgSetupValidationResponse(hasLocations, hasSchedules, hasCalendar);
     }
 
     @Override

@@ -189,6 +189,12 @@ public class GlobalExceptionHandler {
                 .body(new ApiResponse<>(400, safe(ex.getMessage()), null));
     }
 
+    @ExceptionHandler(CommonExceptionHandler.BadRequestException.class)
+    public ResponseEntity<ApiResponse<Object>> handleBadRequest(CommonExceptionHandler.BadRequestException ex) {
+        return ResponseEntity.badRequest()
+                .body(new ApiResponse<>(400, safe(ex.getMessage()), null));
+    }
+
     @ExceptionHandler(DuplicateRequestException.class)
     public ResponseEntity<ApiResponse<Object>> handleDuplicateRequest(DuplicateRequestException ex) {
         return ResponseEntity.status(409)

@@ -428,7 +428,7 @@ public class UserFacade {
     public ApiResponse<RequestApproverDto> assignRequestApprover(RequestApproverDto dto) {
             RequestApproverModel model = userService.assignRequestApprover(dto);
             RequestApproverDto Dto=userDtoMapper.toDto(model);
-            return new ApiResponse<>(200,"approver assigned successfully",Dto);
+            return new ApiResponse<>(200,"approver assigned successfully",null);
 
     }
 

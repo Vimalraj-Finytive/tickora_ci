@@ -1524,6 +1524,7 @@ SELECT
     ra.user_name AS request_approver_name,
     ws.work_schedule_name AS schedule_name,
     c.name AS calendar_name,
+    c.id AS calendar_id,
     og.group_name,
     r.name AS role_name,
     l.name AS location_name,

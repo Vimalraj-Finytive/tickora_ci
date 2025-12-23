@@ -32,6 +32,7 @@ public class UserMergeUtil {
                     existing.setPolicies(new ArrayList<>());
                     existing.setSecondaryDetails(null);
                     existing.setCalendarName(p.getCalendarName());
+                    existing.setCalendarId(p.getCalendarId());
                     existing.setRequestApproverName(p.getRequestApproverName());
                     existing.setPayrollName(p.getPayrollName());
                     existing.setOrganizationName(p.getOrganizationName());
