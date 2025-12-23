@@ -290,9 +290,10 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
                                 Collectors.toList()
                         )
                 ));
+        List<LocalDate> holidays = userHolidayMap.get(userId);
         for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
             DayOfWeek dayOfWeek = date.getDayOfWeek();
-            if (!userWorkingDaysMap.get(userId).contains(dayOfWeek) || userHolidayMap.get(userId).contains(date)){
+            if (!userWorkingDaysMap.get(userId).contains(dayOfWeek) || (holidays != null && holidays.contains(date))){
                 return true;
             }
         }
