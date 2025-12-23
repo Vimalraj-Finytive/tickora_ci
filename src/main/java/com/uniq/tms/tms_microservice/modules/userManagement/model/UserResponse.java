@@ -22,6 +22,7 @@ public class UserResponse {
     private String scheduleName;
     private List<UserPolicyDto> policies;
     private String calendarName;
+    private String calendarId;
     private String requestApproverName;
     private String payrollName;
     private String organizationName;
@@ -49,6 +50,7 @@ public class UserResponse {
             LocalDate validFrom,
             LocalDate validTo,
             String calendarName,
+            String calendarId,
             String requestApproverName,
             String payRollName,
             String organizationName,
@@ -88,6 +90,7 @@ public class UserResponse {
         }
 
         this.calendarName = calendarName;
+        this.calendarId = calendarId;
         this.requestApproverName = requestApproverName;
         this.payrollName = payRollName;
         this.organizationName = organizationName;
@@ -216,5 +219,13 @@ public class UserResponse {
 
     public void setOrgType(String orgType) {
         this.orgType = orgType;
+    }
+
+    public String getCalendarId() {
+        return calendarId;
+    }
+
+    public void setCalendarId(String calendarId) {
+        this.calendarId = calendarId;
     }
 }

@@ -290,4 +290,9 @@ public class CalendarAdapterImpl implements CalendarAdapter {
     public boolean existsByDate(String calendarId, LocalDate date, String holidayId) {
         return calendarHolidayRepository.existsByCalendar_IdAndDateAndIdNot(calendarId, date, holidayId);
     }
+
+    @Override
+    public List<CalendarEntity> findAllCalendar() {
+        return calendarRepository.findAll();
+    }
 }
