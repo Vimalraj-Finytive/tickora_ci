@@ -189,7 +189,7 @@ CREATE TABLE ${schemaName}.work_schedule (
 -- Table: calendar
 -- ===========================================================
 --changeset system:create-calendar-table
-CREATE TABLE IF NOT EXISTS calendar (
+CREATE TABLE IF NOT EXISTS ${schemaName}.calendar (
     id VARCHAR(10) PRIMARY KEY,
     name VARCHAR(255),
     is_default BOOLEAN,
@@ -204,14 +204,14 @@ CREATE TABLE IF NOT EXISTS calendar (
 -- Table: calendar_details
 -- ===========================================================
 --changeset system:create-calendar-details-table
-CREATE TABLE IF NOT EXISTS calendar_details (
+CREATE TABLE IF NOT EXISTS ${schemaName}.calendar_details (
     id VARCHAR(10) PRIMARY KEY,
     date DATE,
     name VARCHAR(255),
     year VARCHAR(10),
     calendar_id VARCHAR(10) NOT NULL,
     CONSTRAINT fk_calendar_details_calendar
-        FOREIGN KEY (calendar_id) REFERENCES calendar (id)
+        FOREIGN KEY (calendar_id) REFERENCES ${schemaName}.calendar (id)
         ON DELETE CASCADE
 );
 
@@ -382,7 +382,7 @@ SELECT * FROM (VALUES
     ('TSS006', 'Half Day'),
     ('TSS007', 'Permission'),
     ('TSS008', 'Rest Day'),
-    ('TSS0009', 'Unpaid Leave')
+    ('TSS009', 'Unpaid Leave')
 ) AS tmp(status_id, status_name)
 WHERE NOT EXISTS (SELECT 1 FROM ${schemaName}.timesheet_status);
 
@@ -661,7 +661,7 @@ CREATE TABLE IF NOT EXISTS ${schemaName}.user_payroll_history (
 -- Table: payment
 -- ===========================================================
 --changeset system:create-payment
-CREATE TABLE payment (
+CREATE TABLE IF NOT EXISTS ${schemaName}.payment (
     payment_id VARCHAR(20) PRIMARY KEY,
     order_id VARCHAR(30) NOT NULL,
     amount NUMERIC(10, 2) NOT NULL,
@@ -677,7 +677,7 @@ CREATE TABLE payment (
 -- Table: subscription
 -- ===========================================================
 --changeset system:create-subscription
-CREATE TABLE subscription (
+CREATE TABLE IF NOT EXISTS ${schemaName}.subscription (
     subscription_id VARCHAR(20) PRIMARY KEY,
     start_date TIMESTAMP NOT NULL,
     end_date TIMESTAMP NOT NULL,
@@ -689,7 +689,7 @@ CREATE TABLE subscription (
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP,
     CONSTRAINT fk_subscription_plan FOREIGN KEY (plan_id)
-        REFERENCES plan(plan_id)
+        REFERENCES ${schemaName}.plan(plan_id)
         ON DELETE RESTRICT
 );
 
@@ -697,17 +697,17 @@ CREATE TABLE subscription (
 -- Table: subscription_mapping
 -- ===========================================================
 --changeset system:create-subscription_mapping
-CREATE TABLE subscription_mapping (
+CREATE TABLE IF NOT EXISTS ${schemaName}.subscription_mapping (
     subscription_mapping_id SERIAL PRIMARY KEY,
     subscription_id VARCHAR(20) NOT NULL,
     payment_id VARCHAR(20) NOT NULL,
 
     CONSTRAINT fk_mapping_subscription FOREIGN KEY (subscription_id)
-        REFERENCES subscription(subscription_id)
+        REFERENCES ${schemaName}.subscription(subscription_id)
         ON DELETE CASCADE,
 
     CONSTRAINT fk_mapping_payment FOREIGN KEY (payment_id)
-        REFERENCES payment(payment_id)
+        REFERENCES ${schemaName}.payment(payment_id)
         ON DELETE CASCADE
 );
 
@@ -797,7 +797,7 @@ SELECT * FROM (
 -- Table: user_policies
 -- ===========================================================
 --changeset system:create-user-policies-table
-CREATE TABLE IF NOT EXISTS user_policies (
+CREATE TABLE IF NOT EXISTS ${schemaName}.user_policies (
     id BIGSERIAL PRIMARY KEY,
     policy_id VARCHAR(20) NOT NULL,
     user_id VARCHAR(20) NOT NULL,
@@ -808,12 +808,11 @@ CREATE TABLE IF NOT EXISTS user_policies (
     assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_user_policies_policy
-        FOREIGN KEY (policy_id) REFERENCES timeoff_policies(policy_id)
+        FOREIGN KEY (policy_id) REFERENCES ${schemaName}.timeoff_policies(policy_id)
         ON DELETE CASCADE,
-
            CONSTRAINT fk_user_policies_user
                 FOREIGN KEY (user_id)
-                REFERENCES users(user_id)
+                REFERENCES ${schemaName}.users(user_id)
                 ON DELETE CASCADE
 );
 
@@ -821,7 +820,7 @@ CREATE TABLE IF NOT EXISTS user_policies (
 -- Table: timeoff_request
 -- ===========================================================
 -- changeset system:create-timeoff-request-table
-CREATE TABLE IF NOT EXISTS timeoff_request (
+CREATE TABLE IF NOT EXISTS ${schemaName}.timeoff_request (
     timeoff_request_id BIGSERIAL PRIMARY KEY,
     policy_id VARCHAR(20) NOT NULL,
     user_id   VARCHAR(20) NOT NULL,
@@ -838,7 +837,7 @@ CREATE TABLE IF NOT EXISTS timeoff_request (
     updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_timeoff_request_policy
         FOREIGN KEY (policy_id)
-        REFERENCES timeoff_policies(policy_id)
+        REFERENCES ${schemaName}.timeoff_policies(policy_id)
         ON DELETE CASCADE,
     CONSTRAINT chk_timeoff_request_status
         CHECK (status IN ('PENDING', 'APPROVED', 'CANCELLED', 'REJECTED')),
@@ -865,7 +864,7 @@ CREATE TABLE IF NOT EXISTS ${schemaName}.users_request_mapping (
 -- Table: timeoff_request_history
 -- ===========================================================
 -- changeset system:create-timeoff-request-history-table
-CREATE TABLE IF NOT EXISTS timeoff_request_history (
+CREATE TABLE IF NOT EXISTS ${schemaName}.timeoff_request_history (
     id BIGSERIAL PRIMARY KEY,
     timeoff_request_id BIGINT NOT NULL,
     user_id VARCHAR(20) NOT NULL,
@@ -878,7 +877,7 @@ CREATE TABLE IF NOT EXISTS timeoff_request_history (
 -- Table: leave_balance
 -- ===========================================================
 --changeset system:create-leave-balance-table
-CREATE TABLE IF NOT EXISTS leave_balance (
+CREATE TABLE IF NOT EXISTS ${schemaName}.leave_balance (
     leave_balance_id BIGSERIAL PRIMARY KEY,
     policy_id VARCHAR(20) NOT NULL,
     user_id VARCHAR(20) NOT NULL,
@@ -895,10 +894,10 @@ CREATE TABLE IF NOT EXISTS leave_balance (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_leave_balance_policy
-        FOREIGN KEY (policy_id) REFERENCES timeoff_policies(policy_id)
+        FOREIGN KEY (policy_id) REFERENCES ${schemaName}.timeoff_policies(policy_id)
         ON DELETE CASCADE,
    CONSTRAINT fk_leave_balance_user
-            FOREIGN KEY (user_id) REFERENCES users(user_id)
+            FOREIGN KEY (user_id) REFERENCES ${schemaName}.users(user_id)
             ON DELETE CASCADE
 );
 
@@ -906,7 +905,7 @@ CREATE TABLE IF NOT EXISTS leave_balance (
 -- Table: monthly_accrual_tracking
 -- ===========================================================
 --changeset system:create-monthly-summary-table
-CREATE TABLE IF NOT EXISTS monthly_summary (
+CREATE TABLE IF NOT EXISTS ${schemaName}.monthly_summary (
     id BIGSERIAL PRIMARY KEY,
     user_id VARCHAR(20) NOT NULL,
     month INT NOT NULL,
