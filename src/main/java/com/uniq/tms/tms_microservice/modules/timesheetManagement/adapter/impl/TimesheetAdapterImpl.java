@@ -623,6 +623,10 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
                         || TimesheetStatusEnum.PERMISSION.getLabel().equalsIgnoreCase(t.getStatus())) {
                     extraWorkedDays++;
                 }
+                t.setFirstClockInTime(formatTime(t.getFirstClockIn()));
+                t.setLastClockOutTime(formatTime(t.getLastClockOut()));
+                t.setTrackedHoursDuration(formatDuration(t.getTrackedHours()));
+                t.setRegularHoursDuration(formatDuration(t.getRegularHours()));
                 continue;
             }
             if (calendarHolidays.contains(date)) {
