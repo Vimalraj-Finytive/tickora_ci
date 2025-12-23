@@ -1047,8 +1047,8 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
     }
 
     @Override
-    public void deleteTimesheet(String userId, LocalDate date) {
-        timesheetRepository.deleteByUser_UserIdAndDate(userId,date);
+    public void deleteTimesheet(String userId, LocalDate startDate, LocalDate endDate) {
+        timesheetRepository.deleteByUser_UserIdAndDateBetween(userId,startDate, endDate);
     }
 
     @Override

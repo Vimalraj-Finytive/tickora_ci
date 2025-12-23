@@ -23,6 +23,7 @@ import com.uniq.tms.tms_microservice.modules.timesheetManagement.services.Timesh
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
 import com.uniq.tms.tms_microservice.modules.userManagement.enums.MemberType;
 import com.uniq.tms.tms_microservice.modules.userManagement.enums.UserRole;
+import com.uniq.tms.tms_microservice.modules.userManagement.projections.UserHolidayProjection;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.FixedWorkScheduleEntity;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.FlexibleWorkScheduleEntity;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.WorkScheduleEntity;
@@ -30,6 +31,7 @@ import com.uniq.tms.tms_microservice.modules.workScheduleManagement.enums.DayOfW
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.enums.WorkScheduleTypeEnum;
 import com.uniq.tms.tms_microservice.shared.dto.EnumModel;
 import com.uniq.tms.tms_microservice.shared.helper.AuthHelper;
+import com.uniq.tms.tms_microservice.shared.helper.TimesheetHelper;
 import com.uniq.tms.tms_microservice.shared.util.DateTimeUtil;
 import com.uniq.tms.tms_microservice.shared.util.ExportStatusTracker;
 import com.uniq.tms.tms_microservice.shared.util.ReportStyleUtil;
@@ -76,10 +78,11 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
     private final TimesheetAdapter timesheetAdapter;
     private final TimesheetService timesheetService;
     private final ExportStatusTracker exportStatusTracker;
+    private final TimesheetHelper timesheetHelper;
 
     public TimeOffRequestServiceImpl(TimeOffRequestAdapter timeOffRequestAdapter, TimeOffPolicyEntityMapper TimeOffPolicyEntityMapper, TimeOffPolicyDtoMapper timeOffPolicyDtoMapper,
                                      LeaveBalanceAdapter leaveBalanceAdapter, TimeOffPolicyAdapter timeOffPolicyAdapter, UserPolicyAdapter userPolicyAdapter,
-                                     AuthHelper authHelper, CacheKeyUtil cacheKeyUtil, @Nullable RedisTemplate<String, Object> redisTemplate, ReportStyleUtil reportStyleUtil, UserAdapter userAdapter, TimesheetAdapter timesheetAdapter, TimesheetService timesheetService, ExportStatusTracker exportStatusTracker) {
+                                     AuthHelper authHelper, CacheKeyUtil cacheKeyUtil, @Nullable RedisTemplate<String, Object> redisTemplate, ReportStyleUtil reportStyleUtil, UserAdapter userAdapter, TimesheetAdapter timesheetAdapter, TimesheetService timesheetService, ExportStatusTracker exportStatusTracker, TimesheetHelper timesheetHelper) {
         this.timeOffRequestAdapter = timeOffRequestAdapter;
         this.TimeOffPolicyEntityMapper = TimeOffPolicyEntityMapper;
         this.timeOffPolicyDtoMapper = timeOffPolicyDtoMapper;
@@ -94,6 +97,7 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
         this.timesheetAdapter = timesheetAdapter;
         this.timesheetService = timesheetService;
         this.exportStatusTracker = exportStatusTracker;
+        this.timesheetHelper = timesheetHelper;
     }
 
     @Value("${csv.request.download.dir}")
@@ -143,7 +147,7 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
         if (user.getRequestApproverId() == null || user.getRequestApproverId().isEmpty()) {
             throw new IllegalArgumentException("No request approver is associated with your profile. Please contact your admin to proceed.");
         }
-        UserEntity approver = userAdapter.findUserByOrgIdAndUserId(authHelper.getOrgId(),user.getRequestApproverId());
+        UserEntity approver = userAdapter.findUserByOrgIdAndUserId(authHelper.getOrgId(), user.getRequestApproverId());
         if (approver.isActive() == null || !approver.isActive()) {
             throw new IllegalArgumentException("Your request approver is inactive. Please contact your admin.");
         }
@@ -157,10 +161,17 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
         if (policy.getEntitledType() == EntitledType.DAY && days != request.getUnitsRequested()) {
             throw new IllegalArgumentException("The specified units do not align with the selected date range.");
         }
+        boolean isHoliday = checkIsHoliday(request.getUserId(), request.getStartDate(), request.getEndDate());
+        if (isHoliday){
+            throw new IllegalArgumentException("Cannot create leave request on a holiday");
+        }
         TimeOffRequestEntity entity = new TimeOffRequestEntity();
         Integer requested = 0;
         if (policy.getCompensation() == Compensation.PAID) {
             LeaveBalanceEntity leaveBalance = leaveBalanceAdapter.findForPeriod(policy.getPolicyId(), request.getUserId(), request.getStartDate(), request.getEndDate());
+            if (leaveBalance == null){
+                throw new IllegalArgumentException("Cannot create leave request. Leave balance is not available for the selected period.");
+            }
             if (leaveBalance.getBalanceUnits() == 0.0) {
                 throw new IllegalArgumentException("Insufficient leave balance to apply for paid leave.");
             }
@@ -181,7 +192,7 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
                 requested = request.getUnitsRequested();
                 validateDays(days, leaveBalance.getBalanceUnits());
             } else if (policy.getEntitledType() == EntitledType.HALF_DAY) {
-                if (request.getHourType() == null){
+                if (request.getHourType() == null) {
                     throw new IllegalArgumentException("Hour type is required for half day permission");
                 }
                 requested = request.getUnitsRequested();
@@ -203,7 +214,7 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
         entity.setStartDate(request.getStartDate());
         entity.setEndDate(request.getEndDate());
         entity.setUnitsRequested(request.getUnitsRequested());
-        entity.setHourType(request.getHourType() != null? request.getHourType() : null);
+        entity.setHourType(request.getHourType() != null ? request.getHourType() : null);
         entity.setStatus(Status.PENDING);
         entity.setReason(request.getReason());
         entity.setRequestDate(LocalDate.now(zoneId));
@@ -262,10 +273,36 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
         return m;
     }
 
+    private boolean checkIsHoliday(String userId, LocalDate startDate, LocalDate endDate){
+        if (startDate == null || endDate == null){
+            return false;
+        }
+        TimesheetHelper.WorkScheduleResult result = timesheetHelper.fetchWorkSchedulesAndDays(new String[]{ userId });
+        Map<String, Set< DayOfWeek >> userWorkingDaysMap = result.getUserWorkingDaysMap();
+        List<UserHolidayProjection> results =
+                userAdapter.findUserHolidays(List.of(userId));
+
+        Map<String, List<LocalDate>> userHolidayMap = results.stream()
+                .collect(Collectors.groupingBy(
+                        UserHolidayProjection::getUserId,
+                        Collectors.mapping(
+                                UserHolidayProjection::getDate,
+                                Collectors.toList()
+                        )
+                ));
+        for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
+            DayOfWeek dayOfWeek = date.getDayOfWeek();
+            if (!userWorkingDaysMap.get(userId).contains(dayOfWeek) || userHolidayMap.get(userId).contains(date)){
+                return true;
+            }
+        }
+        return false;
+    }
+
     private double validateHours(WorkScheduleEntity workSchedule, LocalTime startTime, LocalTime endTime, Integer hoursRequested, LeaveBalanceEntity leaveBalance, LocalDate date) {
         long minutes = Duration.between(startTime, endTime).toMinutes();
         DayOfWeekEnum day = DayOfWeekEnum.valueOf(date.getDayOfWeek().name());
-        if (workSchedule.getType().getType() == WorkScheduleTypeEnum.FIXED  ){
+        if (workSchedule.getType().getType() == WorkScheduleTypeEnum.FIXED) {
             FixedWorkScheduleEntity fixedEntity =
                     timesheetAdapter.findByWorkScheduleIdAndDay(workSchedule.getScheduleId(), day);
             DateTimeUtil.validateDuration(minutes, hoursRequested, fixedEntity.getDuration());
@@ -274,16 +311,15 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
             boolean crossesMidnight = fixedEndTime.isBefore(fixedStartTime);
             boolean inRange;
             if (crossesMidnight) {
-                 inRange = (startTime.equals(fixedStartTime) || startTime.isAfter(fixedStartTime) || startTime.isBefore(fixedEndTime)) &&
-                 (endTime.equals(fixedEndTime) || endTime.isAfter(fixedStartTime) || endTime.isBefore(fixedEndTime));
+                inRange = (startTime.equals(fixedStartTime) || startTime.isAfter(fixedStartTime) || startTime.isBefore(fixedEndTime)) &&
+                        (endTime.equals(fixedEndTime) || endTime.isAfter(fixedStartTime) || endTime.isBefore(fixedEndTime));
             } else {
                 inRange = (startTime.equals(fixedStartTime) || startTime.isAfter(fixedStartTime)) && (endTime.equals(fixedEndTime) || endTime.isBefore(fixedEndTime));
             }
             if (!inRange) {
                 throw new IllegalArgumentException("Start and End times must be within the workschedule range");
             }
-        }
-        else {
+        } else {
             FlexibleWorkScheduleEntity flexibleEntity =
                     timesheetAdapter.findByWorkScheduleIdAndDays(workSchedule.getScheduleId(), day);
             DateTimeUtil.validateDuration(minutes, hoursRequested, flexibleEntity.getDuration());
@@ -297,20 +333,19 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
         }
     }
 
-    private void setTimeForHalf(WorkScheduleEntity workSchedule, LocalDate startDate, HourType leaveHalf, TimeOffRequestEntity entity){
+    private void setTimeForHalf(WorkScheduleEntity workSchedule, LocalDate startDate, HourType leaveHalf, TimeOffRequestEntity entity) {
         DayOfWeekEnum day = DayOfWeekEnum.valueOf(startDate.getDayOfWeek().name());
-        if (workSchedule.getType().getType() == WorkScheduleTypeEnum.FIXED){
+        if (workSchedule.getType().getType() == WorkScheduleTypeEnum.FIXED) {
             FixedWorkScheduleEntity fixedEntity =
                     timesheetAdapter.findByWorkScheduleIdAndDay(workSchedule.getScheduleId(), day);
-            double half = fixedEntity.getDuration()/2;
+            double half = fixedEntity.getDuration() / 2;
             int hours = (int) half;
             int minutes = (int) ((half - hours) * 60);
             LocalTime halfTime = fixedEntity.getStartTime().toLocalTime().plusHours(hours).plusMinutes(minutes);
-            if (leaveHalf == HourType.FIRST_HALF){
+            if (leaveHalf == HourType.FIRST_HALF) {
                 entity.setStartTime(fixedEntity.getStartTime().toLocalTime());
                 entity.setEndTime(halfTime);
-            }
-            else {
+            } else {
                 entity.setStartTime(halfTime);
                 entity.setEndTime(fixedEntity.getEndTime().toLocalTime());
             }
@@ -333,8 +368,12 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
             }
             entity.setStatus(model.getStatus());
             timeOffRequestAdapter.saveRequest(entity);
-            timesheetService.deleteTimesheet(model.getUserId(),model.getStartDate());
+            timesheetService.deleteTimesheet(model.getUserId(), model.getStartDate(),model.getEndDate());
             return;
+        }
+        boolean isHoliday = checkIsHoliday(model.getUserId(), model.getStartDate(), model.getEndDate());
+        if (isHoliday){
+            throw new IllegalArgumentException("Cannot create leave request on a holiday");
         }
         double days = ChronoUnit.DAYS.between(entity.getStartDate(), entity.getEndDate()) + 1;
         if (model.getReason() != null) {
@@ -366,11 +405,11 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
                     validateDays(days, leaveBalance.getBalanceUnits());
                 }
             }
-            if (entity.getPolicy().getEntitledType() == EntitledType.HALF_DAY ) {
+            if (entity.getPolicy().getEntitledType() == EntitledType.HALF_DAY) {
                 if (days != 1) {
                     throw new IllegalArgumentException("Invalid paid leave request.");
                 }
-                if (model.getHourType() != null){
+                if (model.getHourType() != null) {
                     entity.setHourType(model.getHourType());
                 }
                 setTimeForHalf(workSchedule, model.getStartDate(), model.getHourType(), entity);
@@ -401,92 +440,97 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
         TimeOffRequestEntity saved = timeOffRequestAdapter.saveRequest(entity);
     }
 
-    private void checkCredentials(String policyId, LocalDate requestDate){
-        if (policyId == null || requestDate == null){
+    private void checkCredentials(String policyId, LocalDate requestDate) {
+        if (policyId == null || requestDate == null) {
             throw new IllegalArgumentException("Missing required fields");
         }
     }
 
     private boolean handleEmployeeRules(Status current, Status next) {
-        return ((current == Status.PENDING || current == Status.APPROVED) && (next == Status.CANCELLED ) ||
-        (current == Status.PENDING && next == Status.PENDING));
+        return ((current == Status.PENDING || current == Status.APPROVED) && (next == Status.CANCELLED) ||
+                (current == Status.PENDING && next == Status.PENDING));
     }
 
     @Override
     @Transactional
     public void adminUpdateStatus(AdminStatusUpdate model) {
-        TimeOffRequestEntity entity = timeOffRequestAdapter.findByRequestId(model.getRequestId());
-        boolean dateInvalid = LocalDate.now(zoneId).isAfter(entity.getStartDate());
-        boolean statusInvalid = (model.getStatus() != null && !handleAdminRules(entity.getStatus(), model.getStatus()));
+        TimeOffRequestEntity entity =
+                timeOffRequestAdapter.findByRequestId(model.getRequestId());
+        boolean dateInvalid =
+                LocalDate.now(zoneId).isAfter(entity.getStartDate());
+        boolean statusInvalid =
+                model.getStatus() != null &&
+                        !handleAdminRules(entity.getStatus(), model.getStatus());
         if (dateInvalid || statusInvalid) {
-            log.warn("Update not allowed. Date invalid = {}, Status invalid = {}", dateInvalid, statusInvalid);
-            throw new IllegalArgumentException("Update not allowed because the leave start date has already passed.");
+            log.warn("Update not allowed. Date invalid = {}, Status invalid = {}",
+                    dateInvalid, statusInvalid);
+            throw new IllegalArgumentException(
+                    "Update not allowed because the leave start date has already passed."
+            );
         }
-        if (model.getStatus() != null) {
-            log.info("Updating status from {} → {}", entity.getStatus(), model.getStatus());
-            entity.setStatus(model.getStatus());
-            TimeOffRequestEntity saved = timeOffRequestAdapter.saveRequest(entity);
-            log.info("Status updated successfully. Saved status: {}", saved.getStatus());
-            if (saved.getStatus().equals(Status.APPROVED)) {
-                if(entity.getPolicy().getCompensation().equals(Compensation.PAID)) {
-                    log.info("Policy is PAID. Applying entitled type: {}", entity.getPolicy().getEntitledType());
-                    switch (entity.getPolicy().getEntitledType()) {
-
-                        case DAY -> {
-                            log.info("Applying PAID_LEAVE to timesheet");
-                            timesheetService.createTimesheet(
-                                    TimesheetStatusEnum.PAID_LEAVE,
-                                    entity.getUser().getUserId(),
-                                    entity.getStartDate(),
-                                    entity.getStartTime(),
-                                    entity.getEndTime()
-                            );
-                        }
-                        case HALF_DAY -> {
-                            log.info("Applying HALF_DAY leave to timesheet");
-                            timesheetService.createTimesheet(
-                                    TimesheetStatusEnum.HALF_DAY,
-                                    entity.getUser().getUserId(),
-                                    entity.getStartDate(),
-                                    entity.getStartTime(),
-                                    entity.getEndTime()
-                            );
-                        }
-                        case HOURS -> {
-                            log.info("Applying PERMISSION leave (Hours type)");
-                            timesheetService.createTimesheet(
-                                    TimesheetStatusEnum.PERMISSION,
-                                    entity.getUser().getUserId(),
-                                    entity.getStartDate(),
-                                    entity.getStartTime(),
-                                    entity.getEndTime()
-                            );
-                        }
-                    }
-                }else {
-                    log.info("Policy is UNPAID → Marking ABSENT in timesheet");
-                    timesheetService.createTimesheet(
-                            TimesheetStatusEnum.UNPAID_LEAVE,
-                            entity.getUser().getUserId(),
-                            entity.getStartDate(),
-                            entity.getStartTime(),
-                            entity.getEndTime()
-                    );
-                }
-            } else if (saved.getStatus() == Status.REJECTED) {
-                log.info("Request REJECTED → Restoring leave balance and deleting timesheet entry");
-                Integer requested = saved.getUnitsRequested();
-                addLeaveBalance(saved, requested);
-                log.info("Leave balance restored for {} units", requested);
-                timesheetService.deleteTimesheet(
+        if (model.getStatus() == null) {
+            return;
+        }
+        log.info("Updating status from {} → {}", entity.getStatus(), model.getStatus());
+        entity.setStatus(model.getStatus());
+        TimeOffRequestEntity saved =
+                timeOffRequestAdapter.saveRequest(entity);
+        log.info("Status updated successfully. Saved status: {}", saved.getStatus());
+        if (saved.getStatus() == Status.APPROVED) {
+            boolean isPaid =
+                    entity.getPolicy().getCompensation() == Compensation.PAID;
+            EntitledType entitledType =
+                    entity.getPolicy().getEntitledType();
+            if (entitledType == EntitledType.DAY) {
+                TimesheetStatusEnum status =
+                        isPaid
+                                ? TimesheetStatusEnum.PAID_LEAVE
+                                : TimesheetStatusEnum.UNPAID_LEAVE;
+                log.info("Applying {} leave for date range {} → {}",
+                        status, entity.getStartDate(), entity.getEndDate());
+                timesheetService.createTimesheet(
+                        status,
                         entity.getUser().getUserId(),
-                        entity.getStartDate()
+                        entity.getStartDate(),
+                        entity.getEndDate(),
+                        entity.getStartTime(),
+                        entity.getEndTime()
                 );
-                log.info("Timesheet entry deleted for rejected request");
+            } else if (entitledType == EntitledType.HALF_DAY) {
+                log.info("Applying HALF_DAY leave");
+                timesheetService.createTimesheet(
+                        TimesheetStatusEnum.HALF_DAY,
+                        entity.getUser().getUserId(),
+                        entity.getStartDate(),
+                        entity.getEndDate(),
+                        entity.getStartTime(),
+                        entity.getEndTime()
+                );
+            } else if (entitledType == EntitledType.HOURS) {
+                log.info("Applying PERMISSION (hours-based leave)");
+                timesheetService.createTimesheet(
+                        TimesheetStatusEnum.PERMISSION,
+                        entity.getUser().getUserId(),
+                        entity.getStartDate(),
+                        entity.getEndDate(),
+                        entity.getStartTime(),
+                        entity.getEndTime()
+                );
             }
+        } else if (saved.getStatus() == Status.REJECTED) {
+            log.info("Request REJECTED → Restoring leave balance and deleting timesheet");
+            Integer requested = saved.getUnitsRequested();
+            addLeaveBalance(saved, requested);
+            timesheetService.deleteTimesheet(
+                    entity.getUser().getUserId(),
+                    entity.getStartDate(),
+                    entity.getEndDate()
+            );
+            log.info("Leave balance restored and timesheet deleted");
         }
         log.info("adminUpdateStatus completed successfully for User: {}, Policy: {}",
-                entity.getUser().getUserId(), entity.getPolicy().getPolicyId());
+                entity.getUser().getUserId(),
+                entity.getPolicy().getPolicyId());
     }
 
     private boolean handleAdminRules(Status current, Status next) {
