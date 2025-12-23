@@ -166,14 +166,12 @@ public class PayRollServiceImpl implements PayRollService {
         List<UserPayRollEntity> entities = payRollAdapter.getAllUserPayroll(usersId);
         PayRollSettingEntity settingEntity = payRollAdapter.findFirst()
                 .orElseThrow(() -> new RuntimeException("Payroll Setting not found"));
-        LocalDate date = LocalDate.now(zoneId).withDayOfMonth(1);
-        int year = date.getYear();
-        int month = date.getMonthValue() - 1;
-        if (month == 0) {
-            month = 12;
-            year = year - 1;
-        }
-        int daysInMonth = YearMonth.of(year, month).lengthOfMonth();
+        LocalDate now = LocalDate.now(zoneId).withDayOfMonth(1);
+        LocalDate previousMonth = now.minusMonths(1);
+        int year = previousMonth.getYear();
+        int month = previousMonth.getMonthValue();
+        int daysInMonth = previousMonth.lengthOfMonth();
+
         List<MonthlySummaryEntity> monthlySummaryList = leaveBalanceAdapter.findByMonthAndYear(month, year);
         Map<String, MonthlySummaryEntity> unpaidMap =
                 monthlySummaryList.stream()
@@ -191,7 +189,7 @@ public class PayRollServiceImpl implements PayRollService {
             LocalDate localDate = LocalDate.of(year, month, 1);
             String monthDate = localDate.format(DateTimeFormatter.ofPattern("MMMM,yyyy"));
             userPayrollAmount.setMonth(monthDate);
-            BigDecimal daySalary = entity.getPayroll().getMonthlySalary().divide(BigDecimal.valueOf(30), 2, RoundingMode.HALF_UP);
+            BigDecimal daySalary = entity.getPayroll().getMonthlySalary().divide(BigDecimal.valueOf(daysInMonth), 2, RoundingMode.HALF_UP);
             List<TimesheetEntity> timesheetEntities = timesheetAdapter.getTimesheetByUserIds(entity.getUser().getUserId(), year, month);
             log.info("before rest day");
             log.info("rest day");
