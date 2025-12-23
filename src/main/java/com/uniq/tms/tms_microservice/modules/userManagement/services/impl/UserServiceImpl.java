@@ -2394,6 +2394,8 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public RequestApproverModel assignRequestApprover(RequestApproverDto dto) {
+        String orgId = authHelper.getOrgId();
+        String schema = authHelper.getSchema();
         String approverId = dto.getRequestId();
         List<String> requestedUserIds = dto.getUserId();
         validateApprover(approverId, requestedUserIds);
@@ -2410,6 +2412,22 @@ public class UserServiceImpl implements UserService {
             );
         }
         userAdapter.updateApproverForUsers(approverId, requestedUserIds);
+        if (isRedisEnabled) {
+            try {
+                CacheEventPublisherUtil.syncReloadThenPublish(
+                        publisher,
+                        cacheKeyConfig.getUsers(),
+                        orgId,
+                        schema,
+                        cacheReloadHandlerRegistry
+                );
+                log.info("User cache reload event published after assigned request approver to a user for orgId={}", orgId);
+            } catch (Exception e) {
+                log.error("Failed to publish User cache reload event for orgId={}", orgId, e);
+            }
+        } else {
+            log.info("Redis is not enabled or RedisTemplate is null. Skipping cache reload for request approver of orgId={}", orgId);
+        }
         return userEntityMapper.toModel(approverId, requestedUserIds);
     }
 

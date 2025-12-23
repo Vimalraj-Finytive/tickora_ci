@@ -1,6 +1,8 @@
 package com.uniq.tms.tms_microservice.modules.timesheetManagement.services.impl;
 
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.CalendarAdapter;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeOffRequestEntity;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.EntitledType;
 import com.uniq.tms.tms_microservice.modules.locationManagement.adapter.LocationAdapter;
 import com.uniq.tms.tms_microservice.modules.locationManagement.entity.LocationEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.OrganizationAdapter;
@@ -1414,26 +1416,41 @@ private void calculateHours(TimesheetEntity timesheet, WorkScheduleEntity workSc
         UserEntity user = userAdapter.findById(userId)
                 .orElseThrow(() ->
                         new IllegalArgumentException("User not found: " + userId));
+
         TimesheetStatusEntity timesheetStatus =
                 timesheetAdapter.findByStatusName(status.getLabel())
                         .orElseThrow(() ->
                                 new IllegalArgumentException("Invalid Timesheet Status: " + status));
+
         LocationEntity location = locationAdapter.findDefaultLocation();
         if (location == null) {
             throw new CommonExceptionHandler.DefaultLocationNotFoundException(
                     "Default location not found"
             );
         }
+
         LocalDate currentDate = startDate;
+
         while (!currentDate.isAfter(endDate)) {
-            TimesheetEntity timesheet = new TimesheetEntity();
-            timesheet.setUser(user);
-            timesheet.setDate(currentDate);
+
+            Optional<TimesheetEntity> existing =
+                    timesheetAdapter.findByUserIdAndDate(userId, currentDate);
+
+            LocalDate finalCurrentDate = currentDate;
+            TimesheetEntity timesheet = existing.orElseGet(() -> {
+                TimesheetEntity t = new TimesheetEntity();
+                t.setUser(user);
+                t.setDate(finalCurrentDate);
+                t.setCreatedAt(LocalDateTime.now(zoneId));
+                return t;
+            });
+
             timesheet.setStatus(timesheetStatus);
-            timesheet.setCreatedAt(LocalDateTime.now(zoneId));
             timesheet.setUpdatedAt(LocalDateTime.now(zoneId));
+
             TimesheetEntity savedTimesheet =
                     timesheetAdapter.save(timesheet);
+
             switch (status) {
                 case PAID_LEAVE, UNPAID_LEAVE -> {
                     createHistory(
@@ -1452,6 +1469,7 @@ private void calculateHours(TimesheetEntity timesheet, WorkScheduleEntity workSc
                     createHistory(savedTimesheet, location, LogType.HOUR_OUT, endTime);
                 }
             }
+
             currentDate = currentDate.plusDays(1);
         }
     }
@@ -1473,8 +1491,80 @@ private void calculateHours(TimesheetEntity timesheet, WorkScheduleEntity workSc
         timesheetAdapter.saveTimesheetHistory(history);
     }
 
-    @Override
-    public void deleteTimesheet(String userId, LocalDate startDate, LocalDate endDate){
-        timesheetAdapter.deleteTimesheet(userId,startDate, endDate);
+    @Transactional
+    public void rollbackLeaveTimesheet(
+            TimeOffRequestEntity request
+    ) {
+        String userId = request.getUser().getUserId();
+        LocalDate startDate = request.getStartDate();
+        LocalDate endDate = request.getEndDate();
+        EntitledType type = request.getPolicy().getEntitledType();
+        if (type == EntitledType.DAY) {
+            deleteFullDayLeave(userId, startDate, endDate);
+        } else {
+            rollbackPartialLeave(userId, startDate, endDate);
+        }
     }
+
+    private void deleteFullDayLeave(
+            String userId,
+            LocalDate startDate,
+            LocalDate endDate
+    ) {
+        List<String> statuses = List.of(
+                TimesheetStatusEnum.PAID_LEAVE.getLabel(),
+                TimesheetStatusEnum.UNPAID_LEAVE.getLabel()
+        );
+        timesheetAdapter.deleteFullDayLeaveTimesheets(
+                userId,
+                startDate,
+                endDate,
+                statuses
+        );
+    }
+
+    private void rollbackPartialLeave(
+            String userId,
+            LocalDate startDate,
+            LocalDate endDate
+    ) {
+        timesheetAdapter.deleteLeaveHistories(
+                userId,
+                startDate,
+                endDate,
+                List.of(
+                        LogType.HALF_IN,
+                        LogType.HALF_OUT,
+                        LogType.HOUR_IN,
+                        LogType.HOUR_OUT
+                )
+        );
+
+        List<TimesheetEntity> timesheets =
+                timesheetAdapter.findByUser_UserIdAndDateBetween(
+                        userId, startDate, endDate
+                );
+
+        if (timesheets.isEmpty()) return;
+
+        TimesheetEntity first = timesheets.getFirst();
+
+        if (first.getFirstClockIn() != null) {
+            TimesheetStatusEntity present =
+                    timesheetAdapter.findByStatusName(
+                            TimesheetStatusEnum.PRESENT.getLabel()
+                    ).orElseThrow();
+
+            for (TimesheetEntity t : timesheets) {
+                t.setStatus(present);
+                t.setUpdatedAt(LocalDateTime.now());
+                timesheetAdapter.save(t);
+            }
+        } else {
+            timesheetAdapter.deleteTimesheetsWithoutWork(
+                    userId, startDate, endDate
+            );
+        }
+    }
+
 }
