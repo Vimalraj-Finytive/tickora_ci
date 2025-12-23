@@ -865,9 +865,9 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
                         String.valueOf(first.getLeaveStartDate()),
                         String.valueOf(first.getLeaveEndDate()),
                         first.getLeaveType(),
-                        first.getStatus(),
-                        approvers.isEmpty() ? "-" : approvers,
-                        viewers.isEmpty() ? "-" : viewers
+                        first.getStatus()
+//                        approvers.isEmpty() ? "-" : approvers,
+//                        viewers.isEmpty() ? "-" : viewers
                 });
             }
 
@@ -937,9 +937,9 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
                 reportStyleUtil.createStyledCell(row, col++, String.valueOf(first.getLeaveStartDate()), dataStyle);
                 reportStyleUtil.createStyledCell(row, col++, String.valueOf(first.getLeaveEndDate()), dataStyle);
                 reportStyleUtil.createStyledCell(row, col++, first.getLeaveType(), dataStyle);
-                reportStyleUtil.createStyledCell(row, col++, first.getStatus(), dataStyle);
-                reportStyleUtil.createStyledCell(row, col++, approvers.isEmpty() ? "-" : approvers, dataStyle);
-                reportStyleUtil.createStyledCell(row, col, viewers.isEmpty() ? "-" : viewers, dataStyle);
+                reportStyleUtil.createStyledCell(row, col, first.getStatus(), dataStyle);
+//                reportStyleUtil.createStyledCell(row, col++, approvers.isEmpty() ? "-" : approvers, dataStyle);
+//                reportStyleUtil.createStyledCell(row, col, viewers.isEmpty() ? "-" : viewers, dataStyle);
             }
 
             for (int i = 0; i < headers.length; i++) {
