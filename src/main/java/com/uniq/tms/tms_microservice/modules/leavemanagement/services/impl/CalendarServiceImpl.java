@@ -17,6 +17,7 @@ import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.O
 import com.uniq.tms.tms_microservice.modules.userManagement.adapter.UserAdapter;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
 import com.uniq.tms.tms_microservice.modules.userManagement.enums.UserRole;
+import com.uniq.tms.tms_microservice.modules.userManagement.services.UserService;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
@@ -27,6 +28,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class CalendarServiceImpl implements CalendarService {
@@ -38,13 +40,15 @@ public class CalendarServiceImpl implements CalendarService {
     private final IdGenerationService idGenerationService;
     private final HolidayEntityMapper holidayEntityMapper;
     private final UserAdapter userAdapter;
+    private final UserService userService;
 
-    public CalendarServiceImpl(CalendarEntityMapper calendarEntityMapper, CalendarAdapter calendarAdapter, IdGenerationService idGenerationService, HolidayEntityMapper holidayEntityMapper, UserAdapter userAdapter) {
+    public CalendarServiceImpl(CalendarEntityMapper calendarEntityMapper, CalendarAdapter calendarAdapter, IdGenerationService idGenerationService, HolidayEntityMapper holidayEntityMapper, UserAdapter userAdapter, UserService userService) {
         this.calendarEntityMapper = calendarEntityMapper;
         this.calendarAdapter = calendarAdapter;
         this.idGenerationService = idGenerationService;
         this.holidayEntityMapper = holidayEntityMapper;
         this.userAdapter = userAdapter;
+        this.userService = userService;
     }
 
     @Override
@@ -123,7 +127,16 @@ public class CalendarServiceImpl implements CalendarService {
         if (hasDefault) {
             throw new IllegalArgumentException("Default calendars cannot be deleted");
         }
-
+        CalendarEntity defaultCalendar = calendarAdapter.findDefaultCalendar();
+        String defaultCalendarId = defaultCalendar.getId();
+        List<String> calendarIds = calendarEntities.stream()
+                .map(CalendarEntity::getId)
+                .collect(Collectors.toList());
+        List<UserEntity> users = userAdapter.findByCalendar_CalendarIdIn(calendarIds);
+        users.forEach(user ->
+                userService.updateUserCalendar(user, defaultCalendarId)
+        );
+        userAdapter.saveAllUsers(users);
         log.info("Archiving and deleting calendars: {}", ids);
         calendarAdapter.deleteCalendarById(calendarEntities);
     }
