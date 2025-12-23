@@ -1,6 +1,7 @@
 package com.uniq.tms.tms_microservice.modules.userManagement.services;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
 import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.model.Organization;
 import com.uniq.tms.tms_microservice.modules.userManagement.dto.*;
@@ -87,4 +88,6 @@ public interface UserService {
     List<UserLevelModel> getRequesters();
 
     RequestApproverModel assignRequestApprover(RequestApproverDto dto);
+
+    void updateUserCalendar(UserEntity existingUser, String newCalendarId);
 }

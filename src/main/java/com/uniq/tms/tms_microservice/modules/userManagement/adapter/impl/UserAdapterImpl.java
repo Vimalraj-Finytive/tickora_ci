@@ -670,4 +670,9 @@ public class UserAdapterImpl implements UserAdapter {
     public List<UserHolidayProjection> findUserHolidays(List<String> userIds) {
         return userRepository.findUserHolidays(userIds);
     }
+
+    @Override
+    public List<UserEntity> findByCalendar_CalendarIdIn(List<String> calendarIds) {
+        return userRepository.findUsersByCalendarIds(calendarIds);
+    }
 }

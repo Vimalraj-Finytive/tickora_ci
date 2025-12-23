@@ -2422,7 +2422,8 @@ public class UserServiceImpl implements UserService {
         }
     }
 
-    private void updateUserCalendar(UserEntity existingUser, String newCalendarId) {
+    @Override
+    public void updateUserCalendar(UserEntity existingUser, String newCalendarId) {
         String existingCalendarId =
                 existingUser.getCalendar() != null ? existingUser.getCalendar().getId() : null;
         if (Objects.equals(newCalendarId,existingCalendarId)) {
