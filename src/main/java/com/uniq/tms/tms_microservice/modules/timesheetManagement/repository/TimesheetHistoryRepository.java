@@ -32,4 +32,19 @@ public interface TimesheetHistoryRepository extends JpaRepository<TimesheetHisto
                                @Param("logTime") LocalTime logTime,
                                 @Param("logFrom") LogFrom logFrom);
 
+    @Modifying
+    @Query("""
+    DELETE FROM TimesheetHistoryEntity h
+    WHERE h.timesheet.user.userId = :userId
+      AND h.timesheet.date BETWEEN :startDate AND :endDate
+      AND h.logFrom = 'SYSTEM_GENERATED'
+      AND h.logType IN :logTypes
+""")
+    void deleteLeaveHistories(
+            @Param("userId") String userId,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate,
+            @Param("logTypes") List<LogType> logTypes
+    );
+
 }

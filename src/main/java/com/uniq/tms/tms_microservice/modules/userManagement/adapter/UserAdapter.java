@@ -137,4 +137,5 @@ public interface UserAdapter {
     List<UserProjection> findUserByUserId(String userId);
     List<UserHolidayProjection> findUsersWithHolidayOnDate(LocalDate date, List<String> userIds);
     List<UserHolidayProjection> findUserHolidays(List<String> userIds);
+    List<UserEntity> findByCalendar_CalendarIdIn(List<String> calendarIds);
 }

@@ -290,9 +290,10 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
                                 Collectors.toList()
                         )
                 ));
+        List<LocalDate> holidays = userHolidayMap.get(userId);
         for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
             DayOfWeek dayOfWeek = date.getDayOfWeek();
-            if (!userWorkingDaysMap.get(userId).contains(dayOfWeek) || userHolidayMap.get(userId).contains(date)){
+            if (!userWorkingDaysMap.get(userId).contains(dayOfWeek) || (holidays != null && holidays.contains(date))){
                 return true;
             }
         }
@@ -368,7 +369,7 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
             }
             entity.setStatus(model.getStatus());
             timeOffRequestAdapter.saveRequest(entity);
-            timesheetService.deleteTimesheet(model.getUserId(), model.getStartDate(),model.getEndDate());
+            timesheetService.rollbackLeaveTimesheet(entity);
             return;
         }
         boolean isHoliday = checkIsHoliday(model.getUserId(), model.getStartDate(), model.getEndDate());
@@ -521,11 +522,7 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
             log.info("Request REJECTED → Restoring leave balance and deleting timesheet");
             Integer requested = saved.getUnitsRequested();
             addLeaveBalance(saved, requested);
-            timesheetService.deleteTimesheet(
-                    entity.getUser().getUserId(),
-                    entity.getStartDate(),
-                    entity.getEndDate()
-            );
+            timesheetService.rollbackLeaveTimesheet(saved);
             log.info("Leave balance restored and timesheet deleted");
         }
         log.info("adminUpdateStatus completed successfully for User: {}, Policy: {}",
@@ -865,9 +862,9 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
                         String.valueOf(first.getLeaveStartDate()),
                         String.valueOf(first.getLeaveEndDate()),
                         first.getLeaveType(),
-                        first.getStatus(),
-                        approvers.isEmpty() ? "-" : approvers,
-                        viewers.isEmpty() ? "-" : viewers
+                        first.getStatus()
+//                        approvers.isEmpty() ? "-" : approvers,
+//                        viewers.isEmpty() ? "-" : viewers
                 });
             }
 
@@ -937,9 +934,9 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
                 reportStyleUtil.createStyledCell(row, col++, String.valueOf(first.getLeaveStartDate()), dataStyle);
                 reportStyleUtil.createStyledCell(row, col++, String.valueOf(first.getLeaveEndDate()), dataStyle);
                 reportStyleUtil.createStyledCell(row, col++, first.getLeaveType(), dataStyle);
-                reportStyleUtil.createStyledCell(row, col++, first.getStatus(), dataStyle);
-                reportStyleUtil.createStyledCell(row, col++, approvers.isEmpty() ? "-" : approvers, dataStyle);
-                reportStyleUtil.createStyledCell(row, col, viewers.isEmpty() ? "-" : viewers, dataStyle);
+                reportStyleUtil.createStyledCell(row, col, first.getStatus(), dataStyle);
+//                reportStyleUtil.createStyledCell(row, col++, approvers.isEmpty() ? "-" : approvers, dataStyle);
+//                reportStyleUtil.createStyledCell(row, col, viewers.isEmpty() ? "-" : viewers, dataStyle);
             }
 
             for (int i = 0; i < headers.length; i++) {

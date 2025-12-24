@@ -833,11 +833,11 @@ public class UserServiceImpl implements UserService {
         if (mobileExists.isPresent()) {
             boolean isPrimaryActive = mobileExists.get().getUser().isActive();
             if (!isPrimaryActive) {
-                throw new CommonExceptionHandler.DuplicateUserException(
+                throw new CommonExceptionHandler.BadRequestException(
                         "Inactive User."
                 );
             }
-            throw new CommonExceptionHandler.DuplicateUserException(
+            throw new CommonExceptionHandler.BadRequestException(
                     "Secondary User Mobile number already exists."
             );
         }
@@ -845,11 +845,11 @@ public class UserServiceImpl implements UserService {
         if (emailExists.isPresent()) {
             boolean isPrimaryActive = emailExists.get().getUser().isActive();
             if (!isPrimaryActive) {
-                throw new CommonExceptionHandler.DuplicateUserException(
+                throw new CommonExceptionHandler.BadRequestException(
                         "Inactive User."
                 );
             }
-            throw new CommonExceptionHandler.DuplicateUserException(
+            throw new CommonExceptionHandler.BadRequestException(
                     "Secondary User Email already exists."
             );
         }
@@ -864,22 +864,22 @@ public class UserServiceImpl implements UserService {
         Optional<UserEntity> mobilExists = userAdapter.findByMobileNumber(userDto.getMobileNumber());
         if (mobilExists.isPresent()) {
             if (!mobilExists.get().isActive()) {
-                throw new CommonExceptionHandler.DuplicateUserException(
+                throw new CommonExceptionHandler.BadRequestException(
                         "Inactive Users."
                 );
             }
-            throw new CommonExceptionHandler.DuplicateUserException(
+            throw new CommonExceptionHandler.BadRequestException(
                     "User with this mobile number already exists."
             );
         }
         Optional<UserEntity> emailExists = userAdapter.findByEmail(userDto.getEmail());
         if (emailExists.isPresent()) {
             if (!emailExists.get().isActive()) {
-                throw new CommonExceptionHandler.DuplicateUserException(
+                throw new CommonExceptionHandler.BadRequestException(
                         "Inactive User."
                 );
             }
-            throw new CommonExceptionHandler.DuplicateUserException(
+            throw new CommonExceptionHandler.BadRequestException(
                     "User with this email already exists."
             );
         }
@@ -1842,11 +1842,11 @@ public class UserServiceImpl implements UserService {
             }
             log.info("find user by mobile number");
             userAdapter.findByMobileNumber(organization.getMobile()).ifPresent(user -> {
-                throw new CommonExceptionHandler.DuplicateUserException("Mobile number already in use.");
+                throw new CommonExceptionHandler.BadRequestException("Mobile number already in use.");
             });
             log.info("find user by email");
             userAdapter.findByEmail(organization.getEmail()).ifPresent(user -> {
-                throw new CommonExceptionHandler.DuplicateUserException("Email already in use.");
+                throw new CommonExceptionHandler.BadRequestException("Email already in use.");
             });
             log.info("find user by role");
             RoleEntity role = roleRepository.findById((long) UserRole.SUPERADMIN.getHierarchyLevel())
@@ -2394,6 +2394,8 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public RequestApproverModel assignRequestApprover(RequestApproverDto dto) {
+        String orgId = authHelper.getOrgId();
+        String schema = authHelper.getSchema();
         String approverId = dto.getRequestId();
         List<String> requestedUserIds = dto.getUserId();
         validateApprover(approverId, requestedUserIds);
@@ -2410,6 +2412,22 @@ public class UserServiceImpl implements UserService {
             );
         }
         userAdapter.updateApproverForUsers(approverId, requestedUserIds);
+        if (isRedisEnabled) {
+            try {
+                CacheEventPublisherUtil.syncReloadThenPublish(
+                        publisher,
+                        cacheKeyConfig.getUsers(),
+                        orgId,
+                        schema,
+                        cacheReloadHandlerRegistry
+                );
+                log.info("User cache reload event published after assigned request approver to a user for orgId={}", orgId);
+            } catch (Exception e) {
+                log.error("Failed to publish User cache reload event for orgId={}", orgId, e);
+            }
+        } else {
+            log.info("Redis is not enabled or RedisTemplate is null. Skipping cache reload for request approver of orgId={}", orgId);
+        }
         return userEntityMapper.toModel(approverId, requestedUserIds);
     }
 
@@ -2422,7 +2440,8 @@ public class UserServiceImpl implements UserService {
         }
     }
 
-    private void updateUserCalendar(UserEntity existingUser, String newCalendarId) {
+    @Override
+    public void updateUserCalendar(UserEntity existingUser, String newCalendarId) {
         String existingCalendarId =
                 existingUser.getCalendar() != null ? existingUser.getCalendar().getId() : null;
         if (Objects.equals(newCalendarId,existingCalendarId)) {

@@ -133,14 +133,13 @@ public class TimesheetFacade {
     public ApiResponse<ClockInOutRequestDto> clockInOutUser(ClockInOutRequestDto registerDto) {
         String orgSchema = authHelper.getSchema();
         log.info("Incoming timesheetLogsJson: {}", registerDto.getTimesheetLogsJson());
-
         try {
             List<TimesheetHistoryDto> logs = TimesheetLogParserUtil.parseLogs(registerDto.getTimesheetLogsJson());
             registerDto.setTimesheetLogs(logs);
             return faceService.clockInOutUser(registerDto, orgSchema);
         } catch (IllegalArgumentException e) {
             log.error("Failed to parse timesheet logs", e);
-            return new ApiResponse<>(40,"Invalid timesheet data format: " + e.getMessage(),null);
+            return new ApiResponse<>(404,"Invalid timesheet data format: " + e.getMessage(),null);
         }
     }
 

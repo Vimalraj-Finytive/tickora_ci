@@ -2,6 +2,7 @@ package com.uniq.tms.tms_microservice.modules.timesheetManagement.repository;
 
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.dto.UserAttendanceDto;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.entity.TimesheetEntity;
+import com.uniq.tms.tms_microservice.modules.timesheetManagement.enums.LogType;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.projection.TimesheetHistoryProjection;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.projection.TimesheetProjection;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.projection.TimesheetUserProjection;
@@ -9,9 +10,11 @@ import com.uniq.tms.tms_microservice.modules.userManagement.projections.UserDash
 import com.uniq.tms.tms_microservice.modules.userManagement.projections.UserGroupProjection;
 import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -31,10 +34,10 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
             @Param("userIds") String[] userIds
     );
 
-        @Query(value =
-                "SELECT * FROM fetch_user_groups(:userIds)",
-                nativeQuery = true
-        )
+    @Query(value =
+            "SELECT * FROM fetch_user_groups(:userIds)",
+            nativeQuery = true
+    )
     List<UserGroupProjection> fetchUserGroups(@Param("userIds") String[] userIds);
 
     @Query(value = "SELECT * FROM fetch_timesheet_history(:timesheetIds)",
@@ -51,18 +54,18 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
                                                           @Param("to") LocalDate to);
 
     @Query(value = """
-    SELECT
-        u.user_id AS userId,
-        d.log_date AS logDate,
-        t.status_id AS statusId
-    FROM (
-        SELECT CAST(generate_series(:fromDate, :toDate, interval '1 day') AS date) AS log_date
-    ) d
-    JOIN users u ON u.active = true
-    LEFT JOIN timesheet t ON u.user_id = t.user_id AND t.date = d.log_date
-    WHERE u.organization_id = :orgId
-      AND u.user_id IN (:userIds)
-    """, nativeQuery = true)
+            SELECT
+                u.user_id AS userId,
+                d.log_date AS logDate,
+                t.status_id AS statusId
+            FROM (
+                SELECT CAST(generate_series(:fromDate, :toDate, interval '1 day') AS date) AS log_date
+            ) d
+            JOIN users u ON u.active = true
+            LEFT JOIN timesheet t ON u.user_id = t.user_id AND t.date = d.log_date
+            WHERE u.organization_id = :orgId
+              AND u.user_id IN (:userIds)
+            """, nativeQuery = true)
     List<UserDashboard> getDashboard(
             @Param("userIds") List<String> userIds,
             @Param("fromDate") LocalDate fromDate,
@@ -72,8 +75,8 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
 
     @Query("SELECT t FROM TimesheetEntity t WHERE t.status.statusId IN :statusIds AND t.date BETWEEN :startDate AND :endDate")
     List<TimesheetEntity> findUserByStatusIdIn(@Param("statusIds") List<String> statusIds,
-                                                   @Param("startDate") LocalDate startDate,
-                                                   @Param("endDate") LocalDate endDate);
+                                               @Param("startDate") LocalDate startDate,
+                                               @Param("endDate") LocalDate endDate);
 
     @Query("SELECT u.userId FROM UserEntity u " +
             "WHERE u.userId NOT IN (" +
@@ -82,15 +85,15 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
             ") " +
             "ORDER BY u.userId ASC")
     List<String> findUserByStatusIdNotIn(@Param("startDate") LocalDate startDate,
-                                                     @Param("endDate") LocalDate endDate);
+                                         @Param("endDate") LocalDate endDate);
 
     @Query("""
-        SELECT COUNT(t)
-        FROM TimesheetEntity t
-        WHERE t.user.userId IN :userIds
-          AND t.date = :date
-          AND t.status.id = :statusId
-    """)
+                SELECT COUNT(t)
+                FROM TimesheetEntity t
+                WHERE t.user.userId IN :userIds
+                  AND t.date = :date
+                  AND t.status.id = :statusId
+            """)
     long countByUserIdsAndDateAndStatusId(@Param("userIds") List<String> userIds,
                                           @Param("date") LocalDate date,
                                           @Param("statusId") String statusId);
@@ -130,21 +133,51 @@ public interface TimesheetRepository extends JpaRepository<TimesheetEntity, Long
     void deleteByUser_UserIdAndDateBetween(String userId, LocalDate startDate, LocalDate endDate);
 
     @Query("""
-    SELECT t
-    FROM TimesheetEntity t
-    WHERE t.date = :date
-      AND t.user.userId IN :userIds
-    """)
+            SELECT t
+            FROM TimesheetEntity t
+            WHERE t.date = :date
+              AND t.user.userId IN :userIds
+            """)
     List<TimesheetEntity> findAllTimesheets(
             @Param("date") LocalDate date,
             @Param("userIds") List<String> userIds);
 
     @Query("""
-        SELECT t
-        FROM TimesheetEntity t
-        WHERE t.date = :date
-        """)
+            SELECT t
+            FROM TimesheetEntity t
+            WHERE t.date = :date
+            """)
     List<TimesheetEntity> findAllTimesheetsByDate(@Param("date") LocalDate date);
 
     boolean existsByUser_UserIdAndDate(String userId, LocalDate startDate);
+
+    @Modifying
+    @Query("""
+                DELETE FROM TimesheetEntity t
+                WHERE t.user.userId = :userId
+                  AND t.date BETWEEN :startDate AND :endDate
+                  AND t.status.statusName IN :statuses
+            """)
+    void deleteFullDayLeaveTimesheets(
+            @Param("userId") String userId,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate,
+            @Param("statuses") List<String> statuses
+    );
+
+    List<TimesheetEntity> findByUser_UserIdAndDateBetween(String userId, LocalDate startDate, LocalDate endDate);
+
+    @Modifying
+    @Query("""
+            DELETE FROM TimesheetEntity t
+            WHERE t.user.userId = :userId
+              AND t.date BETWEEN :startDate AND :endDate
+              AND t.firstClockIn IS NULL
+            """)
+    void deleteTimesheetsWithoutWork(
+            @Param("userId") String userId,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
+    );
+
 }

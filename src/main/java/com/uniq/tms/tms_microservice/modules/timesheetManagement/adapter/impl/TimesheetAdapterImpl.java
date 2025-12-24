@@ -266,6 +266,18 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
         dto.setRole(projection.getRoleName() != null ? projection.getRoleName() : "null");
         dto.setGroupName(userGroups.getOrDefault(projection.getUserId(), "null"));
         dto.setHistory(historyMap.getOrDefault(projection.getId(), Collections.emptyList()));
+        if (dto.getFirstClockIn() == null) {
+            dto.getHistory().stream()
+                    .filter(h -> h.getLogType() == LogType.CLOCK_IN)
+                    .findFirst()
+                    .ifPresent(h -> dto.setFirstClockIn(LocalTime.parse(h.getLogTime())));
+        }
+        if (dto.getLastClockOut() == null) {
+            dto.getHistory().stream()
+                    .filter(h -> h.getLogType() == LogType.CLOCK_OUT)
+                    .reduce((a, b) -> b)
+                    .ifPresent(h -> dto.setLastClockOut(LocalTime.parse(h.getLogTime())));
+        }
         return dto;
     }
 
@@ -373,9 +385,15 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
         timesheet.setDayType(isWorkingDay ? "Working Day" : "Holiday");
         log.info("working day ? :{}", timesheet.getDayType());
 
-        boolean hasClockIn = timesheet.getFirstClockIn() != null;
+//        boolean hasClockIn = timesheet.getFirstClockIn() != null;
+//
+//        boolean hasClockOut = timesheet.getLastClockOut() != null;
 
-        boolean hasClockOut = timesheet.getLastClockOut() != null;
+        boolean hasClockIn = timesheet.getHistory().stream()
+                .anyMatch(h -> h.getLogType() == LogType.CLOCK_IN);
+
+        boolean hasClockOut = timesheet.getHistory().stream()
+                .anyMatch(h -> h.getLogType() == LogType.CLOCK_OUT);
 
         boolean hasSystemGeneratedClockOut = timesheet.getHistory().stream()
                 .anyMatch(h -> LogType.CLOCK_OUT.equals(h.getLogType())
@@ -605,10 +623,18 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
                         || TimesheetStatusEnum.PERMISSION.getLabel().equalsIgnoreCase(t.getStatus())) {
                     extraWorkedDays++;
                 }
+                t.setFirstClockInTime(formatTime(t.getFirstClockIn()));
+                t.setLastClockOutTime(formatTime(t.getLastClockOut()));
+                t.setTrackedHoursDuration(formatDuration(t.getTrackedHours()));
+                t.setRegularHoursDuration(formatDuration(t.getRegularHours()));
                 continue;
             }
             if (calendarHolidays.contains(date)) {
                 holiday++;
+                t.setFirstClockInTime(formatTime(t.getFirstClockIn()));
+                t.setLastClockOutTime(formatTime(t.getLastClockOut()));
+                t.setTrackedHoursDuration(formatDuration(t.getTrackedHours()));
+                t.setRegularHoursDuration(formatDuration(t.getRegularHours()));
                 continue;
             }
             totalWorkingDays++;
@@ -1064,5 +1090,25 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
     @Override
     public boolean existsByUserIdAndDate(String userId, LocalDate startDate) {
         return timesheetRepository.existsByUser_UserIdAndDate(userId, startDate);
+    }
+
+    @Override
+    public void deleteFullDayLeaveTimesheets(String userId, LocalDate startDate, LocalDate endDate, List<String> statuses) {
+         timesheetRepository.deleteFullDayLeaveTimesheets(userId, startDate, endDate,statuses);
+    }
+
+    @Override
+    public void deleteLeaveHistories(String userId, LocalDate startDate, LocalDate endDate, List<LogType> halfIn) {
+         timesheetHistoryRepository.deleteLeaveHistories(userId, startDate, endDate, halfIn);
+    }
+
+    @Override
+    public List<TimesheetEntity> findByUser_UserIdAndDateBetween(String userId, LocalDate startDate, LocalDate endDate) {
+        return timesheetRepository.findByUser_UserIdAndDateBetween(userId,startDate,endDate);
+    }
+
+    @Override
+    public void deleteTimesheetsWithoutWork(String userId, LocalDate startDate, LocalDate endDate) {
+        timesheetRepository.deleteTimesheetsWithoutWork(userId, startDate, endDate);
     }
 }
