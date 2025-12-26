@@ -689,7 +689,7 @@ CREATE TABLE IF NOT EXISTS ${schemaName}.subscription (
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP,
     CONSTRAINT fk_subscription_plan FOREIGN KEY (plan_id)
-        REFERENCES ${schemaName}.plan(plan_id)
+        REFERENCES public.plan(plan_id)
         ON DELETE RESTRICT
 );
 

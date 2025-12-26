@@ -127,7 +127,7 @@ public interface UserAdapter {
     List<UserEntity>getGroupMembers(Long groupId);
     List<UserEntity>  getallUsers(String approverId);
     List<UserEntity> findusersInGroup(List<Long> groupIds, String userId);
-    Optional<UserEntity>findSuperAdminByOrgId(String orgId);
+    List<UserEntity>findSuperAdminByOrgId(String orgId);
     List<UserEntity> findByApproverId(String approverId);
     List<UserEntity>findAllById(List<String>userIds);
     void updateApproverForUsers( String approverId, List<String> requestedUserIds);

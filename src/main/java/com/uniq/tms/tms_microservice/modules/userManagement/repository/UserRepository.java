@@ -269,11 +269,11 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
             """)
     List<UserEntity> findUsersWithCalendars(@Param("userIds") String[] userIds);
 
-    @Query("SELECT u FROM UserEntity u WHERE u.active = true AND u.userId <> :excludeId")
-    List<UserEntity> findByActiveTrue(@Param("excludeId") String excludeId);
+    @Query("SELECT u FROM UserEntity u WHERE u.active = true AND u.userId <> :excludeId AND u.role.id <> :excludedRoleId ")
+    List<UserEntity> findByActiveTrue(@Param("excludeId") String excludeId, @Param("excludedRoleId") Integer excludedRoleId);
 
     @Query("SELECT u FROM UserEntity u WHERE u.role.roleId = 1 AND u.organizationId = :orgId")
-    Optional<UserEntity> findSuperAdminByOrgId(@Param("orgId") String orgId);
+    List<UserEntity> findSuperAdminByOrgId(@Param("orgId") String orgId);
 
     List<UserEntity> findByRequestApproverIdAndActiveTrue(String approverId);
 
