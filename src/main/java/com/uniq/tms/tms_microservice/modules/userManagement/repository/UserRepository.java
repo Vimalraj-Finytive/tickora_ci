@@ -216,7 +216,7 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
     @Query("UPDATE UserEntity u SET u.active = false, u.isRegisterUser = false WHERE u.userId IN :userIds AND u.organizationId = :orgId")
     void deactivateUsersByIds(@Param("userIds") List<String> userIds, @Param("orgId") String orgId);
 
-    @Query("SELECT COUNT(u) FROM UserEntity u WHERE u.organizationId = :orgId")
+    @Query("SELECT COUNT(u) FROM UserEntity u WHERE u.organizationId = :orgId AND u.active = true")
     Long countUsersByOrganizationId(@io.lettuce.core.dynamic.annotation.Param("orgId") String orgId);
 
     @Query("SELECT new com.uniq.tms.tms_microservice.modules.userManagement.dto.UserNameEmailDto(u.userName, u.email) " +
