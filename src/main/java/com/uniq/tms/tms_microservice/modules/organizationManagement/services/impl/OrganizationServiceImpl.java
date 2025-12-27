@@ -425,7 +425,7 @@ public class OrganizationServiceImpl implements OrganizationService {
             counts.setAddedUsers(total);
             counts.setSubscriptionUserCount(subscribed);
 
-            counts.setAvailableSubscriptionSlots(Math.max(0, subscribed - total));
+            counts.setAvailableSubscriptionSlots(Math.max(0, subscribed - active));
 
             dto.setCounts(counts);
             return dto;

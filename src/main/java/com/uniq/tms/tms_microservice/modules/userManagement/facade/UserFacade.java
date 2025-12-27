@@ -302,6 +302,12 @@ public class UserFacade {
         if (orgId == null) {
             return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
         }
+        Long currentCount = userService.getCurrentUserCount(orgId);
+        Long subscribedLimit = userService.getSubscribedUserLimit(orgId);
+
+        if (!(currentCount < subscribedLimit)) {
+            return new ApiResponse<UserDto>(404, "User limit reached. Please upgrade your plan.", null);
+        }
         List<EditUserDto> editUserDtos = userService.updateIsActive(userDtoMapper.toMiddleware(editUserDto), orgId, userNameFromToken);
         return new ApiResponse(200, "User is activated", null);
     }
