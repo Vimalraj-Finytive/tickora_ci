@@ -11,6 +11,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
+
+import java.time.LocalDate;
 import java.util.List;
 
 @Repository
@@ -45,6 +47,7 @@ public interface UserPayRollRepository extends JpaRepository<UserPayRollEntity, 
         SELECT upr.user
         FROM UserPayRollEntity upr
         WHERE upr.payroll.id = :payrollId
+        AND upr.user.dateOfJoining <= :date
     """)
-    List<UserEntity> findUsersByPayrollId(@Param("payrollId") String payrollId);
+    List<UserEntity> findUsersByPayrollId(@Param("payrollId") String payrollId, @Param("date") LocalDate date);
 }

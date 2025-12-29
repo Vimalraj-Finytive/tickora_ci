@@ -341,13 +341,21 @@ public class PayRollServiceImpl implements PayRollService {
                 : entities.stream()
                 .map(e -> e.getUser().getUserId())
                 .collect(Collectors.toSet());
-        result.addAll(createZeroPayrollModel(id, processedUserIds));
+        result.addAll(createZeroPayrollModel(id, processedUserIds, month));
         return result;
     }
 
-    private List<UserPayRollAmountModel> createZeroPayrollModel(String payrollId, Set<String> processedUserIds) {
+    private List<UserPayRollAmountModel> createZeroPayrollModel(String payrollId, Set<String> processedUserIds, String month) {
 
-        List<UserEntity> users = payRollAdapter.findUsersByPayrollId(payrollId);
+        DateTimeFormatter formatter =
+                DateTimeFormatter.ofPattern("MMMM,yyyy", Locale.ENGLISH);
+
+        YearMonth yearMonth = YearMonth.parse(month, formatter);
+        LocalDate date = yearMonth.atDay(1);
+
+        int monthValue = yearMonth.getMonthValue();
+        int year  = yearMonth.getYear();
+        List<UserEntity> users = payRollAdapter.findUsersByPayrollId(payrollId, date);
         List<UserPayRollAmountModel> userPayrollList = new ArrayList<>();
         for (UserEntity user : users) {
             if (processedUserIds.contains(user.getUserId())) {
