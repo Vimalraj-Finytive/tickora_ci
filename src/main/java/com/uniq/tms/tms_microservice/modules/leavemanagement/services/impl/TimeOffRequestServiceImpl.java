@@ -658,6 +658,15 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
                 continue;
             }
 
+            UserEntity viewerUser =
+                    userAdapter.findById(row.getViewerId()).orElse(null);
+
+            if (viewerUser != null
+                    && viewerUser.getRole().getHierarchyLevel()
+                    == UserRole.SUPERADMIN.getHierarchyLevel()) {
+                continue;
+            }
+
             // Unique viewer entry key
             String viewerKey = requestId + "|" + row.getViewerId() + "|" + row.getViewerType();
 

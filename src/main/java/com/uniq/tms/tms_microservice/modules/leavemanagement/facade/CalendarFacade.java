@@ -90,4 +90,11 @@ public class CalendarFacade {
     public void deleteHolidayById(String calendarId, String holidayId) {
         calendarService.deleteHolidayById(calendarId,holidayId);
     }
+
+    public ApiResponse<List<HolidayDto>> upComingHolidays() {
+        String userId = authHelper.getUserId();
+        List<HolidayDto> holidays = calendarService.upCommingHolidays(userId).stream()
+                .map(holidayDtoMapper::toDto).toList();
+        return new ApiResponse<>(200,"Upcoming Holidays fetched successfully",holidays);
+    }
 }

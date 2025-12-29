@@ -16,4 +16,5 @@ public interface CalendarService {
     Holiday updateHoliday(HolidayDto holidayDto, String id, String holidayId);
     List<Holiday> findHolidaysByCalendar(String id, String year);
     void deleteHolidayById(String calendarId,String holidayId);
+    List<Holiday> upCommingHolidays(String userId);
 }
