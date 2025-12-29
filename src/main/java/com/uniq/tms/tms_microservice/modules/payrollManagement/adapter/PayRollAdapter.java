@@ -9,6 +9,7 @@ import com.uniq.tms.tms_microservice.modules.payrollManagement.projection.PayRol
 import com.uniq.tms.tms_microservice.modules.payrollManagement.projection.UserPayRollAmount;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -36,5 +37,5 @@ public interface PayRollAdapter {
     void deleteUserPayrollById(String payrollId);
     List<UserPayRollAmount> findAllByMonth(String month);
     Optional<UserPayRollAmountEntity> getUserPayrollAmount(String userId, String month);
-    List<UserEntity> findUsersByPayrollId(String payrollId);
+    List<UserEntity> findUsersByPayrollId(String payrollId, LocalDate date);
 }
