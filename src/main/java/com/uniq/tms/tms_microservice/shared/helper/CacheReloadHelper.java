@@ -57,4 +57,31 @@ public class CacheReloadHelper {
         }
     }
 
+    public void refreshGroupCache(String orgId, String schema) {
+        if (!isRedisEnabled) {
+            log.info("Redis disabled. Skipping Group cache refresh for orgId={}", orgId);
+            return;
+        }
+        try {
+            TenantContext.setCurrentTenant(schema);
+            log.info("reload Group helper");
+            CacheEventPublisherUtil.syncReloadThenPublish(
+                    publisher,
+                    cacheKeyConfig.getGroups(),
+                    orgId,
+                    schema,
+                    cacheReloadHandlerRegistry
+            );
+            log.info("Group cache refreshed for orgId={}", orgId);
+        } catch (Exception e) {
+            log.error(
+                    "Failed to refresh Group cache for orgId={}",
+                    orgId,
+                    e
+            );
+        }finally {
+            TenantContext.clear();
+        }
+    }
+
 }

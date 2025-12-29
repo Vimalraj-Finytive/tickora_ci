@@ -49,6 +49,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -526,11 +527,14 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
 
             Duration scheduledHours = scheduleInfo.getDuration() != null ? scheduleInfo.getDuration() : Duration.ZERO;
             log.info("Scheduled Hours (Flexible): {}", scheduledHours);
-
             Duration worked = timesheet.getTrackedHours() != null ? timesheet.getTrackedHours() : Duration.ZERO;
+
+            worked = worked.truncatedTo(ChronoUnit.MINUTES);
+            scheduledHours = scheduledHours.truncatedTo(ChronoUnit.MINUTES);
+
             if (worked.compareTo(scheduledHours) > 0) {
                 timesheet.setWorkStatus(TimesheetWorkStatusEnum.OVERTIME.getLabel());
-            } else if (worked.compareTo(scheduledHours) >= 0) {
+            } else if (worked.compareTo(scheduledHours) == 0) {
                 timesheet.setWorkStatus(TimesheetWorkStatusEnum.SUFFICIENT_HOURS.getLabel());
             } else {
                 timesheet.setWorkStatus(TimesheetWorkStatusEnum.LESS_WORKED_HOURS.getLabel());
