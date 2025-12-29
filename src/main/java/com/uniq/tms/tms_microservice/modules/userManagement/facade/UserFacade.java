@@ -381,12 +381,10 @@ public class UserFacade {
         return new ApiResponse(statusCode, message.toString().trim(), null);
     }
 
-
     public ApiResponse addOrUpdateGroupMembers(AddOrUpdateGroupMembersDto dto) {
         String orgId = authHelper.getOrgId();
         UserGroupModel model = userDtoMapper.toModel(dto);
         ApiResponse response = userService.addOrUpdateGroupMembers(orgId, model);
-
         return response;
     }
 

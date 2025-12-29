@@ -13,6 +13,7 @@ import com.uniq.tms.tms_microservice.modules.locationManagement.entity.UserLocat
 import com.uniq.tms.tms_microservice.modules.locationManagement.mapper.LocationDtoMapper;
 import com.uniq.tms.tms_microservice.modules.locationManagement.repository.LocationRepository;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.mapper.OrganizationEntityMapper;
+import com.uniq.tms.tms_microservice.modules.userManagement.event.GroupEvent;
 import com.uniq.tms.tms_microservice.modules.userManagement.projections.UserProjection;
 import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.OrganizationAdapter;
@@ -2164,54 +2165,45 @@ public class UserServiceImpl implements UserService {
             return new ApiResponse(404, "User(s) not found or inactive: " + missingUsers, null);
         }
 
-        Map<String, Set<Long>> existingLinks = new HashMap<>();
+        Map<String, Map<Long, UserGroupEntity>> existingMap = new HashMap<>();
         for (UserGroupEntity e : existingUserGroups) {
-            existingLinks
-                    .computeIfAbsent(e.getUser().getUserId(), k -> new HashSet<>())
-                    .add(e.getGroup().getGroupId());
+            existingMap
+                    .computeIfAbsent(e.getUser().getUserId(), k -> new HashMap<>())
+                    .put(e.getGroup().getGroupId(), e);
         }
-
         List<UserGroupEntity> toSave = new ArrayList<>();
         int updates = 0;
 
         for (String userId : userIds) {
             UserEntity user = userMap.get(userId);
-            Set<Long> userExistingGroups = existingLinks.getOrDefault(userId, Collections.emptySet());
+            Map<Long, UserGroupEntity> userGroupMap =
+                    existingMap.getOrDefault(userId, Collections.emptyMap());
+
             for (Long groupId : groupIds) {
                 GroupEntity group = groupMap.get(groupId);
+                UserGroupEntity existing = userGroupMap.get(groupId);
 
-                if (userExistingGroups.contains(groupId)) {
-                    Optional<UserGroupEntity> existing = existingUserGroups.stream()
-                            .filter(ug -> ug.getUser().getUserId().equals(userId)
-                                    && ug.getGroup().getGroupId().equals(groupId))
-                            .findFirst();
-
-                    if (existing.isPresent() && !normalizeType(existing.get().getType()).equals(type)) {
-                        existing.get().setType(type);
-                        toSave.add(existing.get());
+                if (existing != null) {
+                    if (!normalizeType(existing.getType()).equals(type)) {
+                        existing.setType(type);
+                        toSave.add(existing);
                         updates++;
                     }
-                    continue;
+                } else {
+                    UserGroupEntity entity = new UserGroupEntity();
+                    entity.setUser(user);
+                    entity.setGroup(group);
+                    entity.setType(type);
+                    toSave.add(entity);
                 }
-
-                UserGroupEntity entity = new UserGroupEntity();
-                entity.setUser(user);
-                entity.setGroup(group);
-                entity.setType(type);
-                toSave.add(entity);
             }
         }
-
+        boolean cacheReloadRequired = false;
         if (!toSave.isEmpty()) {
             try {
                 userAdapter.saveAllUserGroups(toSave);
                 log.info("Saved {} user-group mappings ({} updates)", toSave.size(), updates);
-
-                if (isRedisEnabled) {
-                    CacheEventPublisherUtil.syncReloadThenPublish(
-                            publisher, cacheKeyConfig.getGroups(), orgId, schema, cacheReloadHandlerRegistry);
-                    log.info("GroupCacheReloadEvent published after add/update group members");
-                }
+                cacheReloadRequired = true;
             } catch (Exception e) {
                 log.error("Failed to save user-group entities", e);
                 return new ApiResponse(500, "Error saving user-group entities", null);
@@ -2220,15 +2212,9 @@ public class UserServiceImpl implements UserService {
             log.info("No changes to save for orgId={}", orgId);
         }
 
-        if (isRedisEnabled) {
+        if (isRedisEnabled && cacheReloadRequired) {
             try {
-                CacheEventPublisherUtil.syncReloadThenPublish(
-                        publisher,
-                        cacheKeyConfig.getGroups(),
-                        orgId,
-                        schema,
-                        cacheReloadHandlerRegistry
-                );
+                publisher.publishEvent(new GroupEvent(orgId, authHelper.getSchema()));
                 log.info("GroupCacheReloadEvent published after Group Creation for orgId={}", orgId);
             } catch (Exception e) {
                 log.error("Failed to publish GroupCacheReloadEvent for orgId={}", orgId, e);
@@ -2236,10 +2222,8 @@ public class UserServiceImpl implements UserService {
         } else {
             log.info("Redis is not enabled or RedisTemplate is null. Skipping cache reload of group members for orgId={}", orgId);
         }
-
         return new ApiResponse(200, "Users added/updated successfully", null);
     }
-
 
     private String normalizeType(String type) {
         if (type == null) return MemberType.MEMBER.getValue();
