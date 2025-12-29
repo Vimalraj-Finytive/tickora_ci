@@ -40,4 +40,16 @@ public interface CalendarHolidayRepository extends JpaRepository<CalendarHoliday
 
     boolean existsByCalendar_IdAndDate(String calendarId, LocalDate date);
     boolean existsByCalendar_IdAndDateAndIdNot(String calendarId, LocalDate date,String holidayId);
+
+    @Query("""
+SELECT h FROM CalendarHolidayEntity h
+WHERE h.calendar.id = :calendarId
+  AND h.year IN (:currentYear, :nextYear)
+""")
+    List<CalendarHolidayEntity> findByCalendarAndTwoYears(
+            @Param("calendarId") String calendarId,
+            @Param("currentYear") String currentYear,
+            @Param("nextYear") String nextYear
+    );
+
 }
