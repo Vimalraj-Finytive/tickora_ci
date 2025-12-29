@@ -1,5 +1,6 @@
 package com.uniq.tms.tms_microservice.modules.timesheetManagement.services;
 
+import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeOffRequestEntity;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.dto.*;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.enums.TimesheetStatusEnum;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.model.TimesheetHistory;
@@ -19,5 +20,5 @@ public interface TimesheetService {
     List<TimesheetStatus> getStatus();
     List<DashboardSummaryDto> getDashboardSummary(String orgId, LocalDate fromDate, LocalDate toDate);
     void createTimesheet (TimesheetStatusEnum status, String userId, LocalDate startDate, LocalDate endDate, LocalTime startTime,LocalTime endTime);
-    void deleteTimesheet(String userId, LocalDate startDate, LocalDate endDate);
+    void rollbackLeaveTimesheet(TimeOffRequestEntity saved);
 }

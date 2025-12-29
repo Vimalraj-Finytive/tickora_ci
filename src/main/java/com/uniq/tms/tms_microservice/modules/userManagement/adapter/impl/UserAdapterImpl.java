@@ -11,6 +11,7 @@ import com.uniq.tms.tms_microservice.modules.userManagement.adapter.UserAdapter;
 import com.uniq.tms.tms_microservice.modules.userManagement.dto.GroupDto;
 import com.uniq.tms.tms_microservice.modules.userManagement.dto.UserNameEmailDto;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.*;
+import com.uniq.tms.tms_microservice.modules.userManagement.enums.UserRole;
 import com.uniq.tms.tms_microservice.modules.userManagement.projections.UserCalendarProjection;
 import com.uniq.tms.tms_microservice.modules.userManagement.projections.UserHolidayProjection;
 import com.uniq.tms.tms_microservice.modules.userManagement.projections.UserProjection;
@@ -613,7 +614,7 @@ public class UserAdapterImpl implements UserAdapter {
     }
     @Override
     public   List<UserEntity> getallUsers(String approverId){
-        return userRepository.findByActiveTrue(approverId);
+        return userRepository.findByActiveTrue(approverId, UserRole.SUPERADMIN.getHierarchyLevel());
     }
 
     @Override
@@ -622,7 +623,7 @@ public class UserAdapterImpl implements UserAdapter {
     }
 
     @Override
-    public Optional<UserEntity>findSuperAdminByOrgId(String orgId){
+    public List<UserEntity>findSuperAdminByOrgId(String orgId){
         return userRepository.findSuperAdminByOrgId(orgId);
     }
 

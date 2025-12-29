@@ -20,6 +20,7 @@ public class UserResponseDto {
     private String scheduleName;
     private List<UserPolicyDto> policies;
     private String calendarName;
+    private String calendarId;
     private String requestApproverName;
     private String payrollName;
     private String organizationName;
@@ -40,6 +41,7 @@ public class UserResponseDto {
         this.dateOfJoining = source.getDateOfJoining();
         this.scheduleName = source.getScheduleName();
         this.calendarName = source.getCalendarName();
+        this.calendarId = source.getCalendarId();
         this.requestApproverName = source.getRequestApproverName();
         this.payrollName = source.getPayrollName();
         this.organizationName = source.getOrganizationName();
@@ -166,5 +168,13 @@ public class UserResponseDto {
 
     public void setOrgType(String orgType) {
         this.orgType = orgType;
+    }
+
+    public String getCalendarId() {
+        return calendarId;
+    }
+
+    public void setCalendarId(String calendarId) {
+        this.calendarId = calendarId;
     }
 }

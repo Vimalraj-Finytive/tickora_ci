@@ -59,4 +59,8 @@ public interface TimesheetAdapter {
     List<TimesheetEntity> findAll(LocalDate date, List<String> userIds);
     List<TimesheetEntity> findAllTimesheetsByDate(LocalDate date);
     boolean existsByUserIdAndDate(String userId, LocalDate startDate);
+    void deleteFullDayLeaveTimesheets(String userId, LocalDate startDate, LocalDate endDate, List<String> statuses);
+    void deleteLeaveHistories(String userId, LocalDate startDate, LocalDate endDate, List<LogType> halfIn);
+    List<TimesheetEntity> findByUser_UserIdAndDateBetween(String userId, LocalDate startDate, LocalDate endDate);
+    void deleteTimesheetsWithoutWork(String userId, LocalDate startDate, LocalDate endDate);
 }

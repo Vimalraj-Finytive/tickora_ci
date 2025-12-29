@@ -302,6 +302,12 @@ public class UserFacade {
         if (orgId == null) {
             return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
         }
+        Long currentCount = userService.getCurrentUserCount(orgId);
+        Long subscribedLimit = userService.getSubscribedUserLimit(orgId);
+
+        if (!(currentCount < subscribedLimit)) {
+            return new ApiResponse<UserDto>(404, "User limit reached. Please upgrade your plan.", null);
+        }
         List<EditUserDto> editUserDtos = userService.updateIsActive(userDtoMapper.toMiddleware(editUserDto), orgId, userNameFromToken);
         return new ApiResponse(200, "User is activated", null);
     }
@@ -428,7 +434,7 @@ public class UserFacade {
     public ApiResponse<RequestApproverDto> assignRequestApprover(RequestApproverDto dto) {
             RequestApproverModel model = userService.assignRequestApprover(dto);
             RequestApproverDto Dto=userDtoMapper.toDto(model);
-            return new ApiResponse<>(200,"approver assigned successfully",Dto);
+            return new ApiResponse<>(200,"approver assigned successfully",null);
 
     }
 

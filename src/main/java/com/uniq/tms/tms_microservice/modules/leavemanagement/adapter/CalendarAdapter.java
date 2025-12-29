@@ -38,5 +38,5 @@ public interface CalendarAdapter {
     List<Object[]> findHolidayDatesByCalendarIds(Set<String> calendarIds);
     boolean existsByCalendarIdAndDate(String calendarId, LocalDate date );
     boolean existsByDate(String calendarId,LocalDate date,String holidayId);
-
+    List<CalendarEntity> findAllCalendar();
 }

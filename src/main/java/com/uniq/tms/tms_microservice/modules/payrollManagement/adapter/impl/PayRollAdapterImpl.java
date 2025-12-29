@@ -12,6 +12,7 @@ import com.uniq.tms.tms_microservice.modules.payrollManagement.repository.PayRol
 import com.uniq.tms.tms_microservice.modules.payrollManagement.repository.PayRollSettingRepository;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.repository.UserPayRollAmountRepository;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.repository.UserPayRollRepository;
+import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
 import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Optional;
@@ -137,5 +138,10 @@ public class PayRollAdapterImpl implements PayRollAdapter {
     @Override
     public Optional<UserPayRollAmountEntity> getUserPayrollAmount(String userId, String month) {
         return userPayrollAmountRepository.getUserPayrollAmount(userId, month);
+    }
+
+    @Override
+    public List<UserEntity> findUsersByPayrollId(String payrollId) {
+        return userPayrollRepo.findUsersByPayrollId(payrollId);
     }
 }

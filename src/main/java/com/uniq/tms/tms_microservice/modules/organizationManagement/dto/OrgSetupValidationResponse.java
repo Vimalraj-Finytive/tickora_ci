@@ -4,10 +4,12 @@ public class OrgSetupValidationResponse {
 
     private boolean hasLocation;
     private boolean hasWorkSchedule;
+    private boolean hasCalendar;
 
-    public OrgSetupValidationResponse(boolean hasLocation, boolean hasWorkSchedule) {
+    public OrgSetupValidationResponse(boolean hasLocation, boolean hasWorkSchedule, boolean hasCalendar) {
         this.hasLocation = hasLocation;
         this.hasWorkSchedule = hasWorkSchedule;
+        this.hasCalendar = hasCalendar;
     }
 
     public boolean isHasLocation() {
@@ -26,4 +28,11 @@ public class OrgSetupValidationResponse {
         this.hasWorkSchedule = hasWorkSchedule;
     }
 
+    public boolean isHasCalendar() {
+        return hasCalendar;
+    }
+
+    public void setHasCalendar(boolean hasCalendar) {
+        this.hasCalendar = hasCalendar;
+    }
 }

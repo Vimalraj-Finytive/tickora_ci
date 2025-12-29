@@ -331,7 +331,52 @@ public class PayRollServiceImpl implements PayRollService {
 
     @Override
     public List<UserPayRollAmountModel> getPayrollAmount(String id, String month) {
-        return entityMapper.toModel(payRollAdapter.getPayrollAmount(id, month));
+        List<UserPayRollAmountModel> result = new ArrayList<>();
+        List<UserPayRollAmountEntity> entities = payRollAdapter.getPayrollAmount(id, month);
+        if (entities != null && !entities.isEmpty()) {
+            result.addAll(entityMapper.toModel(entities));
+        }
+        Set<String> processedUserIds = entities == null
+                ? Collections.emptySet()
+                : entities.stream()
+                .map(e -> e.getUser().getUserId())
+                .collect(Collectors.toSet());
+        result.addAll(createZeroPayrollModel(id, processedUserIds));
+        return result;
+    }
+
+    private List<UserPayRollAmountModel> createZeroPayrollModel(String payrollId, Set<String> processedUserIds) {
+
+        List<UserEntity> users = payRollAdapter.findUsersByPayrollId(payrollId);
+        List<UserPayRollAmountModel> userPayrollList = new ArrayList<>();
+        for (UserEntity user : users) {
+            if (processedUserIds.contains(user.getUserId())) {
+                continue;
+            }
+            UserPayRollAmountModel model = new UserPayRollAmountModel();
+
+            model.setUserId(user.getUserId());
+            model.setUserName(user.getUserName());
+
+            model.setUnpaidLeaveDeduction(BigDecimal.ZERO);
+            model.setRegularDays(0);
+            model.setRegularHrs(BigDecimal.ZERO);
+            model.setOvertimeHrs(BigDecimal.ZERO);
+            model.setTotalHrs(BigDecimal.ZERO);
+
+            model.setRegularPayrollAmount(BigDecimal.ZERO);
+            model.setOvertimePayrollAmount(BigDecimal.ZERO);
+            model.setTotalPayrollAmount(BigDecimal.ZERO);
+            model.setMonthlyNetSalary(BigDecimal.ZERO);
+            model.setTotalAmount(BigDecimal.ZERO);
+
+            model.setPayrollStatus(PayRollStatusEnum.PROCESSING);
+            model.setNotes(null);
+
+            userPayrollList.add(model);
+        }
+
+        return userPayrollList;
     }
 
     @Override
@@ -436,10 +481,10 @@ public class PayRollServiceImpl implements PayRollService {
             totalPayment = totalPayment.add(entity.getTotalPayrollAmount());
             if (entity.getPayrollStatus() == PayRollStatusEnum.PAID) {
                 paidCount++;
-            } else {
-                if (entity.getPayrollStatus() == PayRollStatusEnum.FAILED) {
+            } else if (entity.getPayrollStatus() == PayRollStatusEnum.FAILED){
                     failedCount++;
-                }
+            }
+            else {
                 unpaidCount++;
             }
         }
