@@ -24,6 +24,7 @@ public class PayrollCacheListener {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onPayrollCreated(PayrollCreatedEvent event){
         log.info("Event listener reached");
+        log.info("listener thread: {}", Thread.currentThread().getName());
         cacheReloadHelper.refreshUserCache(event.orgId(), event.schema());
     }
 }

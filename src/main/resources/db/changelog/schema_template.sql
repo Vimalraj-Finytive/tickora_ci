@@ -996,6 +996,22 @@ CREATE INDEX IF NOT EXISTS idx_flexible_work_schedule_ws_id
 CREATE INDEX IF NOT EXISTS idx_weekly_work_schedule_ws_id
     ON ${schemaName}.weekly_work_schedule (work_schedule_id);
 
+-- ===========================================================
+-- Indexes for User Payroll queries
+-- ===========================================================
+
+--changeset system:create-user_payroll-user-id-index
+CREATE INDEX IF NOT EXISTS idx_user_payroll_user_id
+ON ${schemaName}.user_payroll (user_id);
+
+--changeset system:create-user_payroll-payroll-id-index
+CREATE INDEX IF NOT EXISTS idx_user_payroll_payroll_id
+ON ${schemaName}.user_payroll (payroll_id);
+
+--changeset system:create-user_payroll-user-payroll-composite-index
+CREATE INDEX IF NOT EXISTS idx_user_payroll_user_payroll
+ON ${schemaName}.user_payroll (user_id, payroll_id);
+
 --changeset system:create-fetch-main-timesheets-function endDelimiter://
 CREATE OR REPLACE FUNCTION ${schemaName}.fetch_main_timesheets(
     p_start_date DATE,
@@ -1436,9 +1452,16 @@ CREATE OR REPLACE FUNCTION ${schemaName}.log_timesheet_edit()
 RETURNS TRIGGER AS $$
 DECLARE
     actor text := current_setting('app.current_user_id', true);
+    action text;
 BEGIN
 
     IF NEW.first_clock_in IS DISTINCT FROM OLD.first_clock_in THEN
+        action :=
+    			CASE
+    				WHEN OLD.first_clock_in IS NULL AND NEW.first_clock_in IS NOT NULL
+    					THEN 'CREATE'
+    				ELSE 'UPDATE'
+    			END;
         INSERT INTO ${schemaName}.timesheet_edit_history (
             timesheet_id,
             log_type, old_value, new_value,
@@ -1449,12 +1472,18 @@ BEGIN
             OLD.id,
             'CLOCK_IN',
             OLD.first_clock_in::text, NEW.first_clock_in::text,
-            'UPDATE', 'MANUAL_ENTRY',
+            action, 'MANUAL_ENTRY',
             COALESCE(actor, 'SYSTEM'), NOW()
         );
     END IF;
 
     IF NEW.last_clock_out IS DISTINCT FROM OLD.last_clock_out THEN
+        action :=
+                CASE
+                    WHEN OLD.last_clock_out IS NULL AND NEW.last_clock_out IS NOT NULL
+                        THEN 'CREATE'
+                    ELSE 'UPDATE'
+                END;
         INSERT INTO ${schemaName}.timesheet_edit_history (
             timesheet_id,
             log_type, old_value, new_value,
@@ -1465,7 +1494,7 @@ BEGIN
             OLD.id,
             'CLOCK_OUT',
             OLD.last_clock_out::text, NEW.last_clock_out::text,
-            'UPDATE', 'MANUAL_ENTRY',
+            action, 'MANUAL_ENTRY',
             COALESCE(actor, 'SYSTEM'), NOW()
         );
     END IF;
