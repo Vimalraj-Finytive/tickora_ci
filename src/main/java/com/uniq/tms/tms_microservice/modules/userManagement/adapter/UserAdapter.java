@@ -138,4 +138,6 @@ public interface UserAdapter {
     List<UserHolidayProjection> findUsersWithHolidayOnDate(LocalDate date, List<String> userIds);
     List<UserHolidayProjection> findUserHolidays(List<String> userIds);
     List<UserEntity> findByCalendar_CalendarIdIn(List<String> calendarIds);
+    Long countExistingUsers(List<String> userIds);
+    List<UserGroupEntity> findByGroupIdAndUserIdIn(Long groupId, List<String> userIds);
 }

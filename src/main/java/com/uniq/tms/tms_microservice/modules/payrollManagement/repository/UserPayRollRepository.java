@@ -50,4 +50,11 @@ public interface UserPayRollRepository extends JpaRepository<UserPayRollEntity, 
         AND upr.user.dateOfJoining <= :date
     """)
     List<UserEntity> findUsersByPayrollId(@Param("payrollId") String payrollId, @Param("date") LocalDate date);
+
+    @Query("""
+        SELECT upr.user.userId
+        FROM UserPayRollEntity upr
+        WHERE upr.user.dateOfJoining <= :date
+    """)
+    List<String> findAllUsersByMonth(@Param("date") LocalDate date);
 }
