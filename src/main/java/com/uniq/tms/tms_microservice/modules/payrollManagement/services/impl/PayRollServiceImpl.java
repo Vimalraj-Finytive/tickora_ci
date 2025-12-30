@@ -5,6 +5,7 @@ import com.uniq.tms.tms_microservice.modules.identityManagement.service.IdGenera
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.LeaveBalanceAdapter;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.MonthlySummaryEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.ReportType;
+import com.uniq.tms.tms_microservice.modules.payrollManagement.Listener.PayrollCacheListener;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.adapter.PayRollAdapter;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.entity.PayRollEntity;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.entity.PayRollSettingEntity;
@@ -56,6 +57,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.Flow;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -64,6 +66,7 @@ public class PayRollServiceImpl implements PayRollService {
 
     private final ZoneId zoneId = ZoneId.of("Asia/Kolkata");
     private static final Logger log = LogManager.getLogger(PayRollServiceImpl.class);
+    private static final Duration EXPORT_TTL = Duration.ofHours(1);
 
     private final PayRollAdapter payRollAdapter;
     private final PayRollEntityMapper entityMapper;
@@ -542,6 +545,8 @@ public class PayRollServiceImpl implements PayRollService {
         return entityMapper.toModel(entity);
     }
 
+    @Override
+    @Transactional
     public void assignPayroll(PayRollUpdate model) {
         String orgId = authHelper.getOrgId();
         String schema = authHelper.getSchema();
@@ -565,21 +570,15 @@ public class PayRollServiceImpl implements PayRollService {
                 toInsert.add(newEntity);
             }
         }
-        if (!toUpdate.isEmpty()) {
-            payRollAdapter.saveAllUserPayroll(toUpdate);
+        if (toUpdate.isEmpty() && toInsert.isEmpty()) {
+            return;
         }
-        if (!toInsert.isEmpty()) {
-            payRollAdapter.saveAllUserPayroll(toInsert);
-        }
+        toUpdate.addAll(toInsert);
+        payRollAdapter.saveAllUserPayroll(toUpdate);
+        log.info("assignPayroll thread: {}", Thread.currentThread().getName());
         if (isRedisEnabled) {
             try {
-                CacheEventPublisherUtil.syncReloadThenPublish(
-                        publisher,
-                        cacheKeyConfig.getUsers(),
-                        orgId,
-                        schema,
-                        cacheReloadHandlerRegistry
-                );
+                publisher.publishEvent(new PayrollCreatedEvent(orgId,schema));
                 log.info("User cache reload event published after assigned PayRoll to a user for orgId={}", orgId);
             } catch (Exception e) {
                 log.error("Failed to publish User cache reload event for orgId={}", orgId, e);
@@ -630,7 +629,7 @@ public class PayRollServiceImpl implements PayRollService {
             redisTemplate.opsForValue().set(
                     exportKey,
                     ReportType.PENDING.getValues(),
-                    Duration.ofHours(12)
+                    EXPORT_TTL
             );
         } else {
             exportStatusTracker.writeStatus(file, ReportType.PENDING.getValues());
@@ -645,7 +644,7 @@ public class PayRollServiceImpl implements PayRollService {
             boolean redisAvailable = redisTemplate != null;
 
             if (redisAvailable) {
-                redisTemplate.opsForValue().set(redisKey, ReportType.PROCESSING.getValues());
+                redisTemplate.opsForValue().set(redisKey, ReportType.PROCESSING.getValues(),EXPORT_TTL);
             } else {
                 exportStatusTracker.writeStatus(file, ReportType.PROCESSING.getValues());
             }
@@ -658,7 +657,7 @@ public class PayRollServiceImpl implements PayRollService {
             }
 
             if (redisAvailable) {
-                redisTemplate.opsForValue().set(redisKey, ReportType.COMPLETED.getValues());
+                redisTemplate.opsForValue().set(redisKey, ReportType.COMPLETED.getValues(),EXPORT_TTL);
             } else {
                 exportStatusTracker.writeStatus(file, ReportType.COMPLETED.getValues());
             }
@@ -676,12 +675,11 @@ public class PayRollServiceImpl implements PayRollService {
             }
 
             if (redisTemplate != null) {
-                redisTemplate.opsForValue().set(redisKey, ReportType.FAILED.getValues());
+                redisTemplate.opsForValue().set(redisKey, ReportType.FAILED.getValues(),EXPORT_TTL);
             } else {
                 exportStatusTracker.writeStatus(file, ReportType.FAILED.getValues());
             }
         }
-
     }
 
     private void generateCsv(List<UserPayRollAmount> data, File file) {

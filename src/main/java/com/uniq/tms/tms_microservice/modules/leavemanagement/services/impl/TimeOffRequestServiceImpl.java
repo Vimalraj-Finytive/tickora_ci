@@ -61,8 +61,8 @@ import org.springframework.core.io.Resource;
 public class TimeOffRequestServiceImpl implements TimeOffRequestService {
 
     private static final Logger log = LoggerFactory.getLogger(TimeOffRequestServiceImpl.class);
-
     private final ZoneId zoneId = ZoneId.of("Asia/Kolkata");
+    private static final Duration EXPORT_TTL = Duration.ofHours(1);
 
     private final TimeOffRequestAdapter timeOffRequestAdapter;
     private final TimeOffPolicyEntityMapper TimeOffPolicyEntityMapper;
@@ -764,7 +764,7 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
         }
         String exportKey = cacheKeyUtil.getExport(schema, orgId, finalName);
         if (redisTemplate != null) {
-            redisTemplate.opsForValue().set(exportKey, ReportType.PENDING, Duration.ofHours(12));
+            redisTemplate.opsForValue().set(exportKey, ReportType.PENDING, EXPORT_TTL);
         } else {
             exportStatusTracker.writeStatus(file, ReportType.PENDING.getValues());
         }
@@ -778,7 +778,7 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
             boolean redisAvailable = redisTemplate != null;
 
             if (redisAvailable) {
-                redisTemplate.opsForValue().set(exportKey, ReportType.PROCESSING);
+                redisTemplate.opsForValue().set(exportKey, ReportType.PROCESSING, EXPORT_TTL);
             } else {
                 exportStatusTracker.writeStatus(file, ReportType.PROCESSING.getValues());
             }
@@ -793,7 +793,7 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
             }
 
             if (redisAvailable) {
-                redisTemplate.opsForValue().set(exportKey, ReportType.COMPLETED);
+                redisTemplate.opsForValue().set(exportKey, ReportType.COMPLETED, EXPORT_TTL);
             } else {
                 exportStatusTracker.writeStatus(file, ReportType.COMPLETED.getValues());
             }
@@ -810,7 +810,7 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
                 log.error("Error deleting failed export file: {}", deleteEx.getMessage());
             }
             if (redisTemplate != null) {
-                redisTemplate.opsForValue().set(exportKey, ReportType.FAILED.getValues());
+                redisTemplate.opsForValue().set(exportKey, ReportType.FAILED.getValues(), EXPORT_TTL);
             } else {
                 exportStatusTracker.writeStatus(file, ReportType.FAILED.getValues());
             }
