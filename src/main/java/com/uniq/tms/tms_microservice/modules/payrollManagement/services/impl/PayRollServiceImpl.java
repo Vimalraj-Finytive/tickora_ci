@@ -377,7 +377,7 @@ public class PayRollServiceImpl implements PayRollService {
             model.setMonthlyNetSalary(BigDecimal.ZERO);
             model.setTotalAmount(BigDecimal.ZERO);
 
-            model.setPayrollStatus(PayRollStatusEnum.NOTGENERATED);
+            model.setPayrollStatus(PayRollStatusEnum.NOT_GENERATED);
             model.setNotes(null);
 
             userPayrollList.add(model);
@@ -466,7 +466,7 @@ public class PayRollServiceImpl implements PayRollService {
         if (existing.getPayrollStatus() == PayRollStatusEnum.PAID) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Cannot edit payroll. Status is PAID.");
         }
-        if (model.getPayrollStatus() == PayRollStatusEnum.NOTGENERATED) {
+        if (model.getPayrollStatus() == PayRollStatusEnum.NOT_GENERATED) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Payroll status cannot be changed to NOT_GENERATED.");
         }
 

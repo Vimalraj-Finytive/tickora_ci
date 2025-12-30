@@ -7,7 +7,7 @@ public enum PayRollStatusEnum {
     PAID("Paid"),
     CANCELLED("Cancelled"),
     FAILED("Failed"),
-    NOTGENERATED("not_generated");
+    NOT_GENERATED("Not Generated");
 
 
     private final String value;
