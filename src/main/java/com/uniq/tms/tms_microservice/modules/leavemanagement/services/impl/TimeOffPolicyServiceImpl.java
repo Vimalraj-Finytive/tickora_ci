@@ -672,13 +672,15 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
                             entity.getValidityStartDate().withDayOfMonth(1),
                             entity.getValidityEndDate().withDayOfMonth(1)
                     ) + 1;
-                    newStart = entity.getValidityStartDate().plusMonths(months);
+                    newStart = entity.getValidityStartDate().plusMonths(months).withDayOfMonth(1);
                     newEnd = entity.getValidityEndDate().plusMonths(months);
+                    newEnd = YearMonth.from(newEnd).atEndOfMonth();
                 }else {
                     Period diff = Period.between(entity.getValidityStartDate(), entity.getValidityEndDate());
                     long years = diff.getYears() + 1;
-                    newStart = entity.getValidityStartDate().plusYears(years);
+                    newStart = entity.getValidityStartDate().plusYears(years).withDayOfYear(1);;
                     newEnd = entity.getValidityEndDate().plusYears(years);
+                    newEnd = newEnd.withDayOfYear(newEnd.lengthOfYear());
                 }
                 log.info("startDate and endDate");
                 copy.setPolicyId(policyId);

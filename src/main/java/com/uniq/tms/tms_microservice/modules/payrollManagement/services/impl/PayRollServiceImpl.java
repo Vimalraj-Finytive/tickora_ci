@@ -351,11 +351,10 @@ public class PayRollServiceImpl implements PayRollService {
                 DateTimeFormatter.ofPattern("MMMM,yyyy", Locale.ENGLISH);
 
         YearMonth yearMonth = YearMonth.parse(month, formatter);
-        LocalDate date = yearMonth.atDay(1);
+        LocalDate monthEndDate = yearMonth.atEndOfMonth();
 
-        int monthValue = yearMonth.getMonthValue();
-        int year  = yearMonth.getYear();
-        List<UserEntity> users = payRollAdapter.findUsersByPayrollId(payrollId, date);
+
+        List<UserEntity> users = payRollAdapter.findUsersByPayrollId(payrollId, monthEndDate);
         List<UserPayRollAmountModel> userPayrollList = new ArrayList<>();
         for (UserEntity user : users) {
             if (processedUserIds.contains(user.getUserId())) {
@@ -378,7 +377,7 @@ public class PayRollServiceImpl implements PayRollService {
             model.setMonthlyNetSalary(BigDecimal.ZERO);
             model.setTotalAmount(BigDecimal.ZERO);
 
-            model.setPayrollStatus(PayRollStatusEnum.PROCESSING);
+            model.setPayrollStatus(PayRollStatusEnum.NOTGENERATED);
             model.setNotes(null);
 
             userPayrollList.add(model);
@@ -393,6 +392,11 @@ public class PayRollServiceImpl implements PayRollService {
 
         Optional<UserPayRollAmountEntity> optExisting =
                 payRollAdapter.findUserPayrollAmountByUserIdAndMonth(userId, month);
+        if (optExisting.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Payroll cannot be updated until it is generated."
+            );
+        }
         UserPayRollAmountEntity existing = getUserPayrollAmountEntity(model, optExisting);
 
         BigDecimal incomingTotalAmount = model.getTotalAmount();
@@ -462,6 +466,9 @@ public class PayRollServiceImpl implements PayRollService {
         if (existing.getPayrollStatus() == PayRollStatusEnum.PAID) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Cannot edit payroll. Status is PAID.");
         }
+        if (model.getPayrollStatus() == PayRollStatusEnum.NOTGENERATED) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Payroll status cannot be changed to NOT_GENERATED.");
+        }
 
         if (existing.getPayrollStatus() == PayRollStatusEnum.APPROVED &&
                 model.getTotalAmount() != null &&
@@ -496,6 +503,14 @@ public class PayRollServiceImpl implements PayRollService {
                 unpaidCount++;
             }
         }
+        DateTimeFormatter formatter =
+                DateTimeFormatter.ofPattern("MMMM,yyyy", Locale.ENGLISH);
+
+        YearMonth yearMonth = YearMonth.parse(month, formatter);
+        LocalDate monthEndDate = yearMonth.atEndOfMonth();
+        List<String> users = payRollAdapter.findAllUsersByMonth(monthEndDate);
+        int processingCount = users.size()-(paidCount+unpaidCount+failedCount);
+        unpaidCount += Math.max(processingCount, 0);
         return new PayRollPaymentSummary(totalPayment, paidCount, unpaidCount, failedCount);
     }
 
