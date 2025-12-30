@@ -1207,28 +1207,74 @@ public class UserServiceImpl implements UserService {
         List<String> addedUserNames = new ArrayList<>();
         List<String> alreadyExistsUsers = new ArrayList<>();
 
-        // Validate all users first
-        for (String id : userIds) {
-            boolean exists = userAdapter.existsById(id);
-            if (!exists) {
-                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found with ID: " + id);
-            }
+//        Added for future reference
+
+//         Validate all users first
+//        for (String id : userIds) {
+//            boolean exists = userAdapter.existsById(id);
+//            if (!exists) {
+//                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found with ID: " + id);
+//            }
+//        }
+
+//        for (String id : userIds) {
+//            List<UserGroupEntity> existing = userAdapter.findByUserIdAndGroupId(id, addMemberMiddleware.getGroupId());
+//            UserEntity userEntity = userAdapter.findById(id).get();
+//
+//            if (!existing.isEmpty()) {
+//                alreadyExistsUsers.add(userEntity.getUserName());
+//                continue;
+//            }
+//            createUserGroup(new UserGroup(addMemberMiddleware.getGroupId(), id, addMemberMiddleware.getType()), orgId);
+//            addedUserNames.add(userEntity.getUserName());
+//        }
+
+        if (userIds == null || userIds.isEmpty()) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "User IDs must not be null or empty"
+            );
         }
 
-        for (String id : userIds) {
-            List<UserGroupEntity> existing = userAdapter.findByUserIdAndGroupId(id, addMemberMiddleware.getGroupId());
-            UserEntity userEntity = userAdapter.findById(id).get();
+        long existingCount = userAdapter.countExistingUsers(userIds);
 
-            if (!existing.isEmpty()) {
-                alreadyExistsUsers.add(userEntity.getUserName());
+        if (existingCount != userIds.size()) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "User not found with ID: "
+            );
+        }
+
+        List<UserEntity> users = userAdapter.findAllById(userIds);
+
+        List<UserGroupEntity> existingMappings =
+                userAdapter.findByGroupIdAndUserIdIn(addMemberMiddleware.getGroupId(), userIds);
+        Map<String, UserEntity> userMap = users.stream()
+                .collect(Collectors.toMap(UserEntity::getUserId, Function.identity()));
+
+        Set<String> existingUserIds = existingMappings.stream()
+                .map(ug -> ug.getUser().getUserId())
+                .collect(Collectors.toSet());
+
+        for (String id : userIds) {
+
+            UserEntity user = userMap.get(id);
+            if (user == null) continue;
+
+            if (existingUserIds.contains(id)) {
+                alreadyExistsUsers.add(user.getUserName());
                 continue;
             }
 
-            createUserGroup(new UserGroup(addMemberMiddleware.getGroupId(), id, addMemberMiddleware.getType()), orgId);
-            addedUserNames.add(userEntity.getUserName());
+            createUserGroup(
+                    new UserGroup(addMemberMiddleware.getGroupId(), id, addMemberMiddleware.getType()),
+                    orgId
+            );
+            addedUserNames.add(user.getUserName());
         }
 
-        String addedMessage = addedUserNames.isEmpty()
+
+            String addedMessage = addedUserNames.isEmpty()
                 ? ""
                 : "Successfully added users: " + String.join(", ", addedUserNames) + ".";
 

@@ -345,4 +345,13 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
     @Query("SELECT u FROM UserEntity u WHERE u.calendar.id IN :calendarIds")
     List<UserEntity> findUsersByCalendarIds(@Param("calendarIds") List<String> calendarIds);
 
+    @Query("""
+    SELECT COUNT(u.userId)
+    FROM UserEntity u
+    WHERE u.userId IN :userIds
+    """)
+    long countExistingUsers(@Param("userIds") List<String> userIds);
+
+
+
 }
