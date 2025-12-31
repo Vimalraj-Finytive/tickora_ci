@@ -116,7 +116,7 @@ public interface TimeOffRequestRepository extends JpaRepository<TimeOffRequestEn
     WHERE MONTH(r.startDate) = :month
       AND YEAR(r.startDate) = :year
       AND r.policy.compensation = :compensation
-      AND r.status = status
+      AND r.status = :status
       AND r.user.active = true""")
     List<TimeOffRequestEntity> findAllUnpaidRequest(
             @Param("month") int month,
