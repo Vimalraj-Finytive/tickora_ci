@@ -5,14 +5,13 @@ import com.uniq.tms.tms_microservice.modules.identityManagement.service.IdGenera
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.LeaveBalanceAdapter;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.MonthlySummaryEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.ReportType;
-import com.uniq.tms.tms_microservice.modules.payrollManagement.Listener.PayrollCacheListener;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.adapter.PayRollAdapter;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.entity.PayRollEntity;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.entity.PayRollSettingEntity;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.entity.UserPayRollAmountEntity;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.entity.UserPayRollEntity;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.enums.PayRollSettingEnum;
-import com.uniq.tms.tms_microservice.modules.payrollManagement.event.PayrollCreatedEvent;
+import com.uniq.tms.tms_microservice.shared.event.UserEvent;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.mapper.PayRollEntityMapper;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.model.*;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.enums.PayRollStatusEnum;
@@ -29,7 +28,6 @@ import com.uniq.tms.tms_microservice.shared.helper.AuthHelper;
 import com.uniq.tms.tms_microservice.shared.helper.CacheReloadHelper;
 import com.uniq.tms.tms_microservice.shared.security.cache.CacheKeyConfig;
 import com.uniq.tms.tms_microservice.shared.security.cache.CacheReloadHandlerRegistry;
-import com.uniq.tms.tms_microservice.shared.util.CacheEventPublisherUtil;
 import com.uniq.tms.tms_microservice.shared.util.CacheKeyUtil;
 import com.uniq.tms.tms_microservice.shared.util.ExportStatusTracker;
 import com.uniq.tms.tms_microservice.shared.util.ReportStyleUtil;
@@ -57,7 +55,6 @@ import java.nio.charset.StandardCharsets;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.concurrent.Flow;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -157,7 +154,7 @@ public class PayRollServiceImpl implements PayRollService {
         }
         payRollAdapter.saveAllUserPayroll(userPayRollList);
         log.info("reached service");
-        publisher.publishEvent(new PayrollCreatedEvent(orgId, authHelper.getSchema()));
+        publisher.publishEvent(new UserEvent(orgId, authHelper.getSchema()));
         log.info("return response");
         return entityMapper.toModel(payRollEntity);
     }
@@ -578,7 +575,7 @@ public class PayRollServiceImpl implements PayRollService {
         log.info("assignPayroll thread: {}", Thread.currentThread().getName());
         if (isRedisEnabled) {
             try {
-                publisher.publishEvent(new PayrollCreatedEvent(orgId,schema));
+                publisher.publishEvent(new UserEvent(orgId,schema));
                 log.info("User cache reload event published after assigned PayRoll to a user for orgId={}", orgId);
             } catch (Exception e) {
                 log.error("Failed to publish User cache reload event for orgId={}", orgId, e);
