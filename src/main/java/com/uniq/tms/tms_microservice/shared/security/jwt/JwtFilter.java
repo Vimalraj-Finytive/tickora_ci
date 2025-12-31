@@ -70,6 +70,14 @@ public class JwtFilter extends OncePerRequestFilter {
 
         String path = request.getRequestURI();
 
+        if (path.startsWith("/swagger-ui") ||
+                path.startsWith("/v3/api-docs") ||
+                path.startsWith("/swagger-resources") ||
+                path.startsWith("/webjars")) {
+            chain.doFilter(request, response);
+            return;
+        }
+
         if (!path.startsWith("/tms/")) {
             chain.doFilter(request, response);
             return;
