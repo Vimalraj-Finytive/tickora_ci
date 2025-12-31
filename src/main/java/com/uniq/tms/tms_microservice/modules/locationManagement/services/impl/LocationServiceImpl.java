@@ -14,6 +14,7 @@ import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
 import com.uniq.tms.tms_microservice.shared.dto.CachedData;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.OrganizationAdapter;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.OrganizationEntity;
+import com.uniq.tms.tms_microservice.shared.event.LocationEvent;
 import com.uniq.tms.tms_microservice.shared.exception.CommonExceptionHandler;
 import com.uniq.tms.tms_microservice.shared.security.cache.CacheKeyConfig;
 import com.uniq.tms.tms_microservice.shared.security.cache.CacheReloadHandlerRegistry;
@@ -143,13 +144,7 @@ public class LocationServiceImpl implements LocationService {
             }
             locationAdapter.saveUserLocation(userLocationEntities);
             if (isRedisEnabled) {
-                CacheEventPublisherUtil.syncReloadThenPublish(
-                        publisher,
-                        cacheKeyConfig.getLocation(),
-                        orgId,
-                        schema,
-                        cacheReloadHandlerRegistry
-                );
+                publisher.publishEvent(new LocationEvent(orgId, schema));
                 log.info("LocationCacheReloadEvent published after location Added");
             } else {
                 log.info("Redis is not enabled or RedisTemplate is null. Skipping cache add location reload.");
@@ -177,6 +172,7 @@ public class LocationServiceImpl implements LocationService {
     }
 
     @Override
+    @Transactional
     public ApiResponse updateLocation(String orgId, LocationList location) {
         String schema = TenantUtil.getCurrentTenant();
         List<Long> locationIds = location.getLocationId();
@@ -215,13 +211,7 @@ public class LocationServiceImpl implements LocationService {
 
         List<LocationEntity> savedEntities = locationAdapter.updateMultipleLocations(updatedEntities);
         if (isRedisEnabled) {
-            CacheEventPublisherUtil.syncReloadThenPublish(
-                    publisher,
-                    cacheKeyConfig.getLocation(),
-                    orgId,
-                    schema,
-                    cacheReloadHandlerRegistry
-            );
+            publisher.publishEvent(new LocationEvent(orgId, schema));
             log.info("LocationCacheReloadEvent published after bulk update");
         } else {
             log.info("Redis is not enabled or RedisTemplate is null. Skipping cache update Location reload.");
@@ -304,13 +294,7 @@ public class LocationServiceImpl implements LocationService {
 
         locationAdapter.deleteLocation(locationIdList, orgId);
         if (isRedisEnabled) {
-            CacheEventPublisherUtil.syncReloadThenPublish(
-                    publisher,
-                    cacheKeyConfig.getLocation(),
-                    orgId,
-                    schema,
-                    cacheReloadHandlerRegistry
-            );
+            publisher.publishEvent(new LocationEvent(orgId, schema));
             log.info("Location deleted and references updated. Cache reloaded.");
         } else {
             log.info("Redis is not enabled or RedisTemplate is null. Skipping cache delete location reload.");
