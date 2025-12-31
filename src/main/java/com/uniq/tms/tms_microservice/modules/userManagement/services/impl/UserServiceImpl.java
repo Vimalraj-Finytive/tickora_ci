@@ -636,17 +636,18 @@ public class UserServiceImpl implements UserService {
     public ApiResponse<UserDto> createUser(UserDto userDto, SecondaryDetailsDto secondaryDetailsDto, String organizationId) {
         String schema = TenantUtil.getCurrentTenant();
         log.info("Checking if the user is student: {}", userDto.getRoleId());
-        Optional<RoleEntity> roleName = organizationAdapter.findRoleById(userDto.getRoleId());
-        log.info("Role from DB for creating user: {}", roleName.get().getName());
+        User userMiddleware = userDtoMapper.toMiddleware(userDto);
+        RoleEntity role = roleRepository.findById(userMiddleware.getRoleId())
+                .orElseThrow(() -> new RuntimeException("Role not found with ID: " + userMiddleware.getRoleId()));
+        log.info("Role from DB for creating user: {}", role.getName());
         String key = organizationCacheService.getPrivilegeKey(PrivilegeConstants.HAVE_SECONDARY_DETAILS);
-        boolean hasSecondaryDetailsPrivilege = rolePrivilegeHelper.roleHasPrivilege(roleName.get().getName(), key);
+        boolean hasSecondaryDetailsPrivilege = rolePrivilegeHelper.roleHasPrivilege(role.getName(), key);
         log.info("hasSecondaryDetailsPrivilege: {}", hasSecondaryDetailsPrivilege);
         if (hasSecondaryDetailsPrivilege) {
             validateSecondaryUser(secondaryDetailsDto);
         }
         validatePrimaryUser(userDto);
         log.info("Creating user: {}", userDto.getUserName());
-        User userMiddleware = userDtoMapper.toMiddleware(userDto);
         UserEntity entity = userEntityMapper.toEntity(userMiddleware);
         entity.setOrganizationId(organizationId);
         String customUserId = idGenerationService.generateNextUserId(organizationId);
@@ -654,8 +655,6 @@ public class UserServiceImpl implements UserService {
         if (isBlank(userMiddleware.getRoleId())) {
             throw new CommonExceptionHandler.BadRequestException("roleId must not be null");
         }
-        RoleEntity role = roleRepository.findById(userMiddleware.getRoleId())
-                .orElseThrow(() -> new RuntimeException("Role not found with ID: " + userMiddleware.getRoleId()));
 
         entity.setRole(role);
         String defaultPassword = PasswordUtil.generateDefaultPassword();
@@ -691,8 +690,8 @@ public class UserServiceImpl implements UserService {
         UserEntity savedUserEntity = userAdapter.saveUser(entity);
         TimeOffPolicyEntity timeOffPolicyEntity = timeOffPolicyAdapter.findDefaultPolicy();
         assignPolicy(timeOffPolicyEntity.getPolicyId(), customUserId, LocalDate.now());
-        List<Long> locationIds = null;
-        List<Long> groupIds = null;
+        List<Long> locationIds = Collections.emptyList();
+        List<Long> groupIds = Collections.emptyList();
         SecondaryDetailsEntity saveSecondaryUser = null;
         if (hasSecondaryDetailsPrivilege) {
             log.info("Saving secondary details: {}", secondaryDetailsDto.getUserName());
@@ -752,13 +751,14 @@ public class UserServiceImpl implements UserService {
         if (!isBlank(userDto.getLocationId())) {
             log.info("Adding user to location: {}", userDto.getLocationId());
             List<UserLocationEntity> userLocationEntities = new ArrayList<>();
-            for (Long locId : userDto.getLocationId()) {
-                LocationEntity locations = locationRepository.findById(locId)
-                        .orElseThrow(() -> new NoSuchElementException("Location not found with ID: " + locId));
-
+            List<LocationEntity> locations = locationAdapter.findAllLocationById(userDto.getLocationId());
+            if (locations.size() != userDto.getLocationId().size()) {
+                throw new NoSuchElementException("Location not found ");
+            }
+            for (LocationEntity location : locations) {
                 UserLocationEntity userLocation = new UserLocationEntity();
                 userLocation.setUser(savedUserEntity);
-                userLocation.setLocation(locations);
+                userLocation.setLocation(location);
                 userLocationEntities.add(userLocation);
             }
             locationAdapter.saveUserLocation(userLocationEntities);
@@ -774,22 +774,20 @@ public class UserServiceImpl implements UserService {
                     .forEach(id -> assignPolicy(id, customUserId, startDate));
         }
 
-
         if (!isBlank(userDto.getGroupId())) {
             log.info("Adding user to group: {}", userDto.getGroupId());
             List<UserGroupEntity> userGroupEntities = new ArrayList<>();
-            for (Long grpId : userDto.getGroupId()) {
-                GroupEntity groups = groupRepository.findById(grpId)
-                        .orElseThrow(() -> new NoSuchElementException("Group not found with ID: " + grpId));
-
+            List<GroupEntity> groups = userAdapter.findGroupsByIds(new HashSet<>(userDto.getGroupId()));
+            if (groups.size() != userDto.getGroupId().size()) {
+                throw new NoSuchElementException("Group not found");
+            }
+            for (GroupEntity group : groups) {
                 UserGroupEntity userGroup = new UserGroupEntity();
                 userGroup.setUser(savedUserEntity);
-                userGroup.setGroup(groups);
+                userGroup.setGroup(group);
                 userGroupEntities.add(userGroup);
             }
-            for (UserGroupEntity userGroup : userGroupEntities) {
-                userAdapter.saveUserGroup(userGroup);
-            }
+            userAdapter.saveAllUserGroups(userGroupEntities);
             groupIds = userGroupEntities.stream()
                     .map(userGroup -> userGroup.getGroup().getGroupId())
                     .toList();
@@ -1206,29 +1204,6 @@ public class UserServiceImpl implements UserService {
         List<String> userIds = addMemberMiddleware.getUserId();
         List<String> addedUserNames = new ArrayList<>();
         List<String> alreadyExistsUsers = new ArrayList<>();
-
-//        Added for future reference
-
-//         Validate all users first
-//        for (String id : userIds) {
-//            boolean exists = userAdapter.existsById(id);
-//            if (!exists) {
-//                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found with ID: " + id);
-//            }
-//        }
-
-//        for (String id : userIds) {
-//            List<UserGroupEntity> existing = userAdapter.findByUserIdAndGroupId(id, addMemberMiddleware.getGroupId());
-//            UserEntity userEntity = userAdapter.findById(id).get();
-//
-//            if (!existing.isEmpty()) {
-//                alreadyExistsUsers.add(userEntity.getUserName());
-//                continue;
-//            }
-//            createUserGroup(new UserGroup(addMemberMiddleware.getGroupId(), id, addMemberMiddleware.getType()), orgId);
-//            addedUserNames.add(userEntity.getUserName());
-//        }
-
         if (userIds == null || userIds.isEmpty()) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
