@@ -12,6 +12,7 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.services.TimeOffPol
 import com.uniq.tms.tms_microservice.modules.userManagement.adapter.UserAdapter;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
 import com.uniq.tms.tms_microservice.shared.dto.EnumModel;
+import com.uniq.tms.tms_microservice.shared.event.UserEvent;
 import com.uniq.tms.tms_microservice.shared.helper.AuthHelper;
 import com.uniq.tms.tms_microservice.shared.security.cache.CacheKeyConfig;
 import com.uniq.tms.tms_microservice.shared.security.cache.CacheReloadHandlerRegistry;
@@ -367,13 +368,7 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
         }
         if (isRedisEnabled) {
             try {
-                CacheEventPublisherUtil.syncReloadThenPublish(
-                        publisher,
-                        cacheKeyConfig.getUsers(),
-                        orgId,
-                        schema,
-                        cacheReloadHandlerRegistry
-                );
+                publisher.publishEvent(new UserEvent(orgId, authHelper.getSchema()));
                 log.info(
                         "User cache reloaded after policy assignment | orgId={}",
                         orgId
@@ -672,13 +667,15 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
                             entity.getValidityStartDate().withDayOfMonth(1),
                             entity.getValidityEndDate().withDayOfMonth(1)
                     ) + 1;
-                    newStart = entity.getValidityStartDate().plusMonths(months);
+                    newStart = entity.getValidityStartDate().plusMonths(months).withDayOfMonth(1);
                     newEnd = entity.getValidityEndDate().plusMonths(months);
+                    newEnd = YearMonth.from(newEnd).atEndOfMonth();
                 }else {
                     Period diff = Period.between(entity.getValidityStartDate(), entity.getValidityEndDate());
                     long years = diff.getYears() + 1;
-                    newStart = entity.getValidityStartDate().plusYears(years);
+                    newStart = entity.getValidityStartDate().plusYears(years).withDayOfYear(1);;
                     newEnd = entity.getValidityEndDate().plusYears(years);
+                    newEnd = newEnd.withDayOfYear(newEnd.lengthOfYear());
                 }
                 log.info("startDate and endDate");
                 copy.setPolicyId(policyId);
@@ -812,13 +809,7 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
         }
         if (isRedisEnabled) {
             try {
-                CacheEventPublisherUtil.syncReloadThenPublish(
-                        publisher,
-                        cacheKeyConfig.getUsers(),
-                        orgId,
-                        schema,
-                        cacheReloadHandlerRegistry
-                );
+                publisher.publishEvent(new UserEvent(orgId, authHelper.getSchema()));
                 log.info("User cache reload event published after Edited Policies fo a user for orgId={}", orgId);
             } catch (Exception e) {
                 log.error("Failed to publish User cache reload event for orgId={}", orgId, e);

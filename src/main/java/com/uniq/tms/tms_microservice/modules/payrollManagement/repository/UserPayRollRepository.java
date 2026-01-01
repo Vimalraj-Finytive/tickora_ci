@@ -4,12 +4,15 @@ import com.uniq.tms.tms_microservice.modules.payrollManagement.entity.UserPayRol
 import com.uniq.tms.tms_microservice.modules.payrollManagement.entity.UserPayRollEntity;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.model.UserPayRollAmountModel;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.projection.UserPayRollAmount;
+import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
 import io.lettuce.core.dynamic.annotation.Param;
 import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
+
+import java.time.LocalDate;
 import java.util.List;
 
 @Repository
@@ -39,4 +42,19 @@ public interface UserPayRollRepository extends JpaRepository<UserPayRollEntity, 
     WHERE LOWER(month) = LOWER(:month)
     """, nativeQuery = true)
     List<UserPayRollAmount> findAllByMonth(@Param("month") String month);
+
+    @Query("""
+        SELECT upr.user
+        FROM UserPayRollEntity upr
+        WHERE upr.payroll.id = :payrollId
+        AND upr.user.dateOfJoining <= :date
+    """)
+    List<UserEntity> findUsersByPayrollId(@Param("payrollId") String payrollId, @Param("date") LocalDate date);
+
+    @Query("""
+        SELECT upr.user.userId
+        FROM UserPayRollEntity upr
+        WHERE upr.user.dateOfJoining <= :date
+    """)
+    List<String> findAllUsersByMonth(@Param("date") LocalDate date);
 }

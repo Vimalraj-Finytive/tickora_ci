@@ -86,4 +86,10 @@ public class CalendarController {
         calendarFacade.deleteHolidayById(calendarId,holidayId);
         return ResponseEntity.noContent().build();
     }
+
+    @GetMapping("/holidays")
+    public ResponseEntity<ApiResponse<List<HolidayDto>>> upComingHolidays(){
+        ApiResponse<List<HolidayDto>> holidays =calendarFacade.upComingHolidays();
+        return ResponseEntity.status(holidays.getStatusCode()).body(holidays);
+    }
 }

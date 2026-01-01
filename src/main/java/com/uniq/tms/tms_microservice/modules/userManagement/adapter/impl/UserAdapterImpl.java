@@ -676,4 +676,14 @@ public class UserAdapterImpl implements UserAdapter {
     public List<UserEntity> findByCalendar_CalendarIdIn(List<String> calendarIds) {
         return userRepository.findUsersByCalendarIds(calendarIds);
     }
+
+    @Override
+    public Long countExistingUsers(List<String> userIds) {
+        return userRepository.countExistingUsers(userIds);
+    }
+
+    @Override
+    public List<UserGroupEntity> findByGroupIdAndUserIdIn(Long groupId, List<String> userIds) {
+        return userGroupRepository.findByGroupIdAndUserIdIn(groupId, userIds);
+    }
 }
