@@ -295,4 +295,12 @@ public class CalendarAdapterImpl implements CalendarAdapter {
     public List<CalendarEntity> findAllCalendar() {
         return calendarRepository.findAll();
     }
+
+    @Override
+    public List<CalendarHolidayEntity> findByCalendarAndTwoYears(String calendarId) {
+        String currentYear = String.valueOf(LocalDate.now().getYear());
+        String nextYear = String.valueOf(LocalDate.now().getYear() + 1);
+        return calendarHolidayRepository.findByCalendarAndTwoYears(calendarId,currentYear,nextYear);
+    }
+
 }
