@@ -37,8 +37,15 @@ public interface LeaveBalanceRepository extends JpaRepository<LeaveBalanceEntity
             """)
     List<LeaveBalanceEntity> findByPolicyId(@Param("policyId") String policyId);
 
-    @Query("SELECT lb FROM LeaveBalanceEntity lb JOIN FETCH lb.policy WHERE lb.user.userId = :userId AND lb.active=true")
-    List<LeaveBalanceEntity> findLeaveBalanceByUserId(@Param("userId") String userId);
+    @Query("""
+            SELECT lb FROM LeaveBalanceEntity lb
+            JOIN FETCH lb.policy
+            WHERE lb.user.userId = :userId
+            AND lb.active = true
+            AND lb.periodStartDate <= :endOfYear
+            AND lb.periodEnd >= :startOfYear
+            """)
+    List<LeaveBalanceEntity> findLeaveBalanceByUserId(@Param("userId") String userId, @Param("startOfYear") LocalDate startOfYear, @Param("endOfYear") LocalDate endOfYear);
 
     @Query("SELECT lb FROM LeaveBalanceEntity lb " +
             "JOIN FETCH lb.policy p " +
