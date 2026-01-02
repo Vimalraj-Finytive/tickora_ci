@@ -1,10 +1,14 @@
 package com.uniq.tms.tms_microservice.modules.userManagement.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import lombok.extern.slf4j.Slf4j;
+
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 
+@Slf4j
 public class UserResponseDto {
 
     private String userId;

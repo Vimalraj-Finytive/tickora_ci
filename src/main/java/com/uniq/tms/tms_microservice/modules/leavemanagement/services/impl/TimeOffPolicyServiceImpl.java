@@ -443,6 +443,12 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
                             .map(timeOffPolicyAdapter::findUsernameByUserId)
                             .toList();
                     model.setAssignedUsernames(usernames);
+                    if (model.getValidityEndDate() != null &&model.getValidityEndDate().isBefore(LocalDate.now())){
+                        model.setValidityStatus(ValidityStatus.EXPIRED);
+                    }
+                    else {
+                        model.setValidityStatus(ValidityStatus.ACTIVE);
+                    }
                     return model;
                 })
                 .toList();
@@ -459,6 +465,7 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
             }
             return entities.stream()
                     .map(timeOffPolicyEntityMapper::toModel)
+                    .filter(p -> !p.getValidityEndDate().isBefore(LocalDate.now()))
                     .collect(Collectors.toList());
         } catch (ResponseStatusException e) {
             throw e;

@@ -466,9 +466,9 @@ public class PayRollServiceImpl implements PayRollService {
         if (existing.getPayrollStatus() == PayRollStatusEnum.PAID) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Cannot edit payroll. Status is PAID.");
         }
-        if (model.getPayrollStatus() == PayRollStatusEnum.NOT_GENERATED) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Payroll status cannot be changed to NOT_GENERATED.");
-        }
+//        if (model.getPayrollStatus() == PayRollStatusEnum.NOT_GENERATED) {
+//            throw new ResponseStatusException(HttpStatus.CONFLICT, "Payroll status cannot be changed to NOT_GENERATED.");
+//        }
 
         if (existing.getPayrollStatus() == PayRollStatusEnum.APPROVED &&
                 model.getTotalAmount() != null &&

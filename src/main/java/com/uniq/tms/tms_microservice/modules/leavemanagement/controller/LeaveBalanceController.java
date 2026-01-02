@@ -22,17 +22,18 @@ public class LeaveBalanceController{
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<LeaveBalanceDto>>> getLeaveBalance(
-            @RequestHeader("Authorization") String authHeader){
+            @RequestHeader("Authorization") String authHeader,@RequestParam("year") String year){
         String userId = authHelper.getUserId();
-        ApiResponse<List<LeaveBalanceDto>> balance = timeOffFacade.getLeaveBalance(userId);
+        ApiResponse<List<LeaveBalanceDto>> balance = timeOffFacade.getLeaveBalance(userId,year);
         return ResponseEntity.status(balance.getStatusCode()).body(balance);
     }
 
     @GetMapping("/{userId}")
     public ResponseEntity<ApiResponse<List<LeaveBalanceDto>>> getLeaveBalance(
             @RequestHeader("Authorization")String token,
-            @PathVariable("userId") String userId) {
-            ApiResponse<List<LeaveBalanceDto>> response = timeOffFacade.getLeaveBalance(userId);
+            @PathVariable("userId") String userId,
+            @RequestParam("year")String year) {
+            ApiResponse<List<LeaveBalanceDto>> response = timeOffFacade.getLeaveBalance(userId,year);
             return ResponseEntity.status(response.getStatusCode()).body(response);
         }
 
