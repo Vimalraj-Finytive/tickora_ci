@@ -59,8 +59,12 @@ public class LeaveBalanceAdapterImpl implements LeaveBalanceAdapter {
     }
 
 
-    public List<LeaveBalanceEntity> findBalance(String userId) {
-        return leaveBalanceRepo.findLeaveBalanceByUserId( userId);
+    public List<LeaveBalanceEntity> findBalance(String userId,String year) {
+        int yr = Integer.parseInt(year);
+        LocalDate startOfYear = LocalDate.of(yr, 1, 1);
+        LocalDate endOfYear   = LocalDate.of(yr, 12, 31);
+
+        return leaveBalanceRepo.findLeaveBalanceByUserId(userId, startOfYear, endOfYear);
     }
 
     @Override

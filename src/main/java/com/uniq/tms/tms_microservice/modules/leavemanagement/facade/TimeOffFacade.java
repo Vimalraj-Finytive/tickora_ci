@@ -142,8 +142,8 @@ public class TimeOffFacade {
               return new ApiResponse<>(200,"Compensation fetched successfully",dto);
     }
 
-    public ApiResponse<List<LeaveBalanceDto>> getLeaveBalance(String userId) {
-        List<LeaveBalanceModel> model = leaveBalanceService.getLeaveBalance(userId);
+    public ApiResponse<List<LeaveBalanceDto>> getLeaveBalance(String userId,String year) {
+        List<LeaveBalanceModel> model = leaveBalanceService.getLeaveBalance(userId,year);
         List<LeaveBalanceDto> dto = timeoffPolicyDtoMapper.toDtoLeaveList(model);
         return new ApiResponse<>(200, "leave balance fetched successfully", dto);
     }
