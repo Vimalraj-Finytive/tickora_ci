@@ -6,9 +6,9 @@ import java.util.List;
 
 public interface LeaveBalanceService {
 
-    List<LeaveBalanceModel> getLeaveBalance(String userId);
+    List<LeaveBalanceModel> getLeaveBalance(String userId,String year);
     void updateMonthlyLeaveBalance();
     void updateYearlyLeaveBalance();
-    void  updateMonthlyLeaveSummary();
+    void  updateMonthlyLeaveSummary(String orgId);
     void updateDailyLeaveSummary();
 }

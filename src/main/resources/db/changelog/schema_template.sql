@@ -260,7 +260,7 @@ CREATE TABLE user_history (
     active_status VARCHAR(20) NOT NULL,
     is_updated BOOLEAN NOT NULL DEFAULT FALSE,
     comments TEXT,
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- ===========================================================

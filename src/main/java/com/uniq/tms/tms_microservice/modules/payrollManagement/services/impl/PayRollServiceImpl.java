@@ -25,9 +25,6 @@ import com.uniq.tms.tms_microservice.modules.timesheetManagement.entity.Timeshee
 import com.uniq.tms.tms_microservice.modules.userManagement.adapter.UserAdapter;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
 import com.uniq.tms.tms_microservice.shared.helper.AuthHelper;
-import com.uniq.tms.tms_microservice.shared.helper.CacheReloadHelper;
-import com.uniq.tms.tms_microservice.shared.security.cache.CacheKeyConfig;
-import com.uniq.tms.tms_microservice.shared.security.cache.CacheReloadHandlerRegistry;
 import com.uniq.tms.tms_microservice.shared.util.CacheKeyUtil;
 import com.uniq.tms.tms_microservice.shared.util.ExportStatusTracker;
 import com.uniq.tms.tms_microservice.shared.util.ReportStyleUtil;
@@ -40,6 +37,7 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.core.io.ClassPathResource;
@@ -77,17 +75,14 @@ public class PayRollServiceImpl implements PayRollService {
     private final ReportStyleUtil reportStyleUtil;
     private final ExportStatusTracker exportStatusTracker;
     private final ApplicationEventPublisher publisher;
-    private final CacheKeyConfig cacheKeyConfig;
-    private final CacheReloadHandlerRegistry cacheReloadHandlerRegistry;
     private final AuthHelper authHelper;
-    private final CacheReloadHelper cacheReloadHelper;
 
     public PayRollServiceImpl(PayRollAdapter payRollAdapter, PayRollEntityMapper entityMapper, UserAdapter userAdapter,
                               IdGenerationService idGenerationService, TimesheetAdapter timesheetAdapter,
                               PayRollEntityMapper payRollEntityMapper, LeaveBalanceAdapter leaveBalanceAdapter,
                               @Nullable RedisTemplate<String, Object> redisTemplate, CacheKeyUtil cacheKeyUtil,
                               ReportStyleUtil reportStyleUtil, ExportStatusTracker exportStatusTracker,
-                              ApplicationEventPublisher publisher, CacheKeyConfig cacheKeyConfig, CacheReloadHandlerRegistry cacheReloadHandlerRegistry, AuthHelper authHelper, CacheReloadHelper cacheReloadHelper) {
+                              ApplicationEventPublisher publisher, AuthHelper authHelper) {
         this.payRollAdapter = payRollAdapter;
         this.entityMapper = entityMapper;
         this.userAdapter = userAdapter;
@@ -100,10 +95,7 @@ public class PayRollServiceImpl implements PayRollService {
         this.reportStyleUtil = reportStyleUtil;
         this.exportStatusTracker = exportStatusTracker;
         this.publisher = publisher;
-        this.cacheKeyConfig = cacheKeyConfig;
-        this.cacheReloadHandlerRegistry = cacheReloadHandlerRegistry;
         this.authHelper = authHelper;
-        this.cacheReloadHelper = cacheReloadHelper;
     }
 
     @Value("${csv.payroll.download.dir}")
@@ -182,8 +174,13 @@ public class PayRollServiceImpl implements PayRollService {
         List<UserPayRollAmountEntity> userPayrollAmountList = new ArrayList<>();
         for (UserPayRollEntity entity : entities) {
             log.info("loop started");
-            UserPayRollAmountEntity userPayrollAmount = new UserPayRollAmountEntity();
             UserEntity user = entity.getUser();
+            MonthlySummaryEntity monthlySummary = unpaidMap.get(user.getUserId());
+            if (monthlySummary == null) {
+                log.warn("MonthlySummary not found for user: {}. Skipping payroll calculation.", user.getUserId());
+                continue;
+            }
+            UserPayRollAmountEntity userPayrollAmount = new UserPayRollAmountEntity();
             userPayrollAmount.setUser(user);
             userPayrollAmount.setPayroll(entity.getPayroll());
             LocalDate localDate = LocalDate.of(year, month, 1);
@@ -193,7 +190,6 @@ public class PayRollServiceImpl implements PayRollService {
             List<TimesheetEntity> timesheetEntities = timesheetAdapter.getTimesheetByUserIds(entity.getUser().getUserId(), year, month);
             log.info("before rest day");
             log.info("rest day");
-            MonthlySummaryEntity monthlySummary = unpaidMap.get(user.getUserId());
             int paidLeave = monthlySummary.getFullDayUnits() - monthlySummary.getUnpaidLeavesTaken();
             int restDays = daysInMonth - monthlySummary.getTotalWorkingDays();
             Integer regularDays = restDays + paidLeave + monthlySummary.getTotalPresentDays();
@@ -360,30 +356,36 @@ public class PayRollServiceImpl implements PayRollService {
             if (processedUserIds.contains(user.getUserId())) {
                 continue;
             }
-            UserPayRollAmountModel model = new UserPayRollAmountModel();
-
-            model.setUserId(user.getUserId());
-            model.setUserName(user.getUserName());
-
-            model.setUnpaidLeaveDeduction(BigDecimal.ZERO);
-            model.setRegularDays(0);
-            model.setRegularHrs(BigDecimal.ZERO);
-            model.setOvertimeHrs(BigDecimal.ZERO);
-            model.setTotalHrs(BigDecimal.ZERO);
-
-            model.setRegularPayrollAmount(BigDecimal.ZERO);
-            model.setOvertimePayrollAmount(BigDecimal.ZERO);
-            model.setTotalPayrollAmount(BigDecimal.ZERO);
-            model.setMonthlyNetSalary(BigDecimal.ZERO);
-            model.setTotalAmount(BigDecimal.ZERO);
-
-            model.setPayrollStatus(PayRollStatusEnum.NOT_GENERATED);
-            model.setNotes(null);
+            UserPayRollAmountModel model = getUserPayRollAmountModel(user);
 
             userPayrollList.add(model);
         }
 
         return userPayrollList;
+    }
+
+    @NotNull
+    private static UserPayRollAmountModel getUserPayRollAmountModel(UserEntity user) {
+        UserPayRollAmountModel model = new UserPayRollAmountModel();
+
+        model.setUserId(user.getUserId());
+        model.setUserName(user.getUserName());
+
+        model.setUnpaidLeaveDeduction(BigDecimal.ZERO);
+        model.setRegularDays(0);
+        model.setRegularHrs(BigDecimal.ZERO);
+        model.setOvertimeHrs(BigDecimal.ZERO);
+        model.setTotalHrs(BigDecimal.ZERO);
+
+        model.setRegularPayrollAmount(BigDecimal.ZERO);
+        model.setOvertimePayrollAmount(BigDecimal.ZERO);
+        model.setTotalPayrollAmount(BigDecimal.ZERO);
+        model.setMonthlyNetSalary(BigDecimal.ZERO);
+        model.setTotalAmount(BigDecimal.ZERO);
+
+        model.setPayrollStatus(PayRollStatusEnum.NOT_GENERATED);
+        model.setNotes(null);
+        return model;
     }
 
     @Override
