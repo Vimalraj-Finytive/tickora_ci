@@ -1077,6 +1077,8 @@ public class UserServiceImpl implements UserService {
         String userCacheKey = cacheKeyUtil.getMemberKey(orgId, schema);
         String roleField = role.toLowerCase();
         log.info("Fetching from cache key: {}, field: {}", userCacheKey, roleField);
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Kolkata"));
+
         try {
             //Try fetching from Redis first
             if (redisTemplate != null) {
@@ -1084,7 +1086,9 @@ public class UserServiceImpl implements UserService {
 
                 if (cachedObj instanceof List<?> cachedList && !cachedList.isEmpty()) {
                     log.info("Cache hit | orgId={}, role={}", orgId, role);
-                    return (List<UserResponseDto>) cachedList;
+                    List<UserResponseDto> users=(List<UserResponseDto>) cachedList;
+                    users.forEach(user -> filterActivePolicies(user, today));
+                    return users;
                 } else {
                     log.warn("Cache miss or empty list | orgId={}, role={}", orgId, role);
                 }
@@ -1097,6 +1101,7 @@ public class UserServiceImpl implements UserService {
             List<UserResponseDto> freshUsers = roleMap.get(role.toUpperCase());
             if (freshUsers != null && !freshUsers.isEmpty()) {
                 log.info("Returning fresh users from DB for orgId={}, role={}", orgId, role);
+                freshUsers.forEach(user -> filterActivePolicies(user, today));
                 return freshUsers;
             }
         } catch (Exception e) {
@@ -1478,11 +1483,14 @@ public class UserServiceImpl implements UserService {
             ));
         }
 
-        // Step 6 — Single policy for profile (first one)
-        UserPolicyDto singlePolicy =
-                user.getPolicies() != null && !user.getPolicies().isEmpty()
-                        ? user.getPolicies().getFirst()
-                        : null;
+        LocalDate today = LocalDate.now();
+        List<UserPolicyDto> policies =
+                user.getPolicies() != null
+                        ? user.getPolicies().stream()
+                        .filter(p -> (p.getValidFrom() == null || !p.getValidFrom().isAfter(today)) &&
+                                (p.getValidTo() == null || !p.getValidTo().isBefore(today)))
+                        .toList()
+                        : Collections.emptyList();
 
         // Step 7 — Build Profile Response
         return new UserProfileResponseDto(
@@ -1500,7 +1508,7 @@ public class UserServiceImpl implements UserService {
                 user.getCalendarName(),
                 user.getRequestApproverName(),
                 user.getPayrollName(),
-                (List<UserPolicyDto>) singlePolicy,
+                policies,
                 parentDtos
         );
     }
@@ -2421,6 +2429,23 @@ public class UserServiceImpl implements UserService {
             existingUser.setCalendar(calendar);
             log.info("Updated calendar for user {} : {} → {}", existingUser.getUserId(),existingUser.getCalendar().getId(), newCalendarId);
         }
+    }
+
+    private void filterActivePolicies(UserResponseDto user, LocalDate today) {
+
+        if (user.getPolicies() == null) {
+            return;
+        }
+
+        user.setPolicies(
+                user.getPolicies()
+                        .stream()
+                        .filter(p ->
+                                p.getValidTo() == null ||          // custom / lifetime policy
+                                        !p.getValidTo().isBefore(today)   // today or future
+                        )
+                        .toList()
+        );
     }
 
 }

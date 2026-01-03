@@ -61,8 +61,8 @@ public class LeaveBalanceServiceImpl implements LeaveBalanceService {
     }
 
     @Override
-    public List<LeaveBalanceModel> getLeaveBalance(String userId) {
-        List<LeaveBalanceEntity> entities = leaveBalanceAdapter.findBalance(userId);
+    public List<LeaveBalanceModel> getLeaveBalance(String userId,String year) {
+        List<LeaveBalanceEntity> entities = leaveBalanceAdapter.findBalance(userId,year);
         return timeOffPolicyEntityMapper.toBalanceModelList(entities);
     }
 
