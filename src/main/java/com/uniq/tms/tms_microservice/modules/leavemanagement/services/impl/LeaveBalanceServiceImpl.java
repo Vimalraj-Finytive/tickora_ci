@@ -5,23 +5,16 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.MonthlySumma
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeOffPolicyEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeOffRequestEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.*;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.projection.CalendarHolidayProjection;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.record.UserPolicyKey;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.LeaveBalanceEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.mapper.TimeOffPolicyEntityMapper;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.LeaveBalanceModel;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.record.UserPolicyProjection;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.services.LeaveBalanceService;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.adapter.TimesheetAdapter;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.entity.TimesheetEntity;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.enums.TimesheetStatusEnum;
 import com.uniq.tms.tms_microservice.modules.userManagement.adapter.UserAdapter;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
-import com.uniq.tms.tms_microservice.modules.userManagement.model.User;
-import com.uniq.tms.tms_microservice.modules.userManagement.projections.UserCalendarProjection;
 import com.uniq.tms.tms_microservice.modules.userManagement.projections.UserHolidayProjection;
-import com.uniq.tms.tms_microservice.modules.userManagement.services.UserService;
-import com.uniq.tms.tms_microservice.shared.helper.AuthHelper;
 import com.uniq.tms.tms_microservice.shared.helper.TimesheetHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,23 +40,18 @@ public class LeaveBalanceServiceImpl implements LeaveBalanceService {
        private final TimeOffRequestAdapter timeOffRequestAdapter;
        private final UserPolicyAdapter userPolicyAdapter;
        private final TimesheetAdapter timesheetAdapter;
-       private final CalendarAdapter calendarAdapter;
        private final TimesheetHelper timesheetHelper;
        private final UserAdapter userAdapter;
-       private final AuthHelper authHelper;
-       private final UserService userService;
 
-    public LeaveBalanceServiceImpl(LeaveBalanceAdapter leaveBalanceAdapter, TimeOffPolicyEntityMapper timeOffPolicyEntityMapper, TimeOffRequestAdapter timeOffRequestAdapter, UserPolicyAdapter userPolicyAdapter, TimesheetAdapter timesheetAdapter, CalendarAdapter calendarAdapter, TimesheetHelper timesheetHelper, UserAdapter userAdapter, AuthHelper authHelper, UserService userService) {
+    public LeaveBalanceServiceImpl(LeaveBalanceAdapter leaveBalanceAdapter, TimeOffPolicyEntityMapper timeOffPolicyEntityMapper, TimeOffRequestAdapter timeOffRequestAdapter, UserPolicyAdapter userPolicyAdapter,
+                                   TimesheetAdapter timesheetAdapter, TimesheetHelper timesheetHelper, UserAdapter userAdapter) {
         this.leaveBalanceAdapter = leaveBalanceAdapter;
         this.timeOffPolicyEntityMapper = timeOffPolicyEntityMapper;
         this.timeOffRequestAdapter = timeOffRequestAdapter;
         this.userPolicyAdapter = userPolicyAdapter;
         this.timesheetAdapter = timesheetAdapter;
-        this.calendarAdapter = calendarAdapter;
         this.timesheetHelper = timesheetHelper;
         this.userAdapter = userAdapter;
-        this.authHelper = authHelper;
-        this.userService = userService;
     }
 
     @Override
@@ -116,7 +104,7 @@ public class LeaveBalanceServiceImpl implements LeaveBalanceService {
             log.info("monthly");
             if (type == AccrualType.MONTHLY) {
                 next.setPeriodStartDate(today);
-                LocalDate periodEnd = current.getPeriodEnd().plusMonths(1).with(TemporalAdjusters.lastDayOfMonth());;
+                LocalDate periodEnd = current.getPeriodEnd().plusMonths(1).with(TemporalAdjusters.lastDayOfMonth());
                 LocalDate nextAccrual = today.plusMonths(1);
                 if (validTo!= null && periodEnd.isAfter(validTo)){
                     periodEnd = validTo;
@@ -152,7 +140,7 @@ public class LeaveBalanceServiceImpl implements LeaveBalanceService {
             EntitledType entitledType,
             LocalDate today
     ) {
-        double expired = 0.0;
+        double expired;
         double total;
         if (entitledType == EntitledType.HALF_DAY){
             entitled = entitled*0.5;
@@ -340,25 +328,19 @@ public class LeaveBalanceServiceImpl implements LeaveBalanceService {
         List<MonthlySummaryEntity> summaryEntityList = new ArrayList<>();
         log.info(" fetch userPolicy list");
         List<String> usersId = userAdapter.getAllActiveUsers();
-        log.info("policy assigned users{}",usersId.size());
         List<String> userIds = userPolicyAdapter.findAllUserIdsInUserPolicies(LocalDate.of(year, month, YearMonth.of(year, month).lengthOfMonth()), usersId);
-        log.info("workschedule for users{}",userIds.size());
         TimesheetHelper.WorkScheduleResult result = timesheetHelper.fetchWorkSchedulesAndDays(userIds.toArray(new String[0]));
-        log.info("timesheetHelper");
         Map<String, Set< DayOfWeek >> userWorkingDaysMap = result.getUserWorkingDaysMap();
-        log.info("getHoliday");
         List<UserHolidayProjection> results =
                 userAdapter.findUserHolidays(userIds);
-
-        Map<String, List<LocalDate>> userHolidayMap = results.stream()
+        Map<String, Set<LocalDate>> userHolidayMap = results.stream()
                 .collect(Collectors.groupingBy(
                         UserHolidayProjection::getUserId,
                         Collectors.mapping(
                                 UserHolidayProjection::getDate,
-                                Collectors.toList()
+                                Collectors.toSet()
                         )
                 ));
-
         log.info("fetch monthly leaveBalance");
         List<LeaveBalanceEntity> list =
                 leaveBalanceAdapter.findBalancesByMonthYearAndAccrualType(month, year, AccrualType.MONTHLY);
@@ -398,9 +380,9 @@ public class LeaveBalanceServiceImpl implements LeaveBalanceService {
         for (String userId : userIds){
             log.info("loop starts");
             MonthlySummaryEntity summaryEntity = new MonthlySummaryEntity();
-            int totalLeavesTaken = 0;
+            int totalLeavesTaken;
             int paidLeavesTaken = 0;
-            int unpaidLeavesTaken = 0;
+            int unpaidLeavesTaken;
             int totalUnitsAvailable = 0;
             int balanceUnits = 0;
             int halfDayUnits = 0;
@@ -470,7 +452,7 @@ public class LeaveBalanceServiceImpl implements LeaveBalanceService {
                             .getOrDefault(userId, Collections.emptySet())
                             .contains(currentDate.getDayOfWeek())
                             || userHolidayMap
-                            .getOrDefault(userId, Collections.emptyList())
+                            .getOrDefault(userId, Collections.emptySet())
                             .contains(currentDate)) {
                         continue;
                     }
@@ -481,7 +463,7 @@ public class LeaveBalanceServiceImpl implements LeaveBalanceService {
                     fullDayUnits++;
                 }
             }
-            int restDays = calculateRestDays(userId, userWorkingDaysMap, userHolidayMap.getOrDefault(userId, Collections.emptyList()), daysInMonth, year, month);
+            int restDays = calculateRestDays(userId, userWorkingDaysMap, userHolidayMap.getOrDefault(userId, Collections.emptySet()), daysInMonth, year, month);
             int totalWorkingDays = daysInMonth-restDays;
             unpaidLeavesTaken =  totalWorkingDays - (presentUnits+paidLeavesTaken-(halfDayUnits+hoursUnits));
             totalLeavesTaken = paidLeavesTaken + unpaidLeavesTaken;
@@ -507,7 +489,7 @@ public class LeaveBalanceServiceImpl implements LeaveBalanceService {
         log.info("saved all summary");
     }
 
-    public int calculateRestDays(String userId, Map<String, Set<DayOfWeek>> userWorkingDaysMap, List<LocalDate> holidayDates,
+    public int calculateRestDays(String userId, Map<String, Set<DayOfWeek>> userWorkingDaysMap, Set<LocalDate> holidayDates,
                                  int daysInMonth, int year, int month) {
         int restDaysCount =0;
         for (int day = 1; day <= daysInMonth; day++) {

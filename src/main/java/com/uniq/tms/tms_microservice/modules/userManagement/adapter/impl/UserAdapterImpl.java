@@ -12,6 +12,7 @@ import com.uniq.tms.tms_microservice.modules.userManagement.dto.GroupDto;
 import com.uniq.tms.tms_microservice.modules.userManagement.dto.UserNameEmailDto;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.*;
 import com.uniq.tms.tms_microservice.modules.userManagement.enums.UserRole;
+import com.uniq.tms.tms_microservice.modules.userManagement.projections.GroupsData;
 import com.uniq.tms.tms_microservice.modules.userManagement.projections.UserCalendarProjection;
 import com.uniq.tms.tms_microservice.modules.userManagement.projections.UserHolidayProjection;
 import com.uniq.tms.tms_microservice.modules.userManagement.projections.UserProjection;
@@ -158,7 +159,7 @@ public class UserAdapterImpl implements UserAdapter {
     }
 
     @Override
-    public List<GroupDto> getUserGroups(String userId, String orgId) {
+    public List<GroupsData> getUserGroups(String userId, String orgId) {
         return groupRepository.findByUserIdAndOrganizationId(userId, orgId);
     }
 
@@ -200,7 +201,7 @@ public class UserAdapterImpl implements UserAdapter {
     }
 
     @Override
-    public List<GroupDto> getAllgroups(String orgId) {
+    public List<GroupsData> getAllgroups(String orgId) {
         return groupRepository.findByOrganizationId(orgId);
     }
 

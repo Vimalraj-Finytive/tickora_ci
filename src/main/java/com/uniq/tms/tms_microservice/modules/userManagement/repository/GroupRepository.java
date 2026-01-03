@@ -121,7 +121,7 @@ public interface GroupRepository extends JpaRepository<GroupEntity, Long> {
             AND g.organization_id = :orgId
             AND ug.type = 'Supervisor'
     """, nativeQuery = true)
-    List<GroupDto> findByUserIdAndOrganizationId(
+    List<GroupsData> findByUserIdAndOrganizationId(
             @Param("userId") String userId,
             @Param("orgId") String orgId
     );
@@ -144,7 +144,7 @@ public interface GroupRepository extends JpaRepository<GroupEntity, Long> {
         WHERE 
             g.organization_id = :orgId
     """, nativeQuery = true)
-    List<GroupDto> findByOrganizationId(String orgId);
+    List<GroupsData> findByOrganizationId(String orgId);
 
     Optional<GroupEntity> findByGroupId(Long groupId);
 
