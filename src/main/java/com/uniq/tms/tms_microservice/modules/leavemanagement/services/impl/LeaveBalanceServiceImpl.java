@@ -14,6 +14,9 @@ import com.uniq.tms.tms_microservice.modules.timesheetManagement.entity.Timeshee
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.enums.TimesheetStatusEnum;
 import com.uniq.tms.tms_microservice.modules.userManagement.adapter.UserAdapter;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
+import com.uniq.tms.tms_microservice.modules.userManagement.enums.UserRole;
+import com.uniq.tms.tms_microservice.modules.userManagement.model.User;
+import com.uniq.tms.tms_microservice.modules.userManagement.projections.UserCalendarProjection;
 import com.uniq.tms.tms_microservice.modules.userManagement.projections.UserHolidayProjection;
 import com.uniq.tms.tms_microservice.shared.helper.TimesheetHelper;
 import org.slf4j.Logger;
@@ -318,7 +321,7 @@ public class LeaveBalanceServiceImpl implements LeaveBalanceService {
 //    }
 
     @Override
-    public void updateMonthlyLeaveSummary() {
+    public void updateMonthlyLeaveSummary(String orgId) {
 
         LocalDate now = LocalDate.now(zoneId).withDayOfMonth(1);
         LocalDate previousMonth = now.minusMonths(1);
@@ -326,8 +329,16 @@ public class LeaveBalanceServiceImpl implements LeaveBalanceService {
         int year = previousMonth.getYear();
         int daysInMonth = YearMonth.of(year, month).lengthOfMonth();
         List<MonthlySummaryEntity> summaryEntityList = new ArrayList<>();
-        log.info(" fetch userPolicy list");
-        List<String> usersId = userAdapter.getAllActiveUsers();
+        int studentLevel = UserRole.STUDENT.getHierarchyLevel();
+        int superAdminLevel = UserRole.SUPERADMIN.getHierarchyLevel();
+        List<Integer> higherRoleLevels = Arrays.stream(UserRole.values())
+                .map(UserRole::getHierarchyLevel)
+                .filter(level -> level < studentLevel && level > superAdminLevel)
+                .toList();
+        List<String> usersId = userAdapter.getMembersByRole(orgId, higherRoleLevels)
+                .stream().map(UserEntity::getUserId)
+                .filter(Objects::nonNull)
+                .toList();
         List<String> userIds = userPolicyAdapter.findAllUserIdsInUserPolicies(LocalDate.of(year, month, YearMonth.of(year, month).lengthOfMonth()), usersId);
         TimesheetHelper.WorkScheduleResult result = timesheetHelper.fetchWorkSchedulesAndDays(userIds.toArray(new String[0]));
         Map<String, Set< DayOfWeek >> userWorkingDaysMap = result.getUserWorkingDaysMap();
