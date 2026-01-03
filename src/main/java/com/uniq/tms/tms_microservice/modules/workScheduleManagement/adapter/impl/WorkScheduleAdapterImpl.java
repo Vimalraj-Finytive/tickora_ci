@@ -2,6 +2,7 @@ package com.uniq.tms.tms_microservice.modules.workScheduleManagement.adapter.imp
 
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.adapter.WorkScheduleAdapter;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.*;
+import com.uniq.tms.tms_microservice.modules.workScheduleManagement.enums.FixedWorkScheduleProjection;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.repository.*;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.services.impl.WorkScheduleServiceImpl;
 import org.apache.logging.log4j.LogManager;
@@ -147,12 +148,12 @@ public class WorkScheduleAdapterImpl implements WorkScheduleAdapter {
         if (userIds == null) {
             return userWorkingDaysMap;
         }
-
+        log.info("fetch all workSchedule");
         List<WorkScheduleEntity> schedules = workScheduleRepository.findAllSchedulesWithUsers(userIds);
-
+        log.info("workSchedule loop");
         for (WorkScheduleEntity ws : schedules) {
             Set<DayOfWeek> workingDays = new HashSet<>();
-
+            log.info("fixed");
             // FIXED
             if (ws.getFixedWorkSchedules() != null) {
                 ws.getFixedWorkSchedules().forEach(fws -> {
@@ -161,7 +162,7 @@ public class WorkScheduleAdapterImpl implements WorkScheduleAdapter {
                     }
                 });
             }
-
+            log.info("flexible");
             // FLEXIBLE
             if (ws.getFlexibleWorkSchedules() != null) {
                 ws.getFlexibleWorkSchedules().forEach(flws -> {
@@ -171,6 +172,7 @@ public class WorkScheduleAdapterImpl implements WorkScheduleAdapter {
                 });
             }
 
+            log.info("weekly");
             // WEEKLY_EXCEPTION
             WeeklyWorkScheduleEntity weekly = ws.getWeeklyWorkSchedule();
             if (weekly != null && weekly.getStartDay() != null && weekly.getEndDay() != null) {
@@ -188,6 +190,7 @@ public class WorkScheduleAdapterImpl implements WorkScheduleAdapter {
                 workingDays.addAll(range);
             }
 
+            log.info("mapping users");
             // Map all users assigned to this work schedule
             if (ws.getUsers() != null) {
                 ws.getUsers().forEach(user -> {
@@ -204,7 +207,7 @@ public class WorkScheduleAdapterImpl implements WorkScheduleAdapter {
     }
 
     @Override
-    public List<FixedWorkScheduleEntity> findFixedSchedulesByUserIds(String[] pagedUserIds) {
+    public List<FixedWorkScheduleProjection> findFixedSchedulesByUserIds(String[] pagedUserIds) {
         return workScheduleRepository.findFixedSchedulesByUserIds(pagedUserIds);
     }
 

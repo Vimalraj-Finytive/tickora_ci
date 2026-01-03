@@ -2,6 +2,7 @@ package com.uniq.tms.tms_microservice.modules.workScheduleManagement.repository;
 
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.FixedWorkScheduleEntity;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.FlexibleWorkScheduleEntity;
+import com.uniq.tms.tms_microservice.modules.workScheduleManagement.enums.FixedWorkScheduleProjection;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.projection.WorkScheduleData;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.WorkScheduleEntity;
 import jakarta.transaction.Transactional;
@@ -122,10 +123,20 @@ public interface WorkScheduleRepository extends JpaRepository<WorkScheduleEntity
     )
     List<WorkScheduleEntity> findAllSchedulesWithUsers(@Param("userIds") String[] userIds);
 
+//    @Query("""
+//            SELECT DISTINCT ws
+//            FROM WorkScheduleEntity ws
+//            JOIN ws.users u
+//            WHERE u.userId IN :userIds
+//            AND ws.isActive = true
+//     """)
+//    List<WorkScheduleEntity> findAllSchedulesWithUsers(
+//            @Param("userIds") String[] userIds
+//    );
     @Query(value = "SELECT * FROM fetch_fixed_schedules_by_user_ids(:userIds)",
             nativeQuery = true
     )
-    List<FixedWorkScheduleEntity> findFixedSchedulesByUserIds(@Param("userIds") String[] userIds);
+    List<FixedWorkScheduleProjection> findFixedSchedulesByUserIds(@Param("userIds") String[] userIds);
 
 
     @Query(value = "SELECT * FROM fetch_flexible_schedules_by_user_ids(:userIds)",

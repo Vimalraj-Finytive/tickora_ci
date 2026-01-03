@@ -182,8 +182,13 @@ public class PayRollServiceImpl implements PayRollService {
         List<UserPayRollAmountEntity> userPayrollAmountList = new ArrayList<>();
         for (UserPayRollEntity entity : entities) {
             log.info("loop started");
-            UserPayRollAmountEntity userPayrollAmount = new UserPayRollAmountEntity();
             UserEntity user = entity.getUser();
+            MonthlySummaryEntity monthlySummary = unpaidMap.get(user.getUserId());
+            if (monthlySummary == null) {
+                log.warn("MonthlySummary not found for user: {}. Skipping payroll calculation.", user.getUserId());
+                continue;
+            }
+            UserPayRollAmountEntity userPayrollAmount = new UserPayRollAmountEntity();
             userPayrollAmount.setUser(user);
             userPayrollAmount.setPayroll(entity.getPayroll());
             LocalDate localDate = LocalDate.of(year, month, 1);
@@ -193,7 +198,6 @@ public class PayRollServiceImpl implements PayRollService {
             List<TimesheetEntity> timesheetEntities = timesheetAdapter.getTimesheetByUserIds(entity.getUser().getUserId(), year, month);
             log.info("before rest day");
             log.info("rest day");
-            MonthlySummaryEntity monthlySummary = unpaidMap.get(user.getUserId());
             int paidLeave = monthlySummary.getFullDayUnits() - monthlySummary.getUnpaidLeavesTaken();
             int restDays = daysInMonth - monthlySummary.getTotalWorkingDays();
             Integer regularDays = restDays + paidLeave + monthlySummary.getTotalPresentDays();

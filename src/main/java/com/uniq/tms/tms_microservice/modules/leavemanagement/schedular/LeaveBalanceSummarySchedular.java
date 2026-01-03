@@ -30,11 +30,12 @@ public class LeaveBalanceSummarySchedular {
             for (OrganizationEntity orgId : orgIds) {
                 TenantUtil.setCurrentTenant(orgId.getSchemaName());
                 try {
-                    log.info("Scheduled clock triggered for calculate Leave Summary");
+                    log.info("Scheduled clock triggered for calculate Leave Summary{}",orgId.getOrgName());
                     leaveBalanceService.updateMonthlyLeaveSummary();
 //                    leaveBalanceService.updateDailyLeaveSummary();
                 } catch (Exception e) {
                     continue;
+//                      throw new RuntimeException(e);
                 } finally {
                     TenantUtil.clearTenant();
                 }
