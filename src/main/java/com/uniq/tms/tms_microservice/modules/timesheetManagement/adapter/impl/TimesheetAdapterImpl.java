@@ -12,6 +12,7 @@ import com.uniq.tms.tms_microservice.modules.timesheetManagement.enums.LogType;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.enums.TimesheetStatusEnum;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.enums.TimesheetWorkStatusEnum;
 import com.uniq.tms.tms_microservice.modules.userManagement.projections.UserCalendarProjection;
+import com.uniq.tms.tms_microservice.modules.workScheduleManagement.enums.FixedWorkScheduleProjection;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.model.ScheduleTypeInfo;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.enums.DayOfWeekEnum;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.model.ScheduleTypeInfo;
@@ -130,7 +131,7 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
                 ));
         log.info("Fetch WorkSchedules for all users in date range");
         TimesheetHelper.WorkScheduleResult result = timesheetHelper.fetchWorkSchedulesAndDays(userIdArrays);
-        Map<String, Map<DayOfWeek, FixedWorkScheduleEntity>> fixedMap = result.getFixedMap();
+        Map<String, Map<DayOfWeek, FixedWorkScheduleProjection>> fixedMap = result.getFixedMap();
         Map<String, Map<DayOfWeek, FlexibleWorkScheduleEntity>> flexMap = result.getFlexMap();
         Map<String, Set<DayOfWeek>> userWorkingDaysMap = result.getUserWorkingDaysMap();
 
@@ -178,7 +179,7 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
             LocalDate endDate,
             String[] arrayOfUserIds,
             Map<String, String> userGroups,
-            Map<String, Map<DayOfWeek, FixedWorkScheduleEntity>> fixedMap,
+            Map<String, Map<DayOfWeek, FixedWorkScheduleProjection>> fixedMap,
             Map<String, Map<DayOfWeek, FlexibleWorkScheduleEntity>> flexMap,
             Map<String, Set<DayOfWeek>> userWorkingDaysMap,
             Map<String, String> userToCalendarMap,
@@ -292,7 +293,7 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
             LocalDate endDate,
             Set<DayOfWeek> workingDays,
             Map<String, String> userGroups,
-            Map<String, Map<DayOfWeek, FixedWorkScheduleEntity>> fixedMap,
+            Map<String, Map<DayOfWeek, FixedWorkScheduleProjection>> fixedMap,
             Map<String, Map<DayOfWeek, FlexibleWorkScheduleEntity>> flexMap,
             Map<String, String> userToCalendarMap,
             Map<String, List<LocalDate>> calendarHolidayMap
@@ -339,7 +340,7 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
             LocalDate today,
             Set<DayOfWeek> workingDays,
             Map<String, String> userGroups,
-            Map<String, Map<DayOfWeek, FixedWorkScheduleEntity>> fixedMap,
+            Map<String, Map<DayOfWeek, FixedWorkScheduleProjection>> fixedMap,
             Map<String, Map<DayOfWeek, FlexibleWorkScheduleEntity>> flexMap,
             Map<String, String> userToCalendarMap,
             Map<String, List<LocalDate>> calendarHolidayMap
@@ -843,7 +844,7 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
         log.info("Fetching Ws");
         TimesheetHelper.WorkScheduleResult scheduleResult = timesheetHelper.fetchWorkSchedulesAndDays(userIdArray);
         log.info("Mapping Schedules");
-        Map<String, Map<DayOfWeek, FixedWorkScheduleEntity>> fixedMap = scheduleResult.getFixedMap();
+        Map<String, Map<DayOfWeek, FixedWorkScheduleProjection>> fixedMap = scheduleResult.getFixedMap();
         Map<String, Map<DayOfWeek, FlexibleWorkScheduleEntity>> flexMap = scheduleResult.getFlexMap();
         Map<String, Set<DayOfWeek>> userWorkingDaysMap = scheduleResult.getUserWorkingDaysMap();
         //fetch user calendarIds
@@ -924,7 +925,7 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
             LocalDate startDate,
             LocalDate endDate,
             Set<DayOfWeek> workingDays,
-            Map<String, Map<DayOfWeek, FixedWorkScheduleEntity>> fixedMap,
+            Map<String, Map<DayOfWeek, FixedWorkScheduleProjection>> fixedMap,
             Map<String, Map<DayOfWeek, FlexibleWorkScheduleEntity>> flexMap,
             Map<String, String> userToCalendarMap,
             Map<String, List<LocalDate>> calendarHolidayMap
@@ -973,7 +974,7 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
             LocalDate date,
             LocalDate today,
             Set<DayOfWeek> workingDays,
-            Map<String, Map<DayOfWeek, FixedWorkScheduleEntity>> fixedMap,
+            Map<String, Map<DayOfWeek, FixedWorkScheduleProjection>> fixedMap,
             Map<String, Map<DayOfWeek, FlexibleWorkScheduleEntity>> flexMap,
             Map<String, String> userToCalendarMap,
             Map<String, List<LocalDate>> calendarHolidayMap
