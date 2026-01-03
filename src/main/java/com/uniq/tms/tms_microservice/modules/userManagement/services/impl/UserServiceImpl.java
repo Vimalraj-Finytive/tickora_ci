@@ -13,6 +13,7 @@ import com.uniq.tms.tms_microservice.modules.locationManagement.entity.UserLocat
 import com.uniq.tms.tms_microservice.modules.locationManagement.mapper.LocationDtoMapper;
 import com.uniq.tms.tms_microservice.modules.locationManagement.repository.LocationRepository;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.mapper.OrganizationEntityMapper;
+import com.uniq.tms.tms_microservice.modules.userManagement.projections.GroupsData;
 import com.uniq.tms.tms_microservice.shared.event.*;
 import com.uniq.tms.tms_microservice.modules.userManagement.projections.UserProjection;
 import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
@@ -1666,11 +1667,13 @@ public class UserServiceImpl implements UserService {
     public List<GroupDto> getUserGroups(String userId, String role, String orgId) {
         String roleName = role.replace("ROLE_", "");
         if (RoleName.SUPERADMIN.getRoleName().equalsIgnoreCase(roleName)) {
-            List<GroupDto> Allgroup = userAdapter.getAllgroups(orgId);
-            return Allgroup;
+            return userAdapter.getAllgroups(orgId).stream()
+                    .map(v-> new GroupDto(v.getGroupId(), v.getGroupName()))
+                    .toList();
         }
-        List<GroupDto> group = userAdapter.getUserGroups(userId, orgId);
-        return group;
+        return userAdapter.getUserGroups(userId, orgId).stream()
+                .map(v -> new GroupDto(v.getGroupId(), v.getGroupName()))
+                .toList();
     }
 
     @Override

@@ -23,8 +23,9 @@ public class LeaveBalanceSummarySchedular {
         this.organizationRepository = organizationRepository;
     }
 
-    @Scheduled(cron = "0 0 0 1 * ?", zone = "Asia/Kolkata")
-    public void autoUpdateLeaveSummary(){
+//    @Scheduled(cron = "0 0 0 1 * ?", zone = "Asia/Kolkata")
+@Scheduled(cron = "0 */2 * * * ?", zone = "Asia/Kolkata")
+public void autoUpdateLeaveSummary(){
         try {
             List<OrganizationEntity> orgIds = organizationRepository.findAll();
             for (OrganizationEntity orgId : orgIds) {
@@ -34,8 +35,8 @@ public class LeaveBalanceSummarySchedular {
                     leaveBalanceService.updateMonthlyLeaveSummary();
 //                    leaveBalanceService.updateDailyLeaveSummary();
                 } catch (Exception e) {
-                    continue;
-//                      throw new RuntimeException(e);
+//                    continue;
+                      throw new RuntimeException(e);
                 } finally {
                     TenantUtil.clearTenant();
                 }
