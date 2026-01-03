@@ -351,7 +351,4 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
     WHERE u.userId IN :userIds
     """)
     long countExistingUsers(@Param("userIds") List<String> userIds);
-
-
-
 }
