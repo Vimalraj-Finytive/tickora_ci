@@ -18,6 +18,7 @@ public class TimeOffPoliciesModel {
     private Integer entitledUnits;
     private EntitledType entitledType;
     private Status status;
+    private ValidityStatus validityStatus;
     private Integer maxCarryForwardUnits;
     private Boolean isCarryForward;
     private Boolean reschedule;
@@ -159,5 +160,13 @@ public class TimeOffPoliciesModel {
 
     public void setReschedule(Boolean reschedule) {
         this.reschedule = reschedule;
+    }
+
+    public ValidityStatus getValidityStatus() {
+        return validityStatus;
+    }
+
+    public void setValidityStatus(ValidityStatus validityStatus) {
+        this.validityStatus = validityStatus;
     }
 }

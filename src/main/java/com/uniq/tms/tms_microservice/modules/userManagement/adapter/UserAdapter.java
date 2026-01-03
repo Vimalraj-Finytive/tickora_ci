@@ -8,6 +8,7 @@ import com.uniq.tms.tms_microservice.modules.userManagement.dto.GroupDto;
 import com.uniq.tms.tms_microservice.modules.userManagement.dto.UserNameEmailDto;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.*;
 import com.uniq.tms.tms_microservice.modules.userManagement.dto.UserNameSuggestionDto;
+import com.uniq.tms.tms_microservice.modules.userManagement.projections.GroupsData;
 import com.uniq.tms.tms_microservice.modules.userManagement.projections.UserCalendarProjection;
 import com.uniq.tms.tms_microservice.modules.userManagement.projections.UserHolidayProjection;
 import com.uniq.tms.tms_microservice.modules.userManagement.projections.UserProjection;
@@ -38,7 +39,7 @@ public interface UserAdapter {
     void deleteGroup(Long groupId, String orgId);
     List<UserEntity> getMembers(String orgId, Long roleId);
     List<UserEntity> getMembersByRole(String orgId, List<Integer> higherRoleIds);
-    List<GroupDto> getUserGroups(String userId, String orgId);
+    List<GroupsData> getUserGroups(String userId, String orgId);
     List<UserGroupEntity> getGroupMembersByGroupId(Long groupId, String orgId);
     List<UserEntity> getUsersByIds(List<String> userIds, String orgId);
     Optional<UserEntity> findByMobileNumber(String mobileNumber);
@@ -50,7 +51,7 @@ public interface UserAdapter {
     void deleteSupervisorsByGroupId(Long groupId, String userId);
     void deleteByGroupId(Long groupId);
     List<Long> findGroupIdsBySupervisorId(String userIdFromToken);
-    List<GroupDto> getAllgroups(String orgId);
+    List<GroupsData> getAllgroups(String orgId);
     List<UserEntity> findUsersByGroupIds(List<Long> groupIds);
     List<UserEntity> findMembersByGroupIds(List<Long> filteredGroupIds, String userIdFromToken);
     SecondaryDetailsEntity saveSecondaryDetails(SecondaryDetailsEntity secondaryDetails);
