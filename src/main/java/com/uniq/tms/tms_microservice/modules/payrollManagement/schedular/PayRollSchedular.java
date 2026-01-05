@@ -34,7 +34,8 @@ public class PayRollSchedular {
                     payRollService.calculateMonthlyPayrollAmount();
 //                    payRollService.calculateDailyPayrollAmount();
                 } catch (Exception e) {
-                    continue;
+                    log.error("Leave summary failed | orgId={} | schema={}",
+                            orgId.getOrganizationId(), orgId.getSchemaName(), e);
                 } finally {
                     TenantUtil.clearTenant();
                 }
