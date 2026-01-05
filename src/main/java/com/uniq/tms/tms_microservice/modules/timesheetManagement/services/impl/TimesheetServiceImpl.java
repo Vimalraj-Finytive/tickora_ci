@@ -32,6 +32,7 @@ import com.uniq.tms.tms_microservice.modules.timesheetManagement.services.Timesh
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
 import com.uniq.tms.tms_microservice.modules.userManagement.enums.UserRole;
 import com.uniq.tms.tms_microservice.shared.helper.TimesheetHelper;
+import com.uniq.tms.tms_microservice.shared.util.TenantUtil;
 import com.uniq.tms.tms_microservice.shared.util.TimesheetLogParserUtil;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.FixedWorkScheduleEntity;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.FlexibleWorkScheduleEntity;
@@ -1375,11 +1376,16 @@ private void calculateHours(TimesheetEntity timesheet, WorkScheduleEntity workSc
 
     @Override
     public List<DashboardSummaryDto> getDashboardSummary(String orgId, LocalDate fromDate, LocalDate toDate) {
-            OrganizationEntity organization = organizationAdapter.findByOrgId(orgId)
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Organization not found"));
+        log.info("orgId{}", orgId);
+        OrganizationEntity organization = organizationAdapter.findByOrgId(orgId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Organization not found"));
 
-            String orgName = organization.getOrgName();
+        String orgName = organization.getOrgName();
+        log.info("orgName{}", orgName);
+        try {
+            TenantUtil.setCurrentTenant(organization.getSchemaName());
             List<UserEntity> users = userAdapter.findByOrganizationIdAndActiveTrue(orgId);
+            log.info("usersSize{}", users.size());
 
             List<DashboardSummaryDto> result = new ArrayList<>();
 
@@ -1402,8 +1408,11 @@ private void calculateHours(TimesheetEntity timesheet, WorkScheduleEntity workSc
             }
 
             return result;
+        }
+        finally {
+            TenantUtil.clearTenant();
+        }
     }
-
     @Override
     public void createTimesheet(
             TimesheetStatusEnum status,

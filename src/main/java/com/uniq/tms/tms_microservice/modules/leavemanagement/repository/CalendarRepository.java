@@ -1,6 +1,7 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.repository;
 
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.CalendarEntity;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.CalendarHolidayEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.CalendarId;
 import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -8,6 +9,8 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -44,5 +47,4 @@ public interface CalendarRepository extends JpaRepository<CalendarEntity, String
 
     @Query("SELECT COUNT(c) FROM CalendarEntity c WHERE c.isDefault = true AND c.id <> :calendarId")
     long countOtherDefaultCalendars(@Param("calendarId") String calendarId);
-
 }

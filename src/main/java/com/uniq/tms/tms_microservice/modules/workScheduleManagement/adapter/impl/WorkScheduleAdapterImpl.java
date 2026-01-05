@@ -1,7 +1,9 @@
 package com.uniq.tms.tms_microservice.modules.workScheduleManagement.adapter.impl;
 
+import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.adapter.WorkScheduleAdapter;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.*;
+import com.uniq.tms.tms_microservice.modules.workScheduleManagement.enums.FixedWorkScheduleProjection;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.repository.*;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.services.impl.WorkScheduleServiceImpl;
 import org.apache.logging.log4j.LogManager;
@@ -141,58 +143,67 @@ public class WorkScheduleAdapterImpl implements WorkScheduleAdapter {
         return workScheduleMap;
     }
 
-    public Map<String, Set<DayOfWeek>> resolveWorkingDays(String[] userIds) {
+    public Map<String, Set<DayOfWeek>> resolveWorkingDays(String[] userIds){
         Map<String, Set<DayOfWeek>> userWorkingDaysMap = new HashMap<>();
 
         if (userIds == null) {
             return userWorkingDaysMap;
         }
-
         List<WorkScheduleEntity> schedules = workScheduleRepository.findAllSchedulesWithUsers(userIds);
-
         for (WorkScheduleEntity ws : schedules) {
-            Set<DayOfWeek> workingDays = new HashSet<>();
-
-            // FIXED
-            if (ws.getFixedWorkSchedules() != null) {
-                ws.getFixedWorkSchedules().forEach(fws -> {
-                    if (fws.getDay() != null) {
-                        workingDays.add(DayOfWeek.valueOf(fws.getDay().name()));
-                    }
-                });
-            }
-
-            // FLEXIBLE
-            if (ws.getFlexibleWorkSchedules() != null) {
-                ws.getFlexibleWorkSchedules().forEach(flws -> {
-                    if (flws.getDay() != null) {
-                        workingDays.add(DayOfWeek.valueOf(flws.getDay().name()));
-                    }
-                });
-            }
-
-            // WEEKLY_EXCEPTION
-            WeeklyWorkScheduleEntity weekly = ws.getWeeklyWorkSchedule();
-            if (weekly != null && weekly.getStartDay() != null && weekly.getEndDay() != null) {
-                DayOfWeek start = DayOfWeek.valueOf(weekly.getStartDay().name());
-                DayOfWeek end = DayOfWeek.valueOf(weekly.getEndDay().name());
-
-                EnumSet<DayOfWeek> range;
-                if (start.getValue() <= end.getValue()) {
-                    range = EnumSet.range(start, end);
-                } else {
-                    range = EnumSet.noneOf(DayOfWeek.class);
-                    range.addAll(EnumSet.range(start, DayOfWeek.SUNDAY));
-                    range.addAll(EnumSet.range(DayOfWeek.MONDAY, end));
+            try {
+                Set<DayOfWeek> workingDays = new HashSet<>();
+                // FIXED
+                if (ws.getFixedWorkSchedules() != null) {
+                    ws.getFixedWorkSchedules().forEach(fws -> {
+                        if (fws.getDay() != null) {
+                            workingDays.add(DayOfWeek.valueOf(fws.getDay().name()));
+                        }
+                    });
                 }
-                workingDays.addAll(range);
-            }
+                // FLEXIBLE
+                if (ws.getFlexibleWorkSchedules() != null) {
+                    ws.getFlexibleWorkSchedules().forEach(flws -> {
+                        if (flws.getDay() != null) {
+                            workingDays.add(DayOfWeek.valueOf(flws.getDay().name()));
+                        }
+                    });
+                }
 
-            // Map all users assigned to this work schedule
-            if (ws.getUsers() != null) {
-                ws.getUsers().forEach(user -> {
-                    userWorkingDaysMap.put(user.getUserId(), workingDays);
-                });
+                // WEEKLY_EXCEPTION
+                WeeklyWorkScheduleEntity weekly = ws.getWeeklyWorkSchedule();
+                if (weekly != null && weekly.getStartDay() != null && weekly.getEndDay() != null) {
+                    DayOfWeek start = DayOfWeek.valueOf(weekly.getStartDay().name());
+                    DayOfWeek end = DayOfWeek.valueOf(weekly.getEndDay().name());
+
+                    EnumSet<DayOfWeek> range;
+                    if (start.getValue() <= end.getValue()) {
+                        range = EnumSet.range(start, end);
+                    } else {
+                        range = EnumSet.noneOf(DayOfWeek.class);
+                        range.addAll(EnumSet.range(start, DayOfWeek.SUNDAY));
+                        range.addAll(EnumSet.range(DayOfWeek.MONDAY, end));
+                    }
+                    workingDays.addAll(range);
+                }
+
+                // Map all users assigned to this work schedule
+//                if (ws.getUsers() != null) {
+//                    log.info("Reached mapping");
+//                    ws.getUsers().forEach(user -> {
+//                        userWorkingDaysMap.put(user.getUserId(), workingDays);
+//                    });
+//                    log.info("Setup mapping Completed");
+//                }
+                if (ws.getUsers() != null && !ws.getUsers().isEmpty()) {
+                    Set<DayOfWeek> safeDays = Set.copyOf(workingDays);
+                    for (UserEntity user : ws.getUsers()) {
+                        userWorkingDaysMap.put(user.getUserId(), safeDays);
+                    }
+                }
+
+            }catch (Exception e){
+                throw new RuntimeException(e);
             }
         }
 
@@ -204,7 +215,7 @@ public class WorkScheduleAdapterImpl implements WorkScheduleAdapter {
     }
 
     @Override
-    public List<FixedWorkScheduleEntity> findFixedSchedulesByUserIds(String[] pagedUserIds) {
+    public List<FixedWorkScheduleProjection> findFixedSchedulesByUserIds(String[] pagedUserIds) {
         return workScheduleRepository.findFixedSchedulesByUserIds(pagedUserIds);
     }
 

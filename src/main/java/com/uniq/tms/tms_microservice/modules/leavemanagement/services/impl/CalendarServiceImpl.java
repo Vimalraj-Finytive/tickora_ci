@@ -24,6 +24,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -230,5 +231,16 @@ public class CalendarServiceImpl implements CalendarService {
         else{
             throw new IllegalArgumentException("Holiday or CalendarId not found");
         }
+    }
+
+    @Override
+    public List<Holiday> upCommingHolidays(String userId) {
+        UserEntity user = userAdapter.getUserById(userId);
+        String calendarId = user.getCalendar().getId();
+        return calendarAdapter.findByCalendarAndTwoYears(calendarId).stream()
+                .map(holidayEntityMapper::toModel)
+                .filter(h -> h.getDate().isAfter(LocalDate.now()))
+                .toList();
+
     }
 }

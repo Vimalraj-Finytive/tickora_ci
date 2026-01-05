@@ -216,7 +216,7 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
     @Query("UPDATE UserEntity u SET u.active = false, u.isRegisterUser = false WHERE u.userId IN :userIds AND u.organizationId = :orgId")
     void deactivateUsersByIds(@Param("userIds") List<String> userIds, @Param("orgId") String orgId);
 
-    @Query("SELECT COUNT(u) FROM UserEntity u WHERE u.organizationId = :orgId")
+    @Query("SELECT COUNT(u) FROM UserEntity u WHERE u.organizationId = :orgId AND u.active = true")
     Long countUsersByOrganizationId(@io.lettuce.core.dynamic.annotation.Param("orgId") String orgId);
 
     @Query("SELECT new com.uniq.tms.tms_microservice.modules.userManagement.dto.UserNameEmailDto(u.userName, u.email) " +
@@ -269,11 +269,11 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
             """)
     List<UserEntity> findUsersWithCalendars(@Param("userIds") String[] userIds);
 
-    @Query("SELECT u FROM UserEntity u WHERE u.active = true AND u.userId <> :excludeId")
-    List<UserEntity> findByActiveTrue(@Param("excludeId") String excludeId);
+    @Query("SELECT u FROM UserEntity u WHERE u.active = true AND u.userId <> :excludeId AND u.role.id <> :excludedRoleId ")
+    List<UserEntity> findByActiveTrue(@Param("excludeId") String excludeId, @Param("excludedRoleId") Integer excludedRoleId);
 
     @Query("SELECT u FROM UserEntity u WHERE u.role.roleId = 1 AND u.organizationId = :orgId")
-    Optional<UserEntity> findSuperAdminByOrgId(@Param("orgId") String orgId);
+    List<UserEntity> findSuperAdminByOrgId(@Param("orgId") String orgId);
 
     List<UserEntity> findByRequestApproverIdAndActiveTrue(String approverId);
 
@@ -345,4 +345,10 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
     @Query("SELECT u FROM UserEntity u WHERE u.calendar.id IN :calendarIds")
     List<UserEntity> findUsersByCalendarIds(@Param("calendarIds") List<String> calendarIds);
 
+    @Query("""
+    SELECT COUNT(u.userId)
+    FROM UserEntity u
+    WHERE u.userId IN :userIds
+    """)
+    long countExistingUsers(@Param("userIds") List<String> userIds);
 }
