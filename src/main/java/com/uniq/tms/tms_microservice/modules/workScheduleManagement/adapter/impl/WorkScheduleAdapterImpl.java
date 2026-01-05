@@ -3,7 +3,8 @@ package com.uniq.tms.tms_microservice.modules.workScheduleManagement.adapter.imp
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.adapter.WorkScheduleAdapter;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.*;
-import com.uniq.tms.tms_microservice.modules.workScheduleManagement.enums.FixedWorkScheduleProjection;
+import com.uniq.tms.tms_microservice.modules.workScheduleManagement.projection.FixedWorkScheduleProjection;
+import com.uniq.tms.tms_microservice.modules.workScheduleManagement.projection.FlexibleScheduleProjection;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.repository.*;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.services.impl.WorkScheduleServiceImpl;
 import org.apache.logging.log4j.LogManager;
@@ -220,7 +221,7 @@ public class WorkScheduleAdapterImpl implements WorkScheduleAdapter {
     }
 
     @Override
-    public List<FlexibleWorkScheduleEntity> findFlexibleSchedulesByUserIds(String[] pagedUserIds) {
+    public List<FlexibleScheduleProjection> findFlexibleSchedulesByUserIds(String[] pagedUserIds) {
         return workScheduleRepository.findFlexibleSchedulesByUserIds(pagedUserIds);
     }
 
