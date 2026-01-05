@@ -22,10 +22,8 @@ import com.uniq.tms.tms_microservice.shared.helper.TimesheetHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import java.time.DayOfWeek;
-import java.time.LocalDate;
-import java.time.YearMonth;
-import java.time.ZoneId;
+
+import java.time.*;
 import java.time.temporal.ChronoUnit;
 import java.time.temporal.TemporalAdjusters;
 import java.util.*;
@@ -422,13 +420,10 @@ public class LeaveBalanceServiceImpl implements LeaveBalanceService {
             for (TimeOffRequestEntity entity : annualRequestsMap.getOrDefault(userId, Collections.emptyList())){
                 int units = entity.getUnitsRequested();
                 EntitledType type = entity.getPolicy().getEntitledType();
-
-                paidLeavesTaken += units;
-
-                switch (type) {
-                    case DAY -> fullDayUnits += units;
-                    case HALF_DAY -> halfDayUnits += units;
-                    default -> hoursUnits += units;
+                if (Objects.requireNonNull(type) == EntitledType.HALF_DAY) {
+                    halfDayUnits += units;
+                } else if (Objects.requireNonNull(type) == EntitledType.HOURS){
+                    hoursUnits += units;
                 }
             }
             for (LeaveBalanceEntity leaveBalance : leaveBalanceMap.getOrDefault(userId, Collections.emptyList())){
@@ -446,33 +441,41 @@ public class LeaveBalanceServiceImpl implements LeaveBalanceService {
                 LocalDate monthEnd = monthStart.withDayOfMonth(monthStart.lengthOfMonth());
                 LocalDate effectiveStart = request.getStartDate().isBefore(monthStart) ? monthStart : request.getStartDate();
                 LocalDate effectiveEnd = request.getEndDate().isAfter(monthEnd) ? monthEnd : request.getEndDate();
-                int days = (int)ChronoUnit.DAYS.between(effectiveStart, effectiveEnd) + 1;
-                fullDayUnits += days;
-                paidLeavesTaken += days;
                 totalUnitsAvailable += request.getPolicy().getEntitledUnits();
                 balanceUnits += balanceMap.getOrDefault(userId, 0.0);
                 if (effectiveStart.equals(request.getStartDate()) && !effectiveEnd.equals(request.getEndDate())){
                     balanceUnits = balanceUnits - request.getEndDate().getDayOfMonth();
                 }
             }
+            log.info("Processing user: {}", userId);
+            try {
             List<TimesheetEntity> timesheetEntities = timesheetAdapter.getTimesheetByUserIds(userId, year, month);
+            log.info("reached loop");
             for (TimesheetEntity timesheet : timesheetEntities){
-                if (Objects.equals(timesheet.getStatus().getStatusId(), TimesheetStatusEnum.PRESENT.getId())){
-                    LocalDate currentDate = timesheet.getDate();
-                    if (!userWorkingDaysMap
-                            .getOrDefault(userId, Collections.emptySet())
-                            .contains(currentDate.getDayOfWeek())
-                            || userHolidayMap
-                            .getOrDefault(userId, Collections.emptySet())
-                            .contains(currentDate)) {
-                        continue;
+                try {
+                    log.info("reached try");
+                    if (Objects.equals(timesheet.getStatus().getStatusId(), TimesheetStatusEnum.PRESENT.getId())) {
+                        LocalDate currentDate = timesheet.getDate();
+                        if (!userWorkingDaysMap
+                                .getOrDefault(userId, Collections.emptySet())
+                                .contains(currentDate.getDayOfWeek())
+                                || userHolidayMap
+                                .getOrDefault(userId, Collections.emptySet())
+                                .contains(currentDate)) {
+                            continue;
+                        }
+                        presentUnits++;
+                    } else if (Objects.equals(timesheet.getStatus().getStatusId(), TimesheetStatusEnum.PAID_LEAVE.getId())) {
+                        paidLeavesTaken++;
+                        fullDayUnits++;
                     }
-                    presentUnits++;
+                }catch (DateTimeException e) {
+                    log.error("Failed to process timesheet for user in date: {} in {}/{}/{} - {}", userId,timesheet.getDate(), month, year, e.getMessage());
                 }
-                else if (Objects.equals(timesheet.getStatus().getStatusId(), TimesheetStatusEnum.PAID_LEAVE.getId())){
-                    paidLeavesTaken++;
-                    fullDayUnits++;
-                }
+            }
+            } catch (DateTimeException e) {
+                log.error("Failed to process timesheet for user: {} in {}/{} - {}", userId,month, year, e.getMessage());
+                continue;
             }
             int restDays = calculateRestDays(userId, userWorkingDaysMap, userHolidayMap.getOrDefault(userId, Collections.emptySet()), daysInMonth, year, month);
             int totalWorkingDays = daysInMonth-restDays;

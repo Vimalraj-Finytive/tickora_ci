@@ -48,6 +48,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import java.io.*;
 import java.math.BigDecimal;
+import java.math.MathContext;
 import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
 import java.time.*;
@@ -186,7 +187,7 @@ public class PayRollServiceImpl implements PayRollService {
             LocalDate localDate = LocalDate.of(year, month, 1);
             String monthDate = localDate.format(DateTimeFormatter.ofPattern("MMMM,yyyy"));
             userPayrollAmount.setMonth(monthDate);
-            BigDecimal daySalary = entity.getPayroll().getMonthlySalary().divide(BigDecimal.valueOf(daysInMonth), 2, RoundingMode.HALF_UP);
+            BigDecimal daySalary = entity.getPayroll().getMonthlySalary().divide(BigDecimal.valueOf(daysInMonth), MathContext.DECIMAL128);
             List<TimesheetEntity> timesheetEntities = timesheetAdapter.getTimesheetByUserIds(entity.getUser().getUserId(), year, month);
             log.info("before rest day");
             log.info("rest day");
