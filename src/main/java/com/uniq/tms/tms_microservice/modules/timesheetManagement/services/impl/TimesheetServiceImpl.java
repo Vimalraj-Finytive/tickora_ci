@@ -695,7 +695,7 @@ public class TimesheetServiceImpl implements TimesheetService {
         for (TimesheetHistoryEntity log : logs) {
             log.setTimesheet(timesheet);
             log.setLoggedTimestamp(LocalDateTime.now(ZoneId.of("Asia/Kolkata")));
-            log.setLogTime(LocalTime.now(ZoneId.of("Asia/Kolkata")));
+            log.setLogTime(LocalTime.now(ZoneId.of("Asia/Kolkata")).withNano(0));
             if (log.getLogType() == LogType.CLOCK_IN) {
                 handleClockIn(timesheet, log, lastClockOut);
                 lastClockIn = log.getLogTime();
@@ -897,8 +897,8 @@ private void calculateHours(TimesheetEntity timesheet, WorkScheduleEntity workSc
                 return;
             }
 
-            LocalTime clockIn = timesheet.getFirstClockIn();
-            LocalTime clockOut = timesheet.getLastClockOut();
+            LocalTime clockIn = timesheet.getFirstClockIn().withNano(0);
+            LocalTime clockOut = timesheet.getLastClockOut().withNano(0);
             LocalDate timesheetDate = timesheet.getDate();
             LocalDate today = LocalDate.now(ZoneId.of("Asia/Kolkata"));
             boolean isPreviousDay = clockOut.isBefore(clockIn);
@@ -969,27 +969,18 @@ private void calculateHours(TimesheetEntity timesheet, WorkScheduleEntity workSc
                         regularWorkDuration = expectedDuration;
                     }
                 }
-
             }
 
-            LocalTime workedTime = LocalTime.ofSecondOfDay(workedDuration.toSeconds());
+            LocalTime workedTime = toLocalTimeSafe(workedDuration);
             timesheet.setTrackedHours(workedTime);
-            timesheet.setRegularHours(
-                    regularWorkDuration.isZero() ? null : LocalTime.of((int)regularWorkDuration.toHours(),regularWorkDuration.toMinutesPart())
-            );
-            timesheet.setStartTimeDuration(startTimeDuration.isZero() ? null :
-                    LocalTime.of((int)startTimeDuration.toHours(),startTimeDuration.toMinutesPart()));
-
-            timesheet.setEndTimeDuration(endTimeDuration.isZero() ? null :
-                    LocalTime.of((int)endTimeDuration.toHours(),endTimeDuration.toMinutesPart()));
-
-            timesheet.setTotalOverTime(totalOverTime.isZero() ? null :
-                    LocalTime.of((int)totalOverTime.toHours(),totalOverTime.toMinutesPart()));
+            timesheet.setRegularHours(toLocalTimeSafe(regularWorkDuration));
+            timesheet.setStartTimeDuration(toLocalTimeSafe(startTimeDuration));
+            timesheet.setEndTimeDuration(toLocalTimeSafe(endTimeDuration));
+            timesheet.setTotalOverTime(toLocalTimeSafe(totalOverTime));
 
             if (!isManualClockOut) {
-                workedTime = workedTime.minus(endTimeDuration);
-                timesheet.setTotalOverTime(startTimeDuration.isZero() ? null :
-                        LocalTime.of((int)startTimeDuration.toHours(),startTimeDuration.toMinutesPart()));
+                workedTime = toLocalTimeSafe(workedDuration.minus(endTimeDuration));
+                timesheet.setTotalOverTime(toLocalTimeSafe(totalOverTime));
                 timesheet.setEndTimeDuration(null);
                 timesheet.setTrackedHours(workedTime);
             }
@@ -1027,6 +1018,22 @@ private void calculateHours(TimesheetEntity timesheet, WorkScheduleEntity workSc
         }
         return Duration.between(effectiveStart, effectiveEnd);
     }
+
+    private LocalTime toLocalTimeSafe(Duration duration) {
+        if (duration == null || duration.isZero() || duration.isNegative()) {
+            return null;
+        }
+        long totalSeconds = duration.toSeconds();
+        long hours   = totalSeconds / 3600;
+        long minutes = (totalSeconds % 3600) / 60;
+        long seconds = totalSeconds % 60;
+        return LocalTime.of(
+                (int) (hours % 24),
+                (int) minutes,
+                (int) seconds
+        );
+    }
+
 
     @Override
     public void autoClockOut(String orgId) {
