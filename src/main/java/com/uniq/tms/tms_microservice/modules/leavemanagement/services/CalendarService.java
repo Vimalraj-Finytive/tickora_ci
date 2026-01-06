@@ -1,6 +1,7 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.services;
 
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.HolidayDto;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.CalendarEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.Calendar;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.CalendarId;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.Holiday;
@@ -17,4 +18,5 @@ public interface CalendarService {
     List<Holiday> findHolidaysByCalendar(String id, String year);
     void deleteHolidayById(String calendarId,String holidayId);
     List<Holiday> upCommingHolidays(String userId);
+    void createHolidayForNextYear(List<CalendarEntity> calendars, int nextYear);
 }

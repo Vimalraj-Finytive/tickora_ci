@@ -52,4 +52,14 @@ WHERE h.calendar.id = :calendarId
             @Param("nextYear") String nextYear
     );
 
-}
+
+    @Query("""
+        SELECT COUNT(ch) > 0
+        FROM CalendarHolidayEntity ch
+        WHERE ch.calendar.id = :calendarId
+          AND ch.year = :year
+    """)
+    boolean existsByCalendarAndYear(
+            @Param("calendarId") String calendarId,
+            @Param("year") String year
+    );}
