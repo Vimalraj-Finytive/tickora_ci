@@ -1,7 +1,6 @@
 package com.uniq.tms.tms_microservice.shared.helper;
 
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.adapter.WorkScheduleAdapter;
-import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.FlexibleWorkScheduleEntity;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.projection.FixedWorkScheduleProjection;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.model.ScheduleTypeInfo;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.projection.FlexibleScheduleProjection;
