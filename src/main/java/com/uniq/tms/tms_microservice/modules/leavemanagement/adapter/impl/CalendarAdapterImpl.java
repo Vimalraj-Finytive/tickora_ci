@@ -303,4 +303,18 @@ public class CalendarAdapterImpl implements CalendarAdapter {
         return calendarHolidayRepository.findByCalendarAndTwoYears(calendarId,currentYear,nextYear);
     }
 
+    @Override
+    public boolean existsCalendarHolidayForYear(String calendarId, int year) {
+        return calendarHolidayRepository.existsByCalendarAndYear(calendarId, String.valueOf(year));
+    }
+
+    @Override
+    @Transactional
+    public List<HolidayDto> fetchHolidaysForNextYear(String countryCode) {
+        int nextYear = LocalDate.now().plusYears(2).getYear();
+
+        return holidayJsonLoaderUtil.getHolidaysForYears(countryCode, List.of(nextYear));
+    }
+
+
 }
