@@ -44,6 +44,7 @@ public class SecurityConfig {
                                 "/favicon.ico",
                                 "/.well-known/**",
                                 "/assets/**",
+                                "/assets/images/**",
                                 "/browser/**",
                                 "/**/*.js",
                                 "/**/*.css",
