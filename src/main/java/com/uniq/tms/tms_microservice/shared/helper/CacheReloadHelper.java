@@ -147,7 +147,7 @@ public class CacheReloadHelper {
             log.info("reload WorkSchedule helper");
             CacheEventPublisherUtil.syncReloadThenPublish(
                     publisher,
-                    cacheKeyConfig.getUserprofile(),
+                    cacheKeyConfig.getWorkSchedule(),
                     orgId,
                     schema,
                     cacheReloadHandlerRegistry
@@ -174,7 +174,7 @@ public class CacheReloadHelper {
             log.info("reload Location helper");
             CacheEventPublisherUtil.syncReloadThenPublish(
                     publisher,
-                    cacheKeyConfig.getUserprofile(),
+                    cacheKeyConfig.getLocation(),
                     orgId,
                     schema,
                     cacheReloadHandlerRegistry

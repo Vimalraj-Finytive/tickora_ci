@@ -13,11 +13,11 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.model.Calendar;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.CalendarId;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.Holiday;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.services.CalendarService;
-import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.OrganizationRepository;
 import com.uniq.tms.tms_microservice.modules.userManagement.adapter.UserAdapter;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
 import com.uniq.tms.tms_microservice.modules.userManagement.enums.UserRole;
 import com.uniq.tms.tms_microservice.modules.userManagement.services.UserService;
+import com.uniq.tms.tms_microservice.shared.helper.AuthHelper;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
@@ -42,14 +42,16 @@ public class CalendarServiceImpl implements CalendarService {
     private final HolidayEntityMapper holidayEntityMapper;
     private final UserAdapter userAdapter;
     private final UserService userService;
+    private final AuthHelper authHelper;
 
-    public CalendarServiceImpl(CalendarEntityMapper calendarEntityMapper, CalendarAdapter calendarAdapter, IdGenerationService idGenerationService, HolidayEntityMapper holidayEntityMapper, UserAdapter userAdapter, UserService userService) {
+    public CalendarServiceImpl(CalendarEntityMapper calendarEntityMapper, CalendarAdapter calendarAdapter, IdGenerationService idGenerationService, HolidayEntityMapper holidayEntityMapper, UserAdapter userAdapter, UserService userService, AuthHelper authHelper) {
         this.calendarEntityMapper = calendarEntityMapper;
         this.calendarAdapter = calendarAdapter;
         this.idGenerationService = idGenerationService;
         this.holidayEntityMapper = holidayEntityMapper;
         this.userAdapter = userAdapter;
         this.userService = userService;
+        this.authHelper = authHelper;
     }
 
     @Override
@@ -243,4 +245,34 @@ public class CalendarServiceImpl implements CalendarService {
                 .toList();
 
     }
+    @Override
+    public void createHolidayForNextYear(List<CalendarEntity> calendars, int nextYear) {
+
+        for (CalendarEntity calendar : calendars) {
+            try {
+                if (calendar.getCountryEntity() == null) {
+                    continue;
+                }
+                String countryCode = calendar.getCountryEntity().getCode();
+                if (countryCode == null || countryCode.isEmpty()) {
+                    continue;
+                }
+                boolean exists = calendarAdapter.existsCalendarHolidayForYear(calendar.getId(), nextYear);
+                if (exists) {
+                    continue;
+                }
+                List<HolidayDto> holidays = calendarAdapter.fetchHolidaysForNextYear(countryCode);
+                if (holidays.isEmpty()) {
+                    continue;
+                }
+                calendarAdapter.saveHolidays(holidays, countryCode);
+                calendarAdapter.saveHolidaysToCalendarDetails(calendar, holidays);
+
+                log.info("Successfully created holidays for calendar {} year {}", calendar.getId(), nextYear);
+            } catch (Exception e) {
+                log.error("Failed to create holidays for calendar {} (org calendar skipped)", calendar.getId(), e);
+            }
+        }
+    }
+
 }

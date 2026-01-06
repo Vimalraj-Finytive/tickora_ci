@@ -465,7 +465,7 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
             }
             return entities.stream()
                     .map(timeOffPolicyEntityMapper::toModel)
-                    .filter(p -> !p.getValidityEndDate().isBefore(LocalDate.now()))
+                    .filter(p -> p.getValidityEndDate() == null || !p.getValidityEndDate().isBefore(LocalDate.now()))
                     .collect(Collectors.toList());
         } catch (ResponseStatusException e) {
             throw e;
