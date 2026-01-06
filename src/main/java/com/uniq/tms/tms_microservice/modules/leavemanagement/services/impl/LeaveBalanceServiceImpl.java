@@ -15,16 +15,12 @@ import com.uniq.tms.tms_microservice.modules.timesheetManagement.enums.Timesheet
 import com.uniq.tms.tms_microservice.modules.userManagement.adapter.UserAdapter;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
 import com.uniq.tms.tms_microservice.modules.userManagement.enums.UserRole;
-import com.uniq.tms.tms_microservice.modules.userManagement.model.User;
-import com.uniq.tms.tms_microservice.modules.userManagement.projections.UserCalendarProjection;
 import com.uniq.tms.tms_microservice.modules.userManagement.projections.UserHolidayProjection;
 import com.uniq.tms.tms_microservice.shared.helper.TimesheetHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-
 import java.time.*;
-import java.time.temporal.ChronoUnit;
 import java.time.temporal.TemporalAdjusters;
 import java.util.*;
 import java.util.function.Function;
@@ -320,7 +316,6 @@ public class LeaveBalanceServiceImpl implements LeaveBalanceService {
 
     @Override
     public void updateMonthlyLeaveSummary(String orgId) {
-
         LocalDate now = LocalDate.now(zoneId).withDayOfMonth(1);
         LocalDate previousMonth = now.minusMonths(1);
         int month = previousMonth.getMonthValue();

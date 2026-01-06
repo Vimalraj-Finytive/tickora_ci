@@ -695,7 +695,7 @@ public class TimesheetServiceImpl implements TimesheetService {
         for (TimesheetHistoryEntity log : logs) {
             log.setTimesheet(timesheet);
             log.setLoggedTimestamp(LocalDateTime.now(ZoneId.of("Asia/Kolkata")));
-            log.setLogTime(LocalTime.now(ZoneId.of("Asia/Kolkata")));
+            log.setLogTime(LocalTime.now(ZoneId.of("Asia/Kolkata")).withNano(0));
             if (log.getLogType() == LogType.CLOCK_IN) {
                 handleClockIn(timesheet, log, lastClockOut);
                 lastClockIn = log.getLogTime();
