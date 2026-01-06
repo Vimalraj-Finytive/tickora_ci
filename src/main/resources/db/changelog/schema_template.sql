@@ -1629,7 +1629,5 @@ LEFT JOIN org_type ot
     upa.total_amount,
     upa.month
    FROM ${schemaName}.user_payroll_amount upa
-     JOIN ${schemaName}.user_payroll up ON up.payroll_id::text = upa.payroll_id::text
-     AND up.user_id::text = upa.user_id::text
-     JOIN ${schemaName}.payroll p ON p.id::text = up.payroll_id::text
-     LEFT JOIN ${schemaName}.users u ON u.user_id::text = upa.user_id::text;
+         LEFT JOIN ${schemaName}.payroll p ON p.id = upa.payroll_id
+     	 LEFT JOIN ${schemaName}.users u ON u.user_id = upa.user_id;
