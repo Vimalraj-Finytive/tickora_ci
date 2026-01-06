@@ -40,4 +40,6 @@ public interface CalendarAdapter {
     boolean existsByDate(String calendarId,LocalDate date,String holidayId);
     List<CalendarEntity> findAllCalendar();
     List<CalendarHolidayEntity> findByCalendarAndTwoYears(String calendarId);
+    List<HolidayDto> fetchHolidaysForNextYear(String countryCode);
+    boolean existsCalendarHolidayForYear(String calendarId, int year);
 }
