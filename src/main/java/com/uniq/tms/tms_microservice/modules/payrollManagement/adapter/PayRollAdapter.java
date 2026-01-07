@@ -39,4 +39,5 @@ public interface PayRollAdapter {
     Optional<UserPayRollAmountEntity> getUserPayrollAmount(String userId, String month);
     List<UserEntity> findUsersByPayrollId(String payrollId, LocalDate date);
     List<String> findAllUsersByMonth(LocalDate date);
+    List<UserEntity> findAllUsersPayroll(LocalDate date);
 }

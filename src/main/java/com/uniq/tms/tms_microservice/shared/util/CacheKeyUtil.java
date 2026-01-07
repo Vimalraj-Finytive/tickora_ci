@@ -33,8 +33,6 @@ public class CacheKeyUtil {
     @Value("${cache.keys.timeoff.payRollExport}")
     private String payRollExport;
 
-    private static final Logger log = LogManager.getLogger(CacheKeyUtil.class);
-
     public String getLocationKey(String orgId, String schema){
         return location + ":" + schema + ":" + orgId;
     }
