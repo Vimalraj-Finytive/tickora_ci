@@ -53,9 +53,10 @@ public class PayRollController {
         return ResponseEntity.status(created.getStatusCode()).body(created);
     }
 
-    @GetMapping("/{id}/{month}")
+    @GetMapping("/amount")
     public ResponseEntity<ApiResponse<List<UserPayRollAmountDto>>> getPayrollAmount(@RequestHeader("Authorization") String token,
-                                                                                    @PathVariable String id, @PathVariable String month){
+                                                                                    @RequestParam(required = false) String id,
+                                                                                    @RequestParam String month){
         ApiResponse<List<UserPayRollAmountDto>> paymentDto = facade.getPayrollAmount(id, month);
         return ResponseEntity.status(paymentDto.getStatusCode()).body(paymentDto);
     }
@@ -212,4 +213,5 @@ public class PayRollController {
             return MediaType.APPLICATION_OCTET_STREAM;
         }
     }
+
 }
