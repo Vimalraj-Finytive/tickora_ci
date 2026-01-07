@@ -6,7 +6,6 @@ import com.uniq.tms.tms_microservice.modules.userManagement.dto.*;
 import com.uniq.tms.tms_microservice.shared.helper.AuthHelper;
 import com.uniq.tms.tms_microservice.modules.userManagement.constant.UserConstant;
 import com.uniq.tms.tms_microservice.modules.userManagement.facade.UserFacade;
-import com.uniq.tms.tms_microservice.dto.DeactivateUserRequestDto;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,22 +30,20 @@ public class UserController {
         this.authHelper = authHelper;
     }
 
-
     @GetMapping("/group")
-    public ResponseEntity<ApiResponse> getAllGroup(@RequestHeader(value = "Authorization", required = false) String authHeader) {
+    public ResponseEntity<ApiResponse<List<GroupDto>>> getAllGroup(
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
         String orgId;
         try {
             orgId = authHelper.getOrgId();
         } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new ApiResponse(403, "Unauthorized", false));
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new ApiResponse<>(403, "Unauthorized", false));
         }
 
         return ResponseEntity.ok(userFacade.getAllGroup(orgId));
     }
 
-    @PostMapping(
-            value = "/createBulkUser",
-            consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/createBulkUser", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse> createBulkUser(@RequestParam(value = "file") MultipartFile file) {
         Logger logger = LoggerFactory.getLogger(getClass());
         logger.info("Received file: {}", file.getOriginalFilename());
@@ -55,8 +52,7 @@ public class UserController {
         if (file.isEmpty()) {
             return new ResponseEntity<>(
                     new ApiResponse(400, "No file uploaded", null),
-                    HttpStatus.BAD_REQUEST
-            );
+                    HttpStatus.BAD_REQUEST);
         }
 
         try {
@@ -65,8 +61,7 @@ public class UserController {
         } catch (Exception e) {
             return new ResponseEntity<>(
                     new ApiResponse(500, e.getMessage(), null),
-                    HttpStatus.INTERNAL_SERVER_ERROR
-            );
+                    HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -100,31 +95,35 @@ public class UserController {
 
     @GetMapping("/profile")
     public ResponseEntity<ApiResponse> getUser(@RequestHeader("Authorization") String token,
-                                               @RequestParam(required = false) String userId) {
+            @RequestParam(required = false) String userId) {
         ApiResponse response = userFacade.getUserProfile(userId);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
     @GetMapping("/search")
-    public ResponseEntity<ApiResponse<List<UserNameSuggestionDto>>> searchUsers(@RequestHeader("Authorization") String token, @RequestParam String keyword) {
+    public ResponseEntity<ApiResponse<List<UserNameSuggestionDto>>> searchUsers(
+            @RequestHeader("Authorization") String token, @RequestParam String keyword) {
         ApiResponse response = userFacade.searchUsernames(keyword);
         return ResponseEntity.ok(response);
     }
 
     @PostMapping("/deleteUser")
-    public ResponseEntity<ApiResponse> deleteUser(@RequestHeader("Authorization") String token, @Valid @RequestBody DeactivateUserRequestDto requestDto) {
+    public ResponseEntity<ApiResponse> deleteUser(@RequestHeader("Authorization") String token,
+            @Valid @RequestBody DeactivateUserRequestDto requestDto) {
         ApiResponse response = userFacade.deleteUsers(requestDto);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
     @PostMapping("/createGroup")
-    public ResponseEntity<ApiResponse> createGroup(@RequestHeader("Authorization") String token, @RequestBody AddGroupDto addGroupDto) {
+    public ResponseEntity<ApiResponse> createGroup(@RequestHeader("Authorization") String token,
+            @RequestBody AddGroupDto addGroupDto) {
         ApiResponse response = userFacade.createGroup(addGroupDto);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
     @PatchMapping("/editType")
-    public ResponseEntity<ApiResponse> updateUserGroupType(@RequestHeader("Authorization") String token, @RequestBody EditUserGroupDto editUserGroupDto) {
+    public ResponseEntity<ApiResponse> updateUserGroupType(@RequestHeader("Authorization") String token,
+            @RequestBody EditUserGroupDto editUserGroupDto) {
         ApiResponse response = userFacade.updateUserGroupType(editUserGroupDto);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
@@ -139,21 +138,23 @@ public class UserController {
     }
 
     @PatchMapping("/updateGroup")
-    public ResponseEntity<ApiResponse> updateGroup(@RequestHeader("Authorization") String token, @RequestBody AddGroupDto addGroupDto, @RequestParam Long groupId) {
+    public ResponseEntity<ApiResponse> updateGroup(@RequestHeader("Authorization") String token,
+            @RequestBody AddGroupDto addGroupDto, @RequestParam Long groupId) {
         ApiResponse response = userFacade.updateGroupDetails(addGroupDto, groupId);
 
         return ResponseEntity.status((response.getStatusCode())).body(response);
     }
 
     @GetMapping("/getAllGroups")
-    public ResponseEntity<ApiResponse> getAllGroups(@RequestHeader("Authorization") String token) throws JsonProcessingException {
+    public ResponseEntity<ApiResponse> getAllGroups(@RequestHeader("Authorization") String token)
+            throws JsonProcessingException {
         ApiResponse response = userFacade.getAllGroups();
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
     @DeleteMapping("/deleteMember")
     public ResponseEntity<ApiResponse> deleteMember(@RequestHeader("Authorization") String token,
-                                                    @RequestBody DeleteMemberDto request) {
+            @RequestBody DeleteMemberDto request) {
         ApiResponse response = userFacade.deleteMember(request);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
@@ -163,13 +164,13 @@ public class UserController {
             @RequestHeader("Authorization") String token,
             @RequestBody GroupBulkDeleteDto request) {
 
-
         String message = userFacade.deleteGroups(request);
         return ResponseEntity.ok(new ApiResponse(200, message, null));
     }
 
     @GetMapping("/getMembers")
-    public ResponseEntity<ApiResponse> getMembers(@RequestHeader("Authorization") String token, @RequestParam(required = false) Long roleId) {
+    public ResponseEntity<ApiResponse> getMembers(@RequestHeader("Authorization") String token,
+            @RequestParam(required = false) Long roleId) {
         ApiResponse response = userFacade.getMembers(roleId);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
@@ -182,7 +183,7 @@ public class UserController {
 
     @GetMapping("/getGroupMembers")
     public ResponseEntity<ApiResponse> getUserGroupMembers(@RequestHeader("Authorization") String token,
-                                                           @RequestParam Long groupId, @RequestParam(required = false) LocalDate date) {
+            @RequestParam Long groupId, @RequestParam(required = false) LocalDate date) {
         ApiResponse response = userFacade.getUserGroupMembers(groupId, date);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
@@ -195,7 +196,8 @@ public class UserController {
             ApiResponse response = userFacade.getGroupUsers(groupIds);
             return ResponseEntity.status(response.getStatusCode()).body(response);
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ApiResponse(403, "Error: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse(403, "Error: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
         }
     }
 
@@ -211,9 +213,10 @@ public class UserController {
     }
 
     @PatchMapping("/activateUser")
-    public ResponseEntity<ApiResponse> updateIsActive(@RequestHeader("Authorization") String token, @RequestBody EditUserDto editUserDto) {
+    public ResponseEntity<ApiResponse<List<EditUserDto>>> updateIsActive(@RequestHeader("Authorization") String token,
+            @RequestBody EditUserDto editUserDto) {
 
-        ApiResponse response = userFacade.updateIsActive(editUserDto);
+        ApiResponse<List<EditUserDto>> response = userFacade.updateIsActive(editUserDto);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
@@ -260,16 +263,16 @@ public class UserController {
     @PutMapping("/updateCalendar")
     public ResponseEntity<ApiResponse<UserCalendarRequestDto>> updateUser(
             @RequestHeader("Authorization") String token,
-            @Valid @RequestBody UserCalendarRequestDto updates){
+            @Valid @RequestBody UserCalendarRequestDto updates) {
         ApiResponse<UserCalendarRequestDto> response = userFacade.updateCalendar(updates);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
     @GetMapping("/users")
-    public ResponseEntity<ApiResponse<List<UserLevelDto>>>getUsersBelowHierarchy() {
+    public ResponseEntity<ApiResponse<List<UserLevelDto>>> getUsersBelowHierarchy() {
         String userId = authHelper.getUserId();
         String orgId = authHelper.getOrgId();
-        ApiResponse<List<UserLevelDto>> result = userFacade.getUsersBelowHierarchy(userId,orgId);
+        ApiResponse<List<UserLevelDto>> result = userFacade.getUsersBelowHierarchy(userId, orgId);
         return ResponseEntity.status(result.getStatusCode()).body(result);
     }
 
@@ -291,16 +294,17 @@ public class UserController {
 
     @GetMapping("/userList")
     public ResponseEntity<ApiResponse<List<UserLevelDto>>> getRequesters(
-            @RequestHeader("Authorization") String token){
+            @RequestHeader("Authorization") String token) {
         ApiResponse<List<UserLevelDto>> response = userFacade.getRequesters();
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
-   @PostMapping("/bulk/approver")
-   public ResponseEntity<ApiResponse<RequestApproverDto>> assignRequestApprover(@RequestHeader("Authorization") String token,
-                                                            @RequestBody RequestApproverDto dto) {
-       ApiResponse<RequestApproverDto> response = userFacade.assignRequestApprover(dto);
-       return ResponseEntity.status(response.getStatusCode()).body(response);
-   }
+    @PostMapping("/bulk/approver")
+    public ResponseEntity<ApiResponse<RequestApproverDto>> assignRequestApprover(
+            @RequestHeader("Authorization") String token,
+            @RequestBody RequestApproverDto dto) {
+        ApiResponse<RequestApproverDto> response = userFacade.assignRequestApprover(dto);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
 
 }

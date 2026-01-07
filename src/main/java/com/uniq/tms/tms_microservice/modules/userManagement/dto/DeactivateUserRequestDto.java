@@ -1,7 +1,6 @@
-package com.uniq.tms.tms_microservice.dto;
+package com.uniq.tms.tms_microservice.modules.userManagement.dto;
 
 import jakarta.validation.constraints.NotEmpty;
-
 import java.util.List;
 
 public class DeactivateUserRequestDto {
