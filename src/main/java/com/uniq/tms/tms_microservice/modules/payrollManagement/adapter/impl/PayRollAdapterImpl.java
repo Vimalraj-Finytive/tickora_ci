@@ -151,4 +151,9 @@ public class PayRollAdapterImpl implements PayRollAdapter {
     public List<String> findAllUsersByMonth(LocalDate date) {
         return userPayrollRepo.findAllUsersByMonth(date);
     }
+
+    @Override
+    public List<UserEntity> findAllUsersPayroll(LocalDate date) {
+        return userPayrollRepo.findAllUsersPayroll(date);
+    }
 }
