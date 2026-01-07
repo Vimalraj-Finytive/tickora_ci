@@ -10,30 +10,25 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-
         registry.addResourceHandler("/swagger-ui/**")
                 .addResourceLocations("classpath:/META-INF/resources/webjars/springdoc-openapi-ui/");
         registry.addResourceHandler("/v3/api-docs/**")
                 .addResourceLocations("classpath:/META-INF/resources/");
-        registry.addResourceHandler(
-                        "/*.js",
-                        "/*.css",
-                        "/*.ico",
-                        "/*.txt",
-                        "/*.json"
-                ).addResourceLocations("classpath:/static/browser/")
-                .setCachePeriod(0);
         registry.addResourceHandler("/assets/**")
                 .addResourceLocations("classpath:/static/browser/assets/")
-                .setCachePeriod(0);
-        registry.addResourceHandler("/", "/index.html")
+                .setCachePeriod(3600);
+        registry.addResourceHandler("/*.*")
                 .addResourceLocations("classpath:/static/browser/")
-                .setCachePeriod(0);
+                .setCachePeriod(3600);
+        registry.addResourceHandler("/")
+                .addResourceLocations("classpath:/static/browser/");
     }
 
     @Override
     public void addViewControllers(ViewControllerRegistry registry) {
-        registry.addViewController("/{spring:(?!assets|tms|swagger-ui|v3).*}/**")
+        registry.addViewController("/{path:(?!assets|tms|swagger-ui|v3)[^\\.]+}")
+                .setViewName("forward:/index.html");
+        registry.addViewController("/**/{path:(?!assets|tms|swagger-ui|v3)[^\\.]+}")
                 .setViewName("forward:/index.html");
     }
 }
