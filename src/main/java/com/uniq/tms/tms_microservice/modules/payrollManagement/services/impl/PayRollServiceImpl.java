@@ -329,16 +329,21 @@ public class PayRollServiceImpl implements PayRollService {
     @Override
     public List<UserPayRollAmountModel> getPayrollAmount(String id, String month) {
         List<UserPayRollAmountModel> result = new ArrayList<>();
-        List<UserPayRollAmountEntity> entities = payRollAdapter.getPayrollAmount(id, month);
-        if (entities != null && !entities.isEmpty()) {
-            result.addAll(entityMapper.toModel(entities));
+        List<UserPayRollAmountEntity> entities;
+        if (id == null || id.isBlank()) {
+            entities = payRollAdapter.getAllByMonthAndYear(month);
+        }else {
+            entities = payRollAdapter.getPayrollAmount(id, month);
         }
-        Set<String> processedUserIds = entities == null
-                ? Collections.emptySet()
-                : entities.stream()
-                .map(e -> e.getUser().getUserId())
-                .collect(Collectors.toSet());
-        result.addAll(createZeroPayrollModel(id, processedUserIds, month));
+            if (entities != null && !entities.isEmpty()) {
+                result.addAll(entityMapper.toModel(entities));
+            }
+            Set<String> processedUserIds = (entities == null)
+                    ? Collections.emptySet()
+                    : entities.stream()
+                    .map(e -> e.getUser().getUserId())
+                    .collect(Collectors.toSet());
+            result.addAll(createZeroPayrollModel(id, processedUserIds, month));
         return result;
     }
 
@@ -349,9 +354,13 @@ public class PayRollServiceImpl implements PayRollService {
 
         YearMonth yearMonth = YearMonth.parse(month, formatter);
         LocalDate monthEndDate = yearMonth.atEndOfMonth();
-
-
-        List<UserEntity> users = payRollAdapter.findUsersByPayrollId(payrollId, monthEndDate);
+        List<UserEntity> users;
+        if (payrollId == null || payrollId.isBlank()) {
+            users = payRollAdapter.findAllUsersPayroll(monthEndDate);
+        }
+        else {
+            users = payRollAdapter.findUsersByPayrollId(payrollId, monthEndDate);
+        }
         List<UserPayRollAmountModel> userPayrollList = new ArrayList<>();
         for (UserEntity user : users) {
             if (processedUserIds.contains(user.getUserId())) {
