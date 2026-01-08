@@ -32,7 +32,7 @@ public class PolicyYearlySchedular {
                 TenantUtil.setCurrentTenant(orgId.getSchemaName());
                 try {
                     log.info("Scheduled clock triggered for update yearly policy");
-                    timeOffPolicyService.updateYearlyPolicy();
+                    timeOffPolicyService.updateYearlyPolicy(orgId.getOrganizationId());
                 } catch (Exception e) {
                     continue;
                 } finally {

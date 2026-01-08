@@ -504,7 +504,7 @@ public class UserServiceImpl implements UserService {
                 assignModel.setUserValidFrom(LocalDate.now());
 
                 try {
-                    timeOffPolicyService.assignPolicies(assignModel);
+                    timeOffPolicyService.assignPolicies(assignModel, orgId);
                 } catch (Exception ex) {
                     log.error("Default policy assignment failed for {} users. Error: {}", userIds.size(), ex.getMessage(), ex);
 
@@ -694,7 +694,7 @@ public class UserServiceImpl implements UserService {
         log.info("Saving user: {}", userMiddleware.getUserName());
         UserEntity savedUserEntity = userAdapter.saveUser(entity);
         TimeOffPolicyEntity timeOffPolicyEntity = timeOffPolicyAdapter.findDefaultPolicy();
-        assignPolicy(timeOffPolicyEntity.getPolicyId(), customUserId, LocalDate.now());
+        assignPolicy(timeOffPolicyEntity.getPolicyId(), customUserId, LocalDate.now(ZoneId.of("Asia/Kolkata")), organizationId);
         List<Long> locationIds = Collections.emptyList();
         List<Long> groupIds = Collections.emptyList();
         SecondaryDetailsEntity saveSecondaryUser = null;
@@ -776,7 +776,7 @@ public class UserServiceImpl implements UserService {
             log.info("Adding user to policy: {}", userDto.getPolicyIds());
             LocalDate startDate = userDto.getUserValidFrom();
             userDto.getPolicyIds()
-                    .forEach(id -> assignPolicy(id, customUserId, startDate));
+                    .forEach(id -> assignPolicy(id, customUserId, startDate, organizationId));
         }
 
         if (!isBlank(userDto.getGroupId())) {
@@ -819,12 +819,12 @@ public class UserServiceImpl implements UserService {
         return new ApiResponse<>(201, "Successfully saved user", userDto);
     }
 
-    private void assignPolicy(String policyId, String customUserId, LocalDate startDate) {
+    private void assignPolicy(String policyId, String customUserId, LocalDate startDate, String orgId) {
         TimeOffPolicyBulkAssignModel defaultPolicy = new TimeOffPolicyBulkAssignModel();
         defaultPolicy.setUserIds(List.of(customUserId));
         defaultPolicy.setPolicyId(policyId);
         defaultPolicy.setUserValidFrom(startDate);
-        timeOffPolicyService.assignPolicies(defaultPolicy);
+        timeOffPolicyService.assignPolicies(defaultPolicy, orgId);
     }
 
     public boolean validateSecondaryUser(SecondaryDetailsDto dto) {

@@ -10,7 +10,7 @@ public interface TimeOffPolicyService {
       TimeOffPolicyResponseModel createPolicy(TimeOffPolicyRequestModel model);
       List<EnumModel> getDropDowns();
       void editPolicy(TimeOffPolicyEditRequestModel model);
-      void assignPolicies(TimeOffPolicyBulkAssignModel request);
+      void assignPolicies(TimeOffPolicyBulkAssignModel request,String orgId);
       void inactivatePolicy(String policyId, TimeOffPolicyInactivateModel model);
       List<TimeOffPoliciesModel> getAllPolicies();
       List<TimeOffPoliciesModel> getAllPolicy(String type);
@@ -20,7 +20,7 @@ public interface TimeOffPolicyService {
       List<TimeOffPoliciesModel> getPolicyByUserId(String userId);
       List<EnumModel> getResetFrequencyStatus();
       void editUserPolicy(List<EditUserPolicyModel> editUserPolicyModel);
-      void updateMonthlyPolicy();
-      void updateYearlyPolicy();
+      void updateMonthlyPolicy(String orgId);
+      void updateYearlyPolicy(String orgId);
 
 }
