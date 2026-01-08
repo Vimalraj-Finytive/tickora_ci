@@ -189,18 +189,14 @@ public class WorkScheduleAdapterImpl implements WorkScheduleAdapter {
                 }
 
                 // Map all users assigned to this work schedule
-//                if (ws.getUsers() != null) {
-//                    log.info("Reached mapping");
-//                    ws.getUsers().forEach(user -> {
-//                        userWorkingDaysMap.put(user.getUserId(), workingDays);
-//                    });
-//                    log.info("Setup mapping Completed");
-//                }
+                Set<String> requestedUserIds = Set.of(userIds);
+                Set<DayOfWeek> safeDays = Set.copyOf(workingDays);
                 if (ws.getUsers() != null && !ws.getUsers().isEmpty()) {
-                    Set<DayOfWeek> safeDays = Set.copyOf(workingDays);
-                    for (UserEntity user : ws.getUsers()) {
-                        userWorkingDaysMap.put(user.getUserId(), safeDays);
-                    }
+                    ws.getUsers().stream()
+                            .filter(user -> requestedUserIds.contains(user.getUserId()))
+                            .forEach(user -> {
+                                userWorkingDaysMap.put(user.getUserId(), safeDays);
+                            });
                 }
 
             }catch (Exception e){
