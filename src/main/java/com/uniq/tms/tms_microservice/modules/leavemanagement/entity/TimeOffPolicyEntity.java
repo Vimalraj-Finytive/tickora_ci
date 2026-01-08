@@ -159,15 +159,6 @@ public class TimeOffPolicyEntity {
         this.entitledType = entitledType;
     }
 
-
-    public boolean isActive() {
-        return isActive;
-    }
-
-    public void setActive(boolean active) {
-        isActive = active;
-    }
-
     public Integer getMaxCarryForwardUnits() {
         return maxCarryForwardUnits;
     }

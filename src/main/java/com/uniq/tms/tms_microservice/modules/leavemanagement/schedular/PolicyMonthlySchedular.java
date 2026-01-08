@@ -31,7 +31,7 @@ public class PolicyMonthlySchedular {
                 TenantUtil.setCurrentTenant(orgId.getSchemaName());
                 try {
                     log.info("Scheduled clock triggered for update monthly policy");
-                    timeOffPolicyService.updateMonthlyPolicy();
+                    timeOffPolicyService.updateMonthlyPolicy(orgId.getOrganizationId());
                 } catch (Exception e) {
                     continue;
                 } finally {
