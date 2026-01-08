@@ -12,8 +12,6 @@ public class WebConfig implements WebMvcConfigurer {
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         registry.addResourceHandler("/swagger-ui/**")
                 .addResourceLocations("classpath:/META-INF/resources/webjars/springdoc-openapi-ui/");
-        registry.addResourceHandler("/v3/api-docs/**")
-                .addResourceLocations("classpath:/META-INF/resources/");
         registry.addResourceHandler("/assets/**")
                 .addResourceLocations("classpath:/static/browser/assets/")
                 .setCachePeriod(3600);
@@ -30,5 +28,7 @@ public class WebConfig implements WebMvcConfigurer {
                 .setViewName("forward:/index.html");
         registry.addViewController("/**/{path:(?!assets|tms|swagger-ui|v3)[^\\.]+}")
                 .setViewName("forward:/index.html");
+        registry.addRedirectViewController("/","/login");
+        registry.addRedirectViewController("","/login");
     }
 }
