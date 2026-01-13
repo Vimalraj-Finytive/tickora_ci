@@ -92,6 +92,7 @@ public interface UserGroupRepository extends JpaRepository<UserGroupEntity,Long>
     SELECT DISTINCT ug.user.userId
     FROM UserGroupEntity ug
     WHERE ug.group.groupId IN :groupIds
+    AND ug.user.active = true
 """)
     List<String> findUserIdsByGroupIds(@Param("groupIds") List<Long> groupIds);
 
