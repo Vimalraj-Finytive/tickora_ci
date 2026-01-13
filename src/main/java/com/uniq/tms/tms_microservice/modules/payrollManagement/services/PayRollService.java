@@ -40,7 +40,7 @@ public interface PayRollService {
 
     void updatePayroll(PayRollEditRequestModel editModel);
 
-    String startExportPayroll(String month, String format, String schema, String orgId);
+    String startExportPayroll(String month, String format, List<Long> groupIds,List<String> userIds, String schema, String orgId);
 
     String getExportStatus(String exportId, String schema, String orgId);
 

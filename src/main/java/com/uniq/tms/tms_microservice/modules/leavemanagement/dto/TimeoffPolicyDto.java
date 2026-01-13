@@ -1,5 +1,6 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.dto;
 
+import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.Compensation;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.EntitledType;
 
 public class TimeoffPolicyDto {
@@ -7,6 +8,7 @@ public class TimeoffPolicyDto {
     private String policyId;
     private String policyName;
     private EntitledType entitledType;
+    private Compensation compensation;
 
     public String getPolicyId() {
         return policyId;
@@ -30,5 +32,13 @@ public class TimeoffPolicyDto {
 
     public void setEntitledType(EntitledType entitledType) {
         this.entitledType = entitledType;
+    }
+
+    public Compensation getCompensation() {
+        return compensation;
+    }
+
+    public void setCompensation(Compensation compensation) {
+        this.compensation = compensation;
     }
 }
