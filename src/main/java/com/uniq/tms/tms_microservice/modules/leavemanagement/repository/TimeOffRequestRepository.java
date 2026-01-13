@@ -178,8 +178,10 @@ public interface TimeOffRequestRepository extends JpaRepository<TimeOffRequestEn
     SELECT *
     FROM timeoff_request_view
     WHERE creator_id = :userId
-      AND leave_start_date >= :fromDate
-      AND leave_end_date <= :toDate
+      AND (
+            (leave_start_date >= :fromDate AND leave_end_date <= :toDate)
+            OR (leave_start_date <= :fromDate AND leave_end_date >= :toDate)
+           )
       AND (array_length(:policies, 1) IS NULL OR policy_id = ANY(:policies))
       AND (array_length(:status, 1) IS NULL OR status = ANY(:status))
     """,
@@ -196,8 +198,10 @@ public interface TimeOffRequestRepository extends JpaRepository<TimeOffRequestEn
     SELECT *
     FROM timeoff_request_view
     WHERE viewer_id = :viewerId
-      AND leave_start_date >= :fromDate
-      AND leave_end_date <= :toDate
+      AND (
+            (leave_start_date >= :fromDate AND leave_end_date <= :toDate)
+            OR (leave_start_date <= :fromDate AND leave_end_date >= :toDate)
+           )
       AND (array_length(:policies, 1) IS NULL OR policy_id = ANY(:policies))
       AND (array_length(:status, 1) IS NULL OR status = ANY(:status))
     """,
@@ -213,8 +217,10 @@ public interface TimeOffRequestRepository extends JpaRepository<TimeOffRequestEn
     @Query(value = """
     SELECT *
     FROM timeoff_request_view
-    WHERE leave_start_date >= :fromDate
-      AND leave_end_date <= :toDate
+    WHERE (
+            (leave_start_date >= :fromDate AND leave_end_date <= :toDate)
+            OR (leave_start_date <= :fromDate AND leave_end_date >= :toDate)
+           )
       AND (array_length(:policies, 1) IS NULL OR policy_id = ANY(:policies))
       AND (array_length(:status, 1) IS NULL OR status = ANY(:status))
     """,

@@ -140,8 +140,8 @@ public class PayRollFacade {
         }
     }
 
-    public ApiResponse<String> startExport(String month, String format, String schema, String orgId) {
-        String exportId = service.startExportPayroll(month, format, schema, orgId);
+    public ApiResponse<String> startExport(String month, String format, List<Long> groupIds, List<String> userIds, String schema, String orgId) {
+        String exportId = service.startExportPayroll(month, format,groupIds, userIds, schema, orgId);
         return new ApiResponse<>(
                 HttpStatus.ACCEPTED.value(),
                 "Export started",
