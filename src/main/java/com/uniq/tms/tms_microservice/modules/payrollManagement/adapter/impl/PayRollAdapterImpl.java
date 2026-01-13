@@ -5,6 +5,7 @@ import com.uniq.tms.tms_microservice.modules.payrollManagement.entity.PayRollEnt
 import com.uniq.tms.tms_microservice.modules.payrollManagement.entity.PayRollSettingEntity;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.entity.UserPayRollAmountEntity;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.entity.UserPayRollEntity;
+import com.uniq.tms.tms_microservice.modules.payrollManagement.mapper.PayRollEntityMapper;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.model.UserPayRollAmountModel;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.projection.PayRollProjection;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.projection.UserPayRollAmount;
@@ -155,5 +156,10 @@ public class PayRollAdapterImpl implements PayRollAdapter {
     @Override
     public List<UserEntity> findAllUsersPayroll(LocalDate date) {
         return userPayrollRepo.findAllUsersPayroll(date);
+    }
+
+    @Override
+    public List<UserPayRollAmount> findAllByMonthAndUserIds(String month, List<String> userIds) {
+        return userPayrollAmountRepository.findAllByMonthAndUserIds(month,userIds);
     }
 }

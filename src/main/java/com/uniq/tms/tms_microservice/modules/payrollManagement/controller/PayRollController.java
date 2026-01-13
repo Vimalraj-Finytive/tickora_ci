@@ -152,7 +152,7 @@ public class PayRollController {
         String schema = authHelper.getSchema();
         String orgId = authHelper.getOrgId();
         return ResponseEntity.ok(
-                facade.startExport(request.getMonth(), request.getFormat(), schema, orgId)
+                facade.startExport(request.getMonth(), request.getFormat(), request.getGroupIds(), request.getUserIds(), schema, orgId)
         );
     }
 
