@@ -1,6 +1,7 @@
 package com.uniq.tms.tms_microservice.modules.payrollManagement.repository;
 
 import com.uniq.tms.tms_microservice.modules.payrollManagement.entity.UserPayRollAmountEntity;
+import com.uniq.tms.tms_microservice.modules.payrollManagement.projection.UserPayRollAmount;
 import io.lettuce.core.dynamic.annotation.Param;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -51,6 +52,16 @@ public interface UserPayRollAmountRepository extends JpaRepository<UserPayRollAm
             @Param("month") String month
     );
 
-
+    @Query(value = """
+        SELECT *
+        FROM payroll_amount_view upa
+        WHERE LOWER(upa.month) = LOWER(:month)
+          AND upa.user_id IN (:userIds)
+        """,
+            nativeQuery = true)
+    List<UserPayRollAmount> findAllByMonthAndUserIds(
+            @Param("month") String month,
+            @Param("userIds") List<String> userIds
+    );
 
 }

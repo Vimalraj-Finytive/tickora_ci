@@ -619,7 +619,7 @@ public class PayRollServiceImpl implements PayRollService {
 
     @Override
     @Transactional
-    public String startExportPayroll(String month, String format, String schema, String orgId) {
+    public String startExportPayroll(String month, String format, List<Long> groupIds, List<String> userIds, String schema, String orgId) {
         File folder = new File(downloadDir);
         if (!folder.exists()) folder.mkdirs();
         String fileFormat = (format == null ? "xlsx" : format.toLowerCase());
@@ -643,12 +643,12 @@ public class PayRollServiceImpl implements PayRollService {
         } else {
             exportStatusTracker.writeStatus(file, ReportType.PENDING.getValues());
         }
-        generateAsync(file, exportKey, month, fileFormat);
+        generateAsync(file, exportKey, month, groupIds, userIds, fileFormat);
         return finalName;
     }
 
     @Async
-    public void generateAsync(File file, String redisKey, String month, String format) {
+    public void generateAsync(File file, String redisKey, String month,List<Long> groupIds, List<String> userIds, String format) {
         try {
             boolean redisAvailable = redisTemplate != null;
 
@@ -657,8 +657,22 @@ public class PayRollServiceImpl implements PayRollService {
             } else {
                 exportStatusTracker.writeStatus(file, ReportType.PROCESSING.getValues());
             }
-            List<UserPayRollAmount> data = payRollAdapter.findAllByMonth(month);
-
+            userIds = userIds == null || groupIds.isEmpty()
+                    ? Collections.emptyList() : userIds;
+            List<String> groupUserIds =
+                    groupIds == null || groupIds.isEmpty()
+                            ? Collections.emptyList()
+                            : userAdapter.findUserIdsByGroupIds(groupIds);
+            Set<String> uniqueUserIdSet = new HashSet<>();
+            uniqueUserIdSet.addAll(groupUserIds);
+            uniqueUserIdSet.addAll(userIds);
+            List<String> eligibleUserIds = new ArrayList<>(uniqueUserIdSet);
+            List<UserPayRollAmount> data;
+            if (eligibleUserIds.isEmpty()) {
+                data = payRollAdapter.findAllByMonth(month);
+            }else {
+                 data = payRollAdapter.findAllByMonthAndUserIds(month,eligibleUserIds);
+            }
             if ("csv".equalsIgnoreCase(format)) {
                 generateCsv(data, file);
             } else {
