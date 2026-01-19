@@ -1301,7 +1301,7 @@ private void calculateHours(TimesheetEntity timesheet, WorkScheduleEntity workSc
                         permission++;
                     }
                     case "Paid Leave" -> paidLeave++;
-                    case "unPaid Leave" -> unpaidLeave++;
+                    case "Unpaid Leave" -> unpaidLeave++;
                     case "Absent" -> absent++;
                     case "Not Marked" -> {
                         if (isToday) notMarked++;
