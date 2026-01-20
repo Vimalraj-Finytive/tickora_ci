@@ -48,6 +48,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import java.io.*;
 import java.math.BigDecimal;
+import java.math.MathContext;
 import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
 import java.time.*;
@@ -186,7 +187,7 @@ public class PayRollServiceImpl implements PayRollService {
             LocalDate localDate = LocalDate.of(year, month, 1);
             String monthDate = localDate.format(DateTimeFormatter.ofPattern("MMMM,yyyy"));
             userPayrollAmount.setMonth(monthDate);
-            BigDecimal daySalary = entity.getPayroll().getMonthlySalary().divide(BigDecimal.valueOf(daysInMonth), 2, RoundingMode.HALF_UP);
+            BigDecimal daySalary = entity.getPayroll().getMonthlySalary().divide(BigDecimal.valueOf(daysInMonth), MathContext.DECIMAL128);
             List<TimesheetEntity> timesheetEntities = timesheetAdapter.getTimesheetByUserIds(entity.getUser().getUserId(), year, month);
             log.info("before rest day");
             log.info("rest day");
@@ -328,16 +329,21 @@ public class PayRollServiceImpl implements PayRollService {
     @Override
     public List<UserPayRollAmountModel> getPayrollAmount(String id, String month) {
         List<UserPayRollAmountModel> result = new ArrayList<>();
-        List<UserPayRollAmountEntity> entities = payRollAdapter.getPayrollAmount(id, month);
-        if (entities != null && !entities.isEmpty()) {
-            result.addAll(entityMapper.toModel(entities));
+        List<UserPayRollAmountEntity> entities;
+        if (id == null || id.isBlank()) {
+            entities = payRollAdapter.getAllByMonthAndYear(month);
+        }else {
+            entities = payRollAdapter.getPayrollAmount(id, month);
         }
-        Set<String> processedUserIds = entities == null
-                ? Collections.emptySet()
-                : entities.stream()
-                .map(e -> e.getUser().getUserId())
-                .collect(Collectors.toSet());
-        result.addAll(createZeroPayrollModel(id, processedUserIds, month));
+            if (entities != null && !entities.isEmpty()) {
+                result.addAll(entityMapper.toModel(entities));
+            }
+            Set<String> processedUserIds = (entities == null)
+                    ? Collections.emptySet()
+                    : entities.stream()
+                    .map(e -> e.getUser().getUserId())
+                    .collect(Collectors.toSet());
+            result.addAll(createZeroPayrollModel(id, processedUserIds, month));
         return result;
     }
 
@@ -348,9 +354,13 @@ public class PayRollServiceImpl implements PayRollService {
 
         YearMonth yearMonth = YearMonth.parse(month, formatter);
         LocalDate monthEndDate = yearMonth.atEndOfMonth();
-
-
-        List<UserEntity> users = payRollAdapter.findUsersByPayrollId(payrollId, monthEndDate);
+        List<UserEntity> users;
+        if (payrollId == null || payrollId.isBlank()) {
+            users = payRollAdapter.findAllUsersPayroll(monthEndDate);
+        }
+        else {
+            users = payRollAdapter.findUsersByPayrollId(payrollId, monthEndDate);
+        }
         List<UserPayRollAmountModel> userPayrollList = new ArrayList<>();
         for (UserEntity user : users) {
             if (processedUserIds.contains(user.getUserId())) {
@@ -609,7 +619,7 @@ public class PayRollServiceImpl implements PayRollService {
 
     @Override
     @Transactional
-    public String startExportPayroll(String month, String format, String schema, String orgId) {
+    public String startExportPayroll(String month, String format, List<Long> groupIds, List<String> userIds, String schema, String orgId) {
         File folder = new File(downloadDir);
         if (!folder.exists()) folder.mkdirs();
         String fileFormat = (format == null ? "xlsx" : format.toLowerCase());
@@ -633,12 +643,12 @@ public class PayRollServiceImpl implements PayRollService {
         } else {
             exportStatusTracker.writeStatus(file, ReportType.PENDING.getValues());
         }
-        generateAsync(file, exportKey, month, fileFormat);
+        generateAsync(file, exportKey, month, groupIds, userIds, fileFormat);
         return finalName;
     }
 
     @Async
-    public void generateAsync(File file, String redisKey, String month, String format) {
+    public void generateAsync(File file, String redisKey, String month,List<Long> groupIds, List<String> userIds, String format) {
         try {
             boolean redisAvailable = redisTemplate != null;
 
@@ -647,8 +657,22 @@ public class PayRollServiceImpl implements PayRollService {
             } else {
                 exportStatusTracker.writeStatus(file, ReportType.PROCESSING.getValues());
             }
-            List<UserPayRollAmount> data = payRollAdapter.findAllByMonth(month);
-
+            userIds = userIds == null || groupIds.isEmpty()
+                    ? Collections.emptyList() : userIds;
+            List<String> groupUserIds =
+                    groupIds == null || groupIds.isEmpty()
+                            ? Collections.emptyList()
+                            : userAdapter.findUserIdsByGroupIds(groupIds);
+            Set<String> uniqueUserIdSet = new HashSet<>();
+            uniqueUserIdSet.addAll(groupUserIds);
+            uniqueUserIdSet.addAll(userIds);
+            List<String> eligibleUserIds = new ArrayList<>(uniqueUserIdSet);
+            List<UserPayRollAmount> data;
+            if (eligibleUserIds.isEmpty()) {
+                data = payRollAdapter.findAllByMonth(month);
+            }else {
+                 data = payRollAdapter.findAllByMonthAndUserIds(month,eligibleUserIds);
+            }
             if ("csv".equalsIgnoreCase(format)) {
                 generateCsv(data, file);
             } else {

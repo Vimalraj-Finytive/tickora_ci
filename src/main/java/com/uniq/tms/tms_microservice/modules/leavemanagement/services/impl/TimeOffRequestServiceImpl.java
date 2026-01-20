@@ -35,6 +35,7 @@ import com.uniq.tms.tms_microservice.shared.helper.TimesheetHelper;
 import com.uniq.tms.tms_microservice.shared.util.DateTimeUtil;
 import com.uniq.tms.tms_microservice.shared.util.ExportStatusTracker;
 import com.uniq.tms.tms_microservice.shared.util.ReportStyleUtil;
+import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import com.uniq.tms.tms_microservice.shared.util.CacheKeyUtil;
 import jakarta.transaction.Transactional;
@@ -224,10 +225,7 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
         Set<String> viewers =
                 userAdapter.getAllSupervisorIds(groupIds, user.getUserId(), MemberType.SUPERVISOR.getValue())
                         .stream()
-                        .filter(viewerId -> {
-                            UserEntity v = userAdapter.getUserById(viewerId);
-                            return v.isActive() != null && v.isActive();
-                        })
+                        .filter(Objects::nonNull)
                         .collect(Collectors.toSet());
         log.info("viewers size{}", viewers.size());
         List<String> superAdminIds = userAdapter.findSuperAdminByOrgId(authHelper.getOrgId())

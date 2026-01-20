@@ -1,4 +1,4 @@
-package com.uniq.tms.tms_microservice.modules.workScheduleManagement.enums;
+package com.uniq.tms.tms_microservice.modules.workScheduleManagement.projection;
 
 import java.time.LocalTime;
 

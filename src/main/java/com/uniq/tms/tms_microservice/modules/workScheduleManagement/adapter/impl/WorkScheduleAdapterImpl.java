@@ -3,7 +3,8 @@ package com.uniq.tms.tms_microservice.modules.workScheduleManagement.adapter.imp
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.adapter.WorkScheduleAdapter;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.*;
-import com.uniq.tms.tms_microservice.modules.workScheduleManagement.enums.FixedWorkScheduleProjection;
+import com.uniq.tms.tms_microservice.modules.workScheduleManagement.projection.FixedWorkScheduleProjection;
+import com.uniq.tms.tms_microservice.modules.workScheduleManagement.projection.FlexibleScheduleProjection;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.repository.*;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.services.impl.WorkScheduleServiceImpl;
 import org.apache.logging.log4j.LogManager;
@@ -188,18 +189,14 @@ public class WorkScheduleAdapterImpl implements WorkScheduleAdapter {
                 }
 
                 // Map all users assigned to this work schedule
-//                if (ws.getUsers() != null) {
-//                    log.info("Reached mapping");
-//                    ws.getUsers().forEach(user -> {
-//                        userWorkingDaysMap.put(user.getUserId(), workingDays);
-//                    });
-//                    log.info("Setup mapping Completed");
-//                }
+                Set<String> requestedUserIds = Set.of(userIds);
+                Set<DayOfWeek> safeDays = Set.copyOf(workingDays);
                 if (ws.getUsers() != null && !ws.getUsers().isEmpty()) {
-                    Set<DayOfWeek> safeDays = Set.copyOf(workingDays);
-                    for (UserEntity user : ws.getUsers()) {
-                        userWorkingDaysMap.put(user.getUserId(), safeDays);
-                    }
+                    ws.getUsers().stream()
+                            .filter(user -> requestedUserIds.contains(user.getUserId()))
+                            .forEach(user -> {
+                                userWorkingDaysMap.put(user.getUserId(), safeDays);
+                            });
                 }
 
             }catch (Exception e){
@@ -220,7 +217,7 @@ public class WorkScheduleAdapterImpl implements WorkScheduleAdapter {
     }
 
     @Override
-    public List<FlexibleWorkScheduleEntity> findFlexibleSchedulesByUserIds(String[] pagedUserIds) {
+    public List<FlexibleScheduleProjection> findFlexibleSchedulesByUserIds(String[] pagedUserIds) {
         return workScheduleRepository.findFlexibleSchedulesByUserIds(pagedUserIds);
     }
 

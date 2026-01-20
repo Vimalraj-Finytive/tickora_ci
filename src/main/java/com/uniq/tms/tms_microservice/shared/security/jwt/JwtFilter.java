@@ -78,6 +78,19 @@ public class JwtFilter extends OncePerRequestFilter {
             return;
         }
 
+        if (path.startsWith("/assets/") ||
+                path.endsWith(".png") ||
+                path.endsWith(".jpg") ||
+                path.endsWith(".jpeg") ||
+                path.endsWith(".svg") ||
+                path.endsWith(".css") ||
+                path.endsWith(".js") ||
+                path.endsWith(".ico")) {
+            chain.doFilter(request, response);
+            return;
+        }
+
+
         if (!path.startsWith("/tms/")) {
             chain.doFilter(request, response);
             return;

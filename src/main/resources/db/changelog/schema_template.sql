@@ -1156,6 +1156,7 @@ CREATE OR REPLACE FUNCTION ${schemaName}.fetch_fixed_schedules_by_user_ids(
     p_user_ids VARCHAR[]
 )
 RETURNS TABLE (
+    user_id VARCHAR,
     fixed_work_schedule_id VARCHAR,
     day VARCHAR,
     start_time TIME,
@@ -1167,7 +1168,8 @@ LANGUAGE plpgsql
 AS $func$
 BEGIN
     RETURN QUERY
-    SELECT f.fixed_work_schedule_id,
+    SELECT u.user_id,
+           f.fixed_work_schedule_id,
            f.day,
            f.start_time,
            f.end_time,
@@ -1184,6 +1186,7 @@ CREATE OR REPLACE FUNCTION ${schemaName}.fetch_flexible_schedules_by_user_ids(
     p_user_ids VARCHAR[]
 )
 RETURNS TABLE (
+    user_id,
     flexible_work_schedule_id VARCHAR,
     day VARCHAR,
     duration DOUBLE PRECISION,
@@ -1193,7 +1196,8 @@ LANGUAGE plpgsql
 AS $$
 BEGIN
     RETURN QUERY
-    SELECT f.flexible_work_schedule_id,
+    SELECT u.user_id,
+           f.flexible_work_schedule_id,
            f.day,
            f.duration,
            f.work_schedule_id
@@ -1625,7 +1629,5 @@ LEFT JOIN org_type ot
     upa.total_amount,
     upa.month
    FROM ${schemaName}.user_payroll_amount upa
-     JOIN ${schemaName}.user_payroll up ON up.payroll_id::text = upa.payroll_id::text
-     AND up.user_id::text = upa.user_id::text
-     JOIN ${schemaName}.payroll p ON p.id::text = up.payroll_id::text
-     LEFT JOIN ${schemaName}.users u ON u.user_id::text = upa.user_id::text;
+         LEFT JOIN ${schemaName}.payroll p ON p.id = upa.payroll_id
+     	 LEFT JOIN ${schemaName}.users u ON u.user_id = upa.user_id;

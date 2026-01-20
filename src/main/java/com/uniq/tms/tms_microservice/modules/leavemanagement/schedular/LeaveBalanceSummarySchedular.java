@@ -3,7 +3,6 @@ package com.uniq.tms.tms_microservice.modules.leavemanagement.schedular;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.services.LeaveBalanceService;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.OrganizationEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.OrganizationRepository;
-import com.uniq.tms.tms_microservice.shared.helper.AuthHelper;
 import com.uniq.tms.tms_microservice.shared.util.TenantUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,27 +17,31 @@ public class LeaveBalanceSummarySchedular {
 
     private final LeaveBalanceService leaveBalanceService;
     private final OrganizationRepository organizationRepository;
-    private final AuthHelper authHelper;
 
-    public LeaveBalanceSummarySchedular(LeaveBalanceService leaveBalanceService, OrganizationRepository organizationRepository, AuthHelper authHelper) {
+    public LeaveBalanceSummarySchedular(LeaveBalanceService leaveBalanceService, OrganizationRepository organizationRepository) {
         this.leaveBalanceService = leaveBalanceService;
         this.organizationRepository = organizationRepository;
-        this.authHelper = authHelper;
     }
 
-@Scheduled(cron = "0 0 0 1 * ?", zone = "Asia/Kolkata")
-public void autoUpdateLeaveSummary(){
+    @Scheduled(cron = "0 0 0 1 * ?", zone = "Asia/Kolkata")
+    public void autoUpdateLeaveSummary() {
         try {
-            List<OrganizationEntity> orgIds = organizationRepository.findAll();
-            for (OrganizationEntity orgId : orgIds) {
-                TenantUtil.setCurrentTenant(orgId.getSchemaName());
+            List<OrganizationEntity> organization = organizationRepository.findAll();
+            for (OrganizationEntity org : organization) {
                 try {
-                    log.info("Scheduled clock triggered for calculate Leave Summary");
-                    leaveBalanceService.updateMonthlyLeaveSummary(orgId.getOrganizationId());
-//                    leaveBalanceService.updateDailyLeaveSummary();
+                    TenantUtil.setCurrentTenant(org.getSchemaName());
+
+                    log.info("Leave summary start | orgId={} | schema={}",
+                            org.getOrganizationId(), org.getSchemaName());
+
+                    leaveBalanceService.updateMonthlyLeaveSummary(org.getOrganizationId());
+
+                    log.info("Leave summary completed | orgId={} | schema={}",
+                            org.getOrganizationId(), org.getSchemaName());
+
                 } catch (Exception e) {
-                    continue;
-//                      throw new RuntimeException(e);
+                    log.error("Leave summary failed | orgId={} | schema={}",
+                            org.getOrganizationId(), org.getSchemaName(), e);
                 } finally {
                     TenantUtil.clearTenant();
                 }
@@ -47,5 +50,5 @@ public void autoUpdateLeaveSummary(){
             log.error("Error while leaveSummary calculate", e);
         }
     }
-
 }
+

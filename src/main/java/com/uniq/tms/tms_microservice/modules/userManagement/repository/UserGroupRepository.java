@@ -92,6 +92,7 @@ public interface UserGroupRepository extends JpaRepository<UserGroupEntity,Long>
     SELECT DISTINCT ug.user.userId
     FROM UserGroupEntity ug
     WHERE ug.group.groupId IN :groupIds
+    AND ug.user.active = true
 """)
     List<String> findUserIdsByGroupIds(@Param("groupIds") List<Long> groupIds);
 
@@ -114,6 +115,7 @@ public interface UserGroupRepository extends JpaRepository<UserGroupEntity,Long>
     WHERE ug.group.groupId IN :groupIds
       AND ug.type = :type
       AND ug.user.userId <> :userId
+      AND ug.user.active IS TRUE
     """)
     Set<String> findAllSupervisorUserIds(@Param("groupIds") List<Long> groupIds,
                                          @Param("userId") String userId, @Param("type") String type);

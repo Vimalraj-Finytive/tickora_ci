@@ -99,8 +99,9 @@ public class TimeOffFacade {
     }
 
     public ApiResponse<Void> assignPoliciesToUsers(TimeOffPolicyBulkAssignRequestDto dto) {
+            String orgId = authHelper.getOrgId();
             TimeOffPolicyBulkAssignModel model = timeoffPolicyDtoMapper.toBulkAssignModel(dto);
-            timeOffPolicyService.assignPolicies(model);
+            timeOffPolicyService.assignPolicies(model,orgId);
             return new ApiResponse<>(200, "Policies assigned successfully", null);
     }
 

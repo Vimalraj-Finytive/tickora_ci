@@ -37,9 +37,9 @@ public class UserFacade {
 
     private final Logger log = LoggerFactory.getLogger(UserFacade.class);
 
-    public ApiResponse getAllGroup(String orgId) {
+    public ApiResponse<List<GroupDto>> getAllGroup(String orgId) {
         List<GroupDto> groups = userService.getAllGroup(orgId).stream().map(userDtoMapper::toGroupDto).toList();
-        return new ApiResponse(
+        return new ApiResponse<>(
                 200, "Groups fetched successfully", groups
         );
     }
@@ -64,7 +64,7 @@ public class UserFacade {
         return new ApiResponse(200, "Users fetched successfully", users);
     }
 
-    public ApiResponse deleteUsers(com.uniq.tms.tms_microservice.dto.DeactivateUserRequestDto requestDto) {
+    public ApiResponse deleteUsers(DeactivateUserRequestDto requestDto) {
         String orgId = authHelper.getOrgId();
         String userNameFromToken = authHelper.getUsername();
 
@@ -296,20 +296,20 @@ public class UserFacade {
         return new ApiResponse(200, "Users fetched successfully", users);
     }
 
-    public ApiResponse updateIsActive(EditUserDto editUserDto) {
+    public ApiResponse<List<EditUserDto>> updateIsActive(EditUserDto editUserDto) {
         String orgId = authHelper.getOrgId();
         String userNameFromToken = authHelper.getUsername();
         if (orgId == null) {
-            return new ApiResponse(401, "Unauthorized - Invalid Organization", null);
+            return new ApiResponse<>(401, "Unauthorized - Invalid Organization", null);
         }
         Long currentCount = userService.getCurrentUserCount(orgId);
         Long subscribedLimit = userService.getSubscribedUserLimit(orgId);
 
         if (!(currentCount < subscribedLimit)) {
-            return new ApiResponse<UserDto>(404, "User limit reached. Please upgrade your plan.", null);
+            return new ApiResponse<>(404, "User limit reached. Please upgrade your plan.", null);
         }
         List<EditUserDto> editUserDtos = userService.updateIsActive(userDtoMapper.toMiddleware(editUserDto), orgId, userNameFromToken);
-        return new ApiResponse(200, "User is activated", null);
+        return new ApiResponse<>(200, "User is activated", null);
     }
 
     public ApiResponse<List<UserHistoryResponseDto>> getUserHistoryLog(String userId) {

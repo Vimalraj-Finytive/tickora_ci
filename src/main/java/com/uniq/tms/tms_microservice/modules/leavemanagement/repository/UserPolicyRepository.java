@@ -83,7 +83,8 @@ public interface UserPolicyRepository extends JpaRepository<UserPolicyEntity, Lo
     @Query("""
     SELECT DISTINCT up.user.userId
     FROM UserPolicyEntity up
-    WHERE (up.validTo IS NULL OR up.validTo >= :date)
+    WHERE up.validFrom <= :date
+      AND (up.validTo IS NULL OR up.validTo >= :date)
       AND up.active = true
       AND up.user.userId IN :userIds
     """)

@@ -8,6 +8,7 @@ import com.uniq.tms.tms_microservice.modules.payrollManagement.model.UserPayRoll
 import com.uniq.tms.tms_microservice.modules.payrollManagement.projection.PayRollProjection;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.projection.UserPayRollAmount;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
+import io.lettuce.core.dynamic.annotation.Param;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -39,4 +40,6 @@ public interface PayRollAdapter {
     Optional<UserPayRollAmountEntity> getUserPayrollAmount(String userId, String month);
     List<UserEntity> findUsersByPayrollId(String payrollId, LocalDate date);
     List<String> findAllUsersByMonth(LocalDate date);
+    List<UserEntity> findAllUsersPayroll(LocalDate date);
+    List<UserPayRollAmount> findAllByMonthAndUserIds(String month, List<String> userIds);
 }

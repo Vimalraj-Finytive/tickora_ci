@@ -20,7 +20,7 @@ public class IdGenerationServiceImpl implements IdGenerationService {
 
     private static final Logger log = LogManager.getLogger(IdGenerationServiceImpl.class);
 
-    private OrgUserSequenceRepository orgUserSequenceRepository;
+    private final OrgUserSequenceRepository orgUserSequenceRepository;
     private final IdGeneratorAdapter idGeneratorAdapter;
     private final OrganizationRepository organizationRepository;
     private final TimeOffPolicyRepository timeoffPolicyRepository;
@@ -33,6 +33,7 @@ public class IdGenerationServiceImpl implements IdGenerationService {
     }
 
     @Transactional
+    @Override
     public String generateNextUserId(String orgId) {
         int updated = orgUserSequenceRepository.incrementSequence(orgId);
 
@@ -149,9 +150,7 @@ public class IdGenerationServiceImpl implements IdGenerationService {
         if (organizationId == null || organizationId.isBlank()) {
             throw new IllegalArgumentException("organizationId cannot be null or blank");
         }
-        log.info("OrganizationId: {}", organizationId);
         int updated = orgUserSequenceRepository.incrementSubscriptionSequence(organizationId);
-        log.info("Increment number:{}", updated);
         if (updated == 0) {
             OrgUserSequenceEntity sequence = new OrgUserSequenceEntity();
             sequence.setOrgId(organizationId);
@@ -203,41 +202,8 @@ public class IdGenerationServiceImpl implements IdGenerationService {
                     + String.format("%04d", latestNumber);
         }
 
-//    @Override
-//    public String generatePayrollId(String organizationId){
-//        if (organizationId == null || organizationId.isBlank()) {
-//            throw new IllegalArgumentException("organizationId cannot be null or blank");
-//        }
-//        log.info("Generating Payment ID for Organization: {}", organizationId);
-//
-//        int updated = orgUserSequenceRepository.incrementPayrollSequence(organizationId);
-//        log.info("Increment result: {}", updated);
-//
-//
-//        if (updated == 0) {
-//            OrgUserSequenceEntity sequence = new OrgUserSequenceEntity();
-//            sequence.setOrgId(organizationId);
-//            sequence.setLastPaymentId(1);
-//            orgUserSequenceRepository.save(sequence);
-//
-//            return organizationId.replaceAll("\\d", "")
-//                    + IdGenerationTypeEnum.PAYROLL.getPrefix()
-//                    + String.format("%05d", 1);
-//        }
-//
-//        // Get latest number
-//        Integer latestNumber = orgUserSequenceRepository.getLastPayrollId(organizationId);
-//        if (latestNumber == null) {
-//            orgUserSequenceRepository.updateLastPayrollId(organizationId, 1);
-//            latestNumber = 1;
-//        }
-//
-//        return organizationId.replaceAll("\\d", "")
-//                + IdGenerationTypeEnum.PAYROLL.getPrefix()
-//                + String.format("%05d", latestNumber);
-//    }
-
     @Transactional
+    @Override
     public String generatePayrollId(String organizationId) {
         if (organizationId == null || organizationId.isBlank()) {
             throw new IllegalArgumentException("organizationId cannot be null or blank");
