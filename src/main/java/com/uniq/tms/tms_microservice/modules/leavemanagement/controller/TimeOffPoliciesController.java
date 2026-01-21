@@ -1,6 +1,7 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.controller;
 
 import com.uniq.tms.tms_microservice.modules.leavemanagement.constant.LeaveConstant;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeOffPolicyTemplateEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.facade.TimeOffFacade;
 import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
 import com.uniq.tms.tms_microservice.shared.dto.EnumDto;
@@ -132,6 +133,12 @@ public class TimeOffPoliciesController {
                                                              @RequestBody List<EditUserPolicyDto> editUserPolicyDto){
         ApiResponse<Void> response =
                 timeOffFacade.editUserPolicy(editUserPolicyDto);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
+
+    @GetMapping("/template/policies")
+    public ResponseEntity<ApiResponse<List<TimeOffPolicyTemplateDto>>> getAll() {
+        ApiResponse<List<TimeOffPolicyTemplateDto>> response = timeOffFacade.getAllTemplates();
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 }

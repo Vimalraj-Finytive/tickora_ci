@@ -735,6 +735,20 @@ CREATE TABLE IF NOT EXISTS timeoff_policies (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- ===========================================================
+-- Table: timeoff_policy_templates
+-- ===========================================================
+-- changeset system:create-timeoff-policy-templates
+CREATE TABLE IF NOT EXISTS ${schemaName}.timeoff_policy_templates (
+    id BIGSERIAL PRIMARY KEY,
+    policy_code VARCHAR(10) NOT NULL UNIQUE,
+    policy_name VARCHAR(100) NOT NULL,
+    entitled_units INT NOT NULL,
+    gender_applicability VARCHAR(10)
+        CHECK (gender_applicability IN ('MALE','FEMALE','ALL')),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 --changeset system:insert-default-timeoff-policy
 INSERT INTO ${schemaName}.timeoff_policies (
     policy_id,
@@ -1181,12 +1195,12 @@ BEGIN
 END;
 $func$;
 
---changeset system:create-fetch_flexible_schedules_by_user_ids endDelimiter://
+--changeset system:create-fetch_flexible_schedules_by_user_ids splitStatements:false
 CREATE OR REPLACE FUNCTION ${schemaName}.fetch_flexible_schedules_by_user_ids(
     p_user_ids VARCHAR[]
 )
 RETURNS TABLE (
-    user_id,
+    user_id VARCHAR,
     flexible_work_schedule_id VARCHAR,
     day VARCHAR,
     duration DOUBLE PRECISION,
@@ -1202,10 +1216,12 @@ BEGIN
            f.duration,
            f.work_schedule_id
     FROM ${schemaName}.flexible_work_schedule f
-    JOIN ${schemaName}.users u ON f.work_schedule_id = u.work_schedule_id
+    JOIN ${schemaName}.users u
+      ON f.work_schedule_id = u.work_schedule_id
     WHERE u.user_id = ANY(p_user_ids);
 END;
 $$;
+
 
 --changeset system:create-fetch-main-timesheets-users endDelimiter://
 CREATE OR REPLACE FUNCTION ${schemaName}.fetch_main_timesheets_users(
