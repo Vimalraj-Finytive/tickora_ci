@@ -1,5 +1,6 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.services;
 
+import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeOffPolicyTemplateEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.*;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeOffPoliciesModel;
 import com.uniq.tms.tms_microservice.shared.dto.EnumModel;
@@ -22,5 +23,6 @@ public interface TimeOffPolicyService {
       void editUserPolicy(List<EditUserPolicyModel> editUserPolicyModel);
       void updateMonthlyPolicy(String orgId);
       void updateYearlyPolicy(String orgId);
+      List<TimeOffPolicyTemplateModel> getAllTemplates();
 
 }
