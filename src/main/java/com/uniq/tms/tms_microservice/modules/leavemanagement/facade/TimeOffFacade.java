@@ -3,6 +3,7 @@ package com.uniq.tms.tms_microservice.modules.leavemanagement.facade;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.AdminStatusUpdateDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.EmployeeStatusUpdateDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeOffRequestDto;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeOffPolicyTemplateEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.AdminStatusUpdate;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.EmployeeStatusUpdate;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeOffRequest;
@@ -228,5 +229,14 @@ public class TimeOffFacade {
         List<EditUserPolicyModel> model = timeoffPolicyDtoMapper.toModel(editUserPoicyDto);
         timeOffPolicyService.editUserPolicy(model);
         return new ApiResponse<>(200, "Updated user policy succesfully", null);
+    }
+
+    public ApiResponse<List<TimeOffPolicyTemplateDto>> getAllTemplates() {
+
+        List<TimeOffPolicyTemplateModel> templates = timeOffPolicyService.getAllTemplates();
+        List<TimeOffPolicyTemplateDto> dtoList = templates.stream()
+                .map(timeoffPolicyDtoMapper::toDto)
+                .toList();
+        return new ApiResponse<>(200, "Templates fetched successfully", dtoList);
     }
 }

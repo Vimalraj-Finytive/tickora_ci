@@ -3,11 +3,13 @@ package com.uniq.tms.tms_microservice.modules.leavemanagement.services.impl;
 import com.uniq.tms.tms_microservice.modules.identityManagement.service.IdGenerationService;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.LeaveBalanceAdapter;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.TimeOffPolicyAdapter;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.TimeOffPolicyTemplatesAdapter;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.UserPolicyAdapter;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.*;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.*;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.mapper.TimeOffPolicyEntityMapper;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.*;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.repository.TimeOffPolicyTemplateRepository;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.services.TimeOffPolicyService;
 import com.uniq.tms.tms_microservice.modules.userManagement.adapter.UserAdapter;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
@@ -18,6 +20,7 @@ import com.uniq.tms.tms_microservice.shared.security.cache.CacheKeyConfig;
 import com.uniq.tms.tms_microservice.shared.security.cache.CacheReloadHandlerRegistry;
 import com.uniq.tms.tms_microservice.shared.util.CacheEventPublisherUtil;
 import com.uniq.tms.tms_microservice.shared.util.CacheKeyUtil;
+import com.uniq.tms.tms_microservice.shared.util.TimeOffPolicyTemplateLoaderUtil;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,9 +51,11 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
     private final CacheReloadHandlerRegistry cacheReloadHandlerRegistry;
     private final ApplicationEventPublisher publisher;
     private final AuthHelper authHelper;
+    private final TimeOffPolicyTemplateLoaderUtil timeOffPolicyTemplateLoaderUtil;
+    private final TimeOffPolicyTemplatesAdapter timeOffPolicyTemplatesAdapter;
 
     public TimeOffPolicyServiceImpl(IdGenerationService idGenerationService, UserAdapter userAdapter, TimeOffPolicyEntityMapper timeOffPolicyEntityMapper, UserPolicyAdapter userPolicyAdapter, LeaveBalanceAdapter leaveBalanceAdapter,
-                                    TimeOffPolicyAdapter timeOffPolicyAdapter, CacheKeyConfig cacheKeyConfig, CacheReloadHandlerRegistry cacheReloadHandlerRegistry, ApplicationEventPublisher publisher, CacheKeyUtil cacheKeyUtil, AuthHelper authHelper) {
+                                    TimeOffPolicyAdapter timeOffPolicyAdapter, CacheKeyConfig cacheKeyConfig, CacheReloadHandlerRegistry cacheReloadHandlerRegistry, ApplicationEventPublisher publisher, CacheKeyUtil cacheKeyUtil, AuthHelper authHelper,  TimeOffPolicyTemplateLoaderUtil timeOffPolicyTemplateLoaderUtil, TimeOffPolicyTemplatesAdapter timeOffPolicyTemplatesAdapter) {
         this.idGenerationService = idGenerationService;
         this.userAdapter = userAdapter;
         this.timeOffPolicyEntityMapper = timeOffPolicyEntityMapper;
@@ -61,6 +66,8 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
         this.cacheReloadHandlerRegistry = cacheReloadHandlerRegistry;
         this.publisher = publisher;
         this.authHelper = authHelper;
+        this.timeOffPolicyTemplateLoaderUtil = timeOffPolicyTemplateLoaderUtil;
+        this.timeOffPolicyTemplatesAdapter = timeOffPolicyTemplatesAdapter;
     }
 
     @Value("${cache.redis.enabled}")
@@ -822,5 +829,31 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
         } else {
             log.info("Redis is not enabled or RedisTemplate is null. Skipping cache reload for orgId={}", orgId);
         }
+    }
+
+    @Transactional
+    public void createDefaultTemplatesIfNotExists() {
+        for(TimeOffPolicyTemplateEntity template : timeOffPolicyTemplateLoaderUtil.getTemplates()) {
+            TimeOffPolicyTemplateEntity existing =
+                    timeOffPolicyTemplatesAdapter.findByTemplateCode(template.getPolicyCode());
+            log.info("Creating default time-off policy template: {}", template.getPolicyCode());
+            if (existing != null) {
+                continue;
+            }
+            timeOffPolicyTemplatesAdapter.save(template);
+        }
+    }
+
+    @Override
+    public List<TimeOffPolicyTemplateModel> getAllTemplates() {
+        createDefaultTemplatesIfNotExists();
+        List<TimeOffPolicyTemplateEntity> entities =timeOffPolicyTemplatesAdapter.findAll();
+        if (entities == null || entities.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "No Templates Found");
+        }
+        List<TimeOffPolicyTemplateModel> models = entities.stream()
+                .map(timeOffPolicyEntityMapper::toModel)
+                .toList();
+        return models;
     }
 }
