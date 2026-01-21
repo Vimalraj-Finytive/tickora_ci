@@ -3,6 +3,7 @@ package com.uniq.tms.tms_microservice.modules.leavemanagement.mapper;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeOffExportRequestDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeOffPolicyRequestDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeOffPolicyResponseDto;
+import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeOffPolicyTemplateEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeOffRequestEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeOffPolicyEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.*;
@@ -42,4 +43,7 @@ public interface TimeOffPolicyEntityMapper {
     LeaveBalanceModel toModel(LeaveBalanceEntity entity);
     List<LeaveBalanceModel> toBalanceModelList(List<LeaveBalanceEntity> entities);
 
+    TimeOffPolicyTemplateModel toModel(TimeOffPolicyTemplateEntity timeOffPolicyTemplateEntity);
+
+    TimeOffPolicyTemplateEntity toEntity(TimeOffPolicyTemplateModel timeOffPolicyTemplateModel);
 }

@@ -1,0 +1,38 @@
+[
+  {
+    "policyCode": "CL",
+    "policyName": "Casual Leave",
+    "entitledUnits": 1,
+    "genderApplicability": "ALL"
+  },
+  {
+    "policyCode": "SL",
+    "policyName": "Sick Leave",
+    "entitledUnits": 1,
+    "genderApplicability": "ALL"
+  },
+  {
+    "policyCode": "FL",
+    "policyName": "Floating Leave",
+    "entitledUnits": 1,
+    "genderApplicability": "ALL"
+  },
+  {
+    "policyCode": "ML",
+    "policyName": "Maternity Leave",
+    "entitledUnits": 1,
+    "genderApplicability": "FEMALE"
+  },
+  {
+    "policyCode": "PL",
+    "policyName": "Paternity Leave",
+    "entitledUnits": 1,
+    "genderApplicability": "MALE"
+  },
+  {
+    "policyCode": "LOP",
+    "policyName": "Loss of Pay",
+    "entitledUnits": 0,
+    "genderApplicability": "ALL"
+  }
+]
