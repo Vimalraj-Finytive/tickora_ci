@@ -12,6 +12,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
+
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -267,5 +269,19 @@ public class OrganizationController {
     }
 
 
+    @PostMapping("/payment/capture")
+    public ResponseEntity<ApiResponse<String>> captureOnly(
+            @RequestParam String paymentId,
+            @RequestParam BigDecimal amount
+    ) {
+        ApiResponse<String> response =organizationFacade.capturePayment(paymentId, amount);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
+
+    @PostMapping("/payment/verify/signature")
+    public ResponseEntity<ApiResponse<String>> verifySignature(@RequestBody VerifySignatureDto signatureDto) {
+        ApiResponse<String> response =organizationFacade.verifyPaymentSignature(signatureDto);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
 }
 

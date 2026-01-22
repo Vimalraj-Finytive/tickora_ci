@@ -1,9 +1,6 @@
 package com.uniq.tms.tms_microservice.modules.organizationManagement.services.impl;
 
-import com.razorpay.Order;
-import com.razorpay.Payment;
-import com.razorpay.RazorpayClient;
-import com.razorpay.RazorpayException;
+import com.razorpay.*;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.OrganizationAdapter;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.PaymentAdapter;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.SubscriptionAdapter;
@@ -81,7 +78,7 @@ public class PaymentServiceImpl implements PaymentService {
             orderRequest.put("amount", amountInPaise.intValue());
             orderRequest.put("currency", "INR");
             orderRequest.put("receipt", "receipt_" + orgId + "_" + System.currentTimeMillis());
-            orderRequest.put("payment_capture", 1);
+            orderRequest.put("payment_capture", 0);
             Order order = razorpayClient.orders.create(orderRequest);
             String orderId = order.get("id");
             String status = order.get("status");
@@ -288,4 +285,34 @@ public class PaymentServiceImpl implements PaymentService {
                 .map(entry -> new TopCustomersModel(entry.getKey(), entry.getValue()))
                 .toList();
     }
+
+    @Override
+    public void verifySignature(String orderId, String paymentId, String signature) {
+        try {
+            String payload = orderId + "|" + paymentId;
+            boolean isValid= Utils.verifySignature(payload, signature, razorpayKeySecret);
+            if (!isValid) {
+                throw new RuntimeException("Invalid Razorpay signature");
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Signature verification failed", e);
+        }
+    }
+
+
+    @Override
+    public Payment capturePayment(String paymentId, BigDecimal amount) {
+        try {
+            RazorpayClient client = new RazorpayClient(razorpayKeyId, razorpayKeySecret);
+
+            JSONObject request = new JSONObject();
+            request.put("amount", amount.multiply(BigDecimal.valueOf(100)).intValue());
+
+            return client.payments.capture(paymentId, request);
+
+        } catch (RazorpayException e) {
+            throw new RuntimeException("Payment capture failed", e);
+        }
+    }
+
 }

@@ -1,6 +1,7 @@
 package com.uniq.tms.tms_microservice.modules.organizationManagement.services;
 
 
+import com.razorpay.Payment;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.PaymentDto;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.PaymentEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.enums.PaymentStatus;
@@ -17,4 +18,6 @@ public interface PaymentService {
     ResponseEntity<byte[]> getPaymentDetailsPdfBySubscriptionId(String subscriptionId, String orgId);
     List<MonthlyPaymentModel> getOrganizationSales(int year);
     List<TopCustomersModel> getOrganizationTopCustomers(int year);
+    Payment capturePayment(String paymentId, BigDecimal amount);
+    void verifySignature(String orderId, String paymentId, String signature);
 }
