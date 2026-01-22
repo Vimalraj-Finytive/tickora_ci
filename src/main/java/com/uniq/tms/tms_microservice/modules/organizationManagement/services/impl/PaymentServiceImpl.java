@@ -35,6 +35,7 @@ import org.springframework.stereotype.Service;
 import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -51,6 +52,9 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Value("${razorpay.key.secret}")
     private String razorpayKeySecret;
+
+    @Value("${razorpay.webhook.secret}")
+    private String razorpayWebhookSecret;
 
     private final PaymentAdapter paymentAdapter;
     private final SubscriptionAdapter subscriptionAdapter;
@@ -315,4 +319,80 @@ public class PaymentServiceImpl implements PaymentService {
         }
     }
 
+
+    @Override
+    public ResponseEntity<String> handleWebhook(String payload, String signature) {
+
+        try {
+            boolean isVerified=Utils.verifyWebhookSignature(payload, signature, razorpayWebhookSecret);
+            if(!isVerified){
+                return ResponseEntity.ok("Invalid signature ignored");
+            }
+            log.info("Razorpay webhook signature verified successfully.");
+            processPaymentStatus(payload);
+            return ResponseEntity.ok("Webhook processed successfully");
+        }
+        catch (RazorpayException e) {
+            log.error("Invalid Signature: {}", e.getMessage());
+            return ResponseEntity.ok("Invalid signature ignored");
+        }
+        catch (Exception e) {
+            log.error("Razorpay webhook signature verification failed: {}", e.getMessage());
+            return ResponseEntity.ok("Webhook received");
+        }
+
+    }
+
+
+    public void processPaymentStatus(String payload){
+        JSONObject webhookData = new JSONObject(payload);
+        String event=webhookData.getString("event");
+        JSONObject payloadObj = webhookData.getJSONObject("payload");
+        System.out.println(event);
+        String paymentId=null;
+        if (event.startsWith("refund.")) {
+
+            if (payloadObj.has("refund")) {
+                paymentId = payloadObj
+                        .getJSONObject("refund")
+                        .getJSONObject("entity")
+                        .getString("payment_id");
+            }
+
+        }
+        else {
+            paymentId = payloadObj
+                    .getJSONObject("payment")
+                    .getJSONObject("entity")
+                    .getString("id");
+        }
+
+        if (paymentId == null || paymentId.isBlank()) {
+            log.warn("Payment ID not found for event: {}", event);
+            return;
+        }
+        PaymentEntity paymentEntity=paymentAdapter.getPaymentById(paymentId);
+
+        if (paymentEntity == null) {
+            log.warn("Payment  not found: {}", event);
+            return;
+        }
+        if (paymentEntity != null) {
+            log.info("Processing payment status update for Payment ID: {}", paymentId);
+            log.info("Event: {}, PaymentId: {}", event, paymentId);
+            String paymentStatus = switch (event) {
+                case "payment.created" -> PaymentStatus.CREATED.name();
+                case "payment.authorized" -> PaymentStatus.AUTHORIZED.name();
+                case "payment.captured" -> PaymentStatus.SUCCESS.name();
+                case "refund.processed" -> PaymentStatus.REFUNDED.name();
+                case "payment.failed" -> PaymentStatus.FAILED.name();
+                default -> paymentEntity.getPaymentStatus();
+            };
+
+            paymentEntity.setPaymentStatus(paymentStatus);
+            paymentEntity.setUpdatedAt(LocalDateTime.now());
+            paymentAdapter.updatePayment(paymentEntity);
+        }
+
+    }
 }

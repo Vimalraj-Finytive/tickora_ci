@@ -270,4 +270,9 @@ public class OrganizationFacade {
         paymentService.verifySignature(signatureDto.getOrderId(), signatureDto.getPaymentId(), signatureDto.getSignature());
         return new ApiResponse<>(200, "Payment signature verified successfully", null);
     }
+
+
+    public ResponseEntity<String> handleWebhook(String payload, String signature) {
+        return paymentService.handleWebhook(payload, signature);
+    }
 }

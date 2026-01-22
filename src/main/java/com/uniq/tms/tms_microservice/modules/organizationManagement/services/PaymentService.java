@@ -2,6 +2,7 @@ package com.uniq.tms.tms_microservice.modules.organizationManagement.services;
 
 
 import com.razorpay.Payment;
+import com.razorpay.RazorpayException;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.dto.PaymentDto;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.PaymentEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.enums.PaymentStatus;
@@ -20,4 +21,5 @@ public interface PaymentService {
     List<TopCustomersModel> getOrganizationTopCustomers(int year);
     Payment capturePayment(String paymentId, BigDecimal amount);
     void verifySignature(String orderId, String paymentId, String signature);
+    ResponseEntity<String> handleWebhook(String payload, String signature);
 }
