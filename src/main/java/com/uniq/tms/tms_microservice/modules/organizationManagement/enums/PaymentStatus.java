@@ -1,8 +1,12 @@
 package com.uniq.tms.tms_microservice.modules.organizationManagement.enums;
 
 public enum PaymentStatus {
+    CREATED("Created"),
+    AUTHORIZED("Authorized"),
     SUCCESS("Success"),
-    FAILED("Failed");
+    PENDING("Pending"),
+    FAILED("Failed"),
+    REFUNDED("Refunded");
 
     private final String displayValue;
 

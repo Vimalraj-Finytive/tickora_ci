@@ -64,7 +64,8 @@ public class SecurityConfig {
                                 "/tms/organization/**",
                                 "/tms/sendOTP",
                                 "/tms/leaveManagement/countries",
-                                "/tms/debug/**"
+                                "/tms/debug/**",
+                                "/tms/razorpay/webhook/receive"
                         ).permitAll()
                         .requestMatchers("/tms/**").authenticated()
                         .anyRequest().permitAll()
