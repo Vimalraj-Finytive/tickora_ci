@@ -12,5 +12,5 @@ public interface PaymentAdapter {
     List<Object[]> getMonthlyAmountWithShortMonthName(int year);
     BigDecimal getTotalAmountByYear(int year);
     PaymentEntity getPaymentById(String paymentId);
-
+    void updatePayment(PaymentEntity paymentEntity);
 }

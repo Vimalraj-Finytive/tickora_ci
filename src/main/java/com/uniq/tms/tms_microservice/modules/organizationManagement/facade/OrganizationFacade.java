@@ -16,6 +16,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ResponseStatusException;
+
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -259,4 +261,18 @@ public class OrganizationFacade {
         return  new ApiResponse<>(200,"Fetched Organization Onboard details TopCustomers Successfully",dto);
     }
 
+    public ApiResponse<String> capturePayment(String paymentId, BigDecimal amount) {
+        paymentService.capturePayment(paymentId, amount);
+        return new ApiResponse<>(200, "Payment captured successfully", null);
+    }
+
+    public ApiResponse<String> verifyPaymentSignature(VerifySignatureDto signatureDto) {
+        paymentService.verifySignature(signatureDto.getOrderId(), signatureDto.getPaymentId(), signatureDto.getSignature());
+        return new ApiResponse<>(200, "Payment signature verified successfully", null);
+    }
+
+
+    public ResponseEntity<String> handleWebhook(String payload, String signature) {
+        return paymentService.handleWebhook(payload, signature);
+    }
 }

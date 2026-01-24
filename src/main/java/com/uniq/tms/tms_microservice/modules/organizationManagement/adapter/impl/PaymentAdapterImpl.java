@@ -77,4 +77,9 @@ public class PaymentAdapterImpl implements PaymentAdapter {
         return paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new RuntimeException("Payment not found for ID: " + paymentId));
     }
+
+    @Override
+    public void updatePayment(PaymentEntity paymentEntity) {
+        paymentRepository.save(paymentEntity);
+    }
 }
