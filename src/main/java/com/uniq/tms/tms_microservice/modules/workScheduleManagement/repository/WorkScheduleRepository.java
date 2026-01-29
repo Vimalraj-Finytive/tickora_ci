@@ -1,10 +1,9 @@
 package com.uniq.tms.tms_microservice.modules.workScheduleManagement.repository;
 
-import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.FlexibleWorkScheduleEntity;
+import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.WorkScheduleEntity;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.projection.FixedWorkScheduleProjection;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.projection.FlexibleScheduleProjection;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.projection.WorkScheduleData;
-import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.WorkScheduleEntity;
 import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;

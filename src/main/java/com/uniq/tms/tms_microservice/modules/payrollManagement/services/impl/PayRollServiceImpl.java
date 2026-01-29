@@ -1,56 +1,39 @@
 package com.uniq.tms.tms_microservice.modules.payrollManagement.services.impl;
 
-import com.opencsv.CSVWriter;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.uniq.tms.tms_microservice.modules.identityManagement.service.IdGenerationService;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.LeaveBalanceAdapter;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.MonthlySummaryEntity;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.ReportType;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.adapter.PayRollAdapter;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.entity.PayRollEntity;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.entity.PayRollSettingEntity;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.entity.UserPayRollAmountEntity;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.entity.UserPayRollEntity;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.enums.PayRollSettingEnum;
-import com.uniq.tms.tms_microservice.shared.event.UserEvent;
+import com.uniq.tms.tms_microservice.modules.payrollManagement.enums.PayRollStatusEnum;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.mapper.PayRollEntityMapper;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.model.*;
-import com.uniq.tms.tms_microservice.modules.payrollManagement.enums.PayRollStatusEnum;
-import com.uniq.tms.tms_microservice.modules.payrollManagement.model.PayRollModel;
-import com.uniq.tms.tms_microservice.modules.payrollManagement.model.PayRollSettingModel;
-import com.uniq.tms.tms_microservice.modules.payrollManagement.model.UserPayRollAmountModel;
-import com.uniq.tms.tms_microservice.modules.payrollManagement.projection.UserPayRollAmount;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.services.PayRollService;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.adapter.TimesheetAdapter;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.entity.TimesheetEntity;
 import com.uniq.tms.tms_microservice.modules.userManagement.adapter.UserAdapter;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
+import com.uniq.tms.tms_microservice.shared.event.UserEvent;
 import com.uniq.tms.tms_microservice.shared.helper.AuthHelper;
-import com.uniq.tms.tms_microservice.shared.util.CacheKeyUtil;
-import com.uniq.tms.tms_microservice.shared.util.ExportStatusTracker;
-import com.uniq.tms.tms_microservice.shared.util.ReportStyleUtil;
-import io.micrometer.common.lang.Nullable;
 import jakarta.transaction.Transactional;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.poi.ss.usermodel.CellStyle;
-import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.ss.usermodel.Sheet;
-import org.apache.poi.ss.usermodel.Workbook;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.core.io.ClassPathResource;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpStatus;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
-import java.io.*;
+
 import java.math.BigDecimal;
 import java.math.MathContext;
 import java.math.RoundingMode;
-import java.nio.charset.StandardCharsets;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -62,7 +45,6 @@ public class PayRollServiceImpl implements PayRollService {
 
     private final ZoneId zoneId = ZoneId.of("Asia/Kolkata");
     private static final Logger log = LogManager.getLogger(PayRollServiceImpl.class);
-    private static final Duration EXPORT_TTL = Duration.ofHours(1);
 
     private final PayRollAdapter payRollAdapter;
     private final PayRollEntityMapper entityMapper;
@@ -71,19 +53,14 @@ public class PayRollServiceImpl implements PayRollService {
     private final TimesheetAdapter timesheetAdapter;
     private final PayRollEntityMapper payRollEntityMapper;
     private final LeaveBalanceAdapter leaveBalanceAdapter;
-    private final RedisTemplate<String, Object> redisTemplate;
-    private final CacheKeyUtil cacheKeyUtil;
-    private final ReportStyleUtil reportStyleUtil;
-    private final ExportStatusTracker exportStatusTracker;
     private final ApplicationEventPublisher publisher;
     private final AuthHelper authHelper;
+    private final ObjectMapper objectMapper;
 
     public PayRollServiceImpl(PayRollAdapter payRollAdapter, PayRollEntityMapper entityMapper, UserAdapter userAdapter,
                               IdGenerationService idGenerationService, TimesheetAdapter timesheetAdapter,
                               PayRollEntityMapper payRollEntityMapper, LeaveBalanceAdapter leaveBalanceAdapter,
-                              @Nullable RedisTemplate<String, Object> redisTemplate, CacheKeyUtil cacheKeyUtil,
-                              ReportStyleUtil reportStyleUtil, ExportStatusTracker exportStatusTracker,
-                              ApplicationEventPublisher publisher, AuthHelper authHelper) {
+                              ApplicationEventPublisher publisher, AuthHelper authHelper, ObjectMapper objectMapper) {
         this.payRollAdapter = payRollAdapter;
         this.entityMapper = entityMapper;
         this.userAdapter = userAdapter;
@@ -91,12 +68,9 @@ public class PayRollServiceImpl implements PayRollService {
         this.timesheetAdapter = timesheetAdapter;
         this.payRollEntityMapper = payRollEntityMapper;
         this.leaveBalanceAdapter = leaveBalanceAdapter;
-        this.redisTemplate = redisTemplate;
-        this.cacheKeyUtil = cacheKeyUtil;
-        this.reportStyleUtil = reportStyleUtil;
-        this.exportStatusTracker = exportStatusTracker;
         this.publisher = publisher;
         this.authHelper = authHelper;
+        this.objectMapper = objectMapper;
     }
 
     @Value("${csv.payroll.download.dir}")
@@ -330,8 +304,15 @@ public class PayRollServiceImpl implements PayRollService {
     public List<UserPayRollAmountModel> getPayrollAmount(String id, String month) {
         List<UserPayRollAmountModel> result = new ArrayList<>();
         List<UserPayRollAmountEntity> entities;
+        DateTimeFormatter formatter =
+                DateTimeFormatter.ofPattern("MMMM,yyyy", Locale.ENGLISH);
+        YearMonth yearMonth = YearMonth.parse(month, formatter);
+        LocalDateTime endOfMonth = yearMonth
+                .atEndOfMonth()
+                .atTime(LocalTime.MAX);
+        List<String> payrollIds = payRollAdapter.findPayrollIdsCreatedBeforeOrOn(endOfMonth);
         if (id == null || id.isBlank()) {
-            entities = payRollAdapter.getAllByMonthAndYear(month);
+            entities = payRollAdapter.getAllByMonthAndYear(month, payrollIds);
         }else {
             entities = payRollAdapter.getPayrollAmount(id, month);
         }
@@ -343,11 +324,11 @@ public class PayRollServiceImpl implements PayRollService {
                     : entities.stream()
                     .map(e -> e.getUser().getUserId())
                     .collect(Collectors.toSet());
-            result.addAll(createZeroPayrollModel(id, processedUserIds, month));
+            result.addAll(createZeroPayrollModel(id, processedUserIds, month, payrollIds));
         return result;
     }
 
-    private List<UserPayRollAmountModel> createZeroPayrollModel(String payrollId, Set<String> processedUserIds, String month) {
+    private List<UserPayRollAmountModel> createZeroPayrollModel(String payrollId, Set<String> processedUserIds, String month, List<String> payrollIds) {
 
         DateTimeFormatter formatter =
                 DateTimeFormatter.ofPattern("MMMM,yyyy", Locale.ENGLISH);
@@ -356,7 +337,7 @@ public class PayRollServiceImpl implements PayRollService {
         LocalDate monthEndDate = yearMonth.atEndOfMonth();
         List<UserEntity> users;
         if (payrollId == null || payrollId.isBlank()) {
-            users = payRollAdapter.findAllUsersPayroll(monthEndDate);
+            users = payRollAdapter.findAllUsersPayroll(monthEndDate, payrollIds);
         }
         else {
             users = payRollAdapter.findUsersByPayrollId(payrollId, monthEndDate);
@@ -431,6 +412,22 @@ public class PayRollServiceImpl implements PayRollService {
         if (model.getTotalPayrollAmount() != null) {
             existing.setTotalPayrollAmount(model.getTotalPayrollAmount());
         }
+        try {
+            Object bonusObj = model.getBonus();
+            String bonusJson;
+            if (bonusObj instanceof List) {
+                bonusJson = objectMapper.writeValueAsString(bonusObj);
+            } else if (bonusObj instanceof Map) {
+                bonusJson = objectMapper.writeValueAsString(List.of(bonusObj));
+            } else {
+                bonusJson = null;
+            }
+            existing.setBonus(bonusJson);
+
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Invalid bonus JSON", e);
+        }
+
         existing.setUpdatedAt(LocalDateTime.now());
 
         UserPayRollAmountEntity saved = payRollAdapter.saveUserPayRollAmount(existing);
@@ -444,13 +441,20 @@ public class PayRollServiceImpl implements PayRollService {
         return payRollEntityMapper.toResponseModel(entity);
     }
 
-    @Override
-    public List<PayRollListModel> getAllPayrolls() {
-        List<PayRollEntity> entities = payRollAdapter.findAll();
-        return entities.stream()
-                .map(payRollEntityMapper::toListModel)
-                .toList();
-    }
+@Override
+public List<PayRollListModel> getAllPayrolls(String month) {
+    DateTimeFormatter formatter =
+            DateTimeFormatter.ofPattern("MMMM,yyyy", Locale.ENGLISH);
+    YearMonth yearMonth = YearMonth.parse(month, formatter);
+    LocalDateTime endOfMonth = yearMonth
+            .atEndOfMonth()
+            .atTime(LocalTime.MAX);
+    List<PayRollEntity> entities =
+            payRollAdapter.findPayrollsCreatedBeforeOrOn(endOfMonth);
+    return entities.stream()
+            .map(payRollEntityMapper::toListModel)
+            .toList();
+}
 
     @Override
     @Transactional
@@ -501,7 +505,14 @@ public class PayRollServiceImpl implements PayRollService {
 
     @Override
     public PayRollPaymentSummary getPayrollPayment(String month) {
-        List<UserPayRollAmountEntity> userPayRollAmountEntityList = payRollAdapter.getAllByMonthAndYear(month);
+        DateTimeFormatter formatter =
+                DateTimeFormatter.ofPattern("MMMM,yyyy", Locale.ENGLISH);
+        YearMonth yearMonth = YearMonth.parse(month, formatter);
+        LocalDateTime endOfMonth = yearMonth
+                .atEndOfMonth()
+                .atTime(LocalTime.MAX);
+        List<String> payrollIds = payRollAdapter.findPayrollIdsCreatedBeforeOrOn(endOfMonth);
+        List<UserPayRollAmountEntity> userPayRollAmountEntityList = payRollAdapter.getAllByMonthAndYear(month, payrollIds);
         BigDecimal totalPayment = BigDecimal.ZERO;
         int paidCount = 0, unpaidCount = 0, failedCount = 0;
         for (UserPayRollAmountEntity entity : userPayRollAmountEntityList) {
@@ -515,12 +526,8 @@ public class PayRollServiceImpl implements PayRollService {
                 unpaidCount++;
             }
         }
-        DateTimeFormatter formatter =
-                DateTimeFormatter.ofPattern("MMMM,yyyy", Locale.ENGLISH);
-
-        YearMonth yearMonth = YearMonth.parse(month, formatter);
         LocalDate monthEndDate = yearMonth.atEndOfMonth();
-        List<String> users = payRollAdapter.findAllUsersByMonth(monthEndDate);
+        List<String> users = payRollAdapter.findAllUsersByMonth(monthEndDate, payrollIds);
         int processingCount = users.size()-(paidCount+unpaidCount+failedCount);
         unpaidCount += Math.max(processingCount, 0);
         return new PayRollPaymentSummary(totalPayment, paidCount, unpaidCount, failedCount);
@@ -615,194 +622,6 @@ public class PayRollServiceImpl implements PayRollService {
             payroll.setOvertimeAmount(editModel.getOvertimeAmount());
         payroll.setUpdatedAt(LocalDateTime.now());
         payRollAdapter.savePayRoll(payroll);
-    }
-
-    @Override
-    @Transactional
-    public String startExportPayroll(String month, String format, List<Long> groupIds, List<String> userIds, String schema, String orgId) {
-        File folder = new File(downloadDir);
-        if (!folder.exists()) folder.mkdirs();
-        String fileFormat = (format == null ? "xlsx" : format.toLowerCase());
-        String baseName = "Payroll_" + month;
-        String extension = "." + fileFormat;
-        String finalName = baseName + extension;
-        File file = new File(downloadDir + finalName);
-        int count = 1;
-        while (file.exists()) {
-            finalName = baseName + "(" + count + ")" + extension;
-            file = new File(downloadDir + finalName);
-            count++;
-        }
-        String exportKey = cacheKeyUtil.getPayRollExport(schema, orgId, finalName);
-        if (redisTemplate != null) {
-            redisTemplate.opsForValue().set(
-                    exportKey,
-                    ReportType.PENDING.getValues(),
-                    EXPORT_TTL
-            );
-        } else {
-            exportStatusTracker.writeStatus(file, ReportType.PENDING.getValues());
-        }
-        generateAsync(file, exportKey, month, groupIds, userIds, fileFormat);
-        return finalName;
-    }
-
-    @Async
-    public void generateAsync(File file, String redisKey, String month,List<Long> groupIds, List<String> userIds, String format) {
-        try {
-            boolean redisAvailable = redisTemplate != null;
-
-            if (redisAvailable) {
-                redisTemplate.opsForValue().set(redisKey, ReportType.PROCESSING.getValues(),EXPORT_TTL);
-            } else {
-                exportStatusTracker.writeStatus(file, ReportType.PROCESSING.getValues());
-            }
-            userIds = userIds == null || groupIds.isEmpty()
-                    ? Collections.emptyList() : userIds;
-            List<String> groupUserIds =
-                    groupIds == null || groupIds.isEmpty()
-                            ? Collections.emptyList()
-                            : userAdapter.findUserIdsByGroupIds(groupIds);
-            Set<String> uniqueUserIdSet = new HashSet<>();
-            uniqueUserIdSet.addAll(groupUserIds);
-            uniqueUserIdSet.addAll(userIds);
-            List<String> eligibleUserIds = new ArrayList<>(uniqueUserIdSet);
-            List<UserPayRollAmount> data;
-            if (eligibleUserIds.isEmpty()) {
-                data = payRollAdapter.findAllByMonth(month);
-            }else {
-                 data = payRollAdapter.findAllByMonthAndUserIds(month,eligibleUserIds);
-            }
-            if ("csv".equalsIgnoreCase(format)) {
-                generateCsv(data, file);
-            } else {
-                generateXlsx(data, file);
-            }
-
-            if (redisAvailable) {
-                redisTemplate.opsForValue().set(redisKey, ReportType.COMPLETED.getValues(),EXPORT_TTL);
-            } else {
-                exportStatusTracker.writeStatus(file, ReportType.COMPLETED.getValues());
-            }
-        } catch (Exception ex) {
-            log.error("Payroll export failed", ex);
-            try {
-                if (file.exists()) {
-                    boolean deleted = file.delete();
-                    if (!deleted) {
-                        log.warn("Failed to delete file after export failure: {}", file.getAbsolutePath());
-                    }
-                }
-            } catch (Exception deleteEx) {
-                log.error("Error deleting failed export file: {}", deleteEx.getMessage());
-            }
-
-            if (redisTemplate != null) {
-                redisTemplate.opsForValue().set(redisKey, ReportType.FAILED.getValues(),EXPORT_TTL);
-            } else {
-                exportStatusTracker.writeStatus(file, ReportType.FAILED.getValues());
-            }
-        }
-    }
-
-    private void generateCsv(List<UserPayRollAmount> data, File file) {
-        file.getParentFile().mkdirs();
-        try (FileWriter fw = new FileWriter(file);
-             CSVWriter csv = new CSVWriter(fw)) {
-            ClassPathResource resource =
-                    new ClassPathResource("templates/text/payroll_amount_csv_header.txt");
-            try (BufferedReader br = new BufferedReader(
-                    new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8))) {
-
-                String headerLine = br.readLine();
-                if (headerLine != null) {
-                    csv.writeNext(headerLine.split(","));
-                }
-            }
-            for (UserPayRollAmount p : data) {
-                csv.writeNext(new String[]{
-                        p.getUserId(),
-                        p.getUserName(),
-                        p.getPayrollName(),
-                        p.getMonth(),
-                        String.valueOf(p.getPayrollStatus()),
-                        String.valueOf(p.getRegularDays()),
-                        String.valueOf(p.getRegularHrs()),
-                        String.valueOf(p.getOvertimeHrs()),
-                        String.valueOf(p.getTotalHrs()),
-                        String.valueOf(p.getMonthlyNetSalary()),
-                        String.valueOf(p.getUnpaidLeaveDeduction()),
-                        String.valueOf(p.getRegularPayrollAmount()),
-                        String.valueOf(p.getOvertimePayrollAmount()),
-                        String.valueOf(p.getTotalPayrollAmount()),
-                        String.valueOf(p.getTotalAmount()),
-                        p.getNotes()
-                });
-            }
-        } catch (Exception e) {
-            throw new RuntimeException("CSV export failed", e);
-        }
-    }
-
-    private void generateXlsx(List<UserPayRollAmount> data, File file) {
-        file.getParentFile().mkdirs();
-        try (Workbook workbook = new XSSFWorkbook();
-             FileOutputStream fos = new FileOutputStream(file)) {
-            Sheet sheet = workbook.createSheet("Payroll Report");
-            CellStyle headerStyle = reportStyleUtil.createHeaderCellStyle(workbook);
-            CellStyle dataStyle = reportStyleUtil.createDataCellStyle(workbook);
-            ClassPathResource resource =
-                    new ClassPathResource("templates/text/payroll_amount_excel_header.txt");
-            List<String> headerLines;
-            try (BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8))) {
-                headerLines = reader.lines().toList();
-            }
-            String[] headers = headerLines.getFirst().split("\\|");
-            Row headerRow = sheet.createRow(0);
-            for (int i = 0; i < headers.length; i++) {
-                reportStyleUtil.createStyledCell(headerRow, i, headers[i], headerStyle);
-            }
-            int rowIdx = 1;
-            for (UserPayRollAmount p : data) {
-                Row row = sheet.createRow(rowIdx++);
-                int col = 0;
-                reportStyleUtil.createStyledCell(row, col++, p.getUserId(), dataStyle);
-                reportStyleUtil.createStyledCell(row, col++, p.getUserName(), dataStyle);
-                reportStyleUtil.createStyledCell(row, col++, p.getPayrollName(), dataStyle);
-                reportStyleUtil.createStyledCell(row, col++, p.getMonth(), dataStyle);
-                reportStyleUtil.createStyledCell(row, col++, p.getPayrollStatus(), dataStyle);
-                reportStyleUtil.createStyledCell(row, col++, p.getRegularDays(), dataStyle);
-                reportStyleUtil.createStyledCell(row, col++, p.getRegularHrs(), dataStyle);
-                reportStyleUtil.createStyledCell(row, col++, p.getOvertimeHrs(), dataStyle);
-                reportStyleUtil.createStyledCell(row, col++, p.getTotalHrs(), dataStyle);
-                reportStyleUtil.createStyledCell(row, col++, String.valueOf(p.getMonthlyNetSalary()), dataStyle);
-                reportStyleUtil.createStyledCell(row, col++, String.valueOf(p.getUnpaidLeaveDeduction()), dataStyle);
-                reportStyleUtil.createStyledCell(row, col++, String.valueOf(p.getRegularPayrollAmount()), dataStyle);
-                reportStyleUtil.createStyledCell(row, col++, String.valueOf(p.getOvertimePayrollAmount()), dataStyle);
-                reportStyleUtil.createStyledCell(row, col++, String.valueOf(p.getTotalPayrollAmount()), dataStyle);
-                reportStyleUtil.createStyledCell(row, col++, String.valueOf(p.getTotalAmount()), dataStyle);
-                reportStyleUtil.createStyledCell(row, col, p.getNotes(), dataStyle);
-            }
-            for (int i = 0; i < headers.length; i++) {
-                sheet.autoSizeColumn(i);
-            }
-            workbook.write(fos);
-        } catch (Exception e) {
-            throw new RuntimeException("XLSX export failed", e);
-        }
-    }
-
-    @Override
-    public String getExportStatus(String exportId, String schema, String orgId) {
-        String exportKey = cacheKeyUtil.getPayRollExport(schema, orgId, exportId);
-        if (redisTemplate != null) {
-            Object val = redisTemplate.opsForValue().get(exportKey);
-            return (val == null ? "NOT_FOUND" : val.toString());
-        }
-        File file = new File(downloadDir + exportId);
-        String status = exportStatusTracker.readStatus(file);
-        return status == null ? "NOT_FOUND" : status;
     }
 
 }

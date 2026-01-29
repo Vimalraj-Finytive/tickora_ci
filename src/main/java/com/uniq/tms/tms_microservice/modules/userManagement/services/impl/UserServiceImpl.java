@@ -1,6 +1,9 @@
 package com.uniq.tms.tms_microservice.modules.userManagement.services.impl;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.opencsv.CSVReader;
+import com.uniq.tms.tms_microservice.modules.authenticationManagement.model.EmailData;
+import com.uniq.tms.tms_microservice.modules.identityManagement.service.IdGenerationService;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.CalendarAdapter;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.TimeOffPolicyAdapter;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.CalendarEntity;
@@ -9,50 +12,45 @@ import com.uniq.tms.tms_microservice.modules.leavemanagement.model.TimeOffPolicy
 import com.uniq.tms.tms_microservice.modules.leavemanagement.services.TimeOffPolicyService;
 import com.uniq.tms.tms_microservice.modules.locationManagement.adapter.LocationAdapter;
 import com.uniq.tms.tms_microservice.modules.locationManagement.dto.LocationDto;
+import com.uniq.tms.tms_microservice.modules.locationManagement.entity.LocationEntity;
 import com.uniq.tms.tms_microservice.modules.locationManagement.entity.UserLocationEntity;
 import com.uniq.tms.tms_microservice.modules.locationManagement.mapper.LocationDtoMapper;
 import com.uniq.tms.tms_microservice.modules.locationManagement.repository.LocationRepository;
-import com.uniq.tms.tms_microservice.modules.organizationManagement.mapper.OrganizationEntityMapper;
-import com.uniq.tms.tms_microservice.modules.userManagement.projections.GroupsData;
-import com.uniq.tms.tms_microservice.shared.event.*;
-import com.uniq.tms.tms_microservice.modules.userManagement.projections.UserProjection;
-import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.OrganizationAdapter;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.OrganizationEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.RoleEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.SubscriptionEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.enums.OrganizationStatusEnum;
-import com.uniq.tms.tms_microservice.modules.organizationManagement.services.OrganizationCacheService;
-import com.uniq.tms.tms_microservice.modules.userManagement.dto.*;
-import com.uniq.tms.tms_microservice.modules.userManagement.entity.*;
-import com.uniq.tms.tms_microservice.modules.userManagement.model.*;
-import com.uniq.tms.tms_microservice.shared.helper.*;
-import com.uniq.tms.tms_microservice.shared.util.*;
-import com.uniq.tms.tms_microservice.modules.timesheetManagement.adapter.TimesheetAdapter;
-import com.uniq.tms.tms_microservice.modules.authenticationManagement.model.EmailData;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.mapper.OrganizationEntityMapper;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.model.Organization;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.OrganizationRepository;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.RoleRepository;
+import com.uniq.tms.tms_microservice.modules.organizationManagement.services.OrganizationCacheService;
+import com.uniq.tms.tms_microservice.modules.timesheetManagement.adapter.TimesheetAdapter;
+import com.uniq.tms.tms_microservice.modules.timesheetManagement.entity.TimesheetEntity;
 import com.uniq.tms.tms_microservice.modules.userManagement.adapter.UserAdapter;
+import com.uniq.tms.tms_microservice.modules.userManagement.dto.*;
+import com.uniq.tms.tms_microservice.modules.userManagement.entity.*;
 import com.uniq.tms.tms_microservice.modules.userManagement.enums.MemberType;
 import com.uniq.tms.tms_microservice.modules.userManagement.enums.PrivilegeConstants;
 import com.uniq.tms.tms_microservice.modules.userManagement.enums.RoleName;
-import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.RoleRepository;
-import com.uniq.tms.tms_microservice.modules.userManagement.repository.GroupRepository;
-import com.uniq.tms.tms_microservice.modules.userManagement.services.UserCacheService;
-import com.uniq.tms.tms_microservice.modules.workScheduleManagement.adapter.WorkScheduleAdapter;
-import com.uniq.tms.tms_microservice.shared.security.cache.CacheKeyConfig;
-import com.uniq.tms.tms_microservice.shared.security.cache.CacheReloadHandlerRegistry;
-import com.uniq.tms.tms_microservice.shared.security.schema.TenantContext;
-import com.uniq.tms.tms_microservice.modules.locationManagement.entity.LocationEntity;
-import com.uniq.tms.tms_microservice.modules.timesheetManagement.entity.TimesheetEntity;
-import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.WorkScheduleEntity;
-import com.uniq.tms.tms_microservice.shared.exception.CommonExceptionHandler;
+import com.uniq.tms.tms_microservice.modules.userManagement.enums.UserRole;
+import com.uniq.tms.tms_microservice.modules.userManagement.mapper.SecondaryDetailsMapper;
 import com.uniq.tms.tms_microservice.modules.userManagement.mapper.UserDtoMapper;
 import com.uniq.tms.tms_microservice.modules.userManagement.mapper.UserEntityMapper;
-import com.uniq.tms.tms_microservice.modules.userManagement.mapper.SecondaryDetailsMapper;
-import com.uniq.tms.tms_microservice.modules.identityManagement.service.IdGenerationService;
-import com.uniq.tms.tms_microservice.modules.userManagement.enums.UserRole;
+import com.uniq.tms.tms_microservice.modules.userManagement.model.*;
+import com.uniq.tms.tms_microservice.modules.userManagement.projections.UserProjection;
+import com.uniq.tms.tms_microservice.modules.userManagement.repository.GroupRepository;
+import com.uniq.tms.tms_microservice.modules.userManagement.services.UserCacheService;
 import com.uniq.tms.tms_microservice.modules.userManagement.services.UserService;
+import com.uniq.tms.tms_microservice.modules.workScheduleManagement.adapter.WorkScheduleAdapter;
+import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.WorkScheduleEntity;
+import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
+import com.uniq.tms.tms_microservice.shared.event.*;
+import com.uniq.tms.tms_microservice.shared.exception.CommonExceptionHandler;
+import com.uniq.tms.tms_microservice.shared.helper.*;
+import com.uniq.tms.tms_microservice.shared.security.schema.TenantContext;
+import com.uniq.tms.tms_microservice.shared.util.*;
 import io.micrometer.common.util.StringUtils;
 import jakarta.annotation.Nullable;
 import jakarta.persistence.EntityNotFoundException;
@@ -93,12 +91,12 @@ import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import com.opencsv.CSVReader;
 import static com.uniq.tms.tms_microservice.shared.util.TextUtil.isBlank;
 
 @Service
 public class UserServiceImpl implements UserService {
 
+    private final ZoneId zoneId = ZoneId.of("Asia/Kolkata");
     private final UserAdapter userAdapter;
     private final TimesheetAdapter timesheetAdapter;
     private final UserEntityMapper userEntityMapper;
@@ -115,8 +113,6 @@ public class UserServiceImpl implements UserService {
     private final ApplicationEventPublisher publisher;
     private final CacheKeyUtil cacheKeyUtil;
     private final GroupRepository groupRepository;
-    private final CacheKeyConfig cacheKeyConfig;
-    private final CacheReloadHandlerRegistry cacheReloadHandlerRegistry;
     private final IdGenerationService idGenerationService;
     private final RolePrivilegeHelper rolePrivilegeHelper;
     private final ExceptionHelper exceptionHelper;
@@ -135,8 +131,7 @@ public class UserServiceImpl implements UserService {
                            UserDtoMapper userDtoMapper, SecondaryDetailsMapper secondaryDetailsMapper,
                            @Nullable RedisTemplate<String, Object> redisTemplate,
                            ApplicationEventPublisher publisher, WorkScheduleAdapter workScheduleAdapter, UserCacheService userCacheService,
-                           CacheKeyUtil cacheKeyUtil, GroupRepository groupRepository, CacheKeyConfig cacheKeyConfig,
-                           CacheReloadHandlerRegistry cacheReloadHandlerRegistry, IdGenerationService idGenerationService, RolePrivilegeHelper rolePrivilegeHelper,
+                           CacheKeyUtil cacheKeyUtil, GroupRepository groupRepository, IdGenerationService idGenerationService, RolePrivilegeHelper rolePrivilegeHelper,
                            ExceptionHelper exceptionHelper, OrganizationCacheService organizationCacheService, LocationDtoMapper locationDtoMapper,
                            OrganizationAdapter organizationAdapter, LocationAdapter locationAdapter, OrganizationEntityMapper organizationEntityMapper,
                            AuthHelper authHelper, TimeOffPolicyAdapter timeOffPolicyAdapter, TimeOffPolicyService timeOffPolicyService,
@@ -157,8 +152,6 @@ public class UserServiceImpl implements UserService {
         this.publisher = publisher;
         this.cacheKeyUtil = cacheKeyUtil;
         this.groupRepository = groupRepository;
-        this.cacheKeyConfig = cacheKeyConfig;
-        this.cacheReloadHandlerRegistry = cacheReloadHandlerRegistry;
         this.idGenerationService = idGenerationService;
         this.rolePrivilegeHelper = rolePrivilegeHelper;
         this.exceptionHelper = exceptionHelper;
@@ -190,6 +183,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public ApiResponse bulkCreateUsers(MultipartFile file, String orgId, String userId) {
         log.info("Checking work flow for create user");
         String contentType = file.getContentType();
@@ -221,7 +215,6 @@ public class UserServiceImpl implements UserService {
         }
     }
 
-    @Transactional
     public ApiResponse processCsvFile(InputStream inputStream, String originalFileName, String orgId, String userId) {
 
         long startTime = System.currentTimeMillis();
@@ -269,6 +262,7 @@ public class UserServiceImpl implements UserService {
 
             try (CSVReader reader = new CSVReader(new InputStreamReader(inputStream))) {
                 String[] headerRow = reader.readNext();
+                log.info("RAW HEADER LINE = {}", Arrays.toString(headerRow));
                 if (headerRow == null)
                     throw new RuntimeException("Missing header row");
                 validateFixedHeaders(headerRow, expectedHeaders);
@@ -405,7 +399,9 @@ public class UserServiceImpl implements UserService {
 
             List<BulkUserHelper> validRecords = allRecords.stream().filter(BulkUserHelper::isValid).toList();
             List<BulkUserHelper> invalidRecords = new ArrayList<>(allRecords.stream().filter(r -> !r.isValid()).toList());
-
+            invalidRecords.forEach(r ->
+                    log.warn("SKIPPED ROW : {} : {}", r.getRowNumber(), r.getReason())
+            );
             if (remainingSlots <= 0) {
                 invalidRecords.addAll(validRecords.stream()
                         .peek(r -> r.invalidate("Subscription limit reached"))
@@ -636,171 +632,257 @@ public class UserServiceImpl implements UserService {
         }
     }
 
+//    @Override
+//    @Transactional
+//    public ApiResponse<UserDto> createUsers(UserDto userDto, SecondaryDetailsDto secondaryDetailsDto, String organizationId) {
+//        String schema = TenantUtil.getCurrentTenant();
+//        log.info("Checking if the user is student: {}", userDto.getRoleId());
+//        User userMiddleware = userDtoMapper.toMiddleware(userDto);
+//        RoleEntity role = roleRepository.findById(userMiddleware.getRoleId())
+//                .orElseThrow(() -> new RuntimeException("Role not found with ID: " + userMiddleware.getRoleId()));
+//        log.info("Role from DB for creating user: {}", role.getName());
+//        String key = organizationCacheService.getPrivilegeKey(PrivilegeConstants.HAVE_SECONDARY_DETAILS);
+//        boolean hasSecondaryDetailsPrivilege = rolePrivilegeHelper.roleHasPrivilege(role.getName(), key);
+//        log.info("hasSecondaryDetailsPrivilege: {}", hasSecondaryDetailsPrivilege);
+//        if (hasSecondaryDetailsPrivilege) {
+//            validateSecondaryUser(secondaryDetailsDto);
+//        }
+//        validatePrimaryUser(userDto);
+//        log.info("Creating user: {}", userDto.getUserName());
+//        UserEntity entity = userEntityMapper.toEntity(userMiddleware);
+//        entity.setOrganizationId(organizationId);
+//        String customUserId = idGenerationService.generateNextUserId(organizationId);
+//        entity.setUserId(customUserId);
+//        if (isBlank(userMiddleware.getRoleId())) {
+//            throw new CommonExceptionHandler.BadRequestException("roleId must not be null");
+//        }
+//
+//        entity.setRole(role);
+//        String defaultPassword = PasswordUtil.generateDefaultPassword();
+//        String encryptedPassword = PasswordUtil.encryptPassword(defaultPassword);
+//        entity.setPassword(encryptedPassword);
+//        entity.setDefaultPassword(true);
+//        WorkScheduleEntity scheduleToSet = null;
+//        if (userMiddleware.getWorkSchedule() == null || userMiddleware.getWorkSchedule().isEmpty()) {
+//            scheduleToSet = workScheduleAdapter.findDefaultActiveSchedule(organizationId);
+//            if (scheduleToSet == null) {
+//                throw new IllegalStateException("No default work schedule found for this organization");
+//            }
+//        } else {
+//            scheduleToSet = workScheduleAdapter.findByScheduleId(userDto.getWorkSchedule(), organizationId);
+//        }
+//        entity.setWorkSchedule(scheduleToSet);
+//        entity.setActive(true);
+//
+//        CalendarEntity calendarEntity;
+//        if (userDto.getCalendarId() != null) {
+//            calendarEntity = calendarAdapter.findByCalendarId(userDto.getCalendarId())
+//                    .orElseThrow(() ->
+//                            new NoSuchElementException("Calendar not found with ID: " + userDto.getCalendarId()));
+//        } else {
+//            calendarEntity = calendarAdapter.findDefaultCalendar();
+//        }
+//        entity.setCalendar(calendarEntity);
+//        if (userDto.getRequestApproverId() != null) {
+//            entity.setRequestApproverId(userDto.getRequestApproverId());
+//        }
+//        entity.setCreatedAt(LocalDateTime.now());
+//        log.info("Saving user: {}", userMiddleware.getUserName());
+//        UserEntity savedUserEntity = userAdapter.saveUser(entity);
+//        TimeOffPolicyEntity timeOffPolicyEntity = timeOffPolicyAdapter.findDefaultPolicy();
+//        assignPolicy(timeOffPolicyEntity.getPolicyId(), customUserId, LocalDate.now(ZoneId.of("Asia/Kolkata")), organizationId);
+//        List<Long> locationIds = Collections.emptyList();
+//        List<Long> groupIds = Collections.emptyList();
+//        SecondaryDetailsEntity saveSecondaryUser = null;
+//        if (hasSecondaryDetailsPrivilege) {
+//            log.info("Saving secondary details: {}", secondaryDetailsDto.getUserName());
+//            SecondaryDetails secondaryDetails = secondaryDetailsMapper.toMiddleware(secondaryDetailsDto);
+//            SecondaryDetailsEntity secondaryDetailsEntity = secondaryDetailsMapper.toEntity(secondaryDetails);
+//            log.info("Call id generation service: {}", organizationId);
+//            String customSecondaryUserId = idGenerationService.generateNextSecondaryUserId(organizationId);
+//            secondaryDetailsEntity.setId(customSecondaryUserId);
+//            secondaryDetailsEntity.setUser(savedUserEntity);
+//            secondaryDetailsEntity.setEmail(TextUtil.trim(secondaryDetails.getEmail()));
+//            saveSecondaryUser = userAdapter.saveSecondaryDetails(secondaryDetailsEntity);
+//            log.info("Saved secondary details: {}", secondaryDetails);
+//        }
+//        if (savedUserEntity != null) {
+//            log.info("Creating user mapping for all saved users");
+//            UserSchemaMappingEntity mappings = organizationEntityMapper.toSchema(
+//                    savedUserEntity.getEmail(),
+//                    savedUserEntity.getMobileNumber(),
+//                    organizationId,
+//                    TenantContext.getCurrentTenant()
+//            );
+//            try {
+//                userAdapter.create(mappings);
+//            } catch (ConstraintViolationException e) {
+//                log.error("Constraint violation: {}", e.getMessage());
+//                String userMessage = exceptionHelper.getUserFriendlyConstraintMessage(e);
+//                throw new CommonExceptionHandler.ConflictException(userMessage);
+//
+//            } catch (DataIntegrityViolationException e) {
+//                log.error("Data integrity violation: {}", e.getMessage());
+//                String userMessage = exceptionHelper.extractConstraintMessage(e);
+//                throw new CommonExceptionHandler.ConflictException(userMessage);
+//            }
+//        }
+//
+//        if (saveSecondaryUser != null) {
+//            log.info("Creating user mapping for all saved secondary users");
+//            UserSchemaMappingEntity secondaryMappings = organizationEntityMapper.toSchema(
+//                    null,
+//                    saveSecondaryUser.getMobile(),
+//                    organizationId,
+//                    TenantContext.getCurrentTenant()
+//            );
+//            try {
+//                userAdapter.create(secondaryMappings);
+//            } catch (ConstraintViolationException e) {
+//                log.error("Constraint violation: {}", e.getMessage());
+//                String userMessage = exceptionHelper.getUserFriendlyConstraintMessage(e);
+//                throw new CommonExceptionHandler.ConflictException(userMessage);
+//
+//            } catch (DataIntegrityViolationException e) {
+//                log.error("Data integrity violation: {}", e.getMessage());
+//                String userMessage = exceptionHelper.extractConstraintMessage(e);
+//                throw new CommonExceptionHandler.ConflictException(userMessage);
+//            }
+//        }
+//        if (!isBlank(userDto.getLocationId())) {
+//            log.info("Adding user to location: {}", userDto.getLocationId());
+//            List<UserLocationEntity> userLocationEntities = new ArrayList<>();
+//            List<LocationEntity> locations = locationAdapter.findAllLocationById(userDto.getLocationId());
+//            if (locations.size() != userDto.getLocationId().size()) {
+//                throw new NoSuchElementException("Location not found ");
+//            }
+//            for (LocationEntity location : locations) {
+//                UserLocationEntity userLocation = new UserLocationEntity();
+//                userLocation.setUser(savedUserEntity);
+//                userLocation.setLocation(location);
+//                userLocationEntities.add(userLocation);
+//            }
+//            locationAdapter.saveUserLocation(userLocationEntities);
+//            locationIds = userLocationEntities.stream()
+//                    .map(userLocation -> userLocation.getLocation().getLocationId())
+//                    .toList();
+//        }
+//
+//        if (!(userDto.getPolicyIds() == null || userDto.getPolicyIds().isEmpty())) {
+//            log.info("Adding user to policy: {}", userDto.getPolicyIds());
+//            LocalDate startDate = userDto.getUserValidFrom();
+//            userDto.getPolicyIds()
+//                    .forEach(id -> assignPolicy(id, customUserId, startDate, organizationId));
+//        }
+//
+//        if (!isBlank(userDto.getGroupId())) {
+//            log.info("Adding user to group: {}", userDto.getGroupId());
+//            List<UserGroupEntity> userGroupEntities = new ArrayList<>();
+//            List<GroupEntity> groups = userAdapter.findGroupsByIds(new HashSet<>(userDto.getGroupId()));
+//            if (groups.size() != userDto.getGroupId().size()) {
+//                throw new NoSuchElementException("Group not found");
+//            }
+//            for (GroupEntity group : groups) {
+//                UserGroupEntity userGroup = new UserGroupEntity();
+//                userGroup.setUser(savedUserEntity);
+//                userGroup.setGroup(group);
+//                userGroupEntities.add(userGroup);
+//            }
+//            userAdapter.saveAllUserGroups(userGroupEntities);
+//            groupIds = userGroupEntities.stream()
+//                    .map(userGroup -> userGroup.getGroup().getGroupId())
+//                    .toList();
+//        }
+//
+//        User finalUser = userEntityMapper.toMiddleware(savedUserEntity);
+//        finalUser.setLocationId(locationIds);
+//        finalUser.setGroupId(groupIds);
+//        boolean isNewUser = savedUserEntity.isDefaultPassword();
+//        emailHelper.sendAccountCreationEmail(
+//                userMiddleware.getEmail(), userMiddleware.getUserName(), defaultPassword, isNewUser, userMiddleware.getRoleId()
+//        );
+//
+//        if (isRedisEnabled) {
+//            try {
+//                publisher.publishEvent(new UserEvent(organizationId, authHelper.getSchema()));
+//                log.info("UserCacheReloadEvent published after User creation");
+//            } catch (Exception e) {
+//                log.error("Failed to publish UserCacheReloadEvent for orgId={}", organizationId, e);
+//            }
+//        } else {
+//            log.info("Redis is not enabled or RedisTemplate is null. Skipping cache reload of User members for orgId={}", organizationId);
+//        }
+//        return new ApiResponse<>(201, "Successfully saved user", userDto);
+//    }
+
+
     @Override
     @Transactional
     public ApiResponse<UserDto> createUser(UserDto userDto, SecondaryDetailsDto secondaryDetailsDto, String organizationId) {
-        String schema = TenantUtil.getCurrentTenant();
-        log.info("Checking if the user is student: {}", userDto.getRoleId());
+        validatePrimaryUser(userDto);
         User userMiddleware = userDtoMapper.toMiddleware(userDto);
         RoleEntity role = roleRepository.findById(userMiddleware.getRoleId())
                 .orElseThrow(() -> new RuntimeException("Role not found with ID: " + userMiddleware.getRoleId()));
-        log.info("Role from DB for creating user: {}", role.getName());
-        String key = organizationCacheService.getPrivilegeKey(PrivilegeConstants.HAVE_SECONDARY_DETAILS);
-        boolean hasSecondaryDetailsPrivilege = rolePrivilegeHelper.roleHasPrivilege(role.getName(), key);
-        log.info("hasSecondaryDetailsPrivilege: {}", hasSecondaryDetailsPrivilege);
+        boolean hasSecondaryDetailsPrivilege = rolePrivilegeHelper.roleHasPrivilege(role.getName(), organizationCacheService.getPrivilegeKey(PrivilegeConstants.HAVE_SECONDARY_DETAILS));
         if (hasSecondaryDetailsPrivilege) {
             validateSecondaryUser(secondaryDetailsDto);
         }
-        validatePrimaryUser(userDto);
-        log.info("Creating user: {}", userDto.getUserName());
-        UserEntity entity = userEntityMapper.toEntity(userMiddleware);
-        entity.setOrganizationId(organizationId);
-        String customUserId = idGenerationService.generateNextUserId(organizationId);
-        entity.setUserId(customUserId);
+
+        WorkScheduleEntity workSchedule = resolveWorkSchedule(userMiddleware, organizationId);
+        CalendarEntity calendar = resolveCalendar(userDto);
+        TimeOffPolicyEntity defaultPolicy = findDefaultPolicy();
+
         if (isBlank(userMiddleware.getRoleId())) {
             throw new CommonExceptionHandler.BadRequestException("roleId must not be null");
         }
-
+        UserEntity entity = userEntityMapper.toEntity(userMiddleware);
+        entity.setOrganizationId(organizationId);
+        entity.setUserId(idGenerationService.generateNextUserId(organizationId));
         entity.setRole(role);
-        String defaultPassword = PasswordUtil.generateDefaultPassword();
-        String encryptedPassword = PasswordUtil.encryptPassword(defaultPassword);
-        entity.setPassword(encryptedPassword);
-        entity.setDefaultPassword(true);
-        WorkScheduleEntity scheduleToSet = null;
-        if (userMiddleware.getWorkSchedule() == null || userMiddleware.getWorkSchedule().isEmpty()) {
-            scheduleToSet = workScheduleAdapter.findDefaultActiveSchedule(organizationId);
-            if (scheduleToSet == null) {
-                throw new IllegalStateException("No default work schedule found for this organization");
-            }
-        } else {
-            scheduleToSet = workScheduleAdapter.findByScheduleId(userDto.getWorkSchedule(), organizationId);
-        }
-        entity.setWorkSchedule(scheduleToSet);
+        entity.setWorkSchedule(workSchedule);
+        entity.setCalendar(calendar);
         entity.setActive(true);
+        entity.setCreatedAt(LocalDateTime.now(zoneId));
+        entity.setRequestApproverId(userDto.getRequestApproverId());
 
-        CalendarEntity calendarEntity;
-        if (userDto.getCalendarId() != null) {
-            calendarEntity = calendarAdapter.findByCalendarId(userDto.getCalendarId())
-                    .orElseThrow(() ->
-                            new NoSuchElementException("Calendar not found with ID: " + userDto.getCalendarId()));
-        } else {
-            calendarEntity = calendarAdapter.findDefaultCalendar();
-        }
-        entity.setCalendar(calendarEntity);
-        if (userDto.getRequestApproverId() != null) {
-            entity.setRequestApproverId(userDto.getRequestApproverId());
-        }
-        entity.setCreatedAt(LocalDateTime.now());
-        log.info("Saving user: {}", userMiddleware.getUserName());
+        String defaultPassword = PasswordUtil.generateDefaultPassword();
+        entity.setPassword(PasswordUtil.encryptPassword(defaultPassword));
+        entity.setDefaultPassword(true);
+
         UserEntity savedUserEntity = userAdapter.saveUser(entity);
-        TimeOffPolicyEntity timeOffPolicyEntity = timeOffPolicyAdapter.findDefaultPolicy();
-        assignPolicy(timeOffPolicyEntity.getPolicyId(), customUserId, LocalDate.now(ZoneId.of("Asia/Kolkata")), organizationId);
-        List<Long> locationIds = Collections.emptyList();
-        List<Long> groupIds = Collections.emptyList();
-        SecondaryDetailsEntity saveSecondaryUser = null;
+
+        assignPolicy(defaultPolicy.getPolicyId(), savedUserEntity.getUserId(), LocalDate.now(zoneId), organizationId);
+        SecondaryDetailsEntity savedSecondaryUser = null;
         if (hasSecondaryDetailsPrivilege) {
-            log.info("Saving secondary details: {}", secondaryDetailsDto.getUserName());
-            SecondaryDetails secondaryDetails = secondaryDetailsMapper.toMiddleware(secondaryDetailsDto);
-            SecondaryDetailsEntity secondaryDetailsEntity = secondaryDetailsMapper.toEntity(secondaryDetails);
-            log.info("Call id generation service: {}", organizationId);
-            String customSecondaryUserId = idGenerationService.generateNextSecondaryUserId(organizationId);
-            secondaryDetailsEntity.setId(customSecondaryUserId);
-            secondaryDetailsEntity.setUser(savedUserEntity);
-            secondaryDetailsEntity.setEmail(TextUtil.trim(secondaryDetails.getEmail()));
-            saveSecondaryUser = userAdapter.saveSecondaryDetails(secondaryDetailsEntity);
-            log.info("Saved secondary details: {}", secondaryDetails);
-        }
-        if (savedUserEntity != null) {
-            log.info("Creating user mapping for all saved users");
-            UserSchemaMappingEntity mappings = organizationEntityMapper.toSchema(
-                    savedUserEntity.getEmail(),
-                    savedUserEntity.getMobileNumber(),
-                    organizationId,
-                    TenantContext.getCurrentTenant()
+            savedSecondaryUser = saveSecondaryDetails(
+                    secondaryDetailsDto,
+                    savedUserEntity,
+                    organizationId
             );
-            try {
-                userAdapter.create(mappings);
-            } catch (ConstraintViolationException e) {
-                log.error("Constraint violation: {}", e.getMessage());
-                String userMessage = exceptionHelper.getUserFriendlyConstraintMessage(e);
-                throw new CommonExceptionHandler.ConflictException(userMessage);
-
-            } catch (DataIntegrityViolationException e) {
-                log.error("Data integrity violation: {}", e.getMessage());
-                String userMessage = exceptionHelper.extractConstraintMessage(e);
-                throw new CommonExceptionHandler.ConflictException(userMessage);
-            }
         }
 
-        if (saveSecondaryUser != null) {
-            log.info("Creating user mapping for all saved secondary users");
-            UserSchemaMappingEntity secondaryMappings = organizationEntityMapper.toSchema(
+        createSchemaMapping(
+                savedUserEntity.getEmail(),
+                savedUserEntity.getMobileNumber(),
+                organizationId
+        );
+
+        if (savedSecondaryUser != null) {
+            createSchemaMapping(
                     null,
-                    saveSecondaryUser.getMobile(),
-                    organizationId,
-                    TenantContext.getCurrentTenant()
+                    savedSecondaryUser.getMobile(),
+                    organizationId
             );
-            try {
-                userAdapter.create(secondaryMappings);
-            } catch (ConstraintViolationException e) {
-                log.error("Constraint violation: {}", e.getMessage());
-                String userMessage = exceptionHelper.getUserFriendlyConstraintMessage(e);
-                throw new CommonExceptionHandler.ConflictException(userMessage);
+        }
 
-            } catch (DataIntegrityViolationException e) {
-                log.error("Data integrity violation: {}", e.getMessage());
-                String userMessage = exceptionHelper.extractConstraintMessage(e);
-                throw new CommonExceptionHandler.ConflictException(userMessage);
-            }
-        }
-        if (!isBlank(userDto.getLocationId())) {
-            log.info("Adding user to location: {}", userDto.getLocationId());
-            List<UserLocationEntity> userLocationEntities = new ArrayList<>();
-            List<LocationEntity> locations = locationAdapter.findAllLocationById(userDto.getLocationId());
-            if (locations.size() != userDto.getLocationId().size()) {
-                throw new NoSuchElementException("Location not found ");
-            }
-            for (LocationEntity location : locations) {
-                UserLocationEntity userLocation = new UserLocationEntity();
-                userLocation.setUser(savedUserEntity);
-                userLocation.setLocation(location);
-                userLocationEntities.add(userLocation);
-            }
-            locationAdapter.saveUserLocation(userLocationEntities);
-            locationIds = userLocationEntities.stream()
-                    .map(userLocation -> userLocation.getLocation().getLocationId())
-                    .toList();
-        }
+        saveLocations(userDto, savedUserEntity);
+        saveGroups(userDto, savedUserEntity);
 
         if (!(userDto.getPolicyIds() == null || userDto.getPolicyIds().isEmpty())) {
-            log.info("Adding user to policy: {}", userDto.getPolicyIds());
             LocalDate startDate = userDto.getUserValidFrom();
             userDto.getPolicyIds()
-                    .forEach(id -> assignPolicy(id, customUserId, startDate, organizationId));
+                    .forEach(id -> assignPolicy(id, savedUserEntity.getUserId(), startDate, organizationId));
         }
-
-        if (!isBlank(userDto.getGroupId())) {
-            log.info("Adding user to group: {}", userDto.getGroupId());
-            List<UserGroupEntity> userGroupEntities = new ArrayList<>();
-            List<GroupEntity> groups = userAdapter.findGroupsByIds(new HashSet<>(userDto.getGroupId()));
-            if (groups.size() != userDto.getGroupId().size()) {
-                throw new NoSuchElementException("Group not found");
-            }
-            for (GroupEntity group : groups) {
-                UserGroupEntity userGroup = new UserGroupEntity();
-                userGroup.setUser(savedUserEntity);
-                userGroup.setGroup(group);
-                userGroupEntities.add(userGroup);
-            }
-            userAdapter.saveAllUserGroups(userGroupEntities);
-            groupIds = userGroupEntities.stream()
-                    .map(userGroup -> userGroup.getGroup().getGroupId())
-                    .toList();
-        }
-
-        User finalUser = userEntityMapper.toMiddleware(savedUserEntity);
-        finalUser.setLocationId(locationIds);
-        finalUser.setGroupId(groupIds);
         boolean isNewUser = savedUserEntity.isDefaultPassword();
         emailHelper.sendAccountCreationEmail(
                 userMiddleware.getEmail(), userMiddleware.getUserName(), defaultPassword, isNewUser, userMiddleware.getRoleId()
@@ -809,7 +891,6 @@ public class UserServiceImpl implements UserService {
         if (isRedisEnabled) {
             try {
                 publisher.publishEvent(new UserEvent(organizationId, authHelper.getSchema()));
-                log.info("UserCacheReloadEvent published after User creation");
             } catch (Exception e) {
                 log.error("Failed to publish UserCacheReloadEvent for orgId={}", organizationId, e);
             }
@@ -818,6 +899,131 @@ public class UserServiceImpl implements UserService {
         }
         return new ApiResponse<>(201, "Successfully saved user", userDto);
     }
+
+    private WorkScheduleEntity resolveWorkSchedule(User userMiddleware, String organizationId) {
+
+        if (userMiddleware.getWorkSchedule() == null || userMiddleware.getWorkSchedule().isBlank()) {
+            WorkScheduleEntity defaultSchedule =
+                    workScheduleAdapter.findDefaultActiveSchedule(organizationId);
+
+            if (defaultSchedule == null) {
+                throw new IllegalStateException(
+                        "No default active work schedule found for organization: " + organizationId
+                );
+            }
+            return defaultSchedule;
+        }
+        WorkScheduleEntity schedule = workScheduleAdapter.findByScheduleId(
+                userMiddleware.getWorkSchedule(),
+                organizationId
+        );
+        if (schedule == null) {
+            throw new NoSuchElementException(
+                    "Work schedule not found with id: " + userMiddleware.getWorkSchedule()
+            );
+        }
+        return schedule;
+    }
+
+    private CalendarEntity resolveCalendar(UserDto userDto) {
+
+        if (userDto.getCalendarId() != null && !userDto.getCalendarId().isBlank()) {
+            return calendarAdapter.findByCalendarId(userDto.getCalendarId())
+                    .orElseThrow(() ->
+                            new NoSuchElementException(
+                                    "Calendar not found with id: " + userDto.getCalendarId()
+                            )
+                    );
+        }
+
+        CalendarEntity defaultCalendar = calendarAdapter.findDefaultCalendar();
+        if (defaultCalendar == null) {
+            throw new IllegalStateException("No default calendar configured");
+        }
+
+        return defaultCalendar;
+    }
+
+    public TimeOffPolicyEntity findDefaultPolicy() {
+
+        TimeOffPolicyEntity timeOffPolicy =timeOffPolicyAdapter.findDefaultPolicy();
+        if (timeOffPolicy == null) {
+            throw new IllegalStateException("No default time-off policy configured");
+        }
+        return timeOffPolicy;
+    }
+
+    private SecondaryDetailsEntity saveSecondaryDetails(
+            SecondaryDetailsDto dto,
+            UserEntity user,
+            String organizationId
+    ) {
+        SecondaryDetailsEntity entity =
+                secondaryDetailsMapper.toEntity(
+                        secondaryDetailsMapper.toMiddleware(dto)
+                );
+
+        entity.setId(idGenerationService.generateNextSecondaryUserId(organizationId));
+        entity.setUser(user);
+        entity.setEmail(TextUtil.trim(dto.getEmail()));
+
+        return userAdapter.saveSecondaryDetails(entity);
+    }
+
+    private void createSchemaMapping(
+            String email,
+            String mobile,
+            String organizationId
+    ) {
+        UserSchemaMappingEntity mapping = organizationEntityMapper.toSchema(
+                email,
+                mobile,
+                organizationId,
+                TenantContext.getCurrentTenant()
+        );
+
+        try {
+            userAdapter.create(mapping);
+        } catch (ConstraintViolationException e) {
+            throw new CommonExceptionHandler.ConflictException(
+                    exceptionHelper.getUserFriendlyConstraintMessage(e)
+            );
+        } catch (DataIntegrityViolationException e) {
+            throw new CommonExceptionHandler.ConflictException(
+                    exceptionHelper.extractConstraintMessage(e)
+            );
+        }
+    }
+
+    private void saveLocations(UserDto dto, UserEntity user) {
+        if (isBlank(dto.getLocationId())) return;
+
+        List<LocationEntity> locations = locationAdapter.findAllLocationById(dto.getLocationId());
+        if (locations.size() != dto.getLocationId().size()) {
+            throw new NoSuchElementException("Location not found ");
+        }
+
+        List<UserLocationEntity> mappings = locations.stream()
+                .map(location -> new UserLocationEntity(user, location))
+                .toList();
+
+        locationAdapter.saveUserLocation(mappings);
+    }
+
+    private void saveGroups(UserDto dto, UserEntity user){
+        if (isBlank(dto.getGroupId())) return;
+        List<GroupEntity> groups = userAdapter.findGroupsByIds(new HashSet<>(dto.getGroupId()));
+        if (groups.size() != dto.getGroupId().size()) {
+            throw new NoSuchElementException("Group not found");
+        }
+
+        List<UserGroupEntity> mappings = groups.stream()
+                .map(group -> new UserGroupEntity(user, group))
+                .toList();
+        userAdapter.saveAllUserGroups(mappings);
+    }
+
+
 
     private void assignPolicy(String policyId, String customUserId, LocalDate startDate, String orgId) {
         TimeOffPolicyBulkAssignModel defaultPolicy = new TimeOffPolicyBulkAssignModel();

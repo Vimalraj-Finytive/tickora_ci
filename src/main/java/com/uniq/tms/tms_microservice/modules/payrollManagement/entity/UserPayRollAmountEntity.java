@@ -11,6 +11,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Entity
 @Table(name = "user_payroll_amount")
@@ -73,6 +74,9 @@ public class UserPayRollAmountEntity {
 
     @Column(name = "notes")
     String notes;
+
+    @Column(name = "bonus", columnDefinition = "text")
+    private String bonus;
 
     @OneToMany(mappedBy = "userPayrollAmount")
     private List<UserPayRollHistoryEntity> userPayrollHistory = new ArrayList<>();
@@ -219,5 +223,13 @@ public class UserPayRollAmountEntity {
 
     public void setMonth(String month) {
         this.month = month;
+    }
+
+    public String getBonus() {
+        return bonus;
+    }
+
+    public void setBonus(String bonus) {
+        this.bonus = bonus;
     }
 }

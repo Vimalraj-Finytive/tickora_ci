@@ -62,8 +62,8 @@ public class PayRollFacade {
         return new ApiResponse<>(200, "Payroll fetched successfully", dto);
     }
 
-    public ApiResponse<List<PayrollListResponseDto>> getAllPayrolls() {
-        List<PayRollListModel> models = service.getAllPayrolls();
+    public ApiResponse<List<PayrollListResponseDto>> getAllPayrolls(String month) {
+        List<PayRollListModel> models = service.getAllPayrolls(month);
         List<PayrollListResponseDto> dtos = models.stream()
                 .map(payRollDtoMapper::toListDto)
                 .toList();
@@ -138,24 +138,6 @@ public class PayRollFacade {
         } catch (Exception e) {
             return new ApiResponse<>(404, e.getMessage(), null);
         }
-    }
-
-    public ApiResponse<String> startExport(String month, String format, List<Long> groupIds, List<String> userIds, String schema, String orgId) {
-        String exportId = service.startExportPayroll(month, format,groupIds, userIds, schema, orgId);
-        return new ApiResponse<>(
-                HttpStatus.ACCEPTED.value(),
-                "Export started",
-                exportId
-        );
-    }
-
-    public ApiResponse<String> checkStatus(String schema, String orgId, String exportId) {
-        String status = service.getExportStatus(exportId, schema, orgId);
-        return new ApiResponse<>(
-                HttpStatus.OK.value(),
-                "Status fetched",
-                status
-        );
     }
 
 }

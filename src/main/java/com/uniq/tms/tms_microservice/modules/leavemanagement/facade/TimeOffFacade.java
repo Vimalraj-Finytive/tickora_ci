@@ -191,25 +191,6 @@ public class TimeOffFacade {
         return new ApiResponse<>(200, "Status fetched", dto);
     }
 
-
-    public ApiResponse<Map<String,String>> startExportJob(TimeOffExportRequestDto request, String schema, String orgId) {
-        String exportId = timeOffRequestService.startExporting(request, schema, orgId);
-        return new ApiResponse<>(
-                HttpStatus.ACCEPTED.value(),
-                "Export started",
-                exportId
-        );
-    }
-
-    public ApiResponse<Map<String, String>> getExportStatus(String schema, String orgId, String exportId) {
-        String exportStatus = timeOffRequestService.exportStatus(exportId, schema, orgId);
-        return new ApiResponse<>(
-                HttpStatus.OK.value(),
-                "Status fetched",
-                exportStatus
-        );
-    }
-
     public ApiResponse<List<EnumDto>> getResetFrequencyStatus() {
         List<EnumModel> model = timeOffPolicyService.getResetFrequencyStatus();
         List<EnumDto> dto = model.stream()

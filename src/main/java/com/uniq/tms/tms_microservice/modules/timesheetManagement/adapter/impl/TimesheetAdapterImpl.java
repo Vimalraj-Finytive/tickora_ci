@@ -168,7 +168,6 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
         return createSuccessResponse(finalResponse, pagination);
     }
 
-
     /**
      * Fetches and maps timesheets for all users
      */

@@ -51,7 +51,7 @@ public class CacheReloadHelper {
                     orgId,
                     e
             );
-        }finally {
+        } finally {
             TenantContext.clear();
         }
     }
@@ -78,7 +78,7 @@ public class CacheReloadHelper {
                     orgId,
                     e
             );
-        }finally {
+        } finally {
             TenantContext.clear();
         }
     }
@@ -105,7 +105,7 @@ public class CacheReloadHelper {
                     orgId,
                     e
             );
-        }finally {
+        } finally {
             TenantContext.clear();
         }
     }
@@ -132,7 +132,7 @@ public class CacheReloadHelper {
                     orgId,
                     e
             );
-        }finally {
+        } finally {
             TenantContext.clear();
         }
     }
@@ -159,7 +159,7 @@ public class CacheReloadHelper {
                     orgId,
                     e
             );
-        }finally {
+        } finally {
             TenantContext.clear();
         }
     }
@@ -186,7 +186,7 @@ public class CacheReloadHelper {
                     orgId,
                     e
             );
-        }finally {
+        } finally {
             TenantContext.clear();
         }
     }

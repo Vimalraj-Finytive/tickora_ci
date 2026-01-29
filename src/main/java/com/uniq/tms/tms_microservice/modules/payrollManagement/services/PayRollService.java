@@ -1,13 +1,8 @@
 package com.uniq.tms.tms_microservice.modules.payrollManagement.services;
 
-import com.uniq.tms.tms_microservice.modules.leavemanagement.model.ExportStatus;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.model.*;
 
-import java.io.File;
 import java.util.List;
-import com.uniq.tms.tms_microservice.modules.payrollManagement.model.PayRollModel;
-import com.uniq.tms.tms_microservice.modules.payrollManagement.model.PayRollSettingModel;
-import com.uniq.tms.tms_microservice.modules.payrollManagement.model.UserPayRollAmountModel;
 
 public interface PayRollService {
     PayRollSettingModel createOrUpdate(PayRollSettingModel model);
@@ -28,7 +23,7 @@ public interface PayRollService {
 
     PayRollResponseModel getPayrollById(String id);
 
-    List<PayRollListModel> getAllPayrolls();
+    List<PayRollListModel> getAllPayrolls(String month);
 
     void updatePayrollStatus(String payrollId, PayrollStatusUpdateModel model);
 
@@ -39,10 +34,6 @@ public interface PayRollService {
     PayRollSettingModel getSetting();
 
     void updatePayroll(PayRollEditRequestModel editModel);
-
-    String startExportPayroll(String month, String format, List<Long> groupIds,List<String> userIds, String schema, String orgId);
-
-    String getExportStatus(String exportId, String schema, String orgId);
 
     void calculateDailyPayrollAmount();
 

@@ -1,6 +1,6 @@
 package com.uniq.tms.tms_microservice.modules.workScheduleManagement.adapter.impl;
 
-import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
+
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.adapter.WorkScheduleAdapter;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.entity.*;
 import com.uniq.tms.tms_microservice.modules.workScheduleManagement.projection.FixedWorkScheduleProjection;

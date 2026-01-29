@@ -1,8 +1,6 @@
 package com.uniq.tms.tms_microservice.modules.payrollManagement.repository;
 
-import com.uniq.tms.tms_microservice.modules.payrollManagement.entity.UserPayRollAmountEntity;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.entity.UserPayRollEntity;
-import com.uniq.tms.tms_microservice.modules.payrollManagement.model.UserPayRollAmountModel;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.projection.UserPayRollAmount;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
 import io.lettuce.core.dynamic.annotation.Param;
@@ -11,7 +9,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
-
 import java.time.LocalDate;
 import java.util.List;
 
@@ -48,6 +45,8 @@ public interface UserPayRollRepository extends JpaRepository<UserPayRollEntity, 
         FROM UserPayRollEntity upr
         WHERE upr.payroll.id = :payrollId
         AND upr.user.dateOfJoining <= :date
+        AND FUNCTION('DATE', upr.createdAt) <= :date
+        AND upr.user.active = true
     """)
     List<UserEntity> findUsersByPayrollId(@Param("payrollId") String payrollId, @Param("date") LocalDate date);
 
@@ -55,14 +54,16 @@ public interface UserPayRollRepository extends JpaRepository<UserPayRollEntity, 
         SELECT upr.user.userId
         FROM UserPayRollEntity upr
         WHERE upr.user.dateOfJoining <= :date
+        AND upr.payroll.id IN (:payrollIds)
     """)
-    List<String> findAllUsersByMonth(@Param("date") LocalDate date);
+    List<String> findAllUsersByMonth(@Param("date") LocalDate date, @Param("payrollIds") List<String> payrollIds);
 
     @Query("""
         SELECT upr.user
         FROM UserPayRollEntity upr
         WHERE upr.user.dateOfJoining <= :date
         AND upr.user.active = true
+        AND upr.payroll.id IN (:payrollIds)
     """)
-    List<UserEntity> findAllUsersPayroll(@Param("date") LocalDate date);
+    List<UserEntity> findAllUsersPayroll(@Param("date") LocalDate date, @Param("payrollIds") List<String> payrollIds);
 }

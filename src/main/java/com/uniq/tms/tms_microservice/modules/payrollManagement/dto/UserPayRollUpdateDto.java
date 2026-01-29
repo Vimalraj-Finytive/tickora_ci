@@ -2,12 +2,14 @@ package com.uniq.tms.tms_microservice.modules.payrollManagement.dto;
 
 import com.uniq.tms.tms_microservice.modules.payrollManagement.enums.PayRollStatusEnum;
 import java.math.BigDecimal;
+import java.util.Map;
 
 public class UserPayRollUpdateDto {
 
     private PayRollStatusEnum payrollStatus;
     private String notes;
     private  BigDecimal totalAmount;
+    private Object bonus;
 
     public UserPayRollUpdateDto() {
     }
@@ -34,5 +36,13 @@ public class UserPayRollUpdateDto {
 
     public void setTotalAmount(BigDecimal totalAmount) {
         this.totalAmount = totalAmount;
+    }
+
+    public Object getBonus() {
+        return bonus;
+    }
+
+    public void setBonus(Object bonus) {
+        this.bonus = bonus;
     }
 }

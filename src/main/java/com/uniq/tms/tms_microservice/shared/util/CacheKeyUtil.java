@@ -1,7 +1,6 @@
 package com.uniq.tms.tms_microservice.shared.util;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import com.uniq.tms.tms_microservice.modules.ReportManagement.enums.ReportType;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -32,6 +31,8 @@ public class CacheKeyUtil {
     private String export;
     @Value("${cache.keys.timeoff.payRollExport}")
     private String payRollExport;
+    @Value("${cache.keys.timesheet.export}")
+    private String timesheetExport;
 
     public String getLocationKey(String orgId, String schema){
         return location + ":" + schema + ":" + orgId;
@@ -80,4 +81,22 @@ public class CacheKeyUtil {
     public String getPayRollExport(String schema, String orgId, String exportId){
         return payRollExport + ":" + schema + ":" + orgId + ":" + exportId;
     }
+
+    public String getTimesheetExport(String schema, String orgId, String exportId){
+        return timesheetExport + ":" + schema + ":" + orgId + ":" + exportId;
+    }
+
+    public String getExportKey(
+            ReportType type,
+            String schema,
+            String orgId,
+            String exportId
+    ) {
+        return switch (type) {
+            case TIMESHEET -> getTimesheetExport(schema, orgId, exportId);
+            case PAYROLL -> getPayRollExport(schema, orgId, exportId);
+            case TIMEOFF_REQUEST -> getExport(schema, orgId, exportId);
+        };
+    }
+
 }

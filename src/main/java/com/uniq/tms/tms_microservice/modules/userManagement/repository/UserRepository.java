@@ -120,7 +120,14 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
                                                  @Param("groupIds") List<Long> groupIds,
                                                  @Param("orgId") String orgId);
 
-    List<UserEntity> findAllActiveUsersByOrganizationId(String orgId);
+    @Query("""
+    SELECT u
+    FROM UserEntity u
+    WHERE u.organizationId = :orgId
+      AND u.active = true
+    """)
+    List<UserEntity> findAllActiveUsersByOrganizationId(@Param("orgId") String orgId);
+
 
     @Modifying
     @Transactional

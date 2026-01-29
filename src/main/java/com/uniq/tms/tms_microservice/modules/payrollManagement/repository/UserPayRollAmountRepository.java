@@ -32,10 +32,12 @@ public interface UserPayRollAmountRepository extends JpaRepository<UserPayRollAm
             SELECT *
             FROM user_payroll_amount upa
             WHERE LOWER(upa.month) = LOWER(:month)
+            AND upa.payroll_id IN (:payrollIds)
             """,
             nativeQuery = true)
     List<UserPayRollAmountEntity> findAllByMonth(
-            @Param("month") String month
+            @Param("month") String month,
+            @Param("payrollIds") List<String> payrollIds
     );
 
     Optional<UserPayRollAmountEntity> findByUser_UserIdAndMonth(String userId, String month);

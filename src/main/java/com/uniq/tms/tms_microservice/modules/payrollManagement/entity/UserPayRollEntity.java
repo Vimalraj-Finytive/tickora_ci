@@ -2,6 +2,9 @@ package com.uniq.tms.tms_microservice.modules.payrollManagement.entity;
 
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
 import jakarta.persistence.*;
+import org.hibernate.annotations.CreationTimestamp;
+
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "user_payroll")
@@ -19,6 +22,10 @@ public class UserPayRollEntity {
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "payroll_id", nullable = false)
     private PayRollEntity payroll;
+
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
 
     public UserPayRollEntity(){}
 
@@ -45,4 +52,11 @@ public class UserPayRollEntity {
         this.payroll = payroll;
     }
 
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
 }

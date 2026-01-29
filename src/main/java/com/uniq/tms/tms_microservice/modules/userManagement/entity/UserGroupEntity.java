@@ -31,6 +31,11 @@ public class UserGroupEntity {
         this.type = type;
     }
 
+    public UserGroupEntity(UserEntity user, GroupEntity group) {
+        this.user = user;
+        this.group = group;
+    }
+
     public Long getId() {
         return id;
     }

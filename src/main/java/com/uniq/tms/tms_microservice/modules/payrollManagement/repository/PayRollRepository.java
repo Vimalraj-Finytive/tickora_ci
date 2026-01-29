@@ -6,6 +6,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 import com.uniq.tms.tms_microservice.modules.payrollManagement.projection.PayRollProjection;
+
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -18,5 +20,11 @@ public interface PayRollRepository extends JpaRepository<PayRollEntity,String> {
     List<PayRollEntity>findByIsActiveTrue();
     @Query("SELECT p FROM PayRollEntity p WHERE p.id = :id AND p.isActive = true")
     Optional<PayRollEntity> findActiveById(@Param("id") String id);
+
+    @Query(" SELECT p FROM PayRollEntity p WHERE p.createdAt <= :date And p.isActive=true")
+    List<PayRollEntity> findPayrollsCreatedBeforeOrOn(@Param("date") LocalDateTime date);
+
+    @Query(" SELECT p.id FROM PayRollEntity p WHERE p.createdAt <= :date And p.isActive=true")
+    List<String> findPayrollIdsCreatedBeforeOrOn(@Param("date") LocalDateTime date);
 
 }

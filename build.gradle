@@ -19,6 +19,11 @@ configurations {
 	}
     configureEach {
 		exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'
+
+		resolutionStrategy {
+			force 'org.apache.commons:commons-lang3:3.18.0'
+			force 'commons-beanutils:commons-beanutils:1.11.0'
+		}
 	}
 }
 
@@ -45,12 +50,11 @@ dependencies {
 	implementation 'jakarta.validation:jakarta.validation-api:3.0.2'
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	implementation 'org.apache.poi:poi-ooxml:5.4.0'
-	implementation 'org.apache.logging.log4j:log4j-core:2.20.0'
-	implementation 'org.apache.logging.log4j:log4j-api:2.20.0'
-	implementation 'org.apache.logging.log4j:log4j-slf4j2-impl:2.20.0'
+	implementation 'org.springframework.boot:spring-boot-starter-log4j2'
 	implementation 'org.springframework.boot:spring-boot-starter-cache'
 	implementation 'com.github.ben-manes.caffeine:caffeine'
-	implementation 'com.opencsv:opencsv:5.9'
+	implementation 'org.apache.commons:commons-lang3:3.18.0'
+	implementation 'com.opencsv:opencsv:5.10'
 	implementation 'commons-io:commons-io:2.14.0'
 	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 	implementation 'redis.clients:jedis:5.1.0'
@@ -61,10 +65,11 @@ dependencies {
 	implementation 'com.zaxxer:HikariCP'
 	implementation 'org.hibernate.orm:hibernate-core:6.4.4.Final'
 	implementation 'com.razorpay:razorpay-java:1.4.5'
-	implementation 'com.itextpdf:kernel:7.2.6'
-	implementation 'com.itextpdf:layout:7.2.6'
-	implementation 'com.itextpdf:html2pdf:4.0.4'
+	implementation 'com.itextpdf:kernel:8.0.2'
+	implementation 'com.itextpdf:layout:8.0.2'
+	implementation 'com.itextpdf:html2pdf:5.0.2'
 	implementation "org.springdoc:springdoc-openapi-starter-webmvc-ui:2.5.0"
+	implementation 'commons-beanutils:commons-beanutils:1.11.0'
 }
 
 

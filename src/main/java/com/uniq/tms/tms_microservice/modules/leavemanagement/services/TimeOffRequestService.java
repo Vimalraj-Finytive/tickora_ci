@@ -14,7 +14,5 @@ public interface TimeOffRequestService {
     List<TimeOffExportModel> filterRequests(TimeOffExportRequest request, String loggedUserId);
     List<TimeOffRequestResponseModel> filterRequestsByRole(LocalDate fromDate, LocalDate toDate, int minRoleLevel);
     List<EnumModel> getStatus();
-    String startExporting(TimeOffExportRequestDto request, String schema, String orgId);
-    String exportStatus(String exportId, String schema, String orgId);
     List<EnumModel> getHourType();
 }

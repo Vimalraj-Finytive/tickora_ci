@@ -599,6 +599,7 @@ CREATE TABLE IF NOT EXISTS ${schemaName}.user_payroll (
     id BIGSERIAL PRIMARY KEY,
     user_id VARCHAR(20) NOT NULL,
     payroll_id VARCHAR(50) NOT NULL,
+    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT fk_users
         FOREIGN KEY (user_id)
@@ -633,6 +634,7 @@ CREATE TABLE IF NOT EXISTS ${schemaName}.user_payroll_amount (
     created_at TIMESTAMP,
     updated_at TIMESTAMP,
     notes VARCHAR(500),
+    bonus TEXT,
         CONSTRAINT fk_users
         FOREIGN KEY (user_id)
         REFERENCES ${schemaName}.users(user_id)

@@ -2,7 +2,6 @@ package com.uniq.tms.tms_microservice.shared.helper;
 
 import com.uniq.tms.tms_microservice.shared.security.jwt.JwtUtil;
 import com.uniq.tms.tms_microservice.shared.security.user.CustomUserDetails;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -11,10 +10,10 @@ import org.springframework.stereotype.Component;
 public class AuthHelper {
     private final JwtUtil jwtUtil;
 
-    @Autowired
     public AuthHelper(JwtUtil jwtUtil) {
         this.jwtUtil = jwtUtil;
     }
+
     public CustomUserDetails getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null && authentication.getPrincipal() instanceof CustomUserDetails) {

@@ -1,25 +1,22 @@
 package com.uniq.tms.tms_microservice.modules.leavemanagement.services.impl;
 
-import com.opencsv.CSVWriter;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.LeaveBalanceAdapter;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.TimeOffPolicyAdapter;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.TimeOffRequestAdapter;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.adapter.UserPolicyAdapter;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.dto.TimeOffExportRequestDto;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.LeaveBalanceEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeOffPolicyEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.TimeOffRequestEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.entity.UsersRequestMappingEntity;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.enums.*;
-import com.uniq.tms.tms_microservice.modules.leavemanagement.mapper.TimeOffPolicyDtoMapper;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.mapper.TimeOffPolicyEntityMapper;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.model.*;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.projection.TimeOffExportView;
 import com.uniq.tms.tms_microservice.modules.leavemanagement.services.TimeOffRequestService;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.adapter.TimesheetAdapter;
-import com.uniq.tms.tms_microservice.modules.userManagement.adapter.UserAdapter;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.enums.TimesheetStatusEnum;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.services.TimesheetService;
+import com.uniq.tms.tms_microservice.modules.userManagement.adapter.UserAdapter;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
 import com.uniq.tms.tms_microservice.modules.userManagement.enums.MemberType;
 import com.uniq.tms.tms_microservice.modules.userManagement.enums.UserRole;
@@ -33,76 +30,48 @@ import com.uniq.tms.tms_microservice.shared.dto.EnumModel;
 import com.uniq.tms.tms_microservice.shared.helper.AuthHelper;
 import com.uniq.tms.tms_microservice.shared.helper.TimesheetHelper;
 import com.uniq.tms.tms_microservice.shared.util.DateTimeUtil;
-import com.uniq.tms.tms_microservice.shared.util.ExportStatusTracker;
-import com.uniq.tms.tms_microservice.shared.util.ReportStyleUtil;
-import jakarta.annotation.Nonnull;
-import jakarta.annotation.Nullable;
-import com.uniq.tms.tms_microservice.shared.util.CacheKeyUtil;
 import jakarta.transaction.Transactional;
-import org.apache.poi.ss.usermodel.*;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.ClassPathResource;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import java.io.*;
-import java.nio.charset.StandardCharsets;
+
 import java.time.*;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
-import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.springframework.core.io.Resource;
 
 @Service
 public class TimeOffRequestServiceImpl implements TimeOffRequestService {
 
     private static final Logger log = LoggerFactory.getLogger(TimeOffRequestServiceImpl.class);
     private final ZoneId zoneId = ZoneId.of("Asia/Kolkata");
-    private static final Duration EXPORT_TTL = Duration.ofHours(1);
 
     private final TimeOffRequestAdapter timeOffRequestAdapter;
     private final TimeOffPolicyEntityMapper TimeOffPolicyEntityMapper;
-    private final TimeOffPolicyDtoMapper timeOffPolicyDtoMapper;
     private final LeaveBalanceAdapter leaveBalanceAdapter;
     private final TimeOffPolicyAdapter timeOffPolicyAdapter;
     private final UserPolicyAdapter userPolicyAdapter;
     private final AuthHelper authHelper;
-    private final CacheKeyUtil cacheKeyUtil;
-    private final RedisTemplate<String, Object> redisTemplate;
-    private final ReportStyleUtil reportStyleUtil;
     private final UserAdapter userAdapter;
     private final TimesheetAdapter timesheetAdapter;
     private final TimesheetService timesheetService;
-    private final ExportStatusTracker exportStatusTracker;
     private final TimesheetHelper timesheetHelper;
 
-    public TimeOffRequestServiceImpl(TimeOffRequestAdapter timeOffRequestAdapter, TimeOffPolicyEntityMapper TimeOffPolicyEntityMapper, TimeOffPolicyDtoMapper timeOffPolicyDtoMapper,
+    public TimeOffRequestServiceImpl(TimeOffRequestAdapter timeOffRequestAdapter, TimeOffPolicyEntityMapper TimeOffPolicyEntityMapper,
                                      LeaveBalanceAdapter leaveBalanceAdapter, TimeOffPolicyAdapter timeOffPolicyAdapter, UserPolicyAdapter userPolicyAdapter,
-                                     AuthHelper authHelper, CacheKeyUtil cacheKeyUtil, @Nullable RedisTemplate<String, Object> redisTemplate, ReportStyleUtil reportStyleUtil, UserAdapter userAdapter, TimesheetAdapter timesheetAdapter, TimesheetService timesheetService, ExportStatusTracker exportStatusTracker, TimesheetHelper timesheetHelper) {
+                                     AuthHelper authHelper, UserAdapter userAdapter, TimesheetAdapter timesheetAdapter, TimesheetService timesheetService, TimesheetHelper timesheetHelper) {
         this.timeOffRequestAdapter = timeOffRequestAdapter;
         this.TimeOffPolicyEntityMapper = TimeOffPolicyEntityMapper;
-        this.timeOffPolicyDtoMapper = timeOffPolicyDtoMapper;
         this.leaveBalanceAdapter = leaveBalanceAdapter;
         this.timeOffPolicyAdapter = timeOffPolicyAdapter;
         this.userPolicyAdapter = userPolicyAdapter;
         this.authHelper = authHelper;
-        this.cacheKeyUtil = cacheKeyUtil;
-        this.redisTemplate = redisTemplate;
-        this.reportStyleUtil = reportStyleUtil;
         this.userAdapter = userAdapter;
         this.timesheetAdapter = timesheetAdapter;
         this.timesheetService = timesheetService;
-        this.exportStatusTracker = exportStatusTracker;
         this.timesheetHelper = timesheetHelper;
     }
-
-    @Value("${csv.request.download.dir}")
-    private String downloadDir;
 
     @Override
     @Transactional
@@ -695,8 +664,8 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
         String[] statusArr = request.getStatus() == null ? new String[0] : request.getStatus().toArray(new String[0]);
         String[] policyArr = request.getPolicyIds() == null ? new String[0] : request.getPolicyIds().toArray(new String[0]);
 
-        String loggedInUserId = authHelper.getUserId();
-        UserEntity user = userAdapter.findById(loggedInUserId).orElseThrow();
+
+        UserEntity user = userAdapter.findById(loggedUserId).orElseThrow();
 
         boolean isSuperAdmin = user.getRole().getHierarchyLevel() == UserRole.SUPERADMIN.getHierarchyLevel();
         boolean hasUserId = request.getUserId() != null && !request.getUserId().trim().isEmpty();
@@ -741,230 +710,6 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
                     loggedUserId
             );
         }
-    }
-
-    @Override
-    @Transactional
-    public String startExporting(TimeOffExportRequestDto request, String schema, String orgId) {
-        File folder = new File(downloadDir);
-        if (!folder.exists()) folder.mkdirs();
-        TimeOffExportRequest model = timeOffPolicyDtoMapper.toModel(request);
-        String format = request.getFormat() == null ? "xlsx" : request.getFormat().toLowerCase();
-        String baseName = "TimeOffRequest_" + request.getFromDate();
-        String extension = "." + format;
-        String finalName = baseName + extension;
-        File file = new File(downloadDir + finalName);
-        int count = 1;
-        while (file.exists()) {
-            finalName = baseName + "(" + count + ")" + extension;
-            file = new File(downloadDir + finalName);
-            count++;
-        }
-        String exportKey = cacheKeyUtil.getExport(schema, orgId, finalName);
-        if (redisTemplate != null) {
-            redisTemplate.opsForValue().set(exportKey, ReportType.PENDING, EXPORT_TTL);
-        } else {
-            exportStatusTracker.writeStatus(file, ReportType.PENDING.getValues());
-        }
-        generateReportAsync(file, exportKey, model);
-        return finalName;
-    }
-
-    @Async
-    public void generateReportAsync(File file, String exportKey, TimeOffExportRequest request) {
-        try {
-            boolean redisAvailable = redisTemplate != null;
-
-            if (redisAvailable) {
-                redisTemplate.opsForValue().set(exportKey, ReportType.PROCESSING, EXPORT_TTL);
-            } else {
-                exportStatusTracker.writeStatus(file, ReportType.PROCESSING.getValues());
-            }
-
-            String loggedInUser = authHelper.getUserId();
-            List<TimeOffExportView> exportData = fetchExportRows(request, loggedInUser);
-
-            if ("csv".equalsIgnoreCase(request.getFormat())) {
-                generateCsv(exportData, file);
-            } else {
-                generateXlsx(exportData, file);
-            }
-
-            if (redisAvailable) {
-                redisTemplate.opsForValue().set(exportKey, ReportType.COMPLETED, EXPORT_TTL);
-            } else {
-                exportStatusTracker.writeStatus(file, ReportType.COMPLETED.getValues());
-            }
-        } catch (Exception e) {
-            log.error("Timeoff request failed", e);
-            try {
-                if (file.exists()) {
-                    boolean deleted = file.delete();
-                    if (!deleted) {
-                        log.warn("Failed to delete file after export failure: {}", file.getAbsolutePath());
-                    }
-                }
-            } catch (Exception deleteEx) {
-                log.error("Error deleting failed export file: {}", deleteEx.getMessage());
-            }
-            if (redisTemplate != null) {
-                redisTemplate.opsForValue().set(exportKey, ReportType.FAILED.getValues(), EXPORT_TTL);
-            } else {
-                exportStatusTracker.writeStatus(file, ReportType.FAILED.getValues());
-            }
-        }
-    }
-
-    private void generateCsv(List<TimeOffExportView> data, File file) throws Exception {
-
-        // STEP 1: Group by requestId to avoid duplicates
-        Map<Long, List<TimeOffExportView>> grouped =
-                data.stream().collect(Collectors.groupingBy(TimeOffExportView::getTimeoffRequestId));
-
-        file.getParentFile().mkdirs();
-
-        try (FileWriter fw = new FileWriter(file, StandardCharsets.UTF_8);
-             CSVWriter csv = new CSVWriter(fw,
-                     CSVWriter.DEFAULT_SEPARATOR,
-                     CSVWriter.DEFAULT_QUOTE_CHARACTER,
-                     CSVWriter.DEFAULT_ESCAPE_CHARACTER,
-                     CSVWriter.DEFAULT_LINE_END)) {
-
-            // Load CSV header
-            ClassPathResource resource = new ClassPathResource("templates/text/timeoff_request_csv_header.txt");
-            try (BufferedReader br = new BufferedReader(
-                    new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8))) {
-
-                String headerLine = br.readLine();
-                if (headerLine != null) {
-                    csv.writeNext(headerLine.split(","));
-                }
-            }
-
-            // STEP 2: Write merged CSV rows (same as XLSX logic)
-            for (Map.Entry<Long, List<TimeOffExportView>> entry : grouped.entrySet()) {
-
-                List<TimeOffExportView> rows = entry.getValue();
-                TimeOffExportView first = rows.getFirst(); // Base row
-
-                // Merge APPROVERS
-                String approvers = rows.stream()
-                        .filter(v -> v.getViewerType().equalsIgnoreCase(ViewerType.APPROVER.getValue()))
-                        .map(TimeOffExportView::getViewerName)
-                        .distinct()
-                        .collect(Collectors.joining(", ")); // separator for CSV
-
-                // Merge VIEWERS
-                String viewers = rows.stream()
-                        .filter(v -> v.getViewerType().equalsIgnoreCase(ViewerType.VIEWER.getValue()))
-                        .map(TimeOffExportView::getViewerName)
-                        .distinct()
-                        .collect(Collectors.joining(", ")); // separator for CSV
-
-                // Write merged CSV row
-                csv.writeNext(new String[]{
-                        first.getCreatorId(),
-                        first.getCreatorName(),
-                        first.getPolicyName(),
-                        String.valueOf(first.getLeaveStartDate()),
-                        String.valueOf(first.getLeaveEndDate()),
-                        first.getLeaveType(),
-                        first.getStatus()
-//                        approvers.isEmpty() ? "-" : approvers,
-//                        viewers.isEmpty() ? "-" : viewers
-                });
-            }
-
-            csv.flush();
-        }
-    }
-
-
-    private void generateXlsx(List<TimeOffExportView> data, File file) throws Exception {
-
-        // STEP 1: Group by requestId (best)
-        Map<Long, List<TimeOffExportView>> grouped =
-                data.stream().collect(Collectors.groupingBy(TimeOffExportView::getTimeoffRequestId));
-
-        file.getParentFile().mkdirs();
-
-        try (Workbook workbook = new XSSFWorkbook();
-             FileOutputStream fos = new FileOutputStream(file)) {
-
-            Sheet sheet = workbook.createSheet("TimeOff Report");
-
-            // Load headers
-            Resource resource = new ClassPathResource("templates/text/timeoff_request_excel_header.txt");
-            List<String> headerLines;
-            try (BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8))) {
-                headerLines = reader.lines().toList();
-            }
-
-            String[] headers = headerLines.getFirst().split("\\|");
-            CellStyle headerStyle = reportStyleUtil.createHeaderCellStyle(workbook);
-            CellStyle dataStyle = reportStyleUtil.createDataCellStyle(workbook);
-
-            // Create header row
-            Row headerRow = sheet.createRow(0);
-            for (int i = 0; i < headers.length; i++) {
-                reportStyleUtil.createStyledCell(headerRow, i, headers[i], headerStyle);
-            }
-
-            // STEP 2: Write merged rows
-            int rowIdx = 1;
-
-            for (Map.Entry<Long, List<TimeOffExportView>> entry : grouped.entrySet()) {
-                List<TimeOffExportView> rows = entry.getValue();
-                TimeOffExportView first = rows.getFirst();
-
-                // Collect approvers
-                String approvers = rows.stream()
-                        .filter(v -> v.getViewerType().equalsIgnoreCase(ViewerType.APPROVER.getValue()))
-                        .map(TimeOffExportView::getViewerName)
-                        .distinct()
-                        .collect(Collectors.joining(", "));
-
-                // Collect viewers
-                String viewers = rows.stream()
-                        .filter(v -> v.getViewerType().equalsIgnoreCase(ViewerType.VIEWER.getValue()))
-                        .map(TimeOffExportView::getViewerName)
-                        .distinct()
-                        .collect(Collectors.joining(", "));
-
-                Row row = sheet.createRow(rowIdx++);
-                int col = 0;
-
-                reportStyleUtil.createStyledCell(row, col++, first.getCreatorId(), dataStyle);
-                reportStyleUtil.createStyledCell(row, col++, first.getCreatorName(), dataStyle);
-                reportStyleUtil.createStyledCell(row, col++, first.getPolicyName(), dataStyle);
-                reportStyleUtil.createStyledCell(row, col++, String.valueOf(first.getLeaveStartDate()), dataStyle);
-                reportStyleUtil.createStyledCell(row, col++, String.valueOf(first.getLeaveEndDate()), dataStyle);
-                reportStyleUtil.createStyledCell(row, col++, first.getLeaveType(), dataStyle);
-                reportStyleUtil.createStyledCell(row, col, first.getStatus(), dataStyle);
-//                reportStyleUtil.createStyledCell(row, col++, approvers.isEmpty() ? "-" : approvers, dataStyle);
-//                reportStyleUtil.createStyledCell(row, col, viewers.isEmpty() ? "-" : viewers, dataStyle);
-            }
-
-            for (int i = 0; i < headers.length; i++) {
-                sheet.autoSizeColumn(i);
-            }
-
-            workbook.write(fos);
-        }
-    }
-
-
-    @Override
-    public String exportStatus(String exportId, String schema, String orgId) {
-        String exportKey = cacheKeyUtil.getExport(schema, orgId, exportId);
-        if (redisTemplate != null) {
-            Object val = redisTemplate.opsForValue().get(exportKey);
-            return (val == null ? "NOT_FOUND" : val.toString());
-        }
-        File file = new File(downloadDir + exportId);
-        String status = exportStatusTracker.readStatus(file);
-        return status == null ? "NOT_FOUND" : status;
     }
 
     @Override

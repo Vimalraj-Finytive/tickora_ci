@@ -2,6 +2,7 @@ package com.uniq.tms.tms_microservice.modules.payrollManagement.model;
 
 import com.uniq.tms.tms_microservice.modules.payrollManagement.enums.PayRollStatusEnum;
 import java.math.BigDecimal;
+import java.util.Map;
 
 public class UserPayRollAmountModel {
 
@@ -19,6 +20,7 @@ public class UserPayRollAmountModel {
     private PayRollStatusEnum payrollStatus;
     private String notes;
     private BigDecimal totalAmount;
+    private Object bonus;
 
     public String getUserId() {
         return userId;
@@ -130,5 +132,13 @@ public class UserPayRollAmountModel {
 
     public void setTotalAmount(BigDecimal totalAmount) {
         this.totalAmount = totalAmount;
+    }
+
+    public Object getBonus() {
+        return bonus;
+    }
+
+    public void setBonus(Object bonus) {
+        this.bonus = bonus;
     }
 }

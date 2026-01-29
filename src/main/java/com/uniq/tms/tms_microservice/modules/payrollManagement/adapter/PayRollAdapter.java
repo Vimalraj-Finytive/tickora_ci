@@ -11,6 +11,7 @@ import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
 import io.lettuce.core.dynamic.annotation.Param;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -27,7 +28,7 @@ public interface PayRollAdapter {
     List<UserPayRollEntity> getAllUserPayroll(List<String> userIds);
     void saveAllUserPayrollAmount(List<UserPayRollAmountEntity> userPayRollAmountEntityList);
     List<UserPayRollAmountEntity> getPayrollAmount(String id, String month);
-    List<UserPayRollAmountEntity> getAllByMonthAndYear(String month);
+    List<UserPayRollAmountEntity> getAllByMonthAndYear(String month, List<String> payrollIds);
     List<PayRollProjection> getAllPayrollNameAndId();
     Optional<UserPayRollAmountEntity> findUserPayrollAmountByUserIdAndMonth(String userId,String month);
     UserPayRollAmountEntity saveUserPayRollAmount(UserPayRollAmountEntity entity);
@@ -39,7 +40,9 @@ public interface PayRollAdapter {
     List<UserPayRollAmount> findAllByMonth(String month);
     Optional<UserPayRollAmountEntity> getUserPayrollAmount(String userId, String month);
     List<UserEntity> findUsersByPayrollId(String payrollId, LocalDate date);
-    List<String> findAllUsersByMonth(LocalDate date);
-    List<UserEntity> findAllUsersPayroll(LocalDate date);
+    List<String> findAllUsersByMonth(LocalDate date, List<String> payrollIds);
+    List<UserEntity> findAllUsersPayroll(LocalDate date, List<String> payrollIds);
     List<UserPayRollAmount> findAllByMonthAndUserIds(String month, List<String> userIds);
+    List<PayRollEntity> findPayrollsCreatedBeforeOrOn(LocalDateTime date);
+    List<String> findPayrollIdsCreatedBeforeOrOn(LocalDateTime date);
 }

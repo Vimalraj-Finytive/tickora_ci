@@ -94,10 +94,10 @@ public class PayRollController {
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
-    @GetMapping("/details")
+    @GetMapping("/details/{month}")
     public ResponseEntity<ApiResponse<List<PayrollListResponseDto>>> getAllPayrolls(
-            @RequestHeader("Authorization") String token) {
-        ApiResponse<List<PayrollListResponseDto>> response = facade.getAllPayrolls();
+            @RequestHeader("Authorization") String token,@PathVariable String month) {
+        ApiResponse<List<PayrollListResponseDto>> response = facade.getAllPayrolls(month);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
@@ -144,74 +144,6 @@ public class PayRollController {
                                                    @RequestBody PayRollEditRequestDto payRollEditRequestDto){
         ApiResponse<Void> response=facade.updatePayroll(payRollId,payRollEditRequestDto);
         return ResponseEntity.status(response.getStatusCode()).body(response);
-    }
-
-    @PostMapping("/generate")
-    public ResponseEntity<ApiResponse<String>> startExport(
-            @RequestBody PayRollExportDto request) {
-        String schema = authHelper.getSchema();
-        String orgId = authHelper.getOrgId();
-        return ResponseEntity.ok(
-                facade.startExport(request.getMonth(), request.getFormat(), request.getGroupIds(), request.getUserIds(), schema, orgId)
-        );
-    }
-
-    @GetMapping("/status/{exportId}")
-    public ResponseEntity<ApiResponse<String>> status(@PathVariable String exportId) {
-        String schema = authHelper.getSchema();
-        String orgId = authHelper.getOrgId();
-        return ResponseEntity.ok(
-                facade.checkStatus(schema, orgId, exportId)
-        );
-    }
-
-    @GetMapping("/download")
-    public ResponseEntity<?> downloadPayRoll(
-            @RequestHeader("Authorization") String token,
-            @RequestParam String fileName) {
-        try {
-
-            if (fileName.contains("..") || fileName.contains("/") || fileName.contains("\\")) {
-                return ResponseEntity.badRequest().body(
-                        new ApiResponse<>(400, "Invalid file name", null)
-                );
-            }
-
-            Path filePath = Paths.get(downloadDir).resolve(fileName);
-
-            if (!Files.exists(filePath)) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
-                        new ApiResponse<>(404, "File not generated yet. Please try again later.", null)
-                );
-            }
-
-            long fileSize = Files.size(filePath);
-            InputStreamResource resource = new InputStreamResource(Files.newInputStream(filePath));
-            MediaType mediaType = determineMediaType(fileName);
-
-            return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "attachment; filename=\"" + fileName +
-                                    "\"; filename*=UTF-8''" + URLEncoder.encode(fileName, StandardCharsets.UTF_8))
-                    .contentType(mediaType)
-                    .contentLength(fileSize)
-                    .body(resource);
-
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
-                    new ApiResponse<>(500, "Error reading file", null)
-            );
-        }
-    }
-
-    private MediaType determineMediaType(String fileName) {
-        if (fileName.toLowerCase().endsWith(".csv")) {
-            return MediaType.parseMediaType("text/csv");
-        } else if (fileName.toLowerCase().endsWith(".xlsx")) {
-            return MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-        } else {
-            return MediaType.APPLICATION_OCTET_STREAM;
-        }
     }
 
 }

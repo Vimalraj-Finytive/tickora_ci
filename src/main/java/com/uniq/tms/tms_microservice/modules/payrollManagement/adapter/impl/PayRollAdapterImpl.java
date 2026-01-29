@@ -17,6 +17,7 @@ import com.uniq.tms.tms_microservice.modules.userManagement.entity.UserEntity;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -94,8 +95,8 @@ public class PayRollAdapterImpl implements PayRollAdapter {
     }
 
     @Override
-    public List<UserPayRollAmountEntity> getAllByMonthAndYear(String month) {
-        return userPayrollAmountRepository.findAllByMonth(month);
+    public List<UserPayRollAmountEntity> getAllByMonthAndYear(String month, List<String> payrollIds) {
+        return userPayrollAmountRepository.findAllByMonth(month, payrollIds);
     }
 
     @Override
@@ -149,17 +150,27 @@ public class PayRollAdapterImpl implements PayRollAdapter {
     }
 
     @Override
-    public List<String> findAllUsersByMonth(LocalDate date) {
-        return userPayrollRepo.findAllUsersByMonth(date);
+    public List<String> findAllUsersByMonth(LocalDate date, List<String> payrollIds) {
+        return userPayrollRepo.findAllUsersByMonth(date, payrollIds);
     }
 
     @Override
-    public List<UserEntity> findAllUsersPayroll(LocalDate date) {
-        return userPayrollRepo.findAllUsersPayroll(date);
+    public List<UserEntity> findAllUsersPayroll(LocalDate date, List<String> payrollIds) {
+        return userPayrollRepo.findAllUsersPayroll(date, payrollIds);
     }
 
     @Override
     public List<UserPayRollAmount> findAllByMonthAndUserIds(String month, List<String> userIds) {
         return userPayrollAmountRepository.findAllByMonthAndUserIds(month,userIds);
+    }
+
+    @Override
+    public List<PayRollEntity> findPayrollsCreatedBeforeOrOn(LocalDateTime date) {
+        return payrollRepo.findPayrollsCreatedBeforeOrOn(date);
+    }
+
+    @Override
+    public List<String> findPayrollIdsCreatedBeforeOrOn(LocalDateTime date) {
+        return payrollRepo.findPayrollIdsCreatedBeforeOrOn(date);
     }
 }

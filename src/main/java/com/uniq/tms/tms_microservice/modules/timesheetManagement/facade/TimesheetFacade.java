@@ -3,12 +3,10 @@ package com.uniq.tms.tms_microservice.modules.timesheetManagement.facade;
 import com.uniq.tms.tms_microservice.modules.userManagement.dto.UserValidationDto;
 import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.dto.*;
-import com.uniq.tms.tms_microservice.shared.security.schema.TenantContext;
 import com.uniq.tms.tms_microservice.shared.helper.AuthHelper;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.mapper.TimesheetDtoMapper;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.model.TimesheetHistory;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.services.FaceService;
-import com.uniq.tms.tms_microservice.modules.timesheetManagement.services.ReportService;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.services.TimesheetService;
 import com.uniq.tms.tms_microservice.modules.userManagement.dto.RegisterDto;
 import com.uniq.tms.tms_microservice.shared.security.user.CustomUserDetails;
@@ -18,25 +16,27 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ResponseStatusException;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 @Component
 public class TimesheetFacade {
 
+    private static final Duration EXPORT_TTL = Duration.ofHours(1);
+
     private final AuthHelper authHelper;
     private final TimesheetService timesheetService;
     private final TimesheetDtoMapper timesheetDtoMapper;
-    private final ReportService reportService;
     private final FaceService faceService;
 
-    public TimesheetFacade(AuthHelper authHelper, TimesheetService timesheetService, TimesheetDtoMapper timesheetDtoMapper, ReportService reportService, FaceService faceService) {
+    public TimesheetFacade(AuthHelper authHelper, TimesheetService timesheetService,
+                           TimesheetDtoMapper timesheetDtoMapper,
+                           FaceService faceService) {
         this.authHelper = authHelper;
         this.timesheetService = timesheetService;
         this.timesheetDtoMapper = timesheetDtoMapper;
-        this.reportService = reportService;
         this.faceService = faceService;
     }
 
@@ -114,7 +114,6 @@ public class TimesheetFacade {
     }
 
     public ApiResponse getStatus() {
-
         String orgId = authHelper.getOrgId();
         if (orgId == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized - Invalid Organization");
@@ -144,35 +143,8 @@ public class TimesheetFacade {
     }
 
     public ApiResponse<RegisterDto> compareMultiFace(FaceDto faceDto,String userIdFromToken) {
-
         String orgSchema = authHelper.getSchema();
         return faceService.compareMultiFace(faceDto,orgSchema,userIdFromToken);
-    }
-
-    public CompletableFuture<FileExportResponseDto> generateTimesheetFileAsync(
-            TimesheetReportDto request,
-            String predefinedFileName,
-            String userId,
-            String orgId,
-            String role,
-            String schema) {
-
-        TenantContext.setCurrentTenant(schema.toLowerCase().replace("-", "_"));
-        try {
-            log.info("File generation started for user: {}, org: {}", userId, orgId);
-
-            FileExportResponseDto export = reportService.generateTimesheetFile(
-                    request, userId, orgId, role, predefinedFileName);
-
-            log.info("File Generation completed for file: {}", predefinedFileName);
-            return CompletableFuture.completedFuture(export);
-
-        } catch (Exception e) {
-            log.error("Error in async file generation for file: {}", predefinedFileName, e);
-            return CompletableFuture.failedFuture(e);
-        } finally {
-            TenantContext.clear();
-        }
     }
 
     public ApiResponse<UserValidationDto> validateUser(String userId) {
@@ -182,16 +154,13 @@ public class TimesheetFacade {
     public List<DashboardSummaryDto> getDashboardSummary(DashboardSummaryRequest request) {
         LocalDate fromDate = request.getFromDate();
         LocalDate toDate = request.getToDate();
-
         if (toDate.isAfter(LocalDate.now(ZoneId.of("Asia/Kolkata")))) {
             toDate = LocalDate.now(ZoneId.of("Asia/Kolkata"));
         }
-
         String orgId = request.getOrganizationId();
         if (orgId == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Organization ID is required");
         }
-
         return timesheetService.getDashboardSummary(orgId, fromDate, toDate);
     }
 }

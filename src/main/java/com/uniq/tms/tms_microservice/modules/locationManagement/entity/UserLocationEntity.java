@@ -25,6 +25,13 @@ public class UserLocationEntity {
     @JoinColumn(name = "location_id")
     private LocationEntity location;
 
+    public UserLocationEntity(){};
+
+    public UserLocationEntity(UserEntity user, LocationEntity location) {
+        this.user = user;
+        this.location = location;
+    }
+
     public Long getId(){
         return id;
     }

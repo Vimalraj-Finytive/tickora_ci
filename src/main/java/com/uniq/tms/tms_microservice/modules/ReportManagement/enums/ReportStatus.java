@@ -1,6 +1,6 @@
-package com.uniq.tms.tms_microservice.modules.leavemanagement.enums;
+package com.uniq.tms.tms_microservice.modules.ReportManagement.enums;
 
-public enum ReportType {
+public enum ReportStatus {
 
     PROCESSING("Processing"),
     PENDING("Pending"),
@@ -9,7 +9,7 @@ public enum ReportType {
 
     private final String values;
 
-    ReportType(String values){
+    ReportStatus(String values){
         this.values = values;
     }
 

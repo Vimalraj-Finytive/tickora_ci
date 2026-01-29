@@ -90,67 +90,6 @@ public class TimeOffRequestController {
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
-    @PostMapping("/generate")
-    public ResponseEntity<ApiResponse<Map<String,String>>> startExport(@RequestBody TimeOffExportRequestDto request) {
-        String schema = authHelper.getSchema();
-        String orgId = authHelper.getOrgId();
-        ApiResponse<Map<String,String>> export = timeOffFacade.startExportJob(request, schema, orgId);
-        return ResponseEntity.status(export.getStatusCode()).body(export);
-    }
-
-    @GetMapping("generate/status/{exportId}")
-    public ResponseEntity<ApiResponse<Map<String, String>>> getReportStatus(
-            @PathVariable String exportId) {
-        String schema = authHelper.getSchema();
-        String orgId = authHelper.getOrgId();
-        ApiResponse<Map<String, String>> reportStatus = timeOffFacade.getExportStatus(schema, orgId, exportId);
-        return ResponseEntity.status(reportStatus.getStatusCode()).body(reportStatus);
-    }
-
-    @GetMapping("/download")
-    public ResponseEntity<?> downloadTimeoffRequest(
-            @RequestHeader("Authorization") String token,
-            @RequestParam String fileName) {
-        try {
-            if (fileName.contains("..") || fileName.contains("/") || fileName.contains("\\")) {
-                return ResponseEntity.badRequest().body(
-                        new ApiResponse<>(400, "Invalid file name", null)
-                );
-            }
-            Path filePath = Paths.get(downloadDir).resolve(fileName);
-            if (!Files.exists(filePath)) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
-                        new ApiResponse<>(404, "File not generated yet. Please try again later.", null)
-                );
-            }
-            long fileSize = Files.size(filePath);
-            InputStreamResource resource = new InputStreamResource(Files.newInputStream(filePath));
-            MediaType mediaType = determineMediaType(fileName);
-            return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "attachment; filename=\"" + fileName +
-                                    "\"; filename*=UTF-8''" + URLEncoder.encode(fileName, StandardCharsets.UTF_8))
-                    .contentType(mediaType)
-                    .contentLength(fileSize)
-                    .body(resource);
-
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
-                    new ApiResponse<>(500, "Error reading file", null)
-            );
-        }
-    }
-
-    private MediaType determineMediaType(String fileName) {
-        if (fileName.toLowerCase().endsWith(".csv")) {
-            return MediaType.parseMediaType("text/csv");
-        } else if (fileName.toLowerCase().endsWith(".xlsx")) {
-            return MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-        } else {
-            return MediaType.APPLICATION_OCTET_STREAM;
-        }
-    }
-
     @GetMapping("/hourType")
     public ResponseEntity<ApiResponse<List<EnumDto>>> getHourType(
             @RequestHeader("Authorization") String token) {

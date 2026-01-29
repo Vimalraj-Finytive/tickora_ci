@@ -1,6 +1,7 @@
 package com.uniq.tms.tms_microservice.modules.payrollManagement.dto;
 
 import java.math.BigDecimal;
+import java.util.Map;
 
 public class UserPayRollAmountDto {
 
@@ -18,6 +19,7 @@ public class UserPayRollAmountDto {
      private String payrollStatus;
      private String notes;
      private BigDecimal totalAmount;
+    private Object bonus;
 
     public String getUserId() {
         return userId;
@@ -129,5 +131,13 @@ public class UserPayRollAmountDto {
 
     public void setNotes(String notes) {
         this.notes = notes;
+    }
+
+    public Object getBonus() {
+        return bonus;
+    }
+
+    public void setBonus(Object bonus) {
+        this.bonus = bonus;
     }
 }
