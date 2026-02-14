@@ -72,7 +72,7 @@ public class SubscriptionScheduler {
                 long daysRemaining = ChronoUnit.DAYS.between(LocalDate.now(), expiryDate);
 
                 boolean isActiveReminder = OrganizationStatusEnum.ACTIVE.name().equalsIgnoreCase(status)
-                        && (daysRemaining == 30 || (daysRemaining <= 7 && daysRemaining >= 0));
+                        && (daysRemaining == 30 || (daysRemaining <= 3 && daysRemaining >= 0));
                 boolean isExpiredAlert = OrganizationStatusEnum.EXPIRED.name().equalsIgnoreCase(status) || daysRemaining < 0;
 
                 if (isActiveReminder || isExpiredAlert) {

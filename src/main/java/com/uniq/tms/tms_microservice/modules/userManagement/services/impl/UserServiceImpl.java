@@ -2110,7 +2110,7 @@ public class UserServiceImpl implements UserService {
             subscriptionEntity.setSchemaName(schemaName);
             subscriptionEntity.setStatus(OrganizationStatusEnum.ACTIVE.getDisplayValue());
             subscriptionEntity.setStartDate(LocalDateTime.now());
-            subscriptionEntity.setEndDate(LocalDateTime.now().plusDays(30));
+            subscriptionEntity.setEndDate(LocalDateTime.now().plusDays(7));
             subscriptionEntity.setSubscribedUsers(subscribedUsers);
             log.info("Save subscription for created Organization");
             SubscriptionEntity saveSubscription = userAdapter.saveSubscription(subscriptionEntity);

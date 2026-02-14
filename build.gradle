@@ -84,3 +84,7 @@ bootJar {
 jar {
 	enabled = false
 }
+
+bootRun {
+    jvmArgs = ["-Duser.timezone=UTC"]
+}
