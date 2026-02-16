@@ -26,7 +26,7 @@ public class FaceController{
     }
 
 
-    @PostMapping(value = "/register")
+    @PostMapping(value = "/registerFaces")
     public ResponseEntity<ApiResponse<RegisterDto>> registerUserFace(@RequestHeader("Authorization") String token,
                                                                      @ModelAttribute RegisterDto registerDto){
         ApiResponse<RegisterDto> response =timesheetFacade.registerUserFace(registerDto);
@@ -40,7 +40,7 @@ public class FaceController{
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
-    @PostMapping("/multiface/compare")
+    @PostMapping("/multiface/faces/compare")
     public ResponseEntity<ApiResponse<RegisterDto>> compareMultiFace(@RequestHeader("Authorization") String token,
                                                                    @ModelAttribute FaceDto faceDto){
 
