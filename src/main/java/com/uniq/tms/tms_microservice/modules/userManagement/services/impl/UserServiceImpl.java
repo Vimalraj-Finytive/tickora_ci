@@ -26,6 +26,7 @@ import com.uniq.tms.tms_microservice.modules.organizationManagement.model.Organi
 import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.OrganizationRepository;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.repository.RoleRepository;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.services.OrganizationCacheService;
+import com.uniq.tms.tms_microservice.modules.timesheetManagement.adapter.FaceAdapter;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.adapter.TimesheetAdapter;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.entity.TimesheetEntity;
 import com.uniq.tms.tms_microservice.modules.userManagement.adapter.UserAdapter;
@@ -125,6 +126,7 @@ public class UserServiceImpl implements UserService {
     private final TimeOffPolicyAdapter timeOffPolicyAdapter;
     private final TimeOffPolicyService timeOffPolicyService;
     private final UserMergeUtil userMergeUtil;
+    private final FaceAdapter faceAdapter;
     public UserServiceImpl(Validator validator, UserAdapter userAdapter, TimesheetAdapter timesheetAdapter,
                            UserEntityMapper userEntityMapper, CalendarAdapter calendarAdapter, OrganizationRepository organizationRepository,
                            RoleRepository roleRepository, LocationRepository locationRepository, EmailHelper emailHelper,
@@ -135,7 +137,7 @@ public class UserServiceImpl implements UserService {
                            ExceptionHelper exceptionHelper, OrganizationCacheService organizationCacheService, LocationDtoMapper locationDtoMapper,
                            OrganizationAdapter organizationAdapter, LocationAdapter locationAdapter, OrganizationEntityMapper organizationEntityMapper,
                            AuthHelper authHelper, TimeOffPolicyAdapter timeOffPolicyAdapter, TimeOffPolicyService timeOffPolicyService,
-                           UserMergeUtil userMergeUtil) {
+                           UserMergeUtil userMergeUtil, FaceAdapter faceAdapter) {
         this.userAdapter = userAdapter;
         this.timesheetAdapter = timesheetAdapter;
         this.userEntityMapper = userEntityMapper;
@@ -164,6 +166,7 @@ public class UserServiceImpl implements UserService {
         this.timeOffPolicyAdapter = timeOffPolicyAdapter;
         this.timeOffPolicyService = timeOffPolicyService;
         this.userMergeUtil = userMergeUtil;
+        this.faceAdapter = faceAdapter;
     }
 
     private static final Logger log = LoggerFactory.getLogger(UserServiceImpl.class);
@@ -1335,15 +1338,14 @@ public class UserServiceImpl implements UserService {
             userAdapter.saveAllUserHistories(historyEntities);
             log.info("Saved {} user history records in batch", historyEntities.size());
         }
-        CompletableFuture.runAsync(() ->
-                userIds.parallelStream().forEach(userId -> {
-                    try {
-                        userAdapter.deleteUserFace(userId);
-                    } catch (Exception e) {
-                        log.error("Failed to delete face for user {}: {}", userId, e.getMessage());
-                    }
-                })
-        );
+
+        userIds.parallelStream().forEach(userId -> {
+            try {
+                userAdapter.deleteUserFace(userId);
+            } catch (Exception e) {
+                log.error("Failed to delete face for user {}: {}", userId, e.getMessage());
+            }
+        });
         if (isRedisEnabled) {
             try {
                 publisher.publishEvent(new UserEvent(orgId, authHelper.getSchema()));
