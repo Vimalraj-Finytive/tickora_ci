@@ -36,7 +36,7 @@ public class TimesheetScheduler {
                     log.info("Table exists for schema : {}", orgId.getSchemaName());
                     timesheetService.autoClockOut(organizationId);
                 } catch (Exception e) {
-                    continue;
+                    log.warn("Auto clock out failed for schema: {}", orgId.getSchemaName(), e);
                 } finally {
                     TenantUtil.clearTenant();
                 }

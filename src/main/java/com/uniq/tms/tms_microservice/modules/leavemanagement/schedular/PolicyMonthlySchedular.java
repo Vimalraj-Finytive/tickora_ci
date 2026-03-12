@@ -33,7 +33,7 @@ public class PolicyMonthlySchedular {
                     log.info("Scheduled clock triggered for update monthly policy");
                     timeOffPolicyService.updateMonthlyPolicy(orgId.getOrganizationId());
                 } catch (Exception e) {
-                    continue;
+                    log.warn("monthlyPolicy update failed for schema: {}", orgId.getSchemaName(), e);
                 } finally {
                     TenantUtil.clearTenant();
                 }

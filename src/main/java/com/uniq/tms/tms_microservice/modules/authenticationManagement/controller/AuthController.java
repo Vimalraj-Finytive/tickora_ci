@@ -46,7 +46,6 @@ public class AuthController {
                                                 HttpServletResponse response,
                                                 HttpServletRequest request) {
 
-
         logger.info("Login Request Received: {}", loginDto);
 
         String authHeader = request.getHeader("Authorization");

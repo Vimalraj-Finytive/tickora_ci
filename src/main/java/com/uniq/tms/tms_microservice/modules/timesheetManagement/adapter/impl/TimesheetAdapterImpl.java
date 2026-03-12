@@ -505,7 +505,7 @@ public class TimesheetAdapterImpl implements TimesheetAdapter {
         if (scheduleInfo == null) {
             log.warn("No schedule found for userId={}", timesheet.getUserId());
             //timesheet.setWorkStatus(TimesheetWorkStatusEnum.NO_SCHEDULE.getLabel());
-            timesheet.setStatus(TimesheetStatusEnum.ABSENT.getLabel());
+            timesheet.setStatus(TimesheetStatusEnum.PRESENT.getLabel());
             return;
         }
 

@@ -28,7 +28,7 @@ public class CacheReloadEventListener {
     }
 
     @EventListener
-    public void CacheReload(CacheReloadEvent event) {
+    public void cacheReload(CacheReloadEvent event) {
         log.info("Received CacheReloadEvent. Reloading cache...");
         String cacheName = event.getCacheName();
         String orgId = event.getOrgId();

@@ -306,5 +306,4 @@ public class UserController {
         ApiResponse<RequestApproverDto> response = userFacade.assignRequestApprover(dto);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
-
 }

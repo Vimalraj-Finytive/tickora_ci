@@ -32,11 +32,12 @@ public class LocationRedisScheduler {
             for(OrganizationEntity orgId : orgIds){
                 TenantUtil.setCurrentTenant(orgId.getSchemaName());
                 locationCacheService.loadLocationTable(orgId.getOrganizationId(),orgId.getSchemaName());
-                TenantUtil.clearTenant();
             }
             log.info("Location Cache loading completed");
         } catch (Exception e) {
             log.error("Error during scheduled Location cache loading: {}", e.getMessage(), e);
+        } finally {
+            TenantUtil.clearTenant();
         }
     }
 }

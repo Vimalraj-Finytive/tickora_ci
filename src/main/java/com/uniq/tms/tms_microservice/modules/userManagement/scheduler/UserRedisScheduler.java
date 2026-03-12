@@ -32,11 +32,12 @@ public class UserRedisScheduler {
             for(OrganizationEntity orgId : orgIds){
                 TenantUtil.setCurrentTenant(orgId.getSchemaName());
                 userCacheService.loadAllUsers(orgId.getOrganizationId(),orgId.getSchemaName());
-                TenantUtil.clearTenant();
             }
             log.info("Cache User loading completed");
         } catch (Exception e) {
             log.error("Error during scheduled User cache loading: {}", e.getMessage(), e);
+        }finally {
+            TenantUtil.clearTenant();
         }
     }
 
@@ -48,11 +49,12 @@ public class UserRedisScheduler {
             for(OrganizationEntity orgId : orgIds){
                 TenantUtil.setCurrentTenant(orgId.getSchemaName());
                 userCacheService.loadUsersProfile(orgId.getOrganizationId(),orgId.getSchemaName());
-                TenantUtil.clearTenant();
             }
             log.info("Cache User Profile loading completed");
         } catch (Exception e) {
             log.error("Error during scheduled User Profile cache loading: {}", e.getMessage(), e);
+        }finally {
+            TenantUtil.clearTenant();
         }
     }
 

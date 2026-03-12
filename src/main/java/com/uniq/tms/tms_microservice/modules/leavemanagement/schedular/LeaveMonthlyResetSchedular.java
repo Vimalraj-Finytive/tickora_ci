@@ -33,7 +33,7 @@ public class LeaveMonthlyResetSchedular {
                     log.info("Scheduled clock triggered for Update LeaveBalance monthly");
                     leaveBalanceService.updateMonthlyLeaveBalance();
                 } catch (Exception e) {
-                    continue;
+                    log.warn("leaveBalance monthly update failed for schema: {}", orgId.getSchemaName(), e);
                 } finally {
                     TenantUtil.clearTenant();
                 }

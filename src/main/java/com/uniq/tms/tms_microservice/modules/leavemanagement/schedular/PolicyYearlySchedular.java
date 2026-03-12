@@ -34,7 +34,7 @@ public class PolicyYearlySchedular {
                     log.info("Scheduled clock triggered for update yearly policy");
                     timeOffPolicyService.updateYearlyPolicy(orgId.getOrganizationId());
                 } catch (Exception e) {
-                    continue;
+                    log.warn("YearlyPolicy update failed for schema: {}", orgId.getSchemaName(), e);
                 } finally {
                     TenantUtil.clearTenant();
                 }

@@ -33,11 +33,12 @@ public class OrganizationRedisScheduler {
             for(OrganizationEntity orgId : orgIds) {
                 TenantUtil.setCurrentTenant(orgId.getSchemaName());
                 organizationCacheService.loadPrivilegesFromDB(orgId.getSchemaName());
-                TenantUtil.clearTenant();
             }
             log.info("Cache Privilege loading completed");
         } catch (Exception e) {
             log.error("Error during scheduled Privilege cache loading: {}", e.getMessage(), e);
+        }finally {
+            TenantUtil.clearTenant();
         }
     }
 
@@ -49,11 +50,12 @@ public class OrganizationRedisScheduler {
             for(OrganizationEntity orgId : orgIds) {
                 TenantUtil.setCurrentTenant(orgId.getSchemaName());
                 organizationCacheService.loadAllRolesToCache(orgId.getOrganizationId(),orgId.getSchemaName());
-                TenantUtil.clearTenant();
             }
             log.info("Cache Role loading completed");
         } catch (Exception e) {
             log.error("Error during scheduled Role cache loading: {}", e.getMessage(), e);
+        }finally {
+            TenantUtil.clearTenant();
         }
     }
 

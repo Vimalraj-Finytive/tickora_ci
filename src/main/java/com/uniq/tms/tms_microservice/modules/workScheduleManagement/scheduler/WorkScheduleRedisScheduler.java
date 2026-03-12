@@ -32,11 +32,12 @@ public class WorkScheduleRedisScheduler {
             for(OrganizationEntity orgId : orgIds) {
                 TenantUtil.setCurrentTenant(orgId.getSchemaName());
                 workScheduleCacheLoaderService.loadWorkSchedule(orgId.getOrganizationId(),orgId.getSchemaName());
-                TenantUtil.clearTenant();
             }
             log.info("Cache WorkSchedule loading completed");
         } catch (Exception e) {
             log.error("Error during scheduled WorkSchedule cache loading: {}", e.getMessage(), e);
+        }finally {
+            TenantUtil.clearTenant();
         }
     }
 

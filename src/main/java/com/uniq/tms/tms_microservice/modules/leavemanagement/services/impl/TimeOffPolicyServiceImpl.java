@@ -765,7 +765,7 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
         List<LeaveBalanceEntity> toSaveLB = new ArrayList<>();
 
         for (EditUserPolicyModel req : reqList) {
-
+            validFrom = req.getValidityStartDate();
             String policyId = req.getPolicyId();
             LocalDate existingDate = policyValidityStartMap.get(policyId);
             if (existingDate != null && validFrom.isBefore(existingDate)) {
@@ -821,7 +821,7 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
         }
         if (isRedisEnabled) {
             try {
-                publisher.publishEvent(new UserEvent(orgId, authHelper.getSchema()));
+                publisher.publishEvent(new UserEvent(orgId, authHelper.getSchema(), userId));
                 log.info("User cache reload event published after Edited Policies fo a user for orgId={}", orgId);
             } catch (Exception e) {
                 log.error("Failed to publish User cache reload event for orgId={}", orgId, e);

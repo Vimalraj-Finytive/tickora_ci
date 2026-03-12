@@ -33,7 +33,7 @@ public class LeaveYearlyResetSchedular {
                     log.info("Scheduled clock triggered for update LeaveBalance yearly");
                     leaveBalanceService.updateYearlyLeaveBalance();
                 } catch (Exception e) {
-                    continue;
+                    log.warn("leaveBalance yearly update failed for schema: {}", orgId.getSchemaName(), e);
                 } finally {
                     TenantUtil.clearTenant();
                 }
