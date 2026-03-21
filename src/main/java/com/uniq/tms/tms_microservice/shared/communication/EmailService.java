@@ -131,6 +131,9 @@ public class EmailService {
     private final TemplateEngine templateEngine;
     private final JavaMailSender mailSender;
 
+    @Value("${app.base-url}")
+    private String baseUrl;
+
     public EmailService(TemplateEngine templateEngine,
                         JavaMailSender mailSender) {
         this.templateEngine = templateEngine;
@@ -168,6 +171,7 @@ public class EmailService {
         context.setVariable("email", to);
         context.setVariable("isNewUser", isNewUser);
         context.setVariable("emailType", emailType);
+        context.setVariable("baseUrl", baseUrl);
 
         String htmlContent =
                 templateEngine.process("html/email-template", context);

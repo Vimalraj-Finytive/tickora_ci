@@ -44,11 +44,11 @@
         <li>Logging in with the default password is not allowed.</li>
     </ul>
     <p>
-        <a th:href="@{http://51.21.219.235:8000/deeplink(email=${email})}"
+        <a th:href="@{${baseUrl} + '/deeplink'(email=${email})}"
            th:if="${!isNewUser}" class="btn">
             Reset Password
         </a>
-        <a th:href="@{http://51.21.219.235:8000/deeplink(email=${email}, newUser='true')}"
+        <a th:href="@{${baseUrl} + '/deeplink'(email=${email}, newUser='true')}"
            th:if="${isNewUser}" class="btn">
             Reset Password
         </a>
@@ -93,11 +93,11 @@
         <li>Logging in with the default password is not allowed.</li>
     </ul>
     <p>
-        <a th:href="@{http://51.21.219.235:8000/deeplink(email=${email})}"
+        <a th:href="@{${baseUrl} + '/deeplink'(email=${email})}"
            th:if="${!isNewUser}" class="btn">
             Reset Password
         </a>
-        <a th:href="@{http://51.21.219.235:8000/deeplink(email=${email}, newUser='true')}"
+        <a th:href="@{${baseUrl} + '/deeplink'(email=${email}, newUser='true')}"
            th:if="${isNewUser}" class="btn">
             Reset Password
         </a>
