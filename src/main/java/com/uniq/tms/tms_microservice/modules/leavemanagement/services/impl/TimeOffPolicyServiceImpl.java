@@ -29,6 +29,8 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.server.ResponseStatusException;
 import java.time.*;
 import java.time.temporal.ChronoUnit;
@@ -372,18 +374,19 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
             leaveBalanceAdapter.saveLeaveBalances(balanceList);
         }
         if (isRedisEnabled) {
-            try {
-                publisher.publishEvent(new UserEvent(orgId, authHelper.getSchema()));
-                log.info(
-                        "User cache reloaded after policy assignment | orgId={}",
-                        orgId
-                );
-            } catch (Exception e) {
-                log.error(
-                        "Failed to reload user cache after policy assignment | orgId={}",
-                        orgId,
-                        e
-                );
+            if (TransactionSynchronizationManager.isActualTransactionActive()){
+             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    try {
+                        publisher.publishEvent(new UserEvent(orgId, authHelper.getSchema()));
+                        log.info(
+                                "User cache reloaded after policy assignment | orgId={}", orgId);
+                    } catch (Exception e) {
+                        log.error("Failed to reload user cache after policy assignment | orgId={}", orgId, e);
+                    }
+                }
+             });
             }
         } else {
             log.info(

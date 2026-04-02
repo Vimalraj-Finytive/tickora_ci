@@ -102,71 +102,72 @@ public class JwtFilter extends OncePerRequestFilter {
         }
 
         String jwtToken = extractTokenFromRequest(request);
+        if (jwtToken == null) {
+            chain.doFilter(request, response);
+            return;
+        }
+        try {
+
         String tenant = extractSchemaFromToken(jwtToken,response);
+        if (tenant == null) {
+            return;
+        }
 
-        if (jwtToken != null && tenant != null) {
-            log.info("Tenant:{}", tenant);
-            TenantContext.setCurrentTenant(tenant);
-            log.info("Current tenant:{}", TenantContext.getCurrentTenant());
-            if (blacklistedTokenRepository.existsByToken(jwtToken)) {
-                log.warn("JWT token is blacklisted: {}", jwtToken);
-                sendErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, "Token is invalid or expired");
-                return;
-            }
+        log.info("Tenant:{}", tenant);
+        TenantContext.setCurrentTenant(tenant);
+        log.info("Current tenant:{}", TenantContext.getCurrentTenant());
+        if (blacklistedTokenRepository.existsByToken(jwtToken)) {
+            log.warn("JWT token is blacklisted: {}", jwtToken);
+            sendErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, "Token is invalid or expired");
+            return;
+        }
 
-            try {
-                Claims claims = jwtUtil.parseAndValidateToken(jwtToken, request.getHeader("User-Agent"));
-                String subject = claims.getSubject();
-                String role = claims.get("roles", String.class).replace("ROLE_", "");
 
-                UserEntity user = null;
-                boolean isParentLogin = false;
-                String emailKey = organizationCacheService.getPrivilegeKey(PrivilegeConstants.LOGIN_VIA_EMAIL);
-                log.info("email key : {}", emailKey);
-                String mobileKey = organizationCacheService.getPrivilegeKey(PrivilegeConstants.LOGIN_VIA_MOBILE);
-                log.info("mobile key: {}",mobileKey);
-                if (rolePrivilegeHelper.roleHasPrivilege(role, emailKey)) {
-                    user = userRepository.findByEmail(subject);
-                    log.info("user from repo :{}", user);
-                    if (!user.isActive()){
-                        log.info("Your account is deactivated");
-                        sendErrorResponse(response, HttpServletResponse.SC_FORBIDDEN, "Your account has been Inactivated.");
-                        return;
-                    }
-                } else if (rolePrivilegeHelper.roleHasPrivilege(role, mobileKey)) {
-                    user = userRepository.findByMobileNumber(subject);
-                    log.info("mobile user from repo:{}", user);
-                    if (user != null && !user.isActive()){
-                        log.info("Your account is deactivated.");
-                        sendErrorResponse(response, HttpServletResponse.SC_FORBIDDEN, "Your account has been Inactivated.");
-                        return;
-                    }
-                }
+            Claims claims = jwtUtil.parseAndValidateToken(jwtToken, request.getHeader("User-Agent"));
+            String subject = claims.getSubject();
+            String role = claims.get("roles", String.class).replace("ROLE_", "");
 
-                if (user == null) {
-                    log.info("Student not found. Checking if this is a parent login...");
-                    user = secondaryDetailsRepository.findUserByMobile(subject);
-                    if (user != null) {
-                        isParentLogin = true;
-                        log.info("Parent login detected. Student user fetched: {}", user);
-                    }
-                }
-
-                if (user == null) {
-                    log.info("user is null:{}", user);
-                    sendErrorResponse(response, HttpServletResponse.SC_NOT_FOUND, "User does not exist");
+            UserEntity user = null;
+            boolean isParentLogin = false;
+            String emailKey = organizationCacheService.getPrivilegeKey(PrivilegeConstants.LOGIN_VIA_EMAIL);
+            log.info("email key : {}", emailKey);
+            String mobileKey = organizationCacheService.getPrivilegeKey(PrivilegeConstants.LOGIN_VIA_MOBILE);
+            log.info("mobile key: {}",mobileKey);
+            if (rolePrivilegeHelper.roleHasPrivilege(role, emailKey)) {
+                user = userRepository.findByEmail(subject);
+                log.info("user from repo :{}", user);
+                if (!user.isActive()){
+                    log.info("Your account is deactivated");
+                    sendErrorResponse(response, HttpServletResponse.SC_FORBIDDEN, "Your account has been Inactivated.");
                     return;
                 }
+            } else if (rolePrivilegeHelper.roleHasPrivilege(role, mobileKey)) {
+                user = userRepository.findByMobileNumber(subject);
+                log.info("mobile user from repo:{}", user);
+                if (user != null && !user.isActive()){
+                    log.info("Your account is deactivated.");
+                    sendErrorResponse(response, HttpServletResponse.SC_FORBIDDEN, "Your account has been Inactivated.");
+                    return;
+                }
+            }
 
+            if (user == null) {
+                log.info("Student not found. Checking if this is a parent login...");
+                user = secondaryDetailsRepository.findUserByMobile(subject);
+                if (user != null) {
+                    isParentLogin = true;
+                    log.info("Parent login detected. Student user fetched: {}", user);
+                }
+            }
 
-                UsernamePasswordAuthenticationToken authentication = buildAuth(user,tenant);
-                SecurityContextHolder.getContext().setAuthentication(authentication);
-
-            } catch (Exception e) {
-                log.error("JWT validation failed: {}", e.getMessage());
-                sendErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, "Invalid Token");
+            if (user == null) {
+                log.info("user is null:{}", user);
+                sendErrorResponse(response, HttpServletResponse.SC_NOT_FOUND, "User does not exist");
                 return;
             }
+
+            UsernamePasswordAuthenticationToken authentication = buildAuth(user,tenant);
+            SecurityContextHolder.getContext().setAuthentication(authentication);
 
             log.info("Incoming request URI: {}", path);
             if (!isSubscriptionAllowedPath(path)) {
@@ -178,8 +179,19 @@ public class JwtFilter extends OncePerRequestFilter {
                     return;
                 }
             }
+            chain.doFilter(request, response);
+
+        } catch (Exception e) {
+            log.error("JWT validation failed: {}", e.getMessage());
+            if (!response.isCommitted()) {
+                sendErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, "Invalid Token");
+            }
+            SecurityContextHolder.clearContext();
+            return;
+        } finally {
+            TenantContext.clear();
+            log.info("Tenant context cleared");
         }
-        chain.doFilter(request, response);
     }
 
     private String extractSchemaFromToken(String jwtToken, HttpServletResponse response) throws IOException {
@@ -240,13 +252,13 @@ public class JwtFilter extends OncePerRequestFilter {
             log.warn("Response already committed. Skipping error response.");
             return;
         }
-        response.resetBuffer();
+//        response.resetBuffer();
         response.setStatus(status);
         response.setContentType("application/json;charset=UTF-8");
         String json = String.format("{\"status\":%d,\"message\":\"%s\",\"data\":null}",
                 status, message.replace("\"", "\\\""));
         response.getWriter().write(json);
-        response.flushBuffer();
+//        response.flushBuffer();
     }
     
     private static final List<String> WHITELISTED_PATHS = List.of(
@@ -272,5 +284,4 @@ public class JwtFilter extends OncePerRequestFilter {
         return WHITELISTED_PATHS.stream()
                 .anyMatch(whitelist -> pathMatcher.match(whitelist,path));
     }
-
 }

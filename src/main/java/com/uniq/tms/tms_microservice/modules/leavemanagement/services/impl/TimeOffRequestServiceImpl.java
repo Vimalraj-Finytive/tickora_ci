@@ -101,10 +101,10 @@ public class TimeOffRequestServiceImpl implements TimeOffRequestService {
         if (!userPolicyDateValid) {
             throw new IllegalStateException("User does not have policy assignment for the selected date range.");
         }
-        boolean exists = timeOffRequestAdapter.existsTimeoffRequest(request.getUserId(), request.getPolicyId(), LocalDate.now(zoneId));
-        if (exists) {
-            throw new IllegalArgumentException("Request for today is already pending or approved");
-        }
+//        boolean exists = timeOffRequestAdapter.existsTimeoffRequest(request.getUserId(), request.getPolicyId(), LocalDate.now(zoneId));
+//        if (exists) {
+//            throw new IllegalArgumentException("Request for today is already pending or approved");
+//        }
         if (LocalDate.now(zoneId).isAfter(request.getStartDate())) {
             throw new IllegalArgumentException("Invalid request format for the selected entitled type");
         }

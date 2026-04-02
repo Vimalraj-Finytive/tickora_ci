@@ -20,6 +20,8 @@ import com.uniq.tms.tms_microservice.shared.helper.TimesheetHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import java.time.*;
 import java.time.temporal.TemporalAdjusters;
 import java.util.*;
@@ -58,6 +60,7 @@ public class LeaveBalanceServiceImpl implements LeaveBalanceService {
     }
 
     @Override
+    @Transactional
     public void updateMonthlyLeaveBalance() {
         LocalDate now = LocalDate.now(zoneId);
         LocalDate previousMonth = now.minusMonths(1);
@@ -68,8 +71,10 @@ public class LeaveBalanceServiceImpl implements LeaveBalanceService {
         List<String> userIds = userPolicyAdapter.findAllUserIdsInUserPolicies(now, usersId);
         List<LeaveBalanceEntity> monthlyBalances = leaveBalanceAdapter.findActiveMonthlyBalances(monthStartDate, monthEndDate, ResetFrequency.MONTHLY, AccrualType.MONTHLY, userIds);
         updateLeaveBalance(monthlyBalances, AccrualType.MONTHLY);
+        inActiveLeaveBalance(monthlyBalances);
         List<LeaveBalanceEntity> annualBalances = leaveBalanceAdapter.findActiveMonthlyBalances(monthStartDate, monthEndDate, ResetFrequency.ANNUALLY, AccrualType.MONTHLY, userIds);
         updateLeaveBalance(annualBalances, AccrualType.MONTHLY);
+        inActiveLeaveBalance(annualBalances);
     }
 
     private void updateLeaveBalance(List<LeaveBalanceEntity> currentBalances, AccrualType type){
@@ -161,6 +166,7 @@ public class LeaveBalanceServiceImpl implements LeaveBalanceService {
     }
 
     @Override
+    @Transactional
     public void updateYearlyLeaveBalance() {
         LocalDate now = LocalDate.now(zoneId);
         LocalDate previousYear = now.minusYears(1);
@@ -171,6 +177,29 @@ public class LeaveBalanceServiceImpl implements LeaveBalanceService {
         List<String> userIds = userPolicyAdapter.findAllUserIdsInUserPolicies(now, usersId);
         List<LeaveBalanceEntity> currentBalances = leaveBalanceAdapter.findActiveMonthlyBalances(monthStartDate, monthEndDate, ResetFrequency.ANNUALLY, AccrualType.ANNUALLY, userIds);
         updateLeaveBalance(currentBalances, AccrualType.ANNUALLY);
+        inActiveLeaveBalance(currentBalances);
+
+    }
+
+    private void inActiveLeaveBalance(List<LeaveBalanceEntity> balances) {
+
+        if (balances == null || balances.isEmpty()) {
+            return;
+        }
+
+        List<LeaveBalanceEntity> toUpdate = new ArrayList<>();
+
+        for (LeaveBalanceEntity lb : balances) {
+            if (Boolean.TRUE.equals(lb.getActive())) {
+                lb.setActive(false);
+                lb.setUpdatedAt(LocalDateTime.now());
+                toUpdate.add(lb);
+            }
+        }
+
+        leaveBalanceAdapter.saveLeaveBalances(toUpdate);
+
+        log.info("Inactivated {} leave balances", toUpdate.size());
     }
 
 
