@@ -6,10 +6,16 @@ import com.uniq.tms.tms_microservice.modules.locationManagement.mapper.LocationD
 import com.uniq.tms.tms_microservice.modules.locationManagement.model.Location;
 import com.uniq.tms.tms_microservice.modules.locationManagement.model.LocationList;
 import com.uniq.tms.tms_microservice.modules.locationManagement.services.LocationService;
+import com.uniq.tms.tms_microservice.modules.timesheetManagement.services.FaceService;
+import com.uniq.tms.tms_microservice.modules.userManagement.services.UserService;
 import com.uniq.tms.tms_microservice.shared.dto.ApiResponse;
 import com.uniq.tms.tms_microservice.shared.helper.AuthHelper;
+import org.checkerframework.checker.units.qual.A;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.server.ResponseStatusException;
 import java.util.List;
 
@@ -19,11 +25,13 @@ public class LocationFacade {
     private final LocationService locationService;
     private final LocationDtoMapper locationDtoMapper;
     private final AuthHelper authHelper;
+    private final FaceService faceService;
 
-    public LocationFacade(LocationService locationService, LocationDtoMapper locationDtoMapper, AuthHelper authHelper) {
+    public LocationFacade(LocationService locationService, LocationDtoMapper locationDtoMapper, AuthHelper authHelper, FaceService faceService) {
         this.locationService = locationService;
         this.locationDtoMapper = locationDtoMapper;
         this.authHelper = authHelper;
+        this.faceService = faceService;
     }
 
     public ApiResponse getAllLocation(String orgId) {
@@ -73,5 +81,13 @@ public class LocationFacade {
         locationService.deleteLocation(locationIds, orgId);
     }
 
+    public ApiResponse<Void> clearUserLocationCache(String userId) {
+        faceService.evictUserLocationCache(userId);
+        return new ApiResponse<>(200, "Deleted user  Location cache successfully", null);
+    }
 
+    public ApiResponse<Void> clearAllLocationCache() {
+        faceService.clearAllLocationCache();
+        return new ApiResponse<>(200, "Deleted all user Location cache successfully", null);
+    }
 }

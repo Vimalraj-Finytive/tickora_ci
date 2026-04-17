@@ -22,6 +22,7 @@ public class CacheDependencyConfig {
     private String userprofile;
     private String workSchedule;
     private String inactiveUsers;
+    private String timeoffPolicy;
 
     private final CacheKeyConfig cacheKeyConfig;
 
@@ -74,5 +75,9 @@ public class CacheDependencyConfig {
 
     public void setInactiveUsers(String inactiveUsers) {
         this.inactiveUsers = inactiveUsers;
+    }
+
+    public void setTimeoffPolicy(String timeoffPolicy) {
+        this.timeoffPolicy = timeoffPolicy;
     }
 }

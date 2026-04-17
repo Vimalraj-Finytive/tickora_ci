@@ -16,6 +16,7 @@ import com.uniq.tms.tms_microservice.modules.locationManagement.entity.LocationE
 import com.uniq.tms.tms_microservice.modules.locationManagement.entity.UserLocationEntity;
 import com.uniq.tms.tms_microservice.modules.locationManagement.mapper.LocationDtoMapper;
 import com.uniq.tms.tms_microservice.modules.locationManagement.repository.LocationRepository;
+import com.uniq.tms.tms_microservice.modules.locationManagement.services.LocationService;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.adapter.OrganizationAdapter;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.OrganizationEntity;
 import com.uniq.tms.tms_microservice.modules.organizationManagement.entity.RoleEntity;
@@ -29,6 +30,7 @@ import com.uniq.tms.tms_microservice.modules.organizationManagement.services.Org
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.adapter.FaceAdapter;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.adapter.TimesheetAdapter;
 import com.uniq.tms.tms_microservice.modules.timesheetManagement.entity.TimesheetEntity;
+import com.uniq.tms.tms_microservice.modules.timesheetManagement.services.FaceService;
 import com.uniq.tms.tms_microservice.modules.userManagement.adapter.UserAdapter;
 import com.uniq.tms.tms_microservice.modules.userManagement.dto.*;
 import com.uniq.tms.tms_microservice.modules.userManagement.entity.*;
@@ -87,7 +89,6 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -126,6 +127,8 @@ public class UserServiceImpl implements UserService {
     private final TimeOffPolicyAdapter timeOffPolicyAdapter;
     private final TimeOffPolicyService timeOffPolicyService;
     private final UserMergeUtil userMergeUtil;
+    private final FaceService faceService;
+    private final LocationService locationService;
     private final FaceAdapter faceAdapter;
     public UserServiceImpl(Validator validator, UserAdapter userAdapter, TimesheetAdapter timesheetAdapter,
                            UserEntityMapper userEntityMapper, CalendarAdapter calendarAdapter, OrganizationRepository organizationRepository,
@@ -137,7 +140,7 @@ public class UserServiceImpl implements UserService {
                            ExceptionHelper exceptionHelper, OrganizationCacheService organizationCacheService, LocationDtoMapper locationDtoMapper,
                            OrganizationAdapter organizationAdapter, LocationAdapter locationAdapter, OrganizationEntityMapper organizationEntityMapper,
                            AuthHelper authHelper, TimeOffPolicyAdapter timeOffPolicyAdapter, TimeOffPolicyService timeOffPolicyService,
-                           UserMergeUtil userMergeUtil, FaceAdapter faceAdapter) {
+                           UserMergeUtil userMergeUtil, FaceService faceService, LocationService locationService, FaceAdapter faceAdapter) {
         this.userAdapter = userAdapter;
         this.timesheetAdapter = timesheetAdapter;
         this.userEntityMapper = userEntityMapper;
@@ -166,6 +169,8 @@ public class UserServiceImpl implements UserService {
         this.timeOffPolicyAdapter = timeOffPolicyAdapter;
         this.timeOffPolicyService = timeOffPolicyService;
         this.userMergeUtil = userMergeUtil;
+        this.faceService = faceService;
+        this.locationService = locationService;
         this.faceAdapter = faceAdapter;
     }
 
@@ -1167,6 +1172,10 @@ public class UserServiceImpl implements UserService {
                         .toList();
                 locationAdapter.updateUserLocationByUserId(newEntities);
                 log.info("Added user location: {}", toInsert);
+            }
+            if (!toDelete.isEmpty() || !toInsert.isEmpty()) {
+                faceService.evictUserLocationCache(userId);
+                log.info("Location cache cleared for userId: {}", userId);
             }
         }
         if (group != null) {

@@ -14,6 +14,7 @@ public class CacheKeyConfig {
     private String roleprivilege;
     private String workSchedule;
     private String inactiveUsers;
+    private String timeoffPolicy;
 
     public String getLocation() {
         return location;
@@ -69,5 +70,13 @@ public class CacheKeyConfig {
 
     public void setInactiveUsers(String inactiveUsers) {
         this.inactiveUsers = inactiveUsers;
+    }
+
+    public String getTimeoffPolicy() {
+        return timeoffPolicy;
+    }
+
+    public void setTimeoffPolicy(String timeoffPolicy) {
+        this.timeoffPolicy = timeoffPolicy;
     }
 }

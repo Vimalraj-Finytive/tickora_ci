@@ -293,6 +293,7 @@ public class FaceServiceImpl implements FaceService {
         });
     }
 
+
     private <T> ApiResponse<T> handlePythonServiceError(HttpClientErrorException e) {
         try {
             ObjectMapper objectMapper = TimesheetLogParserUtil.getObjectMapper();
@@ -311,6 +312,18 @@ public class FaceServiceImpl implements FaceService {
             log.error("Failed to parse Python error response: {}", e.getResponseBodyAsString());
             return new ApiResponse<>(e.getStatusCode().value(), "Face service error", null);
         }
+    }
+
+    @Override
+    public void evictUserLocationCache(String userId) {
+        locationCache.remove(userId);
+        log.info("Cache cleared for userId: {}", userId);
+    }
+
+    @Override
+    public void clearAllLocationCache() {
+        locationCache.clear();
+        log.info("All location cache cleared");
     }
 
 }

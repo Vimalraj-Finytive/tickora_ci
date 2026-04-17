@@ -63,4 +63,16 @@ public class LocationController {
         locationFacade.deleteLocation( locationIds);
         return ResponseEntity.noContent().build();
     }
+
+    @DeleteMapping("{userId}")
+    public ResponseEntity<ApiResponse<Void>> clearUserLocationCache(@PathVariable String userId) {
+        ApiResponse<Void> response = locationFacade.clearUserLocationCache(userId);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
+
+    @DeleteMapping
+    public ResponseEntity<ApiResponse<Void>> clearAllLocationCache() {
+        ApiResponse<Void> response = locationFacade.clearAllLocationCache();
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
 }

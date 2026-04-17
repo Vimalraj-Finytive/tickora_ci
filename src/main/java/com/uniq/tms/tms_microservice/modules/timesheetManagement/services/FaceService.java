@@ -15,4 +15,7 @@ public interface FaceService {
 
     ApiResponse<UserValidationDto> validateUserLocation(String userId);
 
+    void evictUserLocationCache(String userId);
+    void clearAllLocationCache();
+
 }

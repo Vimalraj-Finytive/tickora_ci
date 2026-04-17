@@ -28,6 +28,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.stereotype.Repository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
@@ -373,26 +374,34 @@ public class TimeOffPolicyServiceImpl implements TimeOffPolicyService {
         if (!balanceList.isEmpty()) {
             leaveBalanceAdapter.saveLeaveBalances(balanceList);
         }
+        log.info("isRedis enabled{}", isRedisEnabled);
         if (isRedisEnabled) {
             if (TransactionSynchronizationManager.isActualTransactionActive()){
              TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override
                 public void afterCommit() {
-                    try {
-                        publisher.publishEvent(new UserEvent(orgId, authHelper.getSchema()));
-                        log.info(
-                                "User cache reloaded after policy assignment | orgId={}", orgId);
-                    } catch (Exception e) {
-                        log.error("Failed to reload user cache after policy assignment | orgId={}", orgId, e);
-                    }
+                    publishUserEvent(orgId);
                 }
              });
+            } else {
+                log.warn("No active transaction found. Publishing event immediately | orgId={}", orgId);
+                publishUserEvent(orgId);
             }
         } else {
             log.info(
                     "Redis not enabled. Skipping cache reload | orgId={}",
                     orgId
             );
+        }
+    }
+
+    private void publishUserEvent(String orgId){
+        try {
+            publisher.publishEvent(new UserEvent(orgId, authHelper.getSchema()));
+            log.info(
+                    "User cache reloaded after policy assignment | orgId={}", orgId);
+        } catch (Exception e) {
+            log.error("Failed to reload user cache after policy assignment | orgId={}", orgId, e);
         }
     }
 
